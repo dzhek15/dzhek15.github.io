@@ -406,18 +406,11 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
   padding-top:11px; border-top:1px solid var(--rule)}
 .pf-foot .btn-keep:disabled{opacity:.5; cursor:default}
 .pf-note{font-size:12.5px; color:var(--muted)}
-.fact-num{display:flex; align-items:center; gap:8px; margin:10px 0 2px; font-size:13px}
-.fact-num input{width:110px; padding:5px 8px; font-family:"IBM Plex Mono",monospace;
-  border:1px solid var(--rule); border-radius:var(--r); background:var(--surface)}
-.fact-tab input{width:100%; padding:4px 6px; font-family:"IBM Plex Mono",monospace; font-size:12.5px;
-  text-align:right; border:1px solid var(--rule); border-radius:var(--r); background:var(--surface)}
-.fact-tab td{padding:3px 5px}
-.lnk{background:none; border:none; padding:0; color:var(--accent); text-decoration:underline;
-  cursor:pointer; font-size:12px}
+
 .btn-ev{padding:10px 18px; font-size:14px; background:var(--surface); color:var(--ink);
   border:1px dashed var(--rule-strong); border-radius:var(--r); cursor:pointer}
 .btn-ev:hover{background:var(--surface-3)}
-@media (max-width:820px){ .roll-ev{width:100%; display:grid; grid-template-columns:1fr 1fr; gap:9px} .roll-ev .btn-ev{width:100%} .roll-ev .btn-ev:last-child{grid-column:1 / -1} }
+@media (max-width:820px){ .roll-ev{width:100%; display:grid; grid-template-columns:1fr 1fr; gap:9px} .roll-ev .btn-ev{width:100%} }
 [data-compact="1"] .btn-ev{padding:7px 13px; font-size:12.5px}
 .ev-back{position:fixed; inset:0; background:rgba(19,26,27,.45); z-index:60;
   display:flex; align-items:center; justify-content:center; padding:16px}
@@ -636,7 +629,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       <div class="roll-ev">
         <button class="btn-ev" id="btnEV" type="button" title="Посчитать матожидание купона: вероятности из коэффициентов, соперники — из долей пула">Оценить купон</button>
         <button class="btn-ev" id="btnPF" type="button" title="Отобрать из системы строки, которые меньше всего пересекаются с выбором толпы">Отобрать строки</button>
-        <button class="btn-ev" id="btnFact" type="button" title="Внести фактические выплаты сыгранного тиража и уточнить расчёт">Выплаты тиража</button>
       </div>
       <div class="roll-crowd">
         <button class="btn-spin btn-crowd" id="btnMost" type="button"><span class="lbl-long">Проставить </span>большинство</button>
@@ -820,7 +812,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       jackpot: 0,
       poolSum: 0,
       poolTypical: 0,
-      calib: {},
       showPct: false,
       showKf: false,
       compact: false,
@@ -850,7 +841,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   if(state.rollMode !== "budget") state.rollMode = "single";
   state.showPct = !!state.showPct;
   state.showKf  = !!state.showKf;
-  if(!state.calib || typeof state.calib !== "object") state.calib = {};
   state.compact = !!state.compact;
   state.zoom = Number(state.zoom);
   if(!isFinite(state.zoom) || state.zoom <= 0) state.zoom = 1;
@@ -1079,52 +1069,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
      13-15 экстраполированы по тренду 9-12. Уточняются кнопкой «Выплаты тиража». */
   var FIX_BASE = {9:0.88, 10:0.82, 11:0.75, 12:0.69, 13:0.64, 14:0.59, 15:0.54};
 
-  function fixFactors(){
-    var acc = {}, out = {}, k;
-    for(k=9;k<=15;k++) acc[k] = [];
-    var store = state.calib || {};
-    Object.keys(store).forEach(function(num){
-      var f = store[num] && store[num].fix;
-      if(!f) return;
-      for(var kk=9;kk<=15;kk++){
-        var v = Number(f[kk]);
-        if(isFinite(v) && v > 0) acc[kk].push(v);
-      }
-    });
-    /* среднее геометрическое: множители мультипликативны */
-    for(k=9;k<=15;k++){
-      if(acc[k].length){
-        var lg = 0;
-        for(var i=0;i<acc[k].length;i++) lg += Math.log(acc[k][i]);
-        out[k] = Math.exp(lg / acc[k].length);
-      } else {
-        out[k] = FIX_BASE[k];
-      }
-    }
-    return out;
-  }
-
-  /* Метод Шина: снимает маржу точнее простой нормировки, потому что учитывает,
-     что контора закладывает в коэффициенты защиту от осведомлённых игроков, и на
-     фаворитах эта добавка не такая, как на аутсайдерах. Ищем параметр z бисекцией. */
-  function shinProbs(raw){
-    var S = raw[0] + raw[1] + raw[2];
-    function fromZ(z){
-      return raw.map(function(pi){
-        var inner = z*z + 4*(1-z)*pi*pi/S;
-        return (Math.sqrt(Math.max(0, inner)) - z) / (2*(1-z));
-      });
-    }
-    var lo = 0, hi = 0.5;
-    for(var i=0;i<50;i++){
-      var mid = (lo + hi)/2;
-      var p = fromZ(mid), sum = p[0] + p[1] + p[2];
-      if(sum > 1) lo = mid; else hi = mid;
-    }
-    var out = fromZ((lo + hi)/2), t = out[0] + out[1] + out[2];
-    if(!(t > 0) || !isFinite(t)) return null;
-    return [out[0]/t, out[1]/t, out[2]/t];
-  }
+  function fixFactors(){ return FIX_BASE; }
 
   /* Вероятности 1/X/2 по версии конторы: берём из коэффициентов и убираем маржу.
      Запасной путь — целые проценты «Б», они те же, но округлённые. */
@@ -1392,7 +1337,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
     h += '<h3>На чём это держится</h3><ul class="ev-ass">' +
          '<li>Вероятность исхода берётся из коэффициента конторы, маржа снимается методом Шина — он точнее простой нормировки, потому что не размазывает надбавку поровну, а учитывает, что на аутсайдерах она больше. Ничего более точного в открытых данных нет.</li>' +
-         '<li>Число соперников оценивается в предположении, что игроки выбирают исходы независимо друг от друга, а затем правится множителем по фактическим выплатам прошлых тиражей. Сверка с реальным тиражом показала, что независимость даёт слишком жирный правый хвост: настоящие купоны скоррелированы и проваливаются вместе. Поправка это частично лечит, но перекос в пользу редких комбинаций остаётся.</li>' +
+         '<li>Число соперников оценивается в предположении, что игроки выбирают исходы независимо друг от друга, а затем правится постоянным множителем, полученным из фактических выплат тиража 5006. Сверка с реальным тиражом показала, что независимость даёт слишком жирный правый хвост: настоящие купоны скоррелированы и проваливаются вместе. Поправка это частично лечит, но перекос в пользу редких комбинаций остаётся.</li>' +
          '<li>Суперприз в тираже 5007 накоплен за 16 тиражей и сравним со всем призовым фондом, поэтому слагаемые за 14 и 15 угаданных сильно тянут EV вверх — при том что их вероятность тысячные доли процента. Почти весь EV сидит в событиях, которые почти никогда не случаются.</li>' +
          '<li>Выплаты считаются от итогового призового фонда: пока приём идёт, вместо собранной на сейчас суммы берётся медиана завершённых тиражей. А вот доли пула — снимок на момент «Обновить тираж», к закрытию они ещё сдвинутся, так что чем раньше считаешь, тем грубее оценка.</li>' +
          '<li>Структура призов: 40% фонда делят все с 9 угаданными и больше, 20% — все с 10 и больше, 10% — с 11 и больше, и по 5% на каждый порог 12, 13, 14, 15; за 14 добавляется 10% суперприза, за 15 — 90%. Строка получает сумму по всем порогам, до которых дотянулась. Проверено на фактических выплатах тиража 5006 до копейки. Невыигранные пороги 14 и 15 уходят в суперприз — тоже сверено, расхождение 3 ₽.</li>' +
@@ -1610,172 +1555,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         ". Они уйдут в CSV наравне с брошенными вариантами; убрать лишние можно корзиной в списке, откатить всё — кнопкой «Вернуть».");
   }
 
-
-  /* ---------- фактические выплаты тиража ---------- */
-  /* Таблица «Угадано событий / Количество вариантов / Коэффициент выплаты»
-     со страницы Балтсистемы у БалтБета. По ней считается, насколько модель
-     промахнулась с числом победителей, и множитель уходит в state.calib. */
-  var FACT_K = [9,10,11,12,13,14,15];
-
-  function showFact(){
-    $("evTitle").textContent = "Фактические выплаты тиража";
-    var guess = String(Math.max(0, (parseInt(state.tirazh, 10) || 0) - 1) || "");
-    var h = '<p class="ev-sub">Со страницы «Балтсистема» у БалтБета: таблица «Угадано событий / Количество вариантов / ' +
-            'Коэффициент выплаты». Вводить можно любой прошедший тираж, не обязательно последний, и не обязательно каждый.</p>';
-    h += '<div class="fact-num"><label for="factTir">Тираж №</label>' +
-         '<input id="factTir" type="text" inputmode="numeric" value="' + guess + '"></div>';
-    h += '<table class="ev-tab fact-tab"><thead><tr><th>Угадано</th><th>Количество вариантов</th>' +
-         '<th>Коэффициент выплаты</th></tr></thead><tbody>';
-    FACT_K.slice().reverse().forEach(function(k){
-      h += '<tr><td>' + k + '</td>' +
-           '<td><input class="fact-n" data-k="' + k + '" type="text" inputmode="numeric" placeholder="0"></td>' +
-           '<td><input class="fact-c" data-k="' + k + '" type="text" inputmode="decimal" placeholder="0"></td></tr>';
-    });
-    h += '</tbody></table>';
-    h += '<div class="pf-foot"><button class="btn-keep" id="factGo" type="button">Посчитать поправку</button>' +
-         '<span class="pf-note" id="factNote"></span></div>';
-    h += '<div id="factOut"></div>';
-    h += factStored();
-    $("evBody").innerHTML = h;
-    $("factGo").addEventListener("click", factRun);
-    $("evBack").hidden = false;
-  }
-
-  function factStored(){
-    var store = state.calib || {}, nums = Object.keys(store).sort();
-    var fx = fixFactors();
-    var h = '<h3>Что сейчас используется</h3>';
-    h += '<table class="ev-tab"><thead><tr><th>Угадано</th><th>Множитель</th><th>Откуда</th></tr></thead><tbody>';
-    FACT_K.forEach(function(k){
-      var have = nums.filter(function(n){ return store[n] && store[n].fix && store[n].fix[k]; }).length;
-      h += '<tr><td>' + k + '</td><td>' + fx[k].toFixed(2) + '</td><td>' +
-           (have ? "по " + have + " тираж(ам)" : "оценка по умолчанию") + '</td></tr>';
-    });
-    h += '</tbody></table>';
-    if(nums.length){
-      h += '<p class="ev-note">Введены тиражи: ' + nums.join(", ") +
-           '. <button class="lnk" id="factWipe" type="button">Стереть все</button></p>';
-    } else {
-      h += '<p class="ev-note">Пока ни одного тиража не введено — работают значения по умолчанию, ' +
-           'полученные из тиража 5006.</p>';
-    }
-    setTimeout(function(){
-      var w = $("factWipe");
-      if(w) w.addEventListener("click", function(){
-        state.calib = {}; save(); showFact();
-      });
-    }, 0);
-    return h;
-  }
-
-  function factRun(){
-    var num = String($("factTir").value || "").replace(/\D/g, "");
-    var note = $("factNote");
-    if(!num){ note.textContent = "не указан номер тиража"; return; }
-    var fact = {};
-    var any = false;
-    [].forEach.call(document.querySelectorAll(".fact-n"), function(el){
-      var k = el.getAttribute("data-k");
-      var n = Number(String(el.value).replace(/\s/g, "").replace(",", "."));
-      var cEl = document.querySelector('.fact-c[data-k="' + k + '"]');
-      var c = Number(String(cEl ? cEl.value : "").replace(/\s/g, "").replace(",", "."));
-      if(isFinite(n) && n > 0 && isFinite(c) && c > 0){ fact[k] = {n:n, c:c}; any = true; }
-    });
-    if(!any){ note.textContent = "заполни хотя бы одну строку: количество и коэффициент"; return; }
-
-    note.textContent = "тяну тираж №" + num + "…";
-    $("factGo").disabled = true;
-    factFetch(num).then(function(draw){
-      $("factGo").disabled = false;
-      if(!draw){ note.textContent = "тираж №" + num + " не нашёлся в списке totobrief"; return; }
-      var res = factCompare(draw, fact);
-      if(res.error){ note.textContent = res.error; return; }
-      state.calib = state.calib || {};
-      state.calib[num] = { fix: res.fix, at: new Date().toISOString().slice(0,10) };
-      save();
-      note.textContent = "готово, поправка сохранена";
-      $("factOut").innerHTML = res.html;
-      render();
-    }).catch(function(e){
-      $("factGo").disabled = false;
-      note.textContent = "не получилось: " + e.message;
-    });
-  }
-
-  function factFetch(num){
-    return fetch(API + "baltbet-main/drawings?page=1")
-      .then(function(r){ return r.json(); })
-      .then(function(j){
-        var rows = (j && j.data) || [];
-        var d = rows.filter(function(x){ return String(x.number) === String(num); })[0];
-        if(d) return d;
-        return fetch(API + "baltbet-main/drawings?page=2")
-          .then(function(r){ return r.json(); })
-          .then(function(j2){
-            var r2 = (j2 && j2.data) || [];
-            return r2.filter(function(x){ return String(x.number) === String(num); })[0] || null;
-          });
-      })
-      .then(function(d){
-        if(!d) return null;
-        return fetch(API + "drawing-info/" + d.id)
-          .then(function(r){ return r.json(); })
-          .then(function(j3){
-            var info = j3.data || j3;
-            return { pool: Number(d.pool_sum) || 0, events: info.events || [] };
-          });
-      });
-  }
-
-  /* Считаем, сколько победителей предсказала бы модель для УЖЕ СЫГРАННОГО тиража,
-     и делим факт на модель. Масштаб (число проданных строк) берём той же формулой,
-     что и в оценке купона, — тогда ошибка масштаба уходит в сам множитель. */
-  function factCompare(draw, fact){
-    var price = Number(state.price) || 30;
-    var idx = {"1":0, "X":1, "2":2};
-    var ps = [];
-    for(var i=0;i<draw.events.length;i++){
-      var e = draw.events[i], q = e.quotes || {};
-      var r = idx[String(e.result || "").trim()];
-      if(r === undefined) return { error: "в тираже нет результатов — он ещё не сыгран" };
-      var arr = [Number(q.pool_win_1), Number(q.pool_draw), Number(q.pool_win_2)];
-      if(!isFinite(arr[0]) || !isFinite(arr[1]) || !isFinite(arr[2])) return { error: "в тираже нет долей пула" };
-      var sum = arr[0] + arr[1] + arr[2];
-      ps.push(Math.max(arr[r], EV_MINPOOL) / sum);
-    }
-    if(ps.length !== 15) return { error: "в тираже не 15 матчей" };
-    if(!draw.pool) return { error: "нет призового фонда тиража" };
-
-    var dist = poissonBinomial(ps);
-    var lines = (draw.pool / 0.9) / price;
-    var A = draw.pool / 90;
-    var SHARE = {9:EV_SHARE.g9, 10:EV_SHARE.g10, 11:EV_SHARE.g11,
-                 12:EV_SHARE.e12, 13:EV_SHARE.e13, 14:EV_SHARE.e14, 15:EV_SHARE.e15};
-    var fix = {}, rows = "";
-    FACT_K.forEach(function(k){
-      var model = evTail(dist, k) * lines;
-      var f = fact[k];
-      if(!f) return;
-      /* сколько строк делило категорию — считаем по деньгам: доля фонда, делённая
-         на выплату одной строке. Так поправка чинит и промах по числу победителей,
-         и небольшой сдвиг самих долей фонда разом. */
-      var share = (A * SHARE[k]) / (f.c * price);
-      var mult = share / model;
-      if(isFinite(mult) && mult > 0 && mult < 20) fix[k] = Number(mult.toFixed(3));
-      rows += '<tr><td>' + k + '</td><td>' + fmt(Math.round(model)) + '</td><td>' + fmt(Math.round(share)) +
-              '</td><td>' + (isFinite(mult) ? "×" + mult.toFixed(2) : "—") + '</td></tr>';
-    });
-    if(!Object.keys(fix).length) return { error: "не удалось посчитать ни одного множителя" };
-
-    var html = '<h3>Модель против факта, тираж №' + (draw.number || "") + '</h3>' +
-      '<table class="ev-tab"><thead><tr><th>Угадано</th><th>Модель ждала</th><th>Делили приз</th>' +
-      '<th>Множитель</th></tr></thead><tbody>' + rows + '</tbody></table>' +
-      '<p class="ev-note">«Делили приз» посчитано по деньгам: доля фонда, поделённая на выплату одной строке. ' +
-      'Может чуть отличаться от счётчика в таблице БалтБета — зато после поправки расчёт выдаёт ровно ту выплату, ' +
-      'которая была на деле. Множитель меньше единицы значит, что модель завышала число победителей и потому ' +
-      'занижала выплаты. Он сразу применяется в «Оценить купон» и «Отобрать строки».</p>';
-    return { fix: fix, html: html };
-  }
 
   /* ---------- render ---------- */
   var rowsEl = $("rows");
@@ -2784,7 +2563,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   $("btnEV").addEventListener("click", function(){ showEV(); });
   $("btnPF").addEventListener("click", function(){ showPortfolio(); });
-  $("btnFact").addEventListener("click", function(){ showFact(); });
   $("evClose").addEventListener("click", function(){ $("evBack").hidden = true; });
   $("evBack").addEventListener("click", function(e){ if(e.target === $("evBack")) $("evBack").hidden = true; });
   document.addEventListener("keydown", function(e){ if(e.key === "Escape") $("evBack").hidden = true; });
