@@ -2,8 +2,8 @@
   "tirazh": "5007",
   "drawingId": 12127,
   "endedAt": "2026-09-15T20:00:00.000000Z",
-  "generatedAt": "2026-09-14T20:24:39.340Z",
-  "source": "totobrief + thesportsdb",
+  "generatedAt": "2026-09-14T20:47:11.897Z",
+  "source": "totobrief + api-football",
   "rules": "чистая серия от 3 матчей, по площадке, окно 150 дней",
   "matches": [
     {
