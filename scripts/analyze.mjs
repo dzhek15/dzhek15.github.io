@@ -50,12 +50,24 @@ async function getJson(url, tries = 3) {
 }
 
 let afCalls = 0;
+let afLast = 0;
+
+/* бесплатный тариф: не больше 10 запросов в минуту, поэтому держим паузу */
+const AF_GAP = 7000;
 
 /* запрос к api-football: ключ уходит заголовком, в лог не попадает */
-async function af(path) {
+async function af(path, retry = true) {
   if (!AF_KEY) throw new Error("не задан секрет APIFOOTBALL_KEY");
+  const wait = AF_GAP - (Date.now() - afLast);
+  if (wait > 0) await sleep(wait);
+  afLast = Date.now();
   afCalls++;
   const r = await fetch(AF + path, { headers: { "x-apisports-key": AF_KEY } });
+  if (r.status === 429 && retry) {
+    log("    лимит запросов в минуту — жду минуту");
+    await sleep(62000);
+    return af(path, false);
+  }
   if (!r.ok) throw new Error(`api-football ${path}: HTTP ${r.status}`);
   const j = await r.json();
   const errs = j && j.errors;
@@ -144,13 +156,22 @@ function daysAround(iso) {
   return out;
 }
 
+/* бесплатный тариф отдаёт расписание только на вчера/сегодня/завтра */
+function withinFreeWindow(d) {
+  const today = Date.now();
+  const t = Date.parse(d + "T12:00:00Z");
+  const diff = Math.round((t - today) / 86400000);
+  return diff >= -1 && diff <= 1;
+}
+
 async function fixturesFor(dates) {
   const all = [];
   for (const d of dates) {
+    if (!withinFreeWindow(d)) { log(`  ${d}: вне окна бесплатного тарифа (вчера–завтра), пропускаю`); continue; }
     for (let page = 1; page <= MAX_PAGES; page++) {
       let j;
       try {
-        j = await af(`fixtures?date=${d}&page=${page}`);
+        j = await af(`fixtures?date=${d}` + (page > 1 ? `&page=${page}` : ""));
       } catch (e) {
         log(`  расписание за ${d}, стр. ${page}: ${e.message}`);
         break;
@@ -195,22 +216,26 @@ function bestFixture(homeRu, awayRu, fixtures) {
 
 const searchCache = new Map();
 
+/* Прямой поиск идёт ТОЛЬКО по словарю data/teams.json: транслит вида
+   «uaithok» вместо Whitehawk находит случайные клубы, а пустая подсказка
+   лучше неверной. Нет команды в словаре — матч остаётся без подсказки. */
 async function searchTeam(ruName, dict) {
   const lat = translit(ruName);
   if (searchCache.has(lat)) return searchCache.get(lat);
   const plain = String(ruName || "").toLowerCase().replace(/ё/g, "е")
     .replace(/\bфк\b/g, "").replace(/[()]/g, " ").replace(/\s+/g, " ").trim();
-  const q = dict[plain] || lat;
+  const q = dict[plain];
+  if (!q) { searchCache.set(lat, null); return null; }
   let found = null;
   try {
     const j = await af(`teams?search=${encodeURIComponent(q)}`);
     let bestT = null, bestS = 0;
     for (const row of j.response || []) {
       const t = row.team || {};
-      const s2 = Math.max(sim(lat, t.name || ""), sim(lat, t.code || ""));
+      const s2 = sim(q, t.name || "");
       if (s2 > bestS) { bestS = s2; bestT = t; }
     }
-    if (bestT && bestS >= 0.5) found = { id: bestT.id, name: bestT.name, score: Number(bestS.toFixed(2)) };
+    if (bestT && bestS >= 0.7) found = { id: bestT.id, name: bestT.name, score: Number(bestS.toFixed(2)) };
   } catch (e) {
     log(`    поиск «${q}»: ${e.message}`);
   }
@@ -315,7 +340,7 @@ async function main() {
       hId = fx.homeId; aId = fx.awayId;
       log(`  ✓ по расписанию: ${fx.home} — ${fx.away} (${fx.league}, ${fx.date}), сходство ${fx.score}, отрыв ${fx.margin}`);
     } else {
-      log("  · в расписании дня не нашёл, пробую прямой поиск");
+      log("  · в расписании дня не нашёл, пробую словарь");
       const [h, a] = [await searchTeam(home, dict), await searchTeam(away, dict)];
       if (h) { hId = h.id; log(`  ✓ ${home} → ${h.name} (${h.score})`); } else { log(`  ✗ не нашёл: ${home}`); misses.push(home); }
       if (a) { aId = a.id; log(`  ✓ ${away} → ${a.name} (${a.score})`); } else { log(`  ✗ не нашёл: ${away}`); misses.push(away); }
