@@ -1,0 +1,115 @@
+{
+  "tirazh": "5007",
+  "drawingId": 12127,
+  "endedAt": "2026-09-15T20:00:00.000000Z",
+  "generatedAt": "2026-09-14T20:24:39.340Z",
+  "source": "totobrief + thesportsdb",
+  "rules": "чистая серия от 3 матчей, по площадке, окно 150 дней",
+  "matches": [
+    {
+      "home": "Райо Вальекано",
+      "away": "Эспаньол",
+      "hints": [],
+      "suggest": null,
+      "resolved": false
+    },
+    {
+      "home": "Питерборо Юнайтед",
+      "away": "Барнсли",
+      "hints": [],
+      "suggest": null,
+      "resolved": false
+    },
+    {
+      "home": "Вест Хэм",
+      "away": "Фулхэм",
+      "hints": [],
+      "suggest": null,
+      "resolved": false
+    },
+    {
+      "home": "Крей Уондерерз",
+      "away": "Сейнт Албанс Сити",
+      "hints": [],
+      "suggest": null,
+      "resolved": false
+    },
+    {
+      "home": "Льюис",
+      "away": "Каршалтон Атлетик",
+      "hints": [],
+      "suggest": null,
+      "resolved": false
+    },
+    {
+      "home": "Уайтхок",
+      "away": "Три Бриджес",
+      "hints": [],
+      "suggest": null,
+      "resolved": false
+    },
+    {
+      "home": "Энфилд Таун",
+      "away": "Дартфорд",
+      "hints": [],
+      "suggest": null,
+      "resolved": false
+    },
+    {
+      "home": "Солихалл Мурс",
+      "away": "Бэрроу",
+      "hints": [],
+      "suggest": null,
+      "resolved": false
+    },
+    {
+      "home": "Алдершот Таун",
+      "away": "Йовил Таун",
+      "hints": [],
+      "suggest": null,
+      "resolved": false
+    },
+    {
+      "home": "Бостон Юнайтед",
+      "away": "Уокинг",
+      "hints": [],
+      "suggest": null,
+      "resolved": false
+    },
+    {
+      "home": "Уэлдстон",
+      "away": "Галифакс Таун",
+      "hints": [],
+      "suggest": null,
+      "resolved": false
+    },
+    {
+      "home": "Беркхамстед",
+      "away": "Аксбридж",
+      "hints": [],
+      "suggest": null,
+      "resolved": false
+    },
+    {
+      "home": "Баллимена",
+      "away": "Каррик Рейнджерс",
+      "hints": [],
+      "suggest": null,
+      "resolved": false
+    },
+    {
+      "home": "Гленторан",
+      "away": "Колрейн",
+      "hints": [],
+      "suggest": null,
+      "resolved": false
+    },
+    {
+      "home": "Браге",
+      "away": "Сандвикенс",
+      "hints": [],
+      "suggest": null,
+      "resolved": false
+    }
+  ]
+}
