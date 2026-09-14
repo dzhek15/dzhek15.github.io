@@ -3,7 +3,7 @@
 
   Как ищет команды (главная сложность: totobrief даёт русские названия,
   открытые базы — английские):
-    1. Берёт с TheSportsDB ВСЕ футбольные матчи за дату тиража и соседние дни.
+    1. Берёт с api-football ВСЕ футбольные матчи за дату тиража и соседние дни.
     2. Русское название переводит в латиницу по правилам, которыми русский
        передаёт английские слова («х» → h, «э» → e), и сводит обе стороны
        к «скелету»: гласные схлопываются, v/w, c/k/q, s/z считаются одной
@@ -17,14 +17,16 @@
   3+ подряд побед, ИЛИ поражений, ИЛИ ничьих, отдельно по площадке,
   без склейки через межсезонье (окно 150 дней).
 
-  Ключей и платных сервисов не требует.
+  Нужен бесплатный ключ api-football в секрете APIFOOTBALL_KEY:
+  100 запросов в сутки, нам хватает примерно тридцати на прогон.
 */
 
 import { readFile, writeFile } from "node:fs/promises";
 
 const TB = "https://totobrief.com/api/v1/community/";
-const SDB_KEY = process.env.SPORTSDB_KEY || "3";
-const SDB = `https://www.thesportsdb.com/api/v1/json/${SDB_KEY}/`;
+const AF = "https://v3.football.api-sports.io/";
+const AF_KEY = process.env.APIFOOTBALL_KEY || "";
+const MAX_PAGES = 8;     /* страниц расписания за один день, чтобы не съесть дневной лимит */
 
 const WINDOW_DAYS = 150;
 const STREAK_MIN = 3;
@@ -45,6 +47,21 @@ async function getJson(url, tries = 3) {
       await sleep(700 * i);
     }
   }
+}
+
+let afCalls = 0;
+
+/* запрос к api-football: ключ уходит заголовком, в лог не попадает */
+async function af(path) {
+  if (!AF_KEY) throw new Error("не задан секрет APIFOOTBALL_KEY");
+  afCalls++;
+  const r = await fetch(AF + path, { headers: { "x-apisports-key": AF_KEY } });
+  if (!r.ok) throw new Error(`api-football ${path}: HTTP ${r.status}`);
+  const j = await r.json();
+  const errs = j && j.errors;
+  const hasErr = errs && (Array.isArray(errs) ? errs.length : Object.keys(errs).length);
+  if (hasErr) throw new Error(`api-football ${path}: ${JSON.stringify(errs)}`);
+  return j;
 }
 
 /* ---------- названия ---------- */
@@ -130,25 +147,30 @@ function daysAround(iso) {
 async function fixturesFor(dates) {
   const all = [];
   for (const d of dates) {
-    let data;
-    try {
-      data = await getJson(SDB + "eventsday.php?d=" + d + "&s=Soccer");
-    } catch (e) {
-      log(`  расписание за ${d} не получено: ${e.message}`);
-      continue;
+    for (let page = 1; page <= MAX_PAGES; page++) {
+      let j;
+      try {
+        j = await af(`fixtures?date=${d}&page=${page}`);
+      } catch (e) {
+        log(`  расписание за ${d}, стр. ${page}: ${e.message}`);
+        break;
+      }
+      const list = j.response || [];
+      if (page === 1) log(`  ${d}: матчей ${j.results || list.length}, страниц ${(j.paging && j.paging.total) || 1}`);
+      for (const e of list) {
+        const t = e.teams || {};
+        if (!t.home || !t.away) continue;
+        all.push({
+          home: t.home.name, away: t.away.name,
+          homeId: t.home.id, awayId: t.away.id,
+          league: ((e.league && e.league.country) ? e.league.country + ". " : "") + ((e.league && e.league.name) || ""),
+          date: (e.fixture && e.fixture.date || "").slice(0, 10),
+        });
+      }
+      const total = (j.paging && j.paging.total) || 1;
+      if (page >= total) break;
+      await sleep(200);
     }
-    const evs = (data && data.events) || [];
-    log(`  ${d}: матчей в базе ${evs.length}`);
-    for (const e of evs) {
-      if (!e.strHomeTeam || !e.strAwayTeam) continue;
-      all.push({
-        home: e.strHomeTeam, away: e.strAwayTeam,
-        homeId: e.idHomeTeam, awayId: e.idAwayTeam,
-        league: e.strLeague || "", date: e.dateEvent || d,
-        hk: skel(e.strHomeTeam, false), ak: skel(e.strAwayTeam, false),
-      });
-    }
-    await sleep(300);
   }
   return all;
 }
@@ -169,33 +191,30 @@ function bestFixture(homeRu, awayRu, fixtures) {
   return best;
 }
 
-/* ---------- запасной путь: прямой поиск по словарю ---------- */
+/* ---------- запасной путь: поиск команды по названию ---------- */
 
 const searchCache = new Map();
 
 async function searchTeam(ruName, dict) {
-  const key = translit(ruName);
-  if (searchCache.has(key)) return searchCache.get(key);
-  const dictName = dict[String(ruName || "").toLowerCase().replace(/ё/g, "е").replace(/\bфк\b/g, "").replace(/[()]/g, " ").replace(/\s+/g, " ").trim()];
-  const queries = dictName ? [dictName] : [key];
+  const lat = translit(ruName);
+  if (searchCache.has(lat)) return searchCache.get(lat);
+  const plain = String(ruName || "").toLowerCase().replace(/ё/g, "е")
+    .replace(/\bфк\b/g, "").replace(/[()]/g, " ").replace(/\s+/g, " ").trim();
+  const q = dict[plain] || lat;
   let found = null;
-  for (const q of queries) {
-    let data;
-    try { data = await getJson(SDB + "searchteams.php?t=" + encodeURIComponent(q)); }
-    catch { continue; }
-    const list = ((data && data.teams) || []).filter((t) => /soccer/i.test(t.strSport || ""));
+  try {
+    const j = await af(`teams?search=${encodeURIComponent(q)}`);
     let bestT = null, bestS = 0;
-    for (const t of list) {
-      const s = Math.max(sim(key, t.strTeam), sim(key, t.strAlternate || ""));
-      if (s > bestS) { bestS = s; bestT = t; }
+    for (const row of j.response || []) {
+      const t = row.team || {};
+      const s2 = Math.max(sim(lat, t.name || ""), sim(lat, t.code || ""));
+      if (s2 > bestS) { bestS = s2; bestT = t; }
     }
-    if (bestT && bestS >= (dictName ? 0.4 : 0.65)) {
-      found = { id: bestT.idTeam, name: bestT.strTeam, score: Number(bestS.toFixed(2)) };
-      break;
-    }
-    await sleep(250);
+    if (bestT && bestS >= 0.5) found = { id: bestT.id, name: bestT.name, score: Number(bestS.toFixed(2)) };
+  } catch (e) {
+    log(`    поиск «${q}»: ${e.message}`);
   }
-  searchCache.set(key, found);
+  searchCache.set(lat, found);
   return found;
 }
 
@@ -205,16 +224,17 @@ const lastCache = new Map();
 
 async function lastEvents(teamId) {
   if (lastCache.has(teamId)) return lastCache.get(teamId);
-  let data;
-  try { data = await getJson(SDB + "eventslast.php?id=" + encodeURIComponent(teamId)); }
-  catch (e) { log(`    матчи команды ${teamId} не получены: ${e.message}`); lastCache.set(teamId, []); return []; }
-  const evs = (data && (data.results || data.events)) || [];
+  let j;
+  try { j = await af(`fixtures?team=${teamId}&last=12`); }
+  catch (e) { log(`    матчи команды ${teamId}: ${e.message}`); lastCache.set(teamId, []); return []; }
   const edge = Date.now() - WINDOW_DAYS * 86400000;
-  const rows = evs
+  const rows = (j.response || [])
     .map((e) => ({
-      date: e.dateEvent ? Date.parse(e.dateEvent + "T00:00:00Z") : NaN,
-      homeId: e.idHomeTeam, awayId: e.idAwayTeam,
-      hs: Number(e.intHomeScore), as: Number(e.intAwayScore),
+      date: Date.parse((e.fixture && e.fixture.date) || ""),
+      homeId: e.teams && e.teams.home && e.teams.home.id,
+      awayId: e.teams && e.teams.away && e.teams.away.id,
+      hs: Number(e.goals && e.goals.home),
+      as: Number(e.goals && e.goals.away),
     }))
     .filter((e) => isFinite(e.date) && e.date >= edge && isFinite(e.hs) && isFinite(e.as))
     .sort((a, b) => b.date - a.date);
@@ -274,7 +294,7 @@ async function main() {
     drawingId: draw.id,
     endedAt: draw.ended_at || "",
     generatedAt: new Date().toISOString(),
-    source: "totobrief + thesportsdb",
+    source: "totobrief + api-football",
     rules: `чистая серия от ${STREAK_MIN} матчей, по площадке, окно ${WINDOW_DAYS} дней`,
     matches: [],
   };
@@ -333,6 +353,7 @@ async function main() {
   const withSuggest = out.matches.filter((m) => m.suggest).length;
 
   log("\n================ ИТОГ ================");
+  log(`Запросов к api-football: ${afCalls} (дневной лимит бесплатного тарифа — 100)`);
   log(`Сопоставлено: ${resolved} матчей из ${out.matches.length}`);
   log(`Чистые серии найдены в ${withHints}, направление даёт ${withSuggest}`);
   if (misses.length) {
