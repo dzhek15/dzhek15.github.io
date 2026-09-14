@@ -116,9 +116,27 @@ input:focus-visible,button:focus-visible,summary:focus-visible,textarea:focus-vi
 }
 .roll{display:flex; flex-direction:column; align-items:center; gap:12px; width:100%}
 .roll-primary{display:flex; gap:12px; align-items:stretch; flex-wrap:wrap; justify-content:center}
+.roll-crowd{display:flex; gap:12px; align-items:stretch; flex-wrap:wrap; justify-content:center}
 .roll-secondary{display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:center}
 .roll-secondary button{font-size:13.5px; padding:7px 12px}
 .roll-secondary button[aria-pressed="true"]{background:var(--ink); color:var(--surface); border-color:var(--ink)}
+.view-strip{display:flex; justify-content:center; margin-top:14px}
+.roll-view{display:flex; gap:7px; align-items:center; flex-wrap:wrap; justify-content:center;
+  padding:6px 10px 6px 6px; border:1px dashed var(--rule-strong); border-radius:6px;
+  background:var(--surface-2)}
+.view-lbl{font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); padding-left:5px}
+.roll-view button{font-size:12.5px; padding:5px 10px; background:var(--surface); color:var(--muted)}
+.roll-view button:hover:not(:disabled){background:var(--surface-3); color:var(--ink)}
+.roll-view button[aria-pressed="true"]{background:var(--ink); color:var(--surface); border-color:var(--ink)}
+.roll-view .zoomctl{background:var(--surface)}
+.roll-view .zoomctl button{padding:5px 9px; font-size:13px; background:transparent}
+.zoomctl{display:inline-flex; align-items:center; gap:0; overflow:hidden;
+  border:1px solid var(--rule-strong); border-radius:var(--r); background:var(--surface-2)}
+.zoomctl button{border:0; border-radius:0; background:transparent; padding:7px 12px;
+  font-family:"Chivo",sans-serif; font-weight:700; font-size:15px; line-height:1}
+.zoomctl button:hover:not(:disabled){background:var(--surface-3)}
+.zoomctl b{min-width:5ch; text-align:center; padding:0 2px; font-size:12.5px; font-weight:600;
+  color:var(--muted); font-variant-numeric:tabular-nums}
 button{font:inherit; cursor:pointer; border-radius:var(--r); border:1px solid var(--rule-strong); background:var(--surface-2); color:var(--ink); padding:8px 13px}
 button:hover:not(:disabled){background:var(--surface-3)}
 button:disabled{opacity:.45; cursor:not-allowed}
@@ -137,6 +155,9 @@ button:disabled{opacity:.45; cursor:not-allowed}
   padding:12px 18px; border-radius:6px; border-color:var(--ink); background:transparent;
 }
 .btn-spin:hover:not(:disabled){background:var(--surface-3)}
+.btn-crowd{border-color:var(--accent); color:var(--accent); padding-block:13px}
+.btn-crowd:hover:not(:disabled){background:var(--warn-bg)}
+.btn-crowd:disabled{border-color:var(--rule-strong); color:var(--muted)}
 .knob-sep{width:100%; height:1px; background:var(--rule); margin:14px 0 12px}
 .roll-note{margin:10px 2px 0; font-size:13px; color:var(--on-bg-muted)}
 .roll-note b{color:var(--on-bg); font-weight:600}
@@ -171,10 +192,12 @@ button:disabled{opacity:.45; cursor:not-allowed}
   .sum-now .delta{margin-left:0; width:100%}
   .roll-primary{width:100%; flex-direction:column; gap:9px}
   .roll-primary button{width:100%; justify-content:center}
+  .roll-crowd{width:100%; display:grid; grid-template-columns:1fr 1fr; gap:9px}
+  .roll-crowd button{width:100%; justify-content:center}
   .btn-roll{font-size:16px; padding:11px 18px}
   .btn-spin{font-size:13.5px; padding:10px 14px}
   .roll-secondary{display:grid; grid-template-columns:1fr 1fr; width:100%; gap:8px}
-  .roll-secondary button:last-child{grid-column:1 / -1}
+  .roll-view{width:100%; justify-content:center; gap:6px}
   .knobs{gap:11px 14px}
   .knob input, select{padding:5px 7px}
 
@@ -259,6 +282,8 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 [data-compact="1"] .knob label{font-size:9px}
 [data-compact="1"] .knob input, [data-compact="1"] select{padding:3px 6px; font-size:12.5px}
 [data-compact="1"] .roll-note{display:none}
+[data-compact="1"] .zoomctl button{padding:5px 9px; font-size:13px}
+[data-compact="1"] .zoomctl b{min-width:4ch; font-size:11px}
 [data-compact="1"] .sum-now{margin-top:8px; padding:7px 12px; border-radius:7px; border-bottom:1px solid var(--rule-strong)}
 [data-compact="1"] .sum-now .big{font-size:17px}
 [data-compact="1"] .sum-now .sig-now{display:none}
@@ -293,10 +318,18 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 
   [data-compact="1"] .console{margin-top:8px; padding:9px 8px}
   [data-compact="1"] .roll-primary{flex-direction:row; gap:6px}
+  [data-compact="1"] .roll-primary{flex-direction:row; gap:6px}
   [data-compact="1"] .roll-primary button{width:auto; flex:1 1 0; padding:7px 6px; font-size:12.5px}
+  [data-compact="1"] .roll-crowd{display:grid; grid-template-columns:1fr 1fr; gap:6px; width:100%}
+  [data-compact="1"] .roll-crowd button{width:100%; padding:7px 6px; font-size:12.5px}
+  [data-compact="1"] .lbl-long{display:none}
   [data-compact="1"] .roll-secondary{display:flex; gap:5px}
   [data-compact="1"] .roll-secondary button{flex:1 1 auto; font-size:11px; padding:5px 6px}
   [data-compact="1"] .roll-secondary button:last-child{grid-column:auto}
+  [data-compact="1"] .view-strip{margin-top:9px}
+  [data-compact="1"] .roll-view{width:100%; gap:4px; padding:4px 7px 4px 4px}
+  [data-compact="1"] .roll-view button{font-size:11px; padding:4px 7px}
+  [data-compact="1"] .view-lbl{font-size:8px; padding-left:3px}
   [data-compact="1"] .knobs, [data-compact="1"] .knob-sep{display:none}
 
   [data-compact="1"] .sum-now{margin-top:7px; padding:6px 9px; gap:4px 8px}
@@ -384,6 +417,23 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 .mode[aria-pressed="true"]{background:var(--ink); color:var(--surface); border-color:var(--ink)}
 .mode svg{display:block; opacity:.85}
 
+/* ---------- запись купона руками ---------- */
+.keep-bar{display:flex; flex-direction:column; align-items:center; justify-content:center;
+  text-align:center; gap:8px; margin-top:14px;
+  padding:13px 16px; border:1px solid var(--rule-strong); border-radius:6px;
+  background:var(--surface); box-shadow:var(--shadow)}
+.btn-keep{font-family:"Chivo",sans-serif; font-weight:700; font-size:14.5px;
+  padding:9px 17px; border-radius:6px; border-color:var(--ink); background:var(--surface-2)}
+.btn-keep:hover:not(:disabled){background:var(--surface-3)}
+.keep-note{font-size:12.5px; color:var(--muted)}
+@media (max-width:560px){
+  .keep-bar{align-items:stretch; padding:11px 12px}
+  .btn-keep{width:100%; justify-content:center}
+}
+[data-compact="1"] .keep-bar{margin-top:8px; padding:8px 11px; gap:6px 10px}
+[data-compact="1"] .btn-keep{font-size:13px; padding:6px 13px}
+[data-compact="1"] .keep-note{font-size:11px}
+
 /* ---------- bottom ---------- */
 .grid2{display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:22px}
 .panel{background:var(--surface); border:1px solid var(--rule); border-radius:6px; padding:16px 18px}
@@ -429,50 +479,26 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         <label for="tirazhName">Тираж №</label>
         <input type="text" id="tirazhName" value="5006">
       </div>
-      <div class="tk"><span class="k">Матчей</span><span class="v mono" id="tkCount">—</span></div>
       <div class="tk"><span class="k">Приём до (МСК)</span><span class="v mono" id="koTime">—</span></div>
       <div class="tk"><span class="k">Осталось</span><span class="v mono" id="koLeft">—</span></div>
       <div class="tk" id="tkJackWrap" hidden><span class="k">Суперприз</span><span class="v mono" id="tkJack">—</span></div>
     </div>
   </header>
 
-  <div class="console">
-    <div class="roll">
-      <div class="roll-primary">
-      <button class="btn-roll" id="btnRoll" type="button">
-        <svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="1.5" y="1.5" width="17" height="17" rx="3" stroke="currentColor" stroke-width="1.7"/><circle cx="6.2" cy="6.2" r="1.5" fill="currentColor"/><circle cx="13.8" cy="13.8" r="1.5" fill="currentColor"/><circle cx="10" cy="10" r="1.5" fill="currentColor"/></svg>
-        Бросить
-      </button>
-      <button class="btn-spin" id="btnSpin" type="button">Случайный выбор ×<span id="spinLbl">1</span></button>
-      </div>
-      <div class="roll-secondary">
-        <button id="btnUndo" type="button" disabled>Вернуть</button>
-        <button id="btnFetch" type="button" title="Забрать актуальный тираж Балтсистемы с totobrief">Обновить тираж</button>
+  <div class="view-strip">
+      <div class="roll-view" role="group" aria-label="Вид страницы">
+        <span class="view-lbl">Вид</span>
         <button id="btnPct" type="button" aria-pressed="false" hidden>Показать проценты</button>
         <button id="btnCompact" type="button" aria-pressed="false" title="Ужать всё так, чтобы 15 матчей влезли на один экран">Компактно</button>
+        <button id="btnFit" type="button" title="Подобрать масштаб так, чтобы весь купон влез в экран целиком">Влезть в экран</button>
+        <span class="zoomctl" role="group" aria-label="Масштаб страницы">
+          <button id="btnZoomOut" type="button" aria-label="Мельче" title="Мельче на 5%">−</button>
+          <b id="zoomVal">100%</b>
+          <button id="btnZoomIn" type="button" aria-label="Крупнее" title="Крупнее на 5%">+</button>
+        </span>
       </div>
-    </div>
-    <div class="knob-sep"></div>
-    <div class="knobs">
-      <div class="knob">
-        <label for="priceLine">Цена строки, ₽</label>
-        <input type="number" id="priceLine" value="30" min="1" step="1">
-      </div>
-      <div class="knob">
-        <label for="spinCount">Кликов за раз</label>
-        <input type="number" id="spinCount" value="1" min="1" max="100000" step="1">
-      </div>
-      <div class="knob">
-        <label for="spinSpeed">Скорость прокрутки</label>
-        <select id="spinSpeed">
-          <option value="900">Медленно</option>
-          <option value="380">Средне</option>
-          <option value="70">Быстро</option>
-        </select>
-      </div>
-    </div>
   </div>
-  <p class="roll-note" id="rollNote"></p>
+
   <div class="sum-now" id="sumNow">
     <span class="big" id="sumBig">—</span>
     <span class="sub" id="sumSub">накликано сейчас</span>
@@ -505,6 +531,46 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   </div>
   <p class="hint" id="hint" hidden></p>
 
+  <div class="console">
+    <div class="roll">
+      <div class="roll-primary">
+      <button class="btn-roll" id="btnRoll" type="button">
+        <svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="1.5" y="1.5" width="17" height="17" rx="3" stroke="currentColor" stroke-width="1.7"/><circle cx="6.2" cy="6.2" r="1.5" fill="currentColor"/><circle cx="13.8" cy="13.8" r="1.5" fill="currentColor"/><circle cx="10" cy="10" r="1.5" fill="currentColor"/></svg>
+        Бросить
+      </button>
+      <button class="btn-spin" id="btnSpin" type="button">Случайный выбор ×<span id="spinLbl">1</span></button>
+      </div>
+      <div class="roll-crowd">
+        <button class="btn-spin btn-crowd" id="btnMost" type="button"><span class="lbl-long">Проставить </span>большинство</button>
+        <button class="btn-spin btn-crowd" id="btnLeast" type="button"><span class="lbl-long">Проставить </span>меньшинство</button>
+      </div>
+      <div class="roll-secondary">
+        <button id="btnUndo" type="button" disabled>Вернуть</button>
+        <button id="btnFetch" type="button" title="Забрать актуальный тираж Балтсистемы с totobrief">Обновить тираж</button>
+      </div>
+    </div>
+    <div class="knob-sep"></div>
+    <div class="knobs">
+      <div class="knob">
+        <label for="priceLine">Цена строки, ₽</label>
+        <input type="number" id="priceLine" value="30" min="1" step="1">
+      </div>
+      <div class="knob">
+        <label for="spinCount">Кликов за раз</label>
+        <input type="number" id="spinCount" value="1" min="1" max="100000" step="1">
+      </div>
+      <div class="knob">
+        <label for="spinSpeed">Скорость прокрутки</label>
+        <select id="spinSpeed">
+          <option value="900">Медленно</option>
+          <option value="380">Средне</option>
+          <option value="70">Быстро</option>
+        </select>
+      </div>
+    </div>
+  </div>
+  <p class="roll-note" id="rollNote"></p>
+
   <div class="coupon" id="coupon">
     <div class="chead">
       <div>№</div><div>Событие</div>
@@ -518,6 +584,11 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     Под исходом: <span class="sw">жирным</span> — доля игроков, <span class="sw m">бледным</span> — оценка конторы, в процентах.
     <span class="sw h">Красным ▲</span> — исход перекуплен толпой, <span class="sw c">зелёным ▼</span> — недобран.
   </p>
+
+  <div class="keep-bar">
+    <button class="btn-keep" id="btnKeep" type="button">Записать купон в сыгранные</button>
+    <span class="keep-note" id="keepNote"></span>
+  </div>
 
   <div class="grid2">
     <section class="panel">
@@ -574,6 +645,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   var OUT = ["1","X","2"];
   var KEY = "baltsystem-kupon-v1";
   var MAX_CSV = 60000;
+  var ZMIN = 0.3, ZMAX = 1.5, ZSTEP = 0.05;
 
   var SEED = [
     ["14.09","21:15","Азия. Лига Чемпионов","Эстеглаль ФК","Аль Садд",[],"rand"],
@@ -629,6 +701,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       jackpot: 0,
       showPct: false,
       compact: false,
+      zoom: 1,
       spent: 0,
       spins: 1,
       speed: 900,
@@ -654,6 +727,9 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   state.rollMode = "single";
   state.showPct = !!state.showPct;
   state.compact = !!state.compact;
+  state.zoom = Number(state.zoom);
+  if(!isFinite(state.zoom) || state.zoom <= 0) state.zoom = 1;
+  state.zoom = Math.round(Math.max(ZMIN, Math.min(ZMAX, state.zoom)) * 100) / 100;
   state.target = 0;
   state.price = Number(state.price); if(!isFinite(state.price) || state.price <= 0) state.price = 30;
   state.rolls = Number(state.rolls); if(!isFinite(state.rolls) || state.rolls < 0) state.rolls = 0;
@@ -735,7 +811,8 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   }
 
   function renderKickoff(){
-    $("tkCount").textContent = state.matches.length;
+    var tc = $("tkCount"); /* плитку «Матчей» убрали — оставляем проверку на случай возврата */
+    if(tc) tc.textContent = state.matches.length;
     var jw = $("tkJackWrap");
     if(state.jackpot){
       jw.hidden = false;
@@ -791,6 +868,71 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       } : null
     });
     if(state.history.length>14) state.history.length=14;
+  }
+
+  /* ---------- масштаб ---------- */
+  /* CSS zoom на body: значение живёт в состоянии и переживает перезагрузку */
+  function applyZoom(){
+    var z = Number(state.zoom) || 1;
+    document.body.style.zoom = (z === 1 ? "" : String(z));
+    var lbl = $("zoomVal");
+    if(lbl) lbl.textContent = Math.round(z * 100) + "%";
+    var zi = $("btnZoomIn"), zo = $("btnZoomOut");
+    if(zi) zi.disabled = z >= ZMAX - 0.001;
+    if(zo) zo.disabled = z <= ZMIN + 0.001;
+  }
+
+  function setZoom(z){
+    z = Math.round(Math.max(ZMIN, Math.min(ZMAX, z)) * 100) / 100;
+    state.zoom = z;
+    applyZoom();
+    save();
+    return z;
+  }
+
+  /* нижняя граница купона на экране при заданном масштабе */
+  function measureBottom(z){
+    var coup = $("coupon");
+    if(!coup) return 0;
+    window.scrollTo(0, 0);
+    document.body.style.zoom = (z === 1 ? "" : String(z));
+    void document.body.offsetHeight; /* заставляем пересчитать вёрстку */
+    return coup.getBoundingClientRect().bottom + 8;
+  }
+
+  /* Масштаб меняет ширину вёрстки, а с ней и высоту — поэтому не одна формула,
+     а несколько проходов с пересчётом, пока купон не уложится в экран. */
+  function fitZoom(){
+    var have = window.innerHeight;
+    var z = 1, good = null;
+    if(!(have > 0)) return z;
+    for(var pass = 0; pass < 8; pass++){
+      var bottom = measureBottom(z);
+      if(!(bottom > 0)) break;
+      if(bottom <= have){ good = z; break; }   /* влезло — этот масштаб и берём */
+      var guess = Math.floor((z * have / bottom) * 100) / 100;
+      if(!isFinite(guess) || guess <= 0) guess = z - 0.05;
+      if(guess > z - 0.02) guess = z - 0.02;   /* каждый проход обязан уменьшать масштаб */
+      z = Math.max(ZMIN, Math.round(guess * 100) / 100);
+      if(z <= ZMIN){ good = ZMIN; break; }
+    }
+    return good === null ? z : good;
+  }
+
+  /* подобрать масштаб так, чтобы купон целиком влез в высоту окна */
+  function fitToScreen(){
+    if(!$("coupon")) return null;
+    var z = fitZoom();
+    var turnedCompact = false;
+    /* мельче 60% читать уже нельзя — сначала включаем компактный вид, потом меряем заново */
+    if(z < 0.6 && !state.compact){
+      state.compact = true;
+      turnedCompact = true;
+      render();
+      z = fitZoom();
+    }
+    setZoom(z);
+    return {zoom: z, compact: turnedCompact};
   }
 
   /* ---------- render ---------- */
@@ -984,6 +1126,11 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       }
     }
     $("btnUndo").disabled = state.history.length === 0 || spinning;
+    $("btnKeep").disabled = t.empty > 0 || spinning;
+    $("keepNote").textContent = t.empty > 0
+      ? "Сначала выбери исход в каждом из " + t.empty + " пустых матч(ей)."
+      : "Купон, собранный руками, попадёт в список сыгранных и в CSV: " +
+        fmt(t.combos) + " строк, " + fmt(t.combos * (Number(state.price)||0)) + " ₽.";
 
     var box = $("sumNow"); box.classList.remove("over","exact");
     var price = Number(state.price) || 0;
@@ -1034,8 +1181,17 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     var cb2 = $("btnCompact");
     cb2.setAttribute("aria-pressed", state.compact ? "true" : "false");
     cb2.textContent = state.compact ? "Обычный вид" : "Компактно";
+    applyZoom();
 
     var havePct = state.matches.some(function(m){ return m.pct; });
+    $("btnMost").disabled = !havePct || spinning;
+    $("btnLeast").disabled = !havePct || spinning;
+    $("btnMost").title = havePct
+      ? "В каждом матче поставить исход, который выбрало больше всего игроков"
+      : "Нет процентов — сначала «Обновить тираж»";
+    $("btnLeast").title = havePct
+      ? "В каждом матче поставить исход, который выбрало меньше всего игроков"
+      : "Нет процентов — сначала «Обновить тираж»";
     var pb = $("btnPct");
     pb.hidden = !havePct;
     pb.setAttribute("aria-pressed", state.showPct ? "true" : "false");
@@ -1237,6 +1393,20 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     pushHistory("до броска");
     shuffleOnce();
     commitVariant("Брошено", "бросок №" + (state.rolls + 1));
+  });
+
+  /* купон собран руками — записать его в сыгранные, ничего не разыгрывая */
+  $("btnKeep").addEventListener("click", function(){
+    if(spinning) return;
+    var t0 = tally();
+    if(t0.empty > 0){
+      say("В " + t0.empty + " матч(ах) не выбран исход — записывать нечего. Отметь исходы во всех строках.");
+      return;
+    }
+    var sig = signature(state.matches);
+    var dup = state.played.some(function(v){ return v.sig === sig; });
+    commitVariant("Записано вручную", "вручную №" + (state.rolls + 1));
+    if(dup) say("Такой же вариант в списке уже был — записал ещё раз. Лишний убирается корзиной в «Сыгранных вариантах».");
   });
 
   function say(msg){
@@ -1444,6 +1614,45 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     say("Список сыгранных вариантов очищен: убрано " + n + " шт. Купон и счётчики не тронуты.");
   });
 
+  /* Расстановка по долям игроков (строка «П»): most=true — самый популярный исход
+     в каждом матче, most=false — самый непопулярный. Зафиксированные строки не трогаем. */
+  function pickByCrowd(most){
+    if(spinning) return;
+    if(!state.matches.some(function(m){ return m.pct && m.pct.pool; })){
+      say("В строках нет процентов — сначала нажми «Обновить тираж», чтобы подтянуть доли игроков с totobrief.");
+      return;
+    }
+    pushHistory(most ? "до расстановки большинства" : "до расстановки меньшинства");
+    var set = 0, locked = 0, noData = 0, ties = 0;
+    state.matches.forEach(function(m){
+      if(!(m.pct && m.pct.pool)){ noData++; return; }
+      if(m.mode === "lock"){ locked++; return; }
+      var vals = [];
+      for(var i=0;i<3;i++){
+        var v = Number(m.pct.pool[i]);
+        vals.push(isFinite(v) ? v : (most ? -1 : Infinity));
+      }
+      var target = most ? Math.max(vals[0], vals[1], vals[2]) : Math.min(vals[0], vals[1], vals[2]);
+      if(!isFinite(target)){ noData++; return; }
+      if(vals.filter(function(x){ return x === target; }).length > 1) ties++;
+      m.picks = {"1":false,"X":false,"2":false};
+      m.picks[OUT[vals.indexOf(target)]] = true;
+      m.mode = "free"; /* иначе бросок тут же перебьёт расстановку */
+      set++;
+    });
+    save(); render();
+    var t0 = tally();
+    say((most ? "Большинство" : "Меньшинство") + " по долям игроков проставлено в " + set + " матч(ах)" +
+        (locked ? ", зафиксированных не трогал: " + locked : "") +
+        (noData ? ", без процентов пропущено: " + noData : "") +
+        (ties ? ", в " + ties + " матч(ах) доли совпали — взят первый по порядку 1/X/2" : "") +
+        ". Получилось " + fmt(t0.combos) + " комбинац(ий) на " + fmt(t0.combos * (Number(state.price)||0)) + " ₽. " +
+        "Эти строки переведены в обычный режим, чтобы бросок их не перебил — вернуть в жеребьёвку можно кнопкой «Все в рандом».");
+  }
+
+  $("btnMost").addEventListener("click", function(){ pickByCrowd(true); });
+  $("btnLeast").addEventListener("click", function(){ pickByCrowd(false); });
+
   $("btnMarkAll").addEventListener("click", function(){
     state.matches.forEach(function(m){ if(m.mode!=="lock") m.mode="rand"; });
     save(); render();
@@ -1579,6 +1788,28 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   $("btnCompact").addEventListener("click", function(){
     state.compact = !state.compact;
     save(); render();
+  });
+
+  $("btnZoomIn").addEventListener("click", function(){ setZoom((Number(state.zoom) || 1) + ZSTEP); });
+  $("btnZoomOut").addEventListener("click", function(){ setZoom((Number(state.zoom) || 1) - ZSTEP); });
+
+  $("btnFit").addEventListener("click", function(){
+    if(!$("coupon")) return;
+    /* подсказка встаёт над купоном и сдвигает его вниз — показываем её до замеров */
+    say("Подбираю масштаб, чтобы купон влез в экран целиком…");
+    var r = fitToScreen();
+    if(!r){ say("Не получилось измерить страницу — подкрути масштаб кнопками − и +."); return; }
+    say(r.zoom >= 1
+      ? "Купон и так помещается в экран — масштаб оставлен 100%."
+      : "Масштаб подобран: " + Math.round(r.zoom * 100) + "% — купон влезает в экран целиком." +
+        (r.compact ? " Заодно включил «Компактно»: без него пришлось бы ужимать до нечитаемого." : ""));
+    /* итоговый текст подсказки длиннее заглушки — добираем масштаб, если купон снова вылез */
+    var z2 = fitZoom();
+    if(z2 < r.zoom){
+      setZoom(z2);
+      var hh = $("hint");
+      if(hh && !hh.hidden) hh.textContent = hh.textContent.replace(/\d+%/, Math.round(z2 * 100) + "%");
+    }
   });
 
   /* ---------- parsing ---------- */
