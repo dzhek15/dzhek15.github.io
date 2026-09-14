@@ -396,6 +396,46 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
   font-size:13px; line-height:1; font-variant-numeric:tabular-nums; color:var(--muted)}
 .kf-col.fav{color:var(--cold); font-weight:600}
 .kf-col.dog{color:var(--hot); font-weight:600}
+.btn-ev{padding:10px 16px; font-size:14px; background:var(--surface); color:var(--ink);
+  border:1px dashed var(--rule-strong); border-radius:var(--r); cursor:pointer}
+.btn-ev:hover{background:var(--surface-3)}
+.ev-back{position:fixed; inset:0; background:rgba(19,26,27,.45); z-index:60;
+  display:flex; align-items:center; justify-content:center; padding:16px}
+.ev-box{background:var(--surface); border:1px solid var(--rule); border-radius:var(--r);
+  box-shadow:var(--shadow); width:100%; max-width:660px; max-height:88vh; display:flex; flex-direction:column}
+.ev-head{display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:12px 16px; border-bottom:1px solid var(--rule)}
+.ev-head h2{margin:0; font-size:16px}
+.ev-head button{font-size:20px; line-height:1; padding:2px 9px; background:transparent;
+  border:1px solid var(--rule); border-radius:var(--r); cursor:pointer; color:var(--muted)}
+.ev-body{padding:14px 16px 18px; overflow:auto}
+.ev-body h3{margin:18px 0 7px; font-size:14px}
+.ev-top{display:flex; flex-direction:column; gap:3px; padding:11px 13px; border-radius:var(--r);
+  border:1px solid var(--rule)}
+.ev-top b{font-size:22px; font-family:"IBM Plex Mono",monospace}
+.ev-top span{font-size:12.5px; color:var(--muted)}
+.ev-top.ev-good{background:#E7F1EC; border-color:var(--cold)}
+.ev-top.ev-good b{color:var(--cold)}
+.ev-top.ev-bad{background:var(--hot-soft); border-color:var(--hot)}
+.ev-top.ev-bad b{color:var(--hot)}
+.ev-sub{margin:10px 0 4px; font-size:12.5px; color:var(--muted)}
+.ev-tab{width:100%; border-collapse:collapse; margin-top:8px; font-size:12.5px}
+.ev-tab th, .ev-tab td{padding:5px 7px; border-bottom:1px solid var(--rule); text-align:right}
+.ev-tab th:first-child, .ev-tab td:first-child{text-align:left}
+.ev-tab th{font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); font-weight:600}
+.ev-tab td{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums}
+.ev-cmp td:first-child{font-family:inherit}
+.ev-note, .ev-warn{margin:8px 0 0; font-size:12px; color:var(--muted)}
+.ev-alarm{margin:10px 0 0; padding:9px 11px; font-size:12.5px; line-height:1.45;
+  background:var(--warn-bg); border:1px solid var(--warn); border-radius:var(--r); color:var(--warn)}
+.ev-inline{font-family:"IBM Plex Mono",monospace}
+.ev-ass{margin:6px 0 0 18px; padding:0; font-size:12.5px; color:var(--muted)}
+.ev-ass li{margin-bottom:6px}
+@media (max-width:520px){
+  .ev-box{max-height:92vh}
+  .ev-tab{font-size:11.5px}
+  .ev-tab th, .ev-tab td{padding:4px 4px}
+}
 .pct-legend{margin:9px 2px 0; font-size:12px; color:var(--muted); display:flex; flex-wrap:wrap; gap:4px 14px; align-items:baseline}
 .pct-legend .sw{font-family:"IBM Plex Mono",monospace; font-weight:600; color:var(--ink)}
 .pct-legend .sw.m{font-weight:400; color:var(--muted)}
@@ -642,7 +682,18 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <div class="keep-bar">
     <button class="btn-keep" id="btnKeep" type="button">Записать купон в сыгранные</button>
+    <button class="btn-ev" id="btnEV" type="button" title="Посчитать матожидание купона: вероятности из коэффициентов, соперники — из долей пула">Оценить купон</button>
     <span class="keep-note" id="keepNote"></span>
+  </div>
+
+  <div class="ev-back" id="evBack" hidden>
+    <div class="ev-box" role="dialog" aria-modal="true" aria-labelledby="evTitle">
+      <div class="ev-head">
+        <h2 id="evTitle">Оценка купона</h2>
+        <button id="evClose" type="button" aria-label="Закрыть окно">×</button>
+      </div>
+      <div class="ev-body" id="evBody"></div>
+    </div>
   </div>
 
   <div class="grid2">
@@ -743,6 +794,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       rolls: 0,
       deadline: "",
       jackpot: 0,
+      poolSum: 0,
       showPct: false,
       showKf: false,
       compact: false,
@@ -984,6 +1036,286 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     }
     setZoom(z);
     return {zoom: z, compact: turnedCompact};
+  }
+
+  /* ---------- матожидание купона ---------- */
+  /* Доли призового фонда по категориям (в процентах от оборота; в сумме 90,
+     оставшиеся 10 идут в суперприз — это ровно та 1/9 от pool_sum, на которую
+     суперприз и растёт из тиража в тираж, если его никто не берёт). */
+  var EV_SHARE = { g9:40, g10:20, g11:10, e12:5, e13:5, e14:5, e15:5 };
+  var EV_JACK14 = 0.10, EV_JACK15 = 0.90;
+  var EV_MINPOOL = 0.5;   /* доля пула на исход не бывает нулевой: подстраховка от деления на ноль */
+
+  /* Вероятности 1/X/2 по версии конторы: берём из коэффициентов и убираем маржу.
+     Запасной путь — целые проценты «Б», они те же, но округлённые. */
+  function evProbs(m){
+    var raw = null, k;
+    if(m.kf){
+      raw = [];
+      for(k=0;k<3;k++){
+        var v = Number(m.kf[k]);
+        if(!(isFinite(v) && v > 1)){ raw = null; break; }
+        raw.push(1/v);
+      }
+    }
+    if(!raw && m.pct && m.pct.bk){
+      raw = [];
+      for(k=0;k<3;k++){
+        var b = Number(m.pct.bk[k]);
+        if(!(isFinite(b) && b > 0)){ raw = null; break; }
+        raw.push(b);
+      }
+    }
+    if(!raw) return null;
+    var s = raw[0] + raw[1] + raw[2];
+    if(!(s > 0)) return null;
+    return [raw[0]/s, raw[1]/s, raw[2]/s];
+  }
+
+  /* Доли пула игроков на каждый исход — по ним оцениваем, сколько будет соперников */
+  function evPool(m){
+    if(!(m.pct && m.pct.pool)) return null;
+    var raw = [];
+    for(var k=0;k<3;k++){
+      var v = Number(m.pct.pool[k]);
+      if(!isFinite(v)) return null;
+      raw.push(Math.max(v, EV_MINPOOL));
+    }
+    var s = raw[0] + raw[1] + raw[2];
+    return [raw[0]/s, raw[1]/s, raw[2]/s];
+  }
+
+  /* Пуассон-Биномиальное распределение: свёртка, dist[k] = P(ровно k угадано) */
+  function poissonBinomial(ps){
+    var dist = [1], i, j;
+    for(i=0;i<ps.length;i++){
+      var p = ps[i], next = [];
+      for(j=0;j<=dist.length;j++) next[j] = 0;
+      for(j=0;j<dist.length;j++){
+        next[j]   += dist[j] * (1 - p);
+        next[j+1] += dist[j] * p;
+      }
+      dist = next;
+    }
+    return dist;
+  }
+
+  function evTail(dist, from){
+    var s = 0;
+    for(var k=from;k<dist.length;k++) s += dist[k];
+    return s;
+  }
+
+  /* Сколько стоит строка, угадавшая ровно k матчей.
+     Категории 9+/10+/11+ кумулятивны: угадавший 12 получает и за 9, и за 10, и за 11. */
+  function evPayouts(pDist, lines, fund, jack){
+    var A = fund / 90;
+    var alloc = {
+      g9: A * EV_SHARE.g9, g10: A * EV_SHARE.g10, g11: A * EV_SHARE.g11,
+      e12: A * EV_SHARE.e12, e13: A * EV_SHARE.e13,
+      e14: A * EV_SHARE.e14 + jack * EV_JACK14,
+      e15: A * EV_SHARE.e15 + jack * EV_JACK15
+    };
+    /* «+1» — это своя строка: она тоже делит приз */
+    var n = {
+      g9:  lines * evTail(pDist, 9)  + 1,
+      g10: lines * evTail(pDist, 10) + 1,
+      g11: lines * evTail(pDist, 11) + 1,
+      e12: lines * (pDist[12] || 0) + 1,
+      e13: lines * (pDist[13] || 0) + 1,
+      e14: lines * (pDist[14] || 0) + 1,
+      e15: lines * (pDist[15] || 0) + 1
+    };
+    var pay = [];
+    for(var k=0;k<=15;k++){
+      var v = 0;
+      if(k >= 9)  v += alloc.g9  / n.g9;
+      if(k >= 10) v += alloc.g10 / n.g10;
+      if(k >= 11) v += alloc.g11 / n.g11;
+      if(k === 12) v += alloc.e12 / n.e12;
+      if(k === 13) v += alloc.e13 / n.e13;
+      if(k === 14) v += alloc.e14 / n.e14;
+      if(k === 15) v += alloc.e15 / n.e15;
+      pay[k] = v;
+    }
+    return { pay: pay, n: n, alloc: alloc };
+  }
+
+  /* Матожидание одной строки: line — массив из 15 индексов выбранного исхода */
+  function evOfLine(line, probs, pools, lines, fund, jack){
+    var qs = [], ps = [], i;
+    for(i=0;i<line.length;i++){ qs.push(probs[i][line[i]]); ps.push(pools[i][line[i]]); }
+    var qDist = poissonBinomial(qs);
+    var tbl = evPayouts(poissonBinomial(ps), lines, fund, jack);
+    var ev = 0, rows = [];
+    for(var k=9;k<=15;k++){
+      var part = (qDist[k] || 0) * tbl.pay[k];
+      ev += part;
+      rows.push({ k:k, p:(qDist[k] || 0), pay:tbl.pay[k], part:part });
+    }
+    return { ev: ev, rows: rows, qDist: qDist, tbl: tbl };
+  }
+
+  /* Разбор текущего купона: собираем выбранные исходы по каждому матчу */
+  function evCoupon(){
+    var probs = [], pools = [], sets = [], combos = 1, bad = null;
+    state.matches.forEach(function(m, idx){
+      var pr = evProbs(m), pl = evPool(m);
+      if(!pr || !pl){ bad = bad || ("нет данных по матчу «" + m.home + " — " + m.away + "»"); return; }
+      var sel = [];
+      for(var i=0;i<3;i++) if(m.picks[OUT[i]]) sel.push(i);
+      if(!sel.length){ bad = bad || ("в матче «" + m.home + " — " + m.away + "» не выбран исход"); return; }
+      probs.push(pr); pools.push(pl); sets.push(sel); combos *= sel.length;
+    });
+    if(bad) return { error: bad };
+    if(probs.length !== 15) return { error: "в тираже не 15 матчей с данными" };
+    return { probs: probs, pools: pools, sets: sets, combos: combos };
+  }
+
+  function evBest(probs, sets, pools, byPool){
+    var line = [];
+    for(var i=0;i<probs.length;i++){
+      var pick = sets ? sets[i][0] : 0, best = -1;
+      var src = byPool ? pools[i] : probs[i];
+      var pool = sets ? sets[i] : [0,1,2];
+      for(var j=0;j<pool.length;j++){
+        if(src[pool[j]] > best){ best = src[pool[j]]; pick = pool[j]; }
+      }
+      line.push(pick);
+    }
+    return line;
+  }
+
+  function evRandomLine(n){
+    var line = [];
+    for(var i=0;i<n;i++) line.push(Math.floor(Math.random()*3));
+    return line;
+  }
+
+  /* Средний EV по всем строкам купона; при большом числе строк — по выборке */
+  function evAverage(sets, probs, pools, lines, fund, jack, cap){
+    var combos = 1, i;
+    for(i=0;i<sets.length;i++) combos *= sets[i].length;
+    var total = 0, anyTot = 0, used = 0, exact = combos <= cap;
+    if(exact){
+      var idx = sets.map(function(){ return 0; });
+      while(true){
+        var line = [];
+        for(i=0;i<sets.length;i++) line.push(sets[i][idx[i]]);
+        var one0 = evOfLine(line, probs, pools, lines, fund, jack);
+        total += one0.ev; anyTot += evTail(one0.qDist, 9);
+        used++;
+        var pos = sets.length - 1;
+        while(pos >= 0 && idx[pos] === sets[pos].length - 1){ idx[pos] = 0; pos--; }
+        if(pos < 0) break;
+        idx[pos]++;
+      }
+    } else {
+      for(var s=0;s<cap;s++){
+        var ln = [];
+        for(i=0;i<sets.length;i++) ln.push(sets[i][Math.floor(Math.random()*sets[i].length)]);
+        var one1 = evOfLine(ln, probs, pools, lines, fund, jack);
+        total += one1.ev; anyTot += evTail(one1.qDist, 9);
+        used++;
+      }
+    }
+    return { avg: total / used, any: anyTot / used, exact: exact, used: used, combos: combos };
+  }
+
+  function evMoney(x){
+    if(!isFinite(x)) return "—";
+    return (Math.abs(x) >= 100 ? Math.round(x).toLocaleString("ru-RU") : x.toFixed(2)) + " ₽";
+  }
+  function evPct(x){
+    if(x >= 0.01) return (x*100).toFixed(1) + "%";
+    if(x >= 0.0001) return (x*100).toFixed(3) + "%";
+    return (x*100).toExponential(1) + "%";
+  }
+
+  function showEV(){
+    var c = evCoupon();
+    var box = $("evBody");
+    if(c.error){
+      box.innerHTML = '<p class="ev-warn">Посчитать не получилось: ' + c.error +
+        '. Нужен загруженный тираж с процентами и коэффициентами и выбранный исход в каждом матче.</p>';
+      $("evBack").hidden = false;
+      return;
+    }
+    var price = Number(state.price) || 30;
+    var fund  = Number(state.poolSum) || 0;
+    var jack  = Number(state.jackpot) || 0;
+    if(!fund){
+      box.innerHTML = '<p class="ev-warn">Не знаю размер призового фонда — нажми «Обновить тираж», он приезжает вместе с матчами.</p>';
+      $("evBack").hidden = false;
+      return;
+    }
+    /* фонд по категориям — это 90% оборота, значит строк продано оборот/цена */
+    var lines = (fund / 0.9) / price;
+
+    var mine = evAverage(c.sets, c.probs, c.pools, lines, fund, jack, 600);
+    var one  = evOfLine(evBest(c.probs, c.sets, c.pools, false), c.probs, c.pools, lines, fund, jack);
+    var favLine  = evBest(c.probs, null, c.pools, false);
+    var mostLine = evBest(c.probs, null, c.pools, true);
+    var fav  = evOfLine(favLine,  c.probs, c.pools, lines, fund, jack);
+    var most = evOfLine(mostLine, c.probs, c.pools, lines, fund, jack);
+    var rndSum = 0, rndAny = 0;
+    for(var r=0;r<300;r++){
+      var rr = evOfLine(evRandomLine(15), c.probs, c.pools, lines, fund, jack);
+      rndSum += rr.ev; rndAny += evTail(rr.qDist, 9);
+    }
+    var rnd = rndSum / 300, rndA = rndAny / 300;
+
+    var verdictCls = mine.avg >= price ? "ev-good" : "ev-bad";
+    var verdict = mine.avg >= price
+      ? "выше цены строки — по этой модели купон в плюсе"
+      : "ниже цены строки — по этой модели купон в минусе";
+
+    var h = "";
+    h += '<div class="ev-top ' + verdictCls + '">' +
+         '<b>' + evMoney(mine.avg) + '</b><span>матожидание одной строки при цене ' + fmt(price) + ' ₽ — ' + verdict + '</span>' +
+         '<span>шанс вернуть хоть что-то (9 угаданных и больше): <b class="ev-inline">' + evPct(mine.any) + '</b></span></div>';
+
+    h += '<p class="ev-sub">Тираж №' + state.tirazh + ': призовой фонд ' + evMoney(fund) +
+         ', суперприз ' + evMoney(jack) + ', продано примерно ' + fmt(Math.round(lines)) + ' строк. ' +
+         'В купоне ' + fmt(mine.combos) + ' строк(и), посчитано ' +
+         (mine.exact ? "все" : "по случайной выборке из " + fmt(mine.used)) + '.</p>';
+
+    h += '<table class="ev-tab"><thead><tr><th>Угадано</th><th>Вероятность</th>' +
+         '<th>Ждём победителей</th><th>Выплата на строку</th><th>Вклад в EV</th></tr></thead><tbody>';
+    var nMap = {9:one.tbl.n.g9, 10:one.tbl.n.g10, 11:one.tbl.n.g11, 12:one.tbl.n.e12,
+                13:one.tbl.n.e13, 14:one.tbl.n.e14, 15:one.tbl.n.e15};
+    one.rows.forEach(function(row){
+      h += '<tr><td>' + row.k + '</td><td>' + evPct(row.p) + '</td><td>' +
+           fmt(Math.round(nMap[row.k])) + '</td><td>' + evMoney(row.pay) + '</td><td>' +
+           evMoney(row.part) + '</td></tr>';
+    });
+    h += '</tbody></table>';
+    h += '<p class="ev-note">Вероятности в таблице — для самой вероятной строки твоего купона; ' +
+         'числа победителей относятся ко всему тиражу.</p>';
+
+    h += '<h3>С чем сравнить</h3>';
+    h += '<table class="ev-tab ev-cmp"><thead><tr><th>Строка</th><th>EV</th><th>Шанс 9+</th></tr></thead><tbody>' +
+         '<tr><td>Твой купон, в среднем</td><td><b>' + evMoney(mine.avg) + '</b></td><td>' + evPct(mine.any) + '</td></tr>' +
+         '<tr><td>Все фавориты конторы</td><td>' + evMoney(fav.ev) + '</td><td>' + evPct(evTail(fav.qDist, 9)) + '</td></tr>' +
+         '<tr><td>Везде выбор большинства</td><td>' + evMoney(most.ev) + '</td><td>' + evPct(evTail(most.qDist, 9)) + '</td></tr>' +
+         '<tr><td>Случайная строка</td><td>' + evMoney(rnd) + '</td><td>' + evPct(rndA) + '</td></tr>' +
+         '<tr><td>Цена строки</td><td>' + evMoney(price) + '</td><td>—</td></tr>' +
+         '</tbody></table>';
+    h += '<p class="ev-alarm">Обрати внимание на строку «случайная»: по этой модели она почти всегда выглядит выгоднее любого осмысленного купона. ' +
+         'Это не находка, а прямая демонстрация её слабого места. Модель считает соперников в предположении, что игроки выбирают исходы независимо друг от друга, ' +
+         'и поэтому резко переоценивает редкие комбинации: ей кажется, что приз делить будет не с кем. ' +
+         'Высокий EV у непопулярного купона — артефакт расчёта, а не преимущество. Смотри на EV вместе с шансом 9+, а не отдельно.</p>';
+
+    h += '<h3>На чём это держится</h3><ul class="ev-ass">' +
+         '<li>Вероятность исхода берётся из коэффициента конторы с убранной маржой — ничего более точного в открытых данных нет.</li>' +
+         '<li>Число соперников в каждой категории оценивается в предположении, что игроки выбирают исходы независимо друг от друга. Это самое слабое место расчёта: на популярных комбинациях соперников на деле будет больше расчётного, на редких — во много раз больше. Абсолютной сумме верить нельзя.</li>' +
+         '<li>Суперприз в тираже 5007 накоплен за 16 тиражей и сравним со всем призовым фондом, поэтому слагаемые за 14 и 15 угаданных сильно тянут EV вверх — при том что их вероятность тысячные доли процента. Почти весь EV сидит в событиях, которые почти никогда не случаются.</li>' +
+         '<li>Доли пула — снимок на момент «Обновить тираж». Пул растёт до закрытия приёма, так что чем раньше считаешь, тем грубее оценка.</li>' +
+         '<li>Структура призов: 40% фонда за 9 и больше, 20% за 10+, 10% за 11+, по 5% за ровно 12, 13, 14 и 15; за 14 добавляется 10% суперприза, за 15 — 90%. Категории 9+/10+/11+ кумулятивны. Фактических выплат totobrief не отдаёт, проверить расчёт по прошлым тиражам не на чем.</li>' +
+         '</ul>';
+
+    box.innerHTML = h;
+    $("evBack").hidden = false;
   }
 
   /* ---------- render ---------- */
@@ -1959,6 +2291,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         if(silent && haveApiData && String(d.number) === String(state.tirazh)) return null;
         state.deadline = d.ended_at || "";
         state.jackpot = Number(d.jackpot) || 0;
+        state.poolSum = Number(d.pool_sum) || 0;
         return fetch(API + "drawing-info/" + d.id)
           .then(function(r){ if(!r.ok) throw new Error("тираж " + d.number + ": " + r.status); return r.json(); })
           .then(function(j2){ return applyDrawing(j2.data || j2); })
@@ -1983,6 +2316,11 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     state.showPct = !state.showPct;
     save(); render();
   });
+
+  $("btnEV").addEventListener("click", function(){ showEV(); });
+  $("evClose").addEventListener("click", function(){ $("evBack").hidden = true; });
+  $("evBack").addEventListener("click", function(e){ if(e.target === $("evBack")) $("evBack").hidden = true; });
+  document.addEventListener("keydown", function(e){ if(e.key === "Escape") $("evBack").hidden = true; });
 
   $("btnKf").addEventListener("click", function(){
     state.showKf = !state.showKf;
