@@ -394,6 +394,8 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 .pct-col.rare b::after{content:"▼"; font-size:7px; vertical-align:2px; margin-left:2px}
 .kf-col{margin-top:3px; text-align:center; font-family:"IBM Plex Mono",monospace;
   font-size:10.5px; line-height:1; font-variant-numeric:tabular-nums; color:var(--muted)}
+.kf-col.fav{color:var(--cold); font-weight:600}
+.kf-col.dog{color:var(--hot); font-weight:600}
 .pct-legend{margin:9px 2px 0; font-size:12px; color:var(--muted); display:flex; flex-wrap:wrap; gap:4px 14px; align-items:baseline}
 .pct-legend .sw{font-family:"IBM Plex Mono",monospace; font-weight:600; color:var(--ink)}
 .pct-legend .sw.m{font-weight:400; color:var(--muted)}
@@ -635,7 +637,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   <p class="pct-legend" id="pctLegend" hidden>
     Под исходом: <span class="sw">жирным</span> — доля игроков, <span class="sw m">бледным</span> — оценка конторы, в процентах.
     <span class="sw c">Зелёным ▲</span> — за исход больше всего игроков, <span class="sw h">красным ▼</span> — меньше всего.
-    Отдельной строкой ниже — <span class="sw m">коэффициент конторы</span> (кнопка «Показать кэфы»); прочерк значит, что на этот исход коэффициента в тираже нет.
+    Отдельной строкой ниже — <span class="sw m">коэффициент конторы</span> (кнопка «Показать кэфы»): <span class="sw c">зелёный</span> — самый низкий в матче, то есть фаворит конторы, <span class="sw h">красный</span> — самый высокий, её аутсайдер. Прочерк значит, что на этот исход коэффициента в тираже нет. Зелёная стрелка и зелёный кэф на разных исходах — народ и контора расходятся.
   </p>
 
   <div class="keep-bar">
@@ -1034,6 +1036,22 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         }
       }
 
+      /* кэфы: у фаворита конторы он самый низкий, у аутсайдера самый высокий */
+      var kfRank = null;
+      if(state.showKf && m.kf){
+        var kvals = [0,1,2].map(function(k){
+          var x = Number(m.kf[k]);
+          return isFinite(x) && x > 0 ? x : null;
+        });
+        if(kvals.indexOf(null) < 0){
+          var ks = kvals.slice().sort(function(a, b){ return a - b; });
+          kfRank = {
+            fav: (ks[1] - ks[0] > 0.001) ? ks[0] : null,
+            dog: (ks[2] - ks[1] > 0.001) ? ks[2] : null
+          };
+        }
+      }
+
       var picksWrap = document.createElement("div");
       picksWrap.className = "picks-m";
 
@@ -1093,11 +1111,15 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
         if(state.showKf){
           var kf = document.createElement("div");
-          kf.className = "kf-col";
           var kv = (m.kf && m.kf[i] != null) ? Number(m.kf[i]) : null;
+          var isFav = !!(kfRank && kfRank.fav !== null && kv === kfRank.fav);
+          var isDog = !!(kfRank && kfRank.dog !== null && kv === kfRank.dog && !isFav);
+          kf.className = "kf-col" + (isFav ? " fav" : (isDog ? " dog" : ""));
           kf.textContent = (kv && isFinite(kv)) ? kv.toFixed(2) : "—";
           kf.title = (kv && isFinite(kv))
-            ? "Коэффициент конторы на этот исход"
+            ? ("Коэффициент конторы на этот исход" +
+               (isFav ? " — самый низкий в матче, контора считает исход самым вероятным"
+                : isDog ? " — самый высокий в матче, контора считает исход наименее вероятным" : ""))
             : "Контора коэффициент на этот исход не дала";
           cell.appendChild(kf);
         }
