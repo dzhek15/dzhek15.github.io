@@ -25,6 +25,8 @@ jobs:
 
       - name: Считаю серии и форму
         run: node scripts/analyze.mjs
+        env:
+          APIFOOTBALL_KEY: ${{ secrets.APIFOOTBALL_KEY }}
 
       - name: Кладу preset.json в репозиторий
         run: |
