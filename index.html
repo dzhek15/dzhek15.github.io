@@ -1071,6 +1071,28 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   function fixFactors(){ return FIX_BASE; }
 
+  /* Метод Шина: снимает маржу точнее простой нормировки, потому что учитывает,
+     что контора закладывает в коэффициенты защиту от осведомлённых игроков, и на
+     фаворитах эта добавка не такая, как на аутсайдерах. Ищем параметр z бисекцией. */
+  function shinProbs(raw){
+    var S = raw[0] + raw[1] + raw[2];
+    function fromZ(z){
+      return raw.map(function(pi){
+        var inner = z*z + 4*(1-z)*pi*pi/S;
+        return (Math.sqrt(Math.max(0, inner)) - z) / (2*(1-z));
+      });
+    }
+    var lo = 0, hi = 0.5;
+    for(var i=0;i<50;i++){
+      var mid = (lo + hi)/2;
+      var p = fromZ(mid), sum = p[0] + p[1] + p[2];
+      if(sum > 1) lo = mid; else hi = mid;
+    }
+    var out = fromZ((lo + hi)/2), t = out[0] + out[1] + out[2];
+    if(!(t > 0) || !isFinite(t)) return null;
+    return [out[0]/t, out[1]/t, out[2]/t];
+  }
+
   /* Вероятности 1/X/2 по версии конторы: берём из коэффициентов и убираем маржу.
      Запасной путь — целые проценты «Б», они те же, но округлённые. */
   function evProbs(m){
