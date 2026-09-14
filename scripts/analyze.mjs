@@ -247,11 +247,52 @@ async function searchTeam(ruName, dict) {
 
 const lastCache = new Map();
 
+/* Разные тарифы api-football отдают историю матчей по-разному:
+   на платном работает &last=12, на бесплатном он закрыт. Поэтому один раз
+   на старте перебираем варианты и дальше ходим тем, который ответил. */
+const HISTORY_WAYS = [
+  { name: "last=12",   build: (id) => `fixtures?team=${id}&last=12` },
+  { name: "season",    build: (id) => `fixtures?team=${id}&season=${seasonYear()}` },
+  { name: "окно дат",  build: (id) => `fixtures?team=${id}&season=${seasonYear()}&from=${dateShift(-WINDOW_DAYS)}&to=${dateShift(0)}` },
+  { name: "прошлый сезон", build: (id) => `fixtures?team=${id}&season=${seasonYear() - 1}` },
+];
+let historyWay = null;
+
+function seasonYear() {
+  const d = new Date();
+  /* европейский сезон начинается летом: с июля считаем текущий год */
+  return d.getUTCMonth() >= 6 ? d.getUTCFullYear() : d.getUTCFullYear() - 1;
+}
+function dateShift(days) {
+  return new Date(Date.now() + days * 86400000).toISOString().slice(0, 10);
+}
+
+async function pickHistoryWay(teamId) {
+  for (const way of HISTORY_WAYS) {
+    try {
+      const j = await af(way.build(teamId));
+      const n = (j.response || []).length;
+      log(`  история матчей: способ «${way.name}» отвечает, матчей ${n}`);
+      if (n) { historyWay = way; return j; }
+    } catch (e) {
+      log(`  история матчей: способ «${way.name}» — ${e.message}`);
+    }
+  }
+  log("  ⚠ ни один способ не отдал историю матчей — подсказок по сериям не будет");
+  historyWay = { name: "нет", build: null };
+  return null;
+}
+
 async function lastEvents(teamId) {
   if (lastCache.has(teamId)) return lastCache.get(teamId);
-  let j;
-  try { j = await af(`fixtures?team=${teamId}&last=12`); }
-  catch (e) { log(`    матчи команды ${teamId}: ${e.message}`); lastCache.set(teamId, []); return []; }
+  let j = null;
+  if (!historyWay) {
+    j = await pickHistoryWay(teamId);
+  } else if (historyWay.build) {
+    try { j = await af(historyWay.build(teamId)); }
+    catch (e) { log(`    матчи команды ${teamId}: ${e.message}`); }
+  }
+  if (!j) { lastCache.set(teamId, []); return []; }
   const edge = Date.now() - WINDOW_DAYS * 86400000;
   const rows = (j.response || [])
     .map((e) => ({
@@ -378,6 +419,7 @@ async function main() {
   const withSuggest = out.matches.filter((m) => m.suggest).length;
 
   log("\n================ ИТОГ ================");
+  log(`История матчей: способ «${historyWay ? historyWay.name : "не понадобился"}»`);
   log(`Запросов к api-football: ${afCalls} (дневной лимит бесплатного тарифа — 100)`);
   log(`Сопоставлено: ${resolved} матчей из ${out.matches.length}`);
   log(`Чистые серии найдены в ${withHints}, направление даёт ${withSuggest}`);
