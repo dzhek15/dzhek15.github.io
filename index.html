@@ -396,11 +396,12 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
   font-size:13px; line-height:1; font-variant-numeric:tabular-nums; color:var(--muted)}
 .kf-col.fav{color:var(--cold); font-weight:600}
 .kf-col.dog{color:var(--hot); font-weight:600}
-.roll-ev{display:flex; justify-content:center}
+.roll-ev{display:flex; justify-content:center; gap:10px; flex-wrap:wrap}
+.pf-line{letter-spacing:.06em}
 .btn-ev{padding:10px 18px; font-size:14px; background:var(--surface); color:var(--ink);
   border:1px dashed var(--rule-strong); border-radius:var(--r); cursor:pointer}
 .btn-ev:hover{background:var(--surface-3)}
-@media (max-width:820px){ .roll-ev{width:100%} .roll-ev .btn-ev{width:100%} }
+@media (max-width:820px){ .roll-ev{width:100%; display:grid; grid-template-columns:1fr 1fr; gap:9px} .roll-ev .btn-ev{width:100%} }
 [data-compact="1"] .btn-ev{padding:7px 13px; font-size:12.5px}
 .ev-back{position:fixed; inset:0; background:rgba(19,26,27,.45); z-index:60;
   display:flex; align-items:center; justify-content:center; padding:16px}
@@ -618,6 +619,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       </div>
       <div class="roll-ev">
         <button class="btn-ev" id="btnEV" type="button" title="Посчитать матожидание купона: вероятности из коэффициентов, соперники — из долей пула">Оценить купон</button>
+        <button class="btn-ev" id="btnPF" type="button" title="Отобрать из системы строки, которые меньше всего пересекаются с выбором толпы">Отобрать строки</button>
       </div>
       <div class="roll-crowd">
         <button class="btn-spin btn-crowd" id="btnMost" type="button"><span class="lbl-long">Проставить </span>большинство</button>
@@ -1268,6 +1270,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   function showEV(){
     var c = evCoupon();
     var box = $("evBody");
+    $("evTitle").textContent = "Оценка купона";
     if(c.error){
       box.innerHTML = '<p class="ev-warn">Посчитать не получилось: ' + c.error +
         '. Нужен загруженный тираж с процентами и коэффициентами и выбранный исход в каждом матче.</p>';
@@ -1353,6 +1356,133 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
          '<li>Суперприз в тираже 5007 накоплен за 16 тиражей и сравним со всем призовым фондом, поэтому слагаемые за 14 и 15 угаданных сильно тянут EV вверх — при том что их вероятность тысячные доли процента. Почти весь EV сидит в событиях, которые почти никогда не случаются.</li>' +
          '<li>Выплаты считаются от итогового призового фонда: пока приём идёт, вместо собранной на сейчас суммы берётся медиана завершённых тиражей. А вот доли пула — снимок на момент «Обновить тираж», к закрытию они ещё сдвинутся, так что чем раньше считаешь, тем грубее оценка.</li>' +
          '<li>Структура призов: 40% фонда за 9 и больше, 20% за 10+, 10% за 11+, по 5% за ровно 12, 13, 14 и 15; за 14 добавляется 10% суперприза, за 15 — 90%. Категории 9+/10+/11+ кумулятивны. Фактических выплат totobrief не отдаёт, проверить расчёт по прошлым тиражам не на чем.</li>' +
+         '</ul>';
+
+    box.innerHTML = h;
+    $("evBack").hidden = false;
+  }
+
+
+  /* ---------- отбор строк из системы ---------- */
+  /* Задача не «найти самые прибыльные строки» — по EV наверх всегда лезут самые
+     редкие комбинации, а это артефакт модели. Поэтому сначала отсекаем строки,
+     у которых шанс угадать 9+ заметно ниже лучшего в системе, и только среди
+     оставшихся ищем те, что меньше пересекаются с толпой и друг с другом. */
+  var PF_VIABLE = 0.6;   /* доля от лучшего шанса 9+, ниже которой строку не рассматриваем */
+  var PF_SCAN   = 4000;  /* сколько строк перебираем максимум */
+
+  function evLines(sets, cap){
+    var combos = 1, i;
+    for(i=0;i<sets.length;i++) combos *= sets[i].length;
+    var out = [];
+    if(combos <= cap){
+      var idx = sets.map(function(){ return 0; });
+      while(true){
+        var line = [];
+        for(i=0;i<sets.length;i++) line.push(sets[i][idx[i]]);
+        out.push(line);
+        var pos = sets.length - 1;
+        while(pos >= 0 && idx[pos] === sets[pos].length - 1){ idx[pos] = 0; pos--; }
+        if(pos < 0) break;
+        idx[pos]++;
+      }
+    } else {
+      var seen = {};
+      while(out.length < cap){
+        var ln = [];
+        for(i=0;i<sets.length;i++) ln.push(sets[i][Math.floor(Math.random()*sets[i].length)]);
+        var key = ln.join("");
+        if(seen[key]) continue;
+        seen[key] = 1;
+        out.push(ln);
+      }
+    }
+    return { lines: out, combos: combos, full: combos <= cap };
+  }
+
+  function showPortfolio(){
+    var c = evCoupon();
+    var box = $("evBody");
+    $("evTitle").textContent = "Отбор строк из системы";
+    if(c.error){
+      box.innerHTML = '<p class="ev-warn">Посчитать не получилось: ' + c.error + '.</p>';
+      $("evBack").hidden = false;
+      return;
+    }
+    var price = Number(state.price) || 30;
+    var poolNow = Number(state.poolSum) || 0;
+    var typical = Number(state.poolTypical) || 0;
+    var projected = (typical && poolNow < typical * 0.6);
+    var fund = projected ? typical : poolNow;
+    var jack = Number(state.jackpot) || 0;
+    if(!fund){
+      box.innerHTML = '<p class="ev-warn">Не знаю размер призового фонда — нажми «Обновить тираж».</p>';
+      $("evBack").hidden = false;
+      return;
+    }
+    var lines = (fund / 0.9) / price;
+
+    var gen = evLines(c.sets, PF_SCAN);
+    if(gen.combos < 2){
+      box.innerHTML = '<p class="ev-warn">В купоне одна строка — отбирать не из чего. ' +
+        'Отметь в некоторых матчах по два-три исхода, тогда получится система.</p>';
+      $("evBack").hidden = false;
+      return;
+    }
+
+    var all = gen.lines.map(function(line){
+      var r = evOfLine(line, c.probs, c.pools, lines, fund, jack);
+      return { line: line, ev: r.ev, any: evTail(r.qDist, 9), q: r.qDist,
+               comp: r.tbl.n.g9, rows: r.rows };
+    });
+
+    var best = 0;
+    all.forEach(function(x){ if(x.any > best) best = x.any; });
+    var pool = all.filter(function(x){ return x.any >= best * PF_VIABLE; });
+    if(!pool.length) pool = all;
+
+    var limit = Math.min(30, pool.length);
+    var occ = {}; for(var k=9;k<=15;k++) occ[k] = 0;
+    var picked = [], rest = pool.slice();
+    for(var step=0; step<limit; step++){
+      var bi = -1, bv = -Infinity;
+      for(var i=0;i<rest.length;i++){
+        var v = 0;
+        for(var j=0;j<rest[i].rows.length;j++){
+          var row = rest[i].rows[j];
+          v += row.part / (1 + occ[row.k]);
+        }
+        if(v > bv){ bv = v; bi = i; }
+      }
+      if(bi < 0) break;
+      var ch = rest.splice(bi, 1)[0];
+      ch.rows.forEach(function(row){ occ[row.k] += row.p; });
+      ch.gain = bv;
+      picked.push(ch);
+    }
+
+    var h = '';
+    h += '<p class="ev-sub">В системе ' + fmt(gen.combos) + ' строк(и), ' +
+         (gen.full ? 'перебрал все' : 'перебрал случайные ' + fmt(gen.lines.length)) + '. ' +
+         'Отсеяно по шансу: осталось ' + fmt(pool.length) + ', из них отобрано ' + fmt(picked.length) + '. ' +
+         'Фонд ' + evMoney(fund) + (projected ? ' (типичный итоговый, приём ещё идёт)' : '') +
+         ', суперприз ' + evMoney(jack) + '.</p>';
+
+    h += '<table class="ev-tab"><thead><tr><th>#</th><th>Строка</th><th>Шанс 9+</th>' +
+         '<th>Соперников в 9+</th><th>EV</th></tr></thead><tbody>';
+    picked.forEach(function(x, i){
+      var txt = x.line.map(function(o){ return OUT[o]; }).join(" ");
+      h += '<tr><td>' + (i+1) + '</td><td class="pf-line">' + txt + '</td><td>' + evPct(x.any) +
+           '</td><td>' + fmt(Math.round(x.comp)) + '</td><td>' + evMoney(x.ev) + '</td></tr>';
+    });
+    h += '</tbody></table>';
+
+    h += '<h3>Как отобрано</h3><ul class="ev-ass">' +
+         '<li>Сначала отсев по жизнеспособности: строка проходит дальше, только если её шанс угадать 9 и больше не меньше ' +
+         Math.round(PF_VIABLE*100) + '% от лучшего в системе. Без этого наверх списка лезут самые редкие комбинации — у них EV по модели огромный, но выиграть они не могут почти никогда.</li>' +
+         '<li>Среди прошедших идёт жадный отбор: на каждом шаге берётся строка с наибольшим приростом, причём вклад в каждую категорию делится на то, сколько уже набрано этой категории отобранными строками. Так набор не сходится в один угол — строки получаются разные.</li>' +
+         '<li>Колонка «соперников в 9+» — сколько игроков тиража, по оценке долей пула, попадут в ту же категорию. Чем меньше, тем меньше делить приз. Это та же оценка независимости, что и в матожидании, со всеми её оговорками.</li>' +
+         '<li>Список — не рекомендация покупать именно эти строки, а способ увидеть, какие места системы меньше всего заняты толпой.</li>' +
          '</ul>';
 
     box.innerHTML = h;
@@ -2365,6 +2495,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   });
 
   $("btnEV").addEventListener("click", function(){ showEV(); });
+  $("btnPF").addEventListener("click", function(){ showPortfolio(); });
   $("evClose").addEventListener("click", function(){ $("evBack").hidden = true; });
   $("evBack").addEventListener("click", function(e){ if(e.target === $("evBack")) $("evBack").hidden = true; });
   document.addEventListener("keydown", function(e){ if(e.key === "Escape") $("evBack").hidden = true; });
