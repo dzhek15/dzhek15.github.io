@@ -795,6 +795,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       deadline: "",
       jackpot: 0,
       poolSum: 0,
+      poolTypical: 0,
       showPct: false,
       showKf: false,
       compact: false,
@@ -1242,7 +1243,11 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       return;
     }
     var price = Number(state.price) || 30;
-    var fund  = Number(state.poolSum) || 0;
+    var poolNow = Number(state.poolSum) || 0;
+    var typical = Number(state.poolTypical) || 0;
+    /* приём ещё идёт — выплаты будут из ИТОГОВОГО фонда, а не из того, что собрано сейчас */
+    var projected = (typical && poolNow < typical * 0.6);
+    var fund = projected ? typical : poolNow;
     var jack  = Number(state.jackpot) || 0;
     if(!fund){
       box.innerHTML = '<p class="ev-warn">Не знаю размер призового фонда — нажми «Обновить тираж», он приезжает вместе с матчами.</p>';
@@ -1275,8 +1280,12 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
          '<b>' + evMoney(mine.avg) + '</b><span>матожидание одной строки при цене ' + fmt(price) + ' ₽ — ' + verdict + '</span>' +
          '<span>шанс вернуть хоть что-то (9 угаданных и больше): <b class="ev-inline">' + evPct(mine.any) + '</b></span></div>';
 
-    h += '<p class="ev-sub">Тираж №' + state.tirazh + ': призовой фонд ' + evMoney(fund) +
-         ', суперприз ' + evMoney(jack) + ', продано примерно ' + fmt(Math.round(lines)) + ' строк. ' +
+    h += '<p class="ev-sub">Тираж №' + state.tirazh + ': ' +
+         (projected
+           ? 'приём ещё идёт, сейчас собрано ' + evMoney(poolNow) + ', поэтому считаю по типичному итоговому фонду ' + evMoney(fund) +
+             ' (медиана завершённых тиражей)'
+           : 'призовой фонд ' + evMoney(fund)) +
+         ', суперприз ' + evMoney(jack) + ', строк в тираже ожидается около ' + fmt(Math.round(lines)) + '. ' +
          'В купоне ' + fmt(mine.combos) + ' строк(и), посчитано ' +
          (mine.exact ? "все" : "по случайной выборке из " + fmt(mine.used)) + '.</p>';
 
@@ -1310,7 +1319,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
          '<li>Вероятность исхода берётся из коэффициента конторы с убранной маржой — ничего более точного в открытых данных нет.</li>' +
          '<li>Число соперников в каждой категории оценивается в предположении, что игроки выбирают исходы независимо друг от друга. Это самое слабое место расчёта: на популярных комбинациях соперников на деле будет больше расчётного, на редких — во много раз больше. Абсолютной сумме верить нельзя.</li>' +
          '<li>Суперприз в тираже 5007 накоплен за 16 тиражей и сравним со всем призовым фондом, поэтому слагаемые за 14 и 15 угаданных сильно тянут EV вверх — при том что их вероятность тысячные доли процента. Почти весь EV сидит в событиях, которые почти никогда не случаются.</li>' +
-         '<li>Доли пула — снимок на момент «Обновить тираж». Пул растёт до закрытия приёма, так что чем раньше считаешь, тем грубее оценка.</li>' +
+         '<li>Выплаты считаются от итогового призового фонда: пока приём идёт, вместо собранной на сейчас суммы берётся медиана завершённых тиражей. А вот доли пула — снимок на момент «Обновить тираж», к закрытию они ещё сдвинутся, так что чем раньше считаешь, тем грубее оценка.</li>' +
          '<li>Структура призов: 40% фонда за 9 и больше, 20% за 10+, 10% за 11+, по 5% за ровно 12, 13, 14 и 15; за 14 добавляется 10% суперприза, за 15 — 90%. Категории 9+/10+/11+ кумулятивны. Фактических выплат totobrief не отдаёт, проверить расчёт по прошлым тиражам не на чем.</li>' +
          '</ul>';
 
@@ -2292,6 +2301,12 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         state.deadline = d.ended_at || "";
         state.jackpot = Number(d.jackpot) || 0;
         state.poolSum = Number(d.pool_sum) || 0;
+        /* приём идёт до закрытия, поэтому запоминаем типичный ИТОГОВЫЙ фонд:
+           медиану завершённых тиражей — по ней и надо считать выплаты */
+        var done = rows.filter(function(x){ return x.status === "finished" && Number(x.pool_sum) > 0; })
+                       .map(function(x){ return Number(x.pool_sum); })
+                       .sort(function(a,b){ return a - b; });
+        state.poolTypical = done.length ? done[Math.floor(done.length/2)] : 0;
         return fetch(API + "drawing-info/" + d.id)
           .then(function(r){ if(!r.ok) throw new Error("тираж " + d.number + ": " + r.status); return r.json(); })
           .then(function(j2){ return applyDrawing(j2.data || j2); })
