@@ -306,6 +306,7 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 [data-compact="1"] .pick{height:24px; font-size:12.5px}
 [data-compact="1"] .pick-cell{gap:2px}
 [data-compact="1"] .pct-col{font-size:9px; gap:4px}
+[data-compact="1"] .kf-col{font-size:9px; margin-top:2px}
 [data-compact="1"] .mode{font-size:0; gap:0; padding:4px 6px}
 [data-compact="1"] .modes{gap:4px}
 [data-compact="1"] .pct-legend{margin-top:6px; font-size:11px}
@@ -362,6 +363,7 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
   [data-compact="1"] .mode svg{width:11px; height:11px}
   [data-compact="1"] .pool-tag{display:none}
   [data-compact="1"] .pct-col{font-size:8px; gap:3px}
+  [data-compact="1"] .kf-col{font-size:8px; margin-top:2px}
 }
 
 /* ---------- coupon ---------- */
@@ -390,6 +392,8 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 .pct-col.rare b{color:var(--hot)}
 .pct-col.lead b::after{content:"▲"; font-size:7px; vertical-align:2px; margin-left:2px}
 .pct-col.rare b::after{content:"▼"; font-size:7px; vertical-align:2px; margin-left:2px}
+.kf-col{margin-top:3px; text-align:center; font-family:"IBM Plex Mono",monospace;
+  font-size:10.5px; line-height:1; font-variant-numeric:tabular-nums; color:var(--muted)}
 .pct-legend{margin:9px 2px 0; font-size:12px; color:var(--muted); display:flex; flex-wrap:wrap; gap:4px 14px; align-items:baseline}
 .pct-legend .sw{font-family:"IBM Plex Mono",monospace; font-weight:600; color:var(--ink)}
 .pct-legend .sw.m{font-weight:400; color:var(--muted)}
@@ -515,6 +519,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       <div class="roll-view" role="group" aria-label="Вид страницы">
         <span class="view-lbl">Вид</span>
         <button id="btnPct" type="button" aria-pressed="false" hidden>Показать проценты</button>
+        <button id="btnKf" type="button" aria-pressed="false" hidden>Показать кэфы</button>
         <button id="btnCompact" type="button" aria-pressed="false" title="Ужать всё так, чтобы 15 матчей влезли на один экран">Компактно</button>
         <button id="btnFit" type="button" title="Подобрать масштаб так, чтобы весь купон влез в экран целиком">Влезть в экран</button>
         <span class="zoomctl" role="group" aria-label="Масштаб страницы">
@@ -569,7 +574,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       <div class="roll-crowd">
         <button class="btn-spin btn-crowd" id="btnMost" type="button"><span class="lbl-long">Проставить </span>большинство</button>
         <button class="btn-spin btn-crowd" id="btnLeast" type="button"><span class="lbl-long">Проставить </span>меньшинство</button>
-        <button class="btn-spin btn-tip" id="btnHints" type="button" hidden>Проставить по сериям</button>
       </div>
       <div class="roll-secondary">
         <button id="btnUndo" type="button" disabled>Вернуть</button>
@@ -631,6 +635,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   <p class="pct-legend" id="pctLegend" hidden>
     Под исходом: <span class="sw">жирным</span> — доля игроков, <span class="sw m">бледным</span> — оценка конторы, в процентах.
     <span class="sw c">Зелёным ▲</span> — за исход больше всего игроков, <span class="sw h">красным ▼</span> — меньше всего.
+    Отдельной строкой ниже — <span class="sw m">коэффициент конторы</span> (кнопка «Показать кэфы»); прочерк значит, что на этот исход коэффициента в тираже нет.
   </p>
 
   <div class="keep-bar">
@@ -737,6 +742,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       deadline: "",
       jackpot: 0,
       showPct: false,
+      showKf: false,
       compact: false,
       zoom: 1,
       spent: 0,
@@ -763,6 +769,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   if(!Array.isArray(state.played)) state.played = [];
   if(state.rollMode !== "budget") state.rollMode = "single";
   state.showPct = !!state.showPct;
+  state.showKf  = !!state.showKf;
   state.compact = !!state.compact;
   state.zoom = Number(state.zoom);
   if(!isFinite(state.zoom) || state.zoom <= 0) state.zoom = 1;
@@ -977,38 +984,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     return {zoom: z, compact: turnedCompact};
   }
 
-  /* ---------- автоматический разбор (preset.json из репозитория) ---------- */
-  /* Файл кладёт GitHub Actions по расписанию: чистые серии по площадке,
-     посчитанные по правилам методики. Нет файла — просто ничего не показываем. */
-  var HINTS = null;
-
-  function normName(x){
-    return String(x || "").toLowerCase().replace(/ё/g, "е")
-      .replace(/\bфк\b/g, "").replace(/[()«»"\x27.]/g, " ")
-      .replace(/\s+/g, " ").trim();
-  }
-
-  function hintFor(m){
-    if(!HINTS || !HINTS.map) return null;
-    return HINTS.map[normName(m.home) + "|" + normName(m.away)] || null;
-  }
-
-  function loadHints(){
-    if(typeof fetch !== "function") return;
-    fetch("preset.json?ts=" + Date.now())
-      .then(function(r){ return r.ok ? r.json() : null; })
-      .then(function(j){
-        if(!j || !Array.isArray(j.matches) || !j.matches.length) return;
-        j.map = {};
-        j.matches.forEach(function(rec){
-          j.map[normName(rec.home) + "|" + normName(rec.away)] = rec;
-        });
-        HINTS = j;
-        render();
-      })
-      .catch(function(){});
-  }
-
   /* ---------- render ---------- */
   var rowsEl = $("rows");
 
@@ -1038,15 +1013,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       meta.className="meta";
       meta.textContent = [m.date, m.time, m.league].filter(Boolean).join("  ·  ");
       fix.appendChild(meta);
-
-      var rec = hintFor(m);
-      if(rec && rec.hints && rec.hints.length){
-        var tip = document.createElement("div");
-        tip.className = "tip";
-        tip.textContent = rec.hints.join(" · ") + (rec.suggest ? " → " + rec.suggest : "");
-        tip.title = "Посчитано автоматически по последним матчам: чистая серия от трёх игр, отдельно по площадке";
-        fix.appendChild(tip);
-      }
 
 
       row.appendChild(fix);
@@ -1123,6 +1089,17 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
              : isLow ? " — меньше всего игроков в этом матче" : "");
           col.innerHTML = '<b>' + pl + '</b><i>' + bk + '</i>';
           cell.appendChild(col);
+        }
+
+        if(state.showKf){
+          var kf = document.createElement("div");
+          kf.className = "kf-col";
+          var kv = (m.kf && m.kf[i] != null) ? Number(m.kf[i]) : null;
+          kf.textContent = (kv && isFinite(kv)) ? kv.toFixed(2) : "—";
+          kf.title = (kv && isFinite(kv))
+            ? "Коэффициент конторы на этот исход"
+            : "Контора коэффициент на этот исход не дала";
+          cell.appendChild(kf);
         }
 
         picksWrap.appendChild(cell);
@@ -1302,13 +1279,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     applyZoom();
 
     var havePct = state.matches.some(function(m){ return m.pct; });
-    var tipCount = HINTS ? state.matches.filter(function(m){
-      var r = hintFor(m);
-      return r && r.suggest;
-    }).length : 0;
-    $("btnHints").hidden = !tipCount;
-    $("btnHints").disabled = spinning;
-    $("btnHints").textContent = "Проставить по сериям (" + tipCount + ")";
     $("btnMost").disabled = !havePct || spinning;
     $("btnLeast").disabled = !havePct || spinning;
     $("btnMost").title = havePct
@@ -1324,7 +1294,15 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     pb.title = state.showPct
       ? "Убрать доли игроков и конторы из строк"
       : "Показать под каждым исходом долю игроков и оценку конторы";
-    $("pctLegend").hidden = !(havePct && state.showPct);
+    var haveKf = state.matches.some(function(m){ return m.kf; });
+    var kb = $("btnKf");
+    kb.hidden = !haveKf;
+    kb.setAttribute("aria-pressed", state.showKf ? "true" : "false");
+    kb.textContent = state.showKf ? "Скрыть кэфы" : "Показать кэфы";
+    kb.title = state.showKf
+      ? "Убрать коэффициенты конторы из строк"
+      : "Показать под каждым исходом коэффициент конторы из того же тиража";
+    $("pctLegend").hidden = !((havePct && state.showPct) || (haveKf && state.showKf));
     $("knobGap").hidden = !havePct;
     renderKickoff();
     renderHistory();
@@ -1799,35 +1777,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         "Эти строки переведены в обычный режим, чтобы бросок их не перебил — вернуть в жеребьёвку можно кнопкой «Все в рандом».");
   }
 
-  $("btnHints").addEventListener("click", function(){
-    if(spinning || !HINTS) return;
-    pushHistory("до расстановки по сериям");
-    var set = 0, locked = 0, cleared = 0, randLeft = 0;
-    state.matches.forEach(function(m){
-      if(m.mode === "lock"){ locked++; return; } /* зафиксированное руками не трогаем */
-      var rec = hintFor(m);
-      if(rec && rec.suggest){
-        m.picks = {"1":false,"X":false,"2":false};
-        m.picks[rec.suggest] = true;
-        m.mode = "free"; /* иначе бросок тут же перебьёт расстановку */
-        set++;
-        return;
-      }
-      /* данных нет или серия направления не даёт — строка остаётся пустой,
-         чтобы сразу было видно, что решать её придётся самому */
-      m.picks = {"1":false,"X":false,"2":false};
-      cleared++;
-      if(m.mode === "rand") randLeft++;
-    });
-    save(); render();
-    say("Проставлено по чистым сериям: " + set + " матч(ей)" +
-        (locked ? ", зафиксированных не трогал: " + locked : "") + ". " +
-        (cleared ? "Остальные " + cleared + " строк(и) очищены — по ним данных или чистой серии нет" +
-                   (randLeft ? ", из них " + randLeft + " помечены «рандом», так что бросок их разыграет" : "") + ". "
-                 : "") +
-        "Это механическая проверка правила о сериях, а не прогноз — пустые строки решай сам.");
-  });
-
   $("btnMost").addEventListener("click", function(){ pickByCrowd(true); });
   $("btnLeast").addEventListener("click", function(){ pickByCrowd(false); });
 
@@ -1949,7 +1898,9 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         pct: (q.pool_win_1 != null) ? {
           pool: [q.pool_win_1, q.pool_draw, q.pool_win_2],
           bk:   [q.bk_win_1,   q.bk_draw,   q.bk_win_2]
-        } : null
+        } : null,
+        /* коэффициенты конторы приходят в том же ответе, отдельного источника не нужно */
+        kf: (q.norm_win_1 != null) ? [q.norm_win_1, q.norm_draw, q.norm_win_2] : null
       });
     });
     if(!list.length) throw new Error("в ответе нет матчей");
@@ -2008,6 +1959,11 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   $("btnPct").addEventListener("click", function(){
     state.showPct = !state.showPct;
+    save(); render();
+  });
+
+  $("btnKf").addEventListener("click", function(){
+    state.showKf = !state.showKf;
     save(); render();
   });
 
@@ -2185,7 +2141,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     if(state.rolls === 0 && !state.played.length && typeof fetch === "function"){
       setTimeout(function(){ pullTirazh(true); }, 300);
     }
-    setTimeout(loadHints, 600);
   } catch(e){ boom(e); }
   setInterval(function(){ try{ renderKickoff(); }catch(e){} }, 30000);
 })();
