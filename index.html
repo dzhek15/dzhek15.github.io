@@ -1192,37 +1192,27 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   }
 
   /* Сколько стоит строка, угадавшая ровно k матчей.
-     Категории 9+/10+/11+ кумулятивны: угадавший 12 получает и за 9, и за 10, и за 11. */
+     Разбор фактических выплат БалтБета показал: КАЖДАЯ категория делится между
+     всеми, кто угадал не меньше её порога, а строка получает сумму по всем
+     категориям от 9 до своего k. То есть «ровно 12» — это доля фонда, которую
+     делят все с 12 и выше, а не только угадавшие ровно двенадцать. */
   function evPayouts(pDist, lines, fund, jack){
     var A = fund / 90;
     var alloc = {
-      g9: A * EV_SHARE.g9, g10: A * EV_SHARE.g10, g11: A * EV_SHARE.g11,
-      e12: A * EV_SHARE.e12, e13: A * EV_SHARE.e13,
-      e14: A * EV_SHARE.e14 + jack * EV_JACK14,
-      e15: A * EV_SHARE.e15 + jack * EV_JACK15
+      9: A * EV_SHARE.g9, 10: A * EV_SHARE.g10, 11: A * EV_SHARE.g11,
+      12: A * EV_SHARE.e12, 13: A * EV_SHARE.e13,
+      14: A * EV_SHARE.e14 + jack * EV_JACK14,
+      15: A * EV_SHARE.e15 + jack * EV_JACK15
     };
     /* «+1» — это своя строка: она тоже делит приз */
     var fx = fixFactors();
-    var n = {
-      g9:  lines * evTail(pDist, 9)  * fx[9]  + 1,
-      g10: lines * evTail(pDist, 10) * fx[10] + 1,
-      g11: lines * evTail(pDist, 11) * fx[11] + 1,
-      e12: lines * (pDist[12] || 0) * fx[12] + 1,
-      e13: lines * (pDist[13] || 0) * fx[13] + 1,
-      e14: lines * (pDist[14] || 0) * fx[14] + 1,
-      e15: lines * (pDist[15] || 0) * fx[15] + 1
-    };
+    var n = {};
+    for(var k = 9; k <= 15; k++) n[k] = lines * evTail(pDist, k) * fx[k] + 1;
     var pay = [];
-    for(var k=0;k<=15;k++){
+    for(var m = 0; m <= 15; m++){
       var v = 0;
-      if(k >= 9)  v += alloc.g9  / n.g9;
-      if(k >= 10) v += alloc.g10 / n.g10;
-      if(k >= 11) v += alloc.g11 / n.g11;
-      if(k === 12) v += alloc.e12 / n.e12;
-      if(k === 13) v += alloc.e13 / n.e13;
-      if(k === 14) v += alloc.e14 / n.e14;
-      if(k === 15) v += alloc.e15 / n.e15;
-      pay[k] = v;
+      for(var c = 9; c <= m; c++) v += alloc[c] / n[c];
+      pay[m] = v;
     }
     return { pay: pay, n: n, alloc: alloc };
   }
@@ -1377,8 +1367,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
     h += '<table class="ev-tab"><thead><tr><th>Угадано</th><th>Вероятность</th>' +
          '<th>Ждём победителей</th><th>Выплата на строку</th><th>Вклад в EV</th></tr></thead><tbody>';
-    var nMap = {9:one.tbl.n.g9, 10:one.tbl.n.g10, 11:one.tbl.n.g11, 12:one.tbl.n.e12,
-                13:one.tbl.n.e13, 14:one.tbl.n.e14, 15:one.tbl.n.e15};
+    var nMap = one.tbl.n;
     one.rows.forEach(function(row){
       h += '<tr><td>' + row.k + '</td><td>' + evPct(row.p) + '</td><td>' +
            fmt(Math.round(nMap[row.k])) + '</td><td>' + evMoney(row.pay) + '</td><td>' +
@@ -1406,7 +1395,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
          '<li>Число соперников оценивается в предположении, что игроки выбирают исходы независимо друг от друга, а затем правится множителем по фактическим выплатам прошлых тиражей. Сверка с реальным тиражом показала, что независимость даёт слишком жирный правый хвост: настоящие купоны скоррелированы и проваливаются вместе. Поправка это частично лечит, но перекос в пользу редких комбинаций остаётся.</li>' +
          '<li>Суперприз в тираже 5007 накоплен за 16 тиражей и сравним со всем призовым фондом, поэтому слагаемые за 14 и 15 угаданных сильно тянут EV вверх — при том что их вероятность тысячные доли процента. Почти весь EV сидит в событиях, которые почти никогда не случаются.</li>' +
          '<li>Выплаты считаются от итогового призового фонда: пока приём идёт, вместо собранной на сейчас суммы берётся медиана завершённых тиражей. А вот доли пула — снимок на момент «Обновить тираж», к закрытию они ещё сдвинутся, так что чем раньше считаешь, тем грубее оценка.</li>' +
-         '<li>Структура призов: 40% фонда за 9 и больше, 20% за 10+, 10% за 11+, по 5% за ровно 12, 13, 14 и 15; за 14 добавляется 10% суперприза, за 15 — 90%. Категории 9+/10+/11+ кумулятивны. Фактических выплат totobrief не отдаёт, проверить расчёт по прошлым тиражам не на чем.</li>' +
+         '<li>Структура призов: 40% фонда делят все с 9 угаданными и больше, 20% — все с 10 и больше, 10% — с 11 и больше, и по 5% на каждый порог 12, 13, 14, 15; за 14 добавляется 10% суперприза, за 15 — 90%. Строка получает сумму по всем порогам, до которых дотянулась. Проверено на фактических выплатах тиража 5006 до копейки. Невыигранные пороги 14 и 15 уходят в суперприз — тоже сверено, расхождение 3 ₽.</li>' +
          '</ul>';
 
     box.innerHTML = h;
@@ -1485,7 +1474,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     var all = gen.lines.map(function(line){
       var r = evOfLine(line, c.probs, c.pools, lines, fund, jack);
       return { line: line, ev: r.ev, any: evTail(r.qDist, 9), q: r.qDist,
-               comp: r.tbl.n.g9, rows: r.rows };
+               comp: r.tbl.n[9], rows: r.rows };
     });
 
     var best = 0;
@@ -1759,23 +1748,32 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
     var dist = poissonBinomial(ps);
     var lines = (draw.pool / 0.9) / price;
+    var A = draw.pool / 90;
+    var SHARE = {9:EV_SHARE.g9, 10:EV_SHARE.g10, 11:EV_SHARE.g11,
+                 12:EV_SHARE.e12, 13:EV_SHARE.e13, 14:EV_SHARE.e14, 15:EV_SHARE.e15};
     var fix = {}, rows = "";
     FACT_K.forEach(function(k){
-      var model = (k <= 11 ? evTail(dist, k) : (dist[k] || 0)) * lines;
+      var model = evTail(dist, k) * lines;
       var f = fact[k];
-      if(!f){ return; }
-      var mult = f.n / model;
+      if(!f) return;
+      /* сколько строк делило категорию — считаем по деньгам: доля фонда, делённая
+         на выплату одной строке. Так поправка чинит и промах по числу победителей,
+         и небольшой сдвиг самих долей фонда разом. */
+      var share = (A * SHARE[k]) / (f.c * price);
+      var mult = share / model;
       if(isFinite(mult) && mult > 0 && mult < 20) fix[k] = Number(mult.toFixed(3));
-      rows += '<tr><td>' + k + '</td><td>' + fmt(Math.round(model)) + '</td><td>' + fmt(f.n) +
+      rows += '<tr><td>' + k + '</td><td>' + fmt(Math.round(model)) + '</td><td>' + fmt(Math.round(share)) +
               '</td><td>' + (isFinite(mult) ? "×" + mult.toFixed(2) : "—") + '</td></tr>';
     });
     if(!Object.keys(fix).length) return { error: "не удалось посчитать ни одного множителя" };
 
     var html = '<h3>Модель против факта, тираж №' + (draw.number || "") + '</h3>' +
-      '<table class="ev-tab"><thead><tr><th>Угадано</th><th>Модель ждала</th><th>Было на деле</th>' +
+      '<table class="ev-tab"><thead><tr><th>Угадано</th><th>Модель ждала</th><th>Делили приз</th>' +
       '<th>Множитель</th></tr></thead><tbody>' + rows + '</tbody></table>' +
-      '<p class="ev-note">Множитель меньше единицы значит, что модель завышала число победителей, ' +
-      'то есть занижала выплаты. Он сразу применяется в «Оценить купон» и «Отобрать строки».</p>';
+      '<p class="ev-note">«Делили приз» посчитано по деньгам: доля фонда, поделённая на выплату одной строке. ' +
+      'Может чуть отличаться от счётчика в таблице БалтБета — зато после поправки расчёт выдаёт ровно ту выплату, ' +
+      'которая была на деле. Множитель меньше единицы значит, что модель завышала число победителей и потому ' +
+      'занижала выплаты. Он сразу применяется в «Оценить купон» и «Отобрать строки».</p>';
     return { fix: fix, html: html };
   }
 
