@@ -398,6 +398,14 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 .kf-col.dog{color:var(--hot); font-weight:600}
 .roll-ev{display:flex; justify-content:center; gap:10px; flex-wrap:wrap}
 .pf-line{letter-spacing:.06em}
+.pf-tab th:first-child, .pf-tab td:first-child{text-align:center; width:26px; padding-left:2px}
+.pf-tab td:nth-child(2){text-align:right; color:var(--muted)}
+.pf-tab input[type="checkbox"]{width:15px; height:15px; accent-color:var(--accent); cursor:pointer}
+.pf-tab tbody tr:hover{background:var(--surface-2)}
+.pf-foot{display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-top:12px;
+  padding-top:11px; border-top:1px solid var(--rule)}
+.pf-foot .btn-keep:disabled{opacity:.5; cursor:default}
+.pf-note{font-size:12.5px; color:var(--muted)}
 .btn-ev{padding:10px 18px; font-size:14px; background:var(--surface); color:var(--ink);
   border:1px dashed var(--rule-strong); border-radius:var(--r); cursor:pointer}
 .btn-ev:hover{background:var(--surface-3)}
@@ -1368,6 +1376,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
      редкие комбинации, а это артефакт модели. Поэтому сначала отсекаем строки,
      у которых шанс угадать 9+ заметно ниже лучшего в системе, и только среди
      оставшихся ищем те, что меньше пересекаются с толпой и друг с другом. */
+  var pfLast = [];
   var PF_VIABLE = 0.6;   /* доля от лучшего шанса 9+, ниже которой строку не рассматриваем */
   var PF_SCAN   = 4000;  /* сколько строк перебираем максимум */
 
@@ -1468,14 +1477,20 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
          'Фонд ' + evMoney(fund) + (projected ? ' (типичный итоговый, приём ещё идёт)' : '') +
          ', суперприз ' + evMoney(jack) + '.</p>';
 
-    h += '<table class="ev-tab"><thead><tr><th>#</th><th>Строка</th><th>Шанс 9+</th>' +
+    pfLast = picked;
+    h += '<table class="ev-tab pf-tab"><thead><tr><th><input type="checkbox" id="pfAll" checked ' +
+         'aria-label="Отметить все строки"></th><th>#</th><th>Строка</th><th>Шанс 9+</th>' +
          '<th>Соперников в 9+</th><th>EV</th></tr></thead><tbody>';
     picked.forEach(function(x, i){
       var txt = x.line.map(function(o){ return OUT[o]; }).join(" ");
-      h += '<tr><td>' + (i+1) + '</td><td class="pf-line">' + txt + '</td><td>' + evPct(x.any) +
-           '</td><td>' + fmt(Math.round(x.comp)) + '</td><td>' + evMoney(x.ev) + '</td></tr>';
+      h += '<tr><td><input type="checkbox" class="pf-cb" data-i="' + i + '" checked ' +
+           'aria-label="Строка ' + (i+1) + '"></td><td>' + (i+1) + '</td><td class="pf-line">' + txt +
+           '</td><td>' + evPct(x.any) + '</td><td>' + fmt(Math.round(x.comp)) + '</td><td>' +
+           evMoney(x.ev) + '</td></tr>';
     });
     h += '</tbody></table>';
+    h += '<div class="pf-foot"><button class="btn-keep" id="pfSave" type="button">Записать отмеченные в сыгранные</button>' +
+         '<span class="pf-note" id="pfNote"></span></div>';
 
     h += '<h3>Как отобрано</h3><ul class="ev-ass">' +
          '<li>Сначала отсев по жизнеспособности: строка проходит дальше, только если её шанс угадать 9 и больше не меньше ' +
@@ -1486,7 +1501,81 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
          '</ul>';
 
     box.innerHTML = h;
+    pfWire(price);
     $("evBack").hidden = false;
+  }
+
+  function pfChecked(){
+    var out = [];
+    [].forEach.call(document.querySelectorAll(".pf-cb"), function(b){
+      if(b.checked) out.push(pfLast[Number(b.getAttribute("data-i"))]);
+    });
+    return out;
+  }
+
+  function pfCount(price){
+    var n = pfChecked().length;
+    var note = $("pfNote");
+    if(note) note.textContent = n
+      ? "отмечено " + fmt(n) + " строк(и) на " + fmt(n * price) + " ₽"
+      : "ни одна строка не отмечена";
+    var btn = $("pfSave");
+    if(btn) btn.disabled = !n;
+  }
+
+  function pfWire(price){
+    var all = $("pfAll");
+    if(all) all.addEventListener("change", function(){
+      [].forEach.call(document.querySelectorAll(".pf-cb"), function(b){ b.checked = all.checked; });
+      pfCount(price);
+    });
+    [].forEach.call(document.querySelectorAll(".pf-cb"), function(b){
+      b.addEventListener("change", function(){ pfCount(price); });
+    });
+    var save1 = $("pfSave");
+    if(save1) save1.addEventListener("click", function(){ pfCommit(price); });
+    pfCount(price);
+  }
+
+  /* Каждая отмеченная строка уходит в «Сыгранные варианты» отдельной записью:
+     так она попадает и в выгрузку CSV наравне с брошенными вариантами. */
+  function pfCommit(price){
+    var chosen = pfChecked();
+    if(!chosen.length) return;
+    pushHistory("до записи отобранных строк");
+    var stamp = new Date().toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit"});
+    var added = 0, dup = 0;
+    var seen = {};
+    state.played.forEach(function(v){ if(v.sig) seen[v.sig] = true; });
+    chosen.forEach(function(x, i){
+      var snap = state.matches.map(function(m, j){
+        var pk = {"1":false, "X":false, "2":false};
+        pk[OUT[x.line[j]]] = true;
+        return { picks: pk, mode: "free", pool: (m.pool || OUT).slice() };
+      });
+      var sig = snap.map(function(r){
+        return OUT.filter(function(o){ return r.picks[o]; }).join("") || "·";
+      }).join(" ");
+      if(seen[sig]){ dup++; return; }
+      seen[sig] = true;
+      state.rolls++;
+      state.spent += price;
+      state.played.unshift({
+        at: stamp,
+        label: "отбор " + (i + 1) + "/" + chosen.length,
+        sig: sig,
+        combos: 1,
+        cost: price,
+        snap: snap
+      });
+      added++;
+    });
+    if(state.played.length > 400) state.played.length = 400;
+    save(); render();
+    $("evBack").hidden = true;
+    say("Записано в сыгранные: " + fmt(added) + " строк(и) на " + fmt(added * price) + " ₽" +
+        (dup ? ", пропущено повторов: " + fmt(dup) : "") +
+        ". Они уйдут в CSV наравне с брошенными вариантами; убрать лишние можно корзиной в списке, откатить всё — кнопкой «Вернуть».");
   }
 
   /* ---------- render ---------- */
