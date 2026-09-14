@@ -1,18 +1,23 @@
 /*
   Автономный разбор тиража Балтсистемы — запускается GitHub Actions по расписанию.
 
-  Что делает:
-    1. Забирает активный тираж с открытого API totobrief (15 матчей).
-    2. Для каждой команды ищет её в TheSportsDB: сначала по таблице соответствий
-       data/teams.json, потом по транслитерации.
-    3. Тянет последние матчи каждой команды и считает ЧИСТЫЕ серии по правилам
-       методики: 3+ подряд побед, ИЛИ 3+ поражений, ИЛИ 3+ ничьих, отдельно
-       по площадке (дома для хозяев, на выезде для гостей), без склейки через
-       межсезонье — берётся окно последних 150 дней.
-    4. Пишет preset.json, который читает сайт.
+  Как ищет команды (главная сложность: totobrief даёт русские названия,
+  открытые базы — английские):
+    1. Берёт с TheSportsDB ВСЕ футбольные матчи за дату тиража и соседние дни.
+    2. Русское название переводит в латиницу по правилам, которыми русский
+       передаёт английские слова («х» → h, «э» → e), и сводит обе стороны
+       к «скелету»: гласные схлопываются, v/w, c/k/q, s/z считаются одной
+       буквой. «Вест Хэм» и «West Ham United» после этого почти совпадают.
+    3. Сопоставляет матч целиком, парой названий сразу — так надёжнее,
+       чем по одной команде.
+    4. Если по расписанию дня не нашлось, пробует прямой поиск по словарю
+       data/teams.json.
 
-  Ключей и платных сервисов не требует. Всё, что не удалось сопоставить,
-  печатается в лог — по нему пополняется data/teams.json.
+  Дальше по найденным командам считает ЧИСТЫЕ серии по правилам методики:
+  3+ подряд побед, ИЛИ поражений, ИЛИ ничьих, отдельно по площадке,
+  без склейки через межсезонье (окно 150 дней).
+
+  Ключей и платных сервисов не требует.
 */
 
 import { readFile, writeFile } from "node:fs/promises";
@@ -21,8 +26,10 @@ const TB = "https://totobrief.com/api/v1/community/";
 const SDB_KEY = process.env.SPORTSDB_KEY || "3";
 const SDB = `https://www.thesportsdb.com/api/v1/json/${SDB_KEY}/`;
 
-const WINDOW_DAYS = 150;   /* глубже не смотрим: там межсезонье и другой дивизион */
-const STREAK_MIN = 3;      /* чистая серия по методике — от трёх матчей */
+const WINDOW_DAYS = 150;
+const STREAK_MIN = 3;
+const PAIR_MIN = 0.50;   /* средняя похожесть пары, ниже которой матч не принимаем */
+const SIDE_MIN = 0.30;   /* и ни одна из сторон не должна быть совсем мимо */
 
 const log = (...a) => console.log(...a);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -42,41 +49,55 @@ async function getJson(url, tries = 3) {
 
 /* ---------- названия ---------- */
 
-const RU2LAT = {
-  а: "a", б: "b", в: "v", г: "g", д: "d", е: "e", ж: "zh", з: "z", и: "i",
-  й: "i", к: "k", л: "l", м: "m", н: "n", о: "o", п: "p", р: "r", с: "s",
-  т: "t", у: "u", ф: "f", х: "kh", ц: "ts", ч: "ch", ш: "sh", щ: "shch",
-  ъ: "", ы: "y", ь: "", э: "e", ю: "yu", я: "ya",
-};
-
-function normRu(name) {
-  return String(name || "")
-    .toLowerCase()
-    .replace(/ё/g, "е")
-    .replace(/\bфк\b/g, "")
-    .replace(/[()]/g, " ")
-    .replace(/[«»"'`.]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
+/* Пары сначала длинные: порядок важен */
+const RULES = [
+  ["дж", "j"], ["кс", "x"], ["ей", "ey"], ["ай", "ai"], ["ой", "oy"], ["ый", "y"],
+  ["ия", "ia"], ["ья", "ia"], ["ьи", "i"], ["тч", "tch"], ["сч", "sh"],
+  ["щ", "sh"], ["ч", "ch"], ["ш", "sh"], ["ж", "zh"], ["ц", "ts"],
+  ["ю", "yu"], ["я", "ya"], ["ё", "e"], ["х", "h"], ["э", "e"],
+  ["а", "a"], ["б", "b"], ["в", "v"], ["г", "g"], ["д", "d"], ["е", "e"],
+  ["з", "z"], ["и", "i"], ["й", "y"], ["к", "k"], ["л", "l"], ["м", "m"],
+  ["н", "n"], ["о", "o"], ["п", "p"], ["р", "r"], ["с", "s"], ["т", "t"],
+  ["у", "u"], ["ф", "f"], ["ы", "y"], ["ъ", ""], ["ь", ""],
+];
 
 function translit(name) {
-  return normRu(name)
-    .split("")
-    .map((ch) => (RU2LAT[ch] !== undefined ? RU2LAT[ch] : ch))
-    .join("")
+  let s = String(name || "").toLowerCase();
+  for (const [from, to] of RULES) s = s.split(from).join(to);
+  return s.replace(/\s+/g, " ").trim();
+}
+
+/* слова-пустышки, которые в одной базе есть, а в другой нет */
+const NOISE = new RegExp(
+  "\\b(fc|cf|afc|sc|ac|as|ss|ssd|us|ud|cd|sd|rc|ca|cp|club|de|the|team|city|town|united|athletic|wanderers|rovers|county|fk|fc)\\b",
+  "g"
+);
+
+/* «скелет» названия: то, что остаётся, если не придираться к гласным и к v/w, c/k */
+function skel(s, dropNoise) {
+  let x = String(s || "").toLowerCase().replace(/[^a-z0-9 ]+/g, " ");
+  if (dropNoise) x = x.replace(NOISE, " ");
+  return x
+    .replace(/wh/g, "v")          /* Whitehawk ≈ Уайтхок */
+    .replace(/ph/g, "f")
+    .replace(/[wv]/g, "v")
+    .replace(/[ckq]/g, "k")
+    .replace(/[zs]/g, "s")
+    .replace(/[gh]/g, "g")        /* английское H русский пишет и как «х», и как «г» */
+    .replace(/[aeiouy]+/g, "a")
+    .replace(/(.)\1+/g, "$1")
     .replace(/\s+/g, " ")
     .trim();
 }
 
-/* грубая мера похожести: доля общих триграмм */
-function similar(a, b) {
-  const tri = (s) => {
-    const x = " " + String(s).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim() + " ";
-    const out = new Set();
-    for (let i = 0; i < x.length - 2; i++) out.add(x.slice(i, i + 3));
-    return out;
-  };
+function tri(s) {
+  const x = "  " + s + "  ";
+  const out = new Set();
+  for (let i = 0; i < x.length - 2; i++) out.add(x.slice(i, i + 3));
+  return out;
+}
+
+function simRaw(a, b) {
   const A = tri(a), B = tri(b);
   if (!A.size || !B.size) return 0;
   let common = 0;
@@ -84,84 +105,130 @@ function similar(a, b) {
   return common / Math.max(A.size, B.size);
 }
 
-/* ---------- поиск команды ---------- */
+/* похожесть русского названия и английского: сравниваем скелеты,
+   отдельно со словами-пустышками и без них, берём лучшее */
+function sim(ruLat, en) {
+  const a1 = skel(ruLat, false), b1 = skel(en, false);
+  const a2 = skel(ruLat, true), b2 = skel(en, true);
+  let best = Math.max(simRaw(a1, b1), simRaw(a2, b2));
+  /* короткое название внутри длинного — «Барнсли» в «Barnsley FC» */
+  if (a2 && b2 && (b2.includes(a2) || a2.includes(b2))) best = Math.max(best, 0.8);
+  return best;
+}
 
-const teamCache = new Map();
+/* ---------- расписание дня ---------- */
 
-async function resolveTeam(ruName, dict) {
-  const key = normRu(ruName);
-  if (teamCache.has(key)) return teamCache.get(key);
+function daysAround(iso) {
+  const base = iso ? Date.parse(String(iso).slice(0, 10) + "T00:00:00Z") : Date.now();
+  const out = [];
+  for (const shift of [-1, 0, 1]) {
+    out.push(new Date(base + shift * 86400000).toISOString().slice(0, 10));
+  }
+  return out;
+}
 
-  const queries = [];
-  if (dict[key]) queries.push(dict[key]);
-  queries.push(translit(ruName));
+async function fixturesFor(dates) {
+  const all = [];
+  for (const d of dates) {
+    let data;
+    try {
+      data = await getJson(SDB + "eventsday.php?d=" + d + "&s=Soccer");
+    } catch (e) {
+      log(`  расписание за ${d} не получено: ${e.message}`);
+      continue;
+    }
+    const evs = (data && data.events) || [];
+    log(`  ${d}: матчей в базе ${evs.length}`);
+    for (const e of evs) {
+      if (!e.strHomeTeam || !e.strAwayTeam) continue;
+      all.push({
+        home: e.strHomeTeam, away: e.strAwayTeam,
+        homeId: e.idHomeTeam, awayId: e.idAwayTeam,
+        league: e.strLeague || "", date: e.dateEvent || d,
+        hk: skel(e.strHomeTeam, false), ak: skel(e.strAwayTeam, false),
+      });
+    }
+    await sleep(300);
+  }
+  return all;
+}
 
+function bestFixture(homeRu, awayRu, fixtures) {
+  const h = translit(homeRu), a = translit(awayRu);
+  let best = null, bestScore = 0, second = 0;
+  for (const f of fixtures) {
+    const sh = sim(h, f.home), sa = sim(a, f.away);
+    if (sh < SIDE_MIN || sa < SIDE_MIN) continue;
+    const score = (sh + sa) / 2;
+    if (score > bestScore) { second = bestScore; bestScore = score; best = { ...f, sh, sa }; }
+    else if (score > second) second = score;
+  }
+  if (!best || bestScore < PAIR_MIN) return null;
+  best.score = Number(bestScore.toFixed(2));
+  best.margin = Number((bestScore - second).toFixed(2));
+  return best;
+}
+
+/* ---------- запасной путь: прямой поиск по словарю ---------- */
+
+const searchCache = new Map();
+
+async function searchTeam(ruName, dict) {
+  const key = translit(ruName);
+  if (searchCache.has(key)) return searchCache.get(key);
+  const dictName = dict[String(ruName || "").toLowerCase().replace(/ё/g, "е").replace(/\bфк\b/g, "").replace(/[()]/g, " ").replace(/\s+/g, " ").trim()];
+  const queries = dictName ? [dictName] : [key];
   let found = null;
   for (const q of queries) {
     let data;
-    try {
-      data = await getJson(SDB + "searchteams.php?t=" + encodeURIComponent(q));
-    } catch (e) {
-      log(`    поиск «${q}» не удался: ${e.message}`);
-      continue;
+    try { data = await getJson(SDB + "searchteams.php?t=" + encodeURIComponent(q)); }
+    catch { continue; }
+    const list = ((data && data.teams) || []).filter((t) => /soccer/i.test(t.strSport || ""));
+    let bestT = null, bestS = 0;
+    for (const t of list) {
+      const s = Math.max(sim(key, t.strTeam), sim(key, t.strAlternate || ""));
+      if (s > bestS) { bestS = s; bestT = t; }
     }
-    const list = (data && data.teams) || [];
-    const football = list.filter((t) => /soccer/i.test(t.strSport || ""));
-    if (!football.length) continue;
-
-    let best = null, bestScore = 0;
-    for (const t of football) {
-      const score = Math.max(similar(q, t.strTeam), similar(q, t.strAlternate || ""));
-      if (score > bestScore) { bestScore = score; best = t; }
-    }
-    /* точное совпадение по словарю принимаем и при среднем сходстве */
-    const threshold = dict[key] && q === dict[key] ? 0.35 : 0.55;
-    if (best && bestScore >= threshold) {
-      found = { id: best.idTeam, name: best.strTeam, score: Number(bestScore.toFixed(2)), via: q };
+    if (bestT && bestS >= (dictName ? 0.4 : 0.65)) {
+      found = { id: bestT.idTeam, name: bestT.strTeam, score: Number(bestS.toFixed(2)) };
       break;
     }
     await sleep(250);
   }
-
-  teamCache.set(key, found);
+  searchCache.set(key, found);
   return found;
 }
 
 /* ---------- форма и серии ---------- */
 
+const lastCache = new Map();
+
 async function lastEvents(teamId) {
+  if (lastCache.has(teamId)) return lastCache.get(teamId);
   let data;
-  try {
-    data = await getJson(SDB + "eventslast.php?id=" + encodeURIComponent(teamId));
-  } catch (e) {
-    log(`    матчи команды ${teamId} не получены: ${e.message}`);
-    return [];
-  }
+  try { data = await getJson(SDB + "eventslast.php?id=" + encodeURIComponent(teamId)); }
+  catch (e) { log(`    матчи команды ${teamId} не получены: ${e.message}`); lastCache.set(teamId, []); return []; }
   const evs = (data && (data.results || data.events)) || [];
   const edge = Date.now() - WINDOW_DAYS * 86400000;
-  return evs
+  const rows = evs
     .map((e) => ({
       date: e.dateEvent ? Date.parse(e.dateEvent + "T00:00:00Z") : NaN,
       homeId: e.idHomeTeam, awayId: e.idAwayTeam,
-      home: e.strHomeTeam, away: e.strAwayTeam,
       hs: Number(e.intHomeScore), as: Number(e.intAwayScore),
-      league: e.strLeague || "",
     }))
     .filter((e) => isFinite(e.date) && e.date >= edge && isFinite(e.hs) && isFinite(e.as))
     .sort((a, b) => b.date - a.date);
+  lastCache.set(teamId, rows);
+  return rows;
 }
 
-/* исход матча глазами команды: W / D / L */
 function outcomeFor(ev, teamId) {
   const atHome = String(ev.homeId) === String(teamId);
   const my = atHome ? ev.hs : ev.as;
   const their = atHome ? ev.as : ev.hs;
-  if (my > their) return "W";
-  if (my < their) return "L";
-  return "D";
+  return my > their ? "W" : my < their ? "L" : "D";
 }
 
-/* чистая серия по площадке: только матчи дома (или только на выезде) подряд */
 function venueStreak(events, teamId, venue) {
   const rows = events.filter((e) =>
     venue === "home" ? String(e.homeId) === String(teamId) : String(e.awayId) === String(teamId)
@@ -173,7 +240,7 @@ function venueStreak(events, teamId, venue) {
     if (outcomeFor(rows[i], teamId) !== first) break;
     n++;
   }
-  return n >= STREAK_MIN ? { kind: first, len: n, games: rows.length } : null;
+  return n >= STREAK_MIN ? { kind: first, len: n } : null;
 }
 
 const WORD = {
@@ -198,6 +265,10 @@ async function main() {
   const events = (data.events || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
   if (!events.length) throw new Error("в тираже нет матчей");
 
+  log("\nТяну расписание матчей за эти даты:");
+  const fixtures = await fixturesFor(daysAround(draw.ended_at));
+  log(`Всего кандидатов: ${fixtures.length}`);
+
   const out = {
     tirazh: String(draw.number),
     drawingId: draw.id,
@@ -208,7 +279,7 @@ async function main() {
     matches: [],
   };
 
-  const unresolved = [];
+  const misses = [];
 
   for (const ev of events) {
     const parts = String(ev.name || "").split(/\s+[—–−-]\s+/);
@@ -217,26 +288,30 @@ async function main() {
     log(`\n${home} — ${away}  [${ev.championship || ""}]`);
 
     const rec = { home, away, hints: [], suggest: null, resolved: false };
+    let hId = null, aId = null;
 
-    const [hT, aT] = [await resolveTeam(home, dict), await resolveTeam(away, dict)];
-    if (!hT) { unresolved.push(home); log(`  ✗ не нашёл: ${home}`); }
-    else log(`  ✓ ${home} → ${hT.name} (id ${hT.id}, сходство ${hT.score}, запрос «${hT.via}»)`);
-    if (!aT) { unresolved.push(away); log(`  ✗ не нашёл: ${away}`); }
-    else log(`  ✓ ${away} → ${aT.name} (id ${aT.id}, сходство ${aT.score}, запрос «${aT.via}»)`);
+    const fx = bestFixture(home, away, fixtures);
+    if (fx) {
+      hId = fx.homeId; aId = fx.awayId;
+      log(`  ✓ по расписанию: ${fx.home} — ${fx.away} (${fx.league}, ${fx.date}), сходство ${fx.score}, отрыв ${fx.margin}`);
+    } else {
+      log("  · в расписании дня не нашёл, пробую прямой поиск");
+      const [h, a] = [await searchTeam(home, dict), await searchTeam(away, dict)];
+      if (h) { hId = h.id; log(`  ✓ ${home} → ${h.name} (${h.score})`); } else { log(`  ✗ не нашёл: ${home}`); misses.push(home); }
+      if (a) { aId = a.id; log(`  ✓ ${away} → ${a.name} (${a.score})`); } else { log(`  ✗ не нашёл: ${away}`); misses.push(away); }
+    }
 
-    if (!hT || !aT) { out.matches.push(rec); continue; }
+    if (!hId || !aId) { out.matches.push(rec); continue; }
     rec.resolved = true;
 
-    const [hEv, aEv] = [await lastEvents(hT.id), await lastEvents(aT.id)];
-    const hs = venueStreak(hEv, hT.id, "home");
-    const as = venueStreak(aEv, aT.id, "away");
+    const hs = venueStreak(await lastEvents(hId), hId, "home");
+    const as = venueStreak(await lastEvents(aId), aId, "away");
 
     const lean = [];
     if (hs) {
       rec.hints.push(`${home}: ${hs.len} ${WORD.home[hs.kind]}`);
       if (hs.kind === "W") lean.push("1");
       if (hs.kind === "D") lean.push("X");
-      /* серия поражений — самое слабое правило методики, направления не даёт */
     }
     if (as) {
       rec.hints.push(`${away}: ${as.len} ${WORD.away[as.kind]}`);
@@ -244,7 +319,7 @@ async function main() {
       if (as.kind === "D") lean.push("X");
     }
     const uniq = [...new Set(lean)];
-    rec.suggest = uniq.length === 1 ? uniq[0] : null;   /* при споре сигналов — молчим */
+    rec.suggest = uniq.length === 1 ? uniq[0] : null;
 
     if (rec.hints.length) rec.hints.forEach((h) => log("  · " + h));
     else log("  · чистых серий нет");
@@ -258,11 +333,11 @@ async function main() {
   const withSuggest = out.matches.filter((m) => m.suggest).length;
 
   log("\n================ ИТОГ ================");
-  log(`Сопоставлено команд: ${resolved} матчей из ${out.matches.length}`);
-  log(`Чистые серии найдены в ${withHints} матчах, направление даёт ${withSuggest}`);
-  if (unresolved.length) {
-    log("\nНе сопоставлены — впиши их в data/teams.json:");
-    [...new Set(unresolved)].forEach((n) => log(`  "${normRu(n)}": "",`));
+  log(`Сопоставлено: ${resolved} матчей из ${out.matches.length}`);
+  log(`Чистые серии найдены в ${withHints}, направление даёт ${withSuggest}`);
+  if (misses.length) {
+    log("\nНе сопоставлены — можно вписать в data/teams.json:");
+    [...new Set(misses)].forEach((n) => log(`  "${n.toLowerCase()}": "",`));
   }
 
   await writeFile(new URL("../preset.json", import.meta.url), JSON.stringify(out, null, 2) + "\n", "utf8");
