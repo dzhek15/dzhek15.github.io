@@ -2,7 +2,7 @@
   "tirazh": "5007",
   "drawingId": 12127,
   "endedAt": "2026-09-15T20:00:00.000000Z",
-  "generatedAt": "2026-09-14T20:52:17.209Z",
+  "generatedAt": "2026-09-14T21:03:53.612Z",
   "source": "totobrief + api-football",
   "rules": "чистая серия от 3 матчей, по площадке, окно 150 дней",
   "matches": [
@@ -11,35 +11,35 @@
       "away": "Эспаньол",
       "hints": [],
       "suggest": null,
-      "resolved": false
+      "resolved": true
     },
     {
       "home": "Питерборо Юнайтед",
       "away": "Барнсли",
       "hints": [],
       "suggest": null,
-      "resolved": false
+      "resolved": true
     },
     {
       "home": "Вест Хэм",
       "away": "Фулхэм",
       "hints": [],
       "suggest": null,
-      "resolved": false
+      "resolved": true
     },
     {
       "home": "Крей Уондерерз",
       "away": "Сейнт Албанс Сити",
       "hints": [],
       "suggest": null,
-      "resolved": false
+      "resolved": true
     },
     {
       "home": "Льюис",
       "away": "Каршалтон Атлетик",
       "hints": [],
       "suggest": null,
-      "resolved": false
+      "resolved": true
     },
     {
       "home": "Уайтхок",
@@ -53,63 +53,63 @@
       "away": "Дартфорд",
       "hints": [],
       "suggest": null,
-      "resolved": false
+      "resolved": true
     },
     {
       "home": "Солихалл Мурс",
       "away": "Бэрроу",
       "hints": [],
       "suggest": null,
-      "resolved": false
+      "resolved": true
     },
     {
       "home": "Алдершот Таун",
       "away": "Йовил Таун",
       "hints": [],
       "suggest": null,
-      "resolved": false
+      "resolved": true
     },
     {
       "home": "Бостон Юнайтед",
       "away": "Уокинг",
       "hints": [],
       "suggest": null,
-      "resolved": false
+      "resolved": true
     },
     {
       "home": "Уэлдстон",
       "away": "Галифакс Таун",
       "hints": [],
       "suggest": null,
-      "resolved": false
+      "resolved": true
     },
     {
       "home": "Беркхамстед",
       "away": "Аксбридж",
       "hints": [],
       "suggest": null,
-      "resolved": false
+      "resolved": true
     },
     {
       "home": "Баллимена",
       "away": "Каррик Рейнджерс",
       "hints": [],
       "suggest": null,
-      "resolved": false
+      "resolved": true
     },
     {
       "home": "Гленторан",
       "away": "Колрейн",
       "hints": [],
       "suggest": null,
-      "resolved": false
+      "resolved": true
     },
     {
       "home": "Браге",
       "away": "Сандвикенс",
       "hints": [],
       "suggest": null,
-      "resolved": false
+      "resolved": true
     }
   ]
 }
