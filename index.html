@@ -427,6 +427,7 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
   border:1px solid var(--rule)}
 .ev-top b{font-size:22px; font-family:"IBM Plex Mono",monospace}
 .ev-top span{font-size:12.5px; color:var(--muted)}
+.ev-top .ev-fine{font-size:11.5px; opacity:.85; margin-top:2px}
 .ev-top.ev-good{background:#E7F1EC; border-color:var(--cold)}
 .ev-top.ev-good b{color:var(--cold)}
 .ev-top.ev-bad{background:var(--hot-soft); border-color:var(--hot)}
@@ -1199,6 +1200,20 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     return { ev: ev, rows: rows, qDist: qDist, tbl: tbl };
   }
 
+  /* Шанс КУПОНА, а не одной строки. Купон берёт k угаданных, если верный исход
+     попал в отмеченные тобой ровно в k матчах: тогда среди строк системы найдётся
+     та, что угадала все эти k. Поэтому в каждом матче складываем вероятности
+     отмеченных исходов — и снова свёртка. Каждый доп поднимает слагаемое, а с ним
+     и весь шанс: ради этого допы и ставят. */
+  function evCouponDist(sets, probs){
+    var qs = sets.map(function(sel, i){
+      var s = 0;
+      for(var j=0;j<sel.length;j++) s += probs[i][sel[j]];
+      return Math.min(s, 1);
+    });
+    return poissonBinomial(qs);
+  }
+
   /* Разбор текущего купона: собираем выбранные исходы по каждому матчу */
   function evCoupon(){
     var probs = [], pools = [], sets = [], combos = 1, bad = null;
@@ -1313,15 +1328,25 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     }
     var rnd = rndSum / 300, rndA = rndAny / 300;
 
-    var verdictCls = mine.avg >= price ? "ev-good" : "ev-bad";
-    var verdict = mine.avg >= price
-      ? "выше цены строки — по этой модели купон в плюсе"
-      : "ниже цены строки — по этой модели купон в минусе";
+    var cDist = evCouponDist(c.sets, c.probs);
+    var cAny  = evTail(cDist, 9);
+    var total = mine.avg * mine.combos;
+    var cost  = mine.combos * price;
+
+    var verdictCls = total >= cost ? "ev-good" : "ev-bad";
+    var verdict = total >= cost
+      ? "больше, чем купон стоит — по этой модели он в плюсе"
+      : "меньше, чем купон стоит — по этой модели он в минусе";
 
     var h = "";
     h += '<div class="ev-top ' + verdictCls + '">' +
-         '<b>' + evMoney(mine.avg) + '</b><span>матожидание одной строки при цене ' + fmt(price) + ' ₽ — ' + verdict + '</span>' +
-         '<span>шанс вернуть хоть что-то (9 угаданных и больше): <b class="ev-inline">' + evPct(mine.any) + '</b></span></div>';
+         '<b>' + evMoney(total) + '</b>' +
+         '<span>матожидание всего купона из ' + fmt(mine.combos) + ' строк(и) при цене ' + evMoney(cost) + ' — ' + verdict + '</span>' +
+         '<span>шанс купона взять 9 угаданных и больше: <b class="ev-inline">' + evPct(cAny) + '</b>' +
+         ' · 11 и больше: <b class="ev-inline">' + evPct(evTail(cDist, 11)) + '</b>' +
+         ' · все 15: <b class="ev-inline">' + evPct(cDist[15] || 0) + '</b></span>' +
+         '<span class="ev-fine">на одну строку: ' + evMoney(mine.avg) + ' при цене ' + fmt(price) +
+         ' ₽, шанс строки ' + evPct(mine.any) + '</span></div>';
 
     h += '<p class="ev-sub">Тираж №' + state.tirazh + ': ' +
          (projected
@@ -1342,7 +1367,9 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     });
     h += '</tbody></table>';
     h += '<p class="ev-note">Вероятности в таблице — для самой вероятной строки твоего купона; ' +
-         'числа победителей относятся ко всему тиражу.</p>';
+         'числа победителей относятся ко всему тиражу. Шанс купона в шапке считается иначе: ' +
+         'каждый доп повышает вероятность угадать матч, поэтому с допами он растёт, ' +
+         'а матожидание одной строки — почти нет. Растёт сумма за весь купон.</p>';
 
     h += '<h3>С чем сравнить</h3>';
     h += '<table class="ev-tab ev-cmp"><thead><tr><th>Строка</th><th>EV</th><th>Шанс 9+</th></tr></thead><tbody>' +
