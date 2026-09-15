@@ -115,10 +115,11 @@ input:focus-visible,button:focus-visible,summary:focus-visible,textarea:focus-vi
   display:flex; flex-direction:column; align-items:stretch; gap:0;
 }
 .roll{display:flex; flex-direction:column; align-items:stretch; gap:12px; width:fit-content; max-width:100%; margin-left:auto}
-.console-top{display:flex; gap:20px; align-items:flex-start; width:100%}
-.hist-panel{flex:1 1 0; min-width:0; background:transparent; border:none; padding:0}
+/* две равные половины: слева сыгранные, справа кнопки */
+.console-top{display:grid; grid-template-columns:1fr 1fr; gap:20px; align-items:start; width:100%}
+.hist-panel{min-width:0; background:transparent; border:none; padding:0}
 .hist-panel .hist{max-height:430px}
-.console-top .roll{flex:0 0 auto}
+.console-top .roll{width:100%; max-width:100%; margin:0; min-width:0}
 .roll-primary{display:flex; gap:12px; align-items:stretch; flex-wrap:wrap; justify-content:center}
 .roll-crowd{display:flex; gap:12px; align-items:stretch; flex-wrap:wrap; justify-content:center}
 .roll-secondary, .roll-modes{display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:center}
@@ -224,7 +225,7 @@ button:disabled{opacity:.45; cursor:not-allowed}
   .roll-primary{width:100%; flex-direction:column; gap:9px}
   .roll-primary button{width:100%; justify-content:center}
   .roll{width:100%; margin-left:0}
-  .console-top{flex-direction:column; gap:16px}
+  .console-top{grid-template-columns:1fr; gap:16px}
   .console-top .roll{order:-1; width:100%}
   .hist-panel{width:100%}
   .hist-panel .hist{max-height:260px}
