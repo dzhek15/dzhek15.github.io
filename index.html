@@ -524,6 +524,7 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 .ev-tab th:first-child, .ev-tab td:first-child{text-align:left}
 .ev-tab th{font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); font-weight:600}
 .ev-tab td{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums}
+.ev-tab td.nw{white-space:nowrap}
 .ev-cmp td:first-child{font-family:inherit}
 .ev-note, .ev-warn{margin:8px 0 0; font-size:12px; color:var(--muted)}
 .ev-lead{margin:8px 0 0; font-size:13.5px; line-height:1.5}
@@ -542,6 +543,8 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 .pct-legend .sw.m{font-weight:400; color:var(--muted)}
 .pct-legend .sw.h{color:var(--hot)}
 .pct-legend .sw.c{color:var(--cold)}
+.pct-col.x-over b{color:var(--hot)}
+.pct-col u{text-decoration:none; color:var(--hot); font-weight:700; margin-left:2px}
 .pick{
   height:34px; width:100%; padding:0; display:flex; align-items:center; justify-content:center;
   font-family:"Chivo",sans-serif; font-weight:700; font-size:16px;
@@ -742,6 +745,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       </div>
       <div class="roll-ev">
         <button class="btn-ev" id="btnEV" type="button" title="Посчитать матожидание купона: вероятности из коэффициентов, соперники — из долей пула"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5V9.5"/><path d="M10 16.5V4"/><path d="M15.5 16.5v-5"/></svg><span class="lbl">Оценить купон</span></button>
+        <button class="btn-ev" id="btnDiff" type="button" title="Где доля игроков сильнее всего расходится с оценкой конторы"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.5v13"/><path d="M4.5 6.5h11"/><path d="M2.5 12.2 4.9 7l2.4 5.2a2.6 2.6 0 0 1-4.8 0z"/><path d="M12.7 12.2 15.1 7l2.4 5.2a2.6 2.6 0 0 1-4.8 0z"/></svg><span class="lbl">Расхождения</span></button>
         <button class="btn-ev" id="btnPF" type="button" title="Отобрать из системы строки, которые меньше всего пересекаются с выбором толпы"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 4.5h13l-5 5.8v5.2l-3 1.6v-6.8z"/></svg><span class="lbl">Отобрать строки</span></button>
       </div>
       <div class="roll-crowd">
@@ -852,7 +856,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. Бросок ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 15.09 15:42 МСК</span>
+    <span class="build">сборка 15.09 16:04 МСК</span>
   </footer>
 </div>
 
@@ -1910,12 +1914,15 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
           var pl = Number(m.pct.pool[i]), bk = Number(m.pct.bk[i]);
           var isTop = !!(crowd && crowd.top !== null && pl === crowd.top);
           var isLow = !!(crowd && crowd.low !== null && pl === crowd.low && !isTop);
+          /* правило форума 1x2.su: больше 30% пула на ничью в футболе — исход переоценён */
+          var xOver = (i === 1 && pl > 30);
           var col = document.createElement("div");
-          col.className = "pct-col" + (isTop ? " lead" : (isLow ? " rare" : ""));
+          col.className = "pct-col" + (isTop ? " lead" : (isLow ? " rare" : "")) + (xOver ? " x-over" : "");
           col.title = "Игроки " + pl + "% · контора " + bk + "%" +
             (isTop ? " — больше всего игроков в этом матче, приз делить со многими"
-             : isLow ? " — меньше всего игроков в этом матче" : "");
-          col.innerHTML = '<b>' + pl + '</b><i>' + bk + '</i>';
+             : isLow ? " — меньше всего игроков в этом матче" : "") +
+            (xOver ? ". На ничью ушло больше 30% пула — по правилу форума такой исход переоценён" : "");
+          col.innerHTML = '<b>' + pl + '</b><i>' + bk + '</i>' + (xOver ? '<u>!</u>' : '');
           cell.appendChild(col);
         }
 
@@ -2633,6 +2640,68 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   $("tirazhName").addEventListener("input", function(e){ state.tirazh = e.target.value; save(); });
   $("tirazhName").value = state.tirazh || "";
+  /* ---------- Окно «Расхождения с толпой» ----------
+     Считаем, насколько доли игроков расходятся с оценкой конторы. Мера — сумма
+     (доля_конторы − доля_игроков)² / доля_игроков по трём исходам: это тот же
+     критерий, что на форуме 1x2.su описан как «сумма отношений против тройки»,
+     только без бесполезного порога. Чем больше, тем сильнее толпа ошибается. */
+  function crowdGap(m){
+    var pr = evProbs(m), pl = evPool(m);
+    if(!pr || !pl) return null;
+    var d = 0, over = 0, under = 0;
+    for(var i = 0; i < 3; i++){
+      d += (pr[i] - pl[i]) * (pr[i] - pl[i]) / Math.max(pl[i], 0.01);
+      if(pl[i] - pr[i] > pl[over] - pr[over]) over = i;
+      if(pr[i] - pl[i] > pr[under] - pl[under]) under = i;
+    }
+    return { d: d, over: over, under: under, pr: pr, pl: pl };
+  }
+
+  function showCrowdGaps(){
+    var rows = [], i;
+    for(i = 0; i < state.matches.length; i++){
+      var g = crowdGap(state.matches[i]);
+      if(g){ g.idx = i; g.m = state.matches[i]; rows.push(g); }
+    }
+    $("evTitle").textContent = "Расхождения с толпой";
+    if(!rows.length){
+      $("evBody").innerHTML = '<p class="ev-warn">Нет данных по долям игроков — нажми «Обновить тираж».</p>';
+      $("evBack").hidden = false;
+      return;
+    }
+    rows.sort(function(a, b){ return b.d - a.d; });
+    var pc = function(x){ return Math.round(x * 100) + "%"; };
+    var h = '<p class="ev-lead">Здесь матчи выстроены по тому, насколько доля игроков расходится с оценкой ' +
+            'конторы. Верх списка — места, где толпа ошибается сильнее всего: её перегруженный исход стоит ' +
+            'дорого (приз делить со многими), а недогруженный при той же вероятности достаётся дешевле.</p>';
+    h += '<p class="ev-note">В столбцах: исход, доля игроков → оценка конторы.</p>' +
+         '<table class="ev-tab"><thead><tr><th>Матч</th><th>Толпа грузит</th><th>Толпа жалеет</th><th>Расх.</th></tr></thead><tbody>';
+    rows.forEach(function(g){
+      var nm = (g.idx + 1) + ". " + g.m.home + " — " + g.m.away;
+      h += '<tr><td>' + nm + '</td>' +
+           '<td class="nw">' + OUT[g.over] + '  ' + pc(g.pl[g.over]) + ' \u2192 ' + pc(g.pr[g.over]) + '</td>' +
+           '<td class="nw">' + OUT[g.under] + '  ' + pc(g.pl[g.under]) + ' \u2192 ' + pc(g.pr[g.under]) + '</td>' +
+           '<td>' + (g.d * 100).toFixed(1) + '</td></tr>';
+    });
+    h += '</tbody></table>';
+    var xo = [];
+    state.matches.forEach(function(m, k){
+      if(m.pct && m.pct.pool && Number(m.pct.pool[1]) > 30) xo.push(k + 1);
+    });
+    if(xo.length){
+      h += '<h3>Переоценённые ничьи</h3><p class="ev-lead">В футболе ничья случается примерно в 28–30% матчей. ' +
+           'Если на неё ушло больше 30% пула, исход переоценён. Сейчас это матч(и) № ' + xo.join(", ") +
+           ' — в строках такая ничья помечена восклицательным знаком.</p>';
+    }
+    h += '<p class="ev-warn">Расхождение говорит только о цене исхода, а не о его вероятности. ' +
+         'Брать недогруженный исход стоит там, где он и по оценке конторы не сильно хуже перегруженного, ' +
+         'иначе сэкономишь на дележе приза, но проиграешь сам матч.</p>';
+    $("evBody").innerHTML = h;
+    $("evBack").hidden = false;
+  }
+
+  $("btnDiff").addEventListener("click", showCrowdGaps);
+
   /* ---------- Окно «Ценность тиража» ----------
      Плитка в шапке показывает одно число, а здесь объясняем словами,
      откуда оно берётся и как его читать. Всё считается по той же выгрузке. */
