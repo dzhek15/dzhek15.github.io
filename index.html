@@ -97,6 +97,9 @@ h1,h2,h3{font-family:"Chivo","IBM Plex Sans",system-ui,sans-serif; margin:0; tex
 }
 .ticket .tk:last-child{border-right:0}
 .ticket .k, .ticket label{font-size:11.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
+.tk-note{font-size:11px; color:var(--muted); margin-top:2px; text-align:center; line-height:1.25}
+.ticket .v.good{color:var(--cold)}
+.ticket .v.bad{color:var(--hot)}
 .ticket .v{font-family:"Chivo",sans-serif; font-weight:800; font-size:17px; line-height:1.1; font-variant-numeric:tabular-nums}
 .ticket .v.soon{color:var(--warn)}
 .ticket .v.shut{color:var(--hot)}
@@ -689,6 +692,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       <div class="tk"><span class="k">Приём до (МСК)</span><span class="v mono" id="koTime">—</span></div>
       <div class="tk"><span class="k">Осталось</span><span class="v mono" id="koLeft">—</span></div>
       <div class="tk" id="tkJackWrap" hidden><span class="k">Суперприз</span><span class="v mono" id="tkJack">—</span></div>
+      <div class="tk" id="tkValWrap" hidden title="Суперприз, делённый на призовой фонд тиража. Чем больше, тем больше чужих денег разыгрывается сверх собранного сегодня. «Обычно» — медиана этого же отношения по завершённым тиражам."><span class="k">Ценность тиража</span><span class="v mono" id="tkVal">—</span><span class="tk-note" id="tkValNote"></span></div>
     </div>
   </header>
 
@@ -824,6 +828,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       <div class="acts">
         <button id="btnCsv" type="button"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.5v8.5"/><path d="M6.6 8.8 10 12.2l3.4-3.4"/><path d="M3.8 15.5h12.4"/></svg><span class="lbl">Скачать CSV</span></button>
         <button id="btnSend" type="button" title="Отправить файл в мессенджер, почту или скопировать в буфер"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3 3 8.6l5.6 2.3L11 16.7z"/><path d="M8.6 10.9 17 3"/></svg><span class="lbl">Отправить CSV</span></button>
+        <button id="btnLink" type="button" title="Скопировать адрес, по которому этот купон откроется на другом устройстве"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8.4 11.6a3.4 3.4 0 0 0 5 .3l2.3-2.3a3.4 3.4 0 0 0-4.8-4.8l-1.3 1.3"/><path d="M11.6 8.4a3.4 3.4 0 0 0-5-.3l-2.3 2.3a3.4 3.4 0 0 0 4.8 4.8l1.3-1.3"/></svg><span class="lbl">Ссылка на купон</span></button>
         <button id="btnLoadCsv" type="button" title="Открыть CSV и листать его варианты прямо в таблице матчей"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12.2V3.7"/><path d="M6.6 7.1 10 3.7l3.4 3.4"/><path d="M3.8 15.5h12.4"/></svg><span class="lbl">Загрузить CSV</span></button>
         <input type="file" id="fileCsv" accept=".csv,text/csv,text/plain" hidden>
       </div>
@@ -843,7 +848,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. Бросок ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 15.09 14:23 МСК</span>
+    <span class="build">сборка 15.09 14:57 МСК</span>
   </footer>
 </div>
 
@@ -910,6 +915,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       jackpot: 0,
       poolSum: 0,
       poolTypical: 0,
+      ratioTypical: 0,
       showPct: false,
       showKf: false,
       compact: false,
@@ -1031,6 +1037,34 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       jw.hidden = false;
       $("tkJack").textContent = fmt(state.jackpot) + " ₽";
     } else { jw.hidden = true; }
+
+    /* ценность тиража: суперприз к типичному фонду, сравниваем с обычным уровнем */
+    var vw = $("tkValWrap");
+    var fundNow = Number(state.poolTypical) || Number(state.poolSum) || 0;
+    var rTyp = Number(state.ratioTypical) || 0;
+    if(state.jackpot && fundNow){
+      vw.hidden = false;
+      var r = state.jackpot / fundNow;
+      var vEl = $("tkVal");
+      vEl.textContent = r.toFixed(2).replace(".", ",");
+      vEl.classList.remove("good", "bad");
+      var note = "";
+      if(rTyp > 0){
+        var rel = r / rTyp;
+        if(rel >= 1.15){ vEl.classList.add("good"); note = "выше обычного"; }
+        else if(rel <= 0.85){ vEl.classList.add("bad"); note = "ниже обычного"; }
+        else note = "как обычно";
+        note += " · обычно " + rTyp.toFixed(2).replace(".", ",");
+      }
+      $("tkValNote").textContent = note;
+    } else { vw.hidden = true; }
+
+    /* на телефоне плитки лежат сеткой 2×2: нечётную последнюю растягиваем на всю ширину,
+       иначе справа от неё просвечивает серый фон контейнера */
+    var tks = [].slice.call(document.querySelectorAll(".ticket .tk"));
+    var vis = tks.filter(function(e){ return !e.hidden; });
+    tks.forEach(function(e){ e.style.gridColumn = ""; });
+    if(vis.length % 2 === 1 && vis.length) vis[vis.length - 1].style.gridColumn = "1 / -1";
 
     var tv = $("koTime"), lv = $("koLeft");
     tv.classList.remove("soon","shut"); lv.classList.remove("soon","shut");
@@ -2587,6 +2621,66 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   $("tirazhName").addEventListener("input", function(e){ state.tirazh = e.target.value; save(); });
   $("tirazhName").value = state.tirazh || "";
+  /* ---------- Купон по ссылке ----------
+     15 цифр: 1 = «1», 2 = «X», 4 = «2», сумма — если отмечено несколько.
+     Так купон переезжает с телефона на компьютер и обратно. */
+  function couponCode(){
+    return state.matches.map(function(m){
+      return String((m.picks["1"] ? 1 : 0) | (m.picks["X"] ? 2 : 0) | (m.picks["2"] ? 4 : 0));
+    }).join("");
+  }
+
+  function couponLink(){
+    return location.origin + location.pathname + "#k=" +
+           encodeURIComponent(state.tirazh || "") + "-" + couponCode();
+  }
+
+  function applyCouponCode(code){
+    if(code.length !== state.matches.length) return false;
+    pushHistory("до загрузки купона по ссылке");
+    for(var i = 0; i < code.length; i++){
+      var v = Number(code[i]);
+      if(!isFinite(v)) return false;
+      var m = state.matches[i];
+      m.picks["1"] = !!(v & 1); m.picks["X"] = !!(v & 2); m.picks["2"] = !!(v & 4);
+      m.mode = "free"; m.pool = OUT.slice();
+    }
+    save(); render();
+    return true;
+  }
+
+  var pendingLink = (function(){
+    var m = String(location.hash || "").match(/^#k=([^-]*)-([0-7]+)$/);
+    return m ? { tirazh: decodeURIComponent(m[1]), code: m[2] } : null;
+  })();
+
+  function tryPendingLink(){
+    if(!pendingLink || !state.matches.length) return;
+    if(pendingLink.code.length !== state.matches.length) return;   /* ждём загрузки тиража */
+    var p = pendingLink;
+    if(p.tirazh && String(p.tirazh) !== String(state.tirazh)){
+      pendingLink = null;
+      say("Ссылка сделана для тиража №" + p.tirazh + ", а сейчас загружен №" + state.tirazh +
+          " — исходы из неё не проставлены.");
+      return;
+    }
+    pendingLink = null;
+    if(applyCouponCode(p.code)) say("Купон из ссылки проставлен. Отменить — «Вернуть».");
+  }
+
+  $("btnLink").addEventListener("click", function(){
+    var url = couponLink();
+    try{ history.replaceState(null, "", "#k=" + encodeURIComponent(state.tirazh || "") + "-" + couponCode()); }catch(e){}
+    var done = function(){
+      $("expNote").textContent = "Ссылка на купон скопирована. Открой её на другом устройстве — исходы проставятся сами.";
+    };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(url).then(done, function(){ showFallback(url); });
+    } else {
+      showFallback(url);
+    }
+  });
+
   /* ---------- Просмотр CSV: варианты листаются в таблице, как страницы книги ----------
      Файл никуда не записывается: купон и корзина остаются нетронутыми,
      пока не нажмёшь «В купон». */
@@ -2754,6 +2848,25 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     return [parts[0].trim(), parts.slice(1).join(" - ").trim()];
   }
 
+  /* тот же тираж: обновляем только доли игроков и коэффициенты, ничего не стирая */
+  function refreshPct(info){
+    var evs = (info.events || []).slice().sort(function(a,b){ return (a.order||0) - (b.order||0); });
+    if(evs.length !== state.matches.length) return false;
+    var i, t;
+    for(i = 0; i < evs.length; i++){
+      t = splitTeams(evs[i].name);
+      if(!t || t[0] !== state.matches[i].home || t[1] !== state.matches[i].away) return false;
+    }
+    for(i = 0; i < evs.length; i++){
+      var q = evs[i].quotes || {}, m = state.matches[i];
+      if(q.pool_win_1 != null) m.pct = { pool:[q.pool_win_1, q.pool_draw, q.pool_win_2],
+                                         bk:  [q.bk_win_1,   q.bk_draw,   q.bk_win_2] };
+      if(q.norm_win_1 != null) m.kf = [q.norm_win_1, q.norm_draw, q.norm_win_2];
+    }
+    save(); render();
+    return true;
+  }
+
   function applyDrawing(info){
     var evs = (info.events || []).slice().sort(function(a,b){ return (a.order||0) - (b.order||0); });
     var list = [];
@@ -2809,7 +2922,21 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         if(!d) d = rows[0];
         if(!d) throw new Error("тиражи не найдены");
         var haveApiData = state.matches.some(function(m){ return m.pct; });
-        if(silent && haveApiData && String(d.number) === String(state.tirazh)) return null;
+        /* тираж тот же — не пересобираем его заново, а только освежаем проценты и кэфы:
+           купон, режимы и корзина остаются как были */
+        /* тираж сменился, а в корзине уже что-то есть — молча не сносим */
+        if(silent && String(d.number) !== String(state.tirazh) && (state.played.length || state.rolls)){
+          return { changed: d.number };
+        }
+        if(haveApiData && String(d.number) === String(state.tirazh)){
+          return fetch(API + "drawing-info/" + d.id)
+            .then(function(r){ if(!r.ok) throw new Error("тираж " + d.number + ": " + r.status); return r.json(); })
+            .then(function(j2){
+              var info = j2.data || j2;
+              if(refreshPct(info)) return {soft:true, number:d.number};
+              return {n:applyDrawing(info), number:d.number};
+            });
+        }
         state.deadline = d.ended_at || "";
         state.jackpot = Number(d.jackpot) || 0;
         state.poolSum = Number(d.pool_sum) || 0;
@@ -2819,6 +2946,10 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
                        .map(function(x){ return Number(x.pool_sum); })
                        .sort(function(a,b){ return a - b; });
         state.poolTypical = done.length ? done[Math.floor(done.length/2)] : 0;
+        var rr = rows.filter(function(x){ return x.status === "finished" && Number(x.pool_sum) > 0 && Number(x.jackpot) > 0; })
+                     .map(function(x){ return Number(x.jackpot) / Number(x.pool_sum); })
+                     .sort(function(a,b){ return a - b; });
+        state.ratioTypical = rr.length ? rr[Math.floor(rr.length/2)] : 0;
         return fetch(API + "drawing-info/" + d.id)
           .then(function(r){ if(!r.ok) throw new Error("тираж " + d.number + ": " + r.status); return r.json(); })
           .then(function(j2){ return applyDrawing(j2.data || j2); })
@@ -2826,13 +2957,23 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       })
       .then(function(res){
         btn.disabled = false; btn.classList.remove("is-loading"); lbl.textContent = was;
-        if(res) say("Тираж №" + res.number + " загружен с totobrief: " + res.n +
+        if(res && res.changed){
+          say("На totobrief появился тираж №" + res.changed + ", а открыт №" + state.tirazh +
+              ". Нажми «Обновить тираж», чтобы перейти на него — корзина при этом очистится.");
+          tryPendingLink();
+        }
+        else if(res && res.soft){
+          if(!silent) say("Тираж №" + res.number + " тот же — обновил доли игроков и коэффициенты. Купон и корзина не тронуты.");
+          tryPendingLink();
+        }
+        else if(res) say("Тираж №" + res.number + " загружен с totobrief: " + res.n +
                     " матч(ей), проценты игроков и конторы подставлены в строки. Исходы и режимы не проставлены — " +
                     "отмечай сам, а для броска сначала нажми «Все в рандом».");
-        else if(!silent) say("Тираж №" + state.tirazh + " уже актуальный — обновлять нечего.");
+        if(res && !res.soft) tryPendingLink();
       })
       .catch(function(err){
         btn.disabled = false; btn.classList.remove("is-loading"); lbl.textContent = was;
+        tryPendingLink();
         if(!silent) say("Не удалось забрать тираж: " + (err && err.message ? err.message : err) +
                         ". На странице-артефакте запросы наружу запрещены — автоподтяжка работает только в размещённой версии.");
       });
@@ -3006,11 +3147,25 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     clearOnLoad();                             /* лист вариантов при загрузке пустой */
     render();
     /* если страница размещена в интернете — тихо проверить, не сменился ли тираж */
-    if(state.rolls === 0 && !state.played.length && typeof fetch === "function"){
+    if(typeof fetch === "function"){
       setTimeout(function(){ pullTirazh(true); }, 300);
+    } else {
+      tryPendingLink();                        /* без сети — ставим купон из ссылки по тому, что уже сохранено */
     }
   } catch(e){ boom(e); }
   setInterval(function(){ try{ renderKickoff(); }catch(e){} }, 30000);
+
+  /* пока приём идёт и вкладка открыта, доли игроков сами подтягиваются раз в 7 минут:
+     они ползут весь день, а «большинство/меньшинство» считаются именно по ним */
+  setInterval(function(){
+    try{
+      if(document.hidden) return;
+      if(typeof fetch !== "function") return;
+      var ts = kickoffMs();
+      if(ts === null || ts - Date.now() <= 0) return;      /* приём закрыт — обновлять нечего */
+      pullTirazh(true);
+    }catch(e){}
+  }, 7 * 60 * 1000);
 })();
 </script>
 
