@@ -476,6 +476,10 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 .meta{font-family:"IBM Plex Mono",monospace; font-size:13px; color:var(--muted); margin-top:3px; overflow-wrap:anywhere}
 .flag{height:11px; width:auto; margin-right:6px; border-radius:1px; vertical-align:baseline;
   box-shadow:0 0 0 1px rgba(19,26,27,.15)}
+/* флаг рядом с названием команды — для еврокубков и прочих межстрановых турниров */
+.tflag{height:12px; width:auto; margin-right:5px; border-radius:1px; vertical-align:-1px;
+  box-shadow:0 0 0 1px rgba(19,26,27,.15)}
+[data-compact="1"] .tflag{height:10px; margin-right:4px}
 .pick-cell{display:flex; flex-direction:column; gap:4px; min-width:0}
 .pick-cell .pick{width:100%}
 .pct-col{display:flex; justify-content:center; gap:6px; font-family:"IBM Plex Mono",monospace;
@@ -887,7 +891,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. Бросок ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 15.09 22:40 МСК</span>
+    <span class="build">сборка 16.09 00:05 МСК</span>
   </footer>
 </div>
 
@@ -1242,8 +1246,8 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   /* Поправка к расчётному числу победителей. Независимость завышает середину хвоста:
      реальные купоны скоррелированы, люди идут за фаворитами и проваливаются вместе.
-     Значения из фактических выплат ТРЁХ тиражей — 4990, 5000 и 5006, суммарно 27 964
-     победителя в категории 9. Девятка устойчива между тиражами (0,870 · 0,882 · 0,900),
+     Значения из фактических выплат ЧЕТЫРЁХ тиражей — 4980, 4990, 5000 и 5006, суммарно
+     35 602 победителя в категории 9. Девятка устойчива между тиражами (0,870 · 0,882 · 0,900),
      ниже по хвосту разброс растёт: у одиннадцати уже 0,655 · 0,755 · 0,834.
      А вот на самом верху поправка ПЕРЕВОРАЧИВАЕТСЯ: модель ждала 1,93 победителя
      с четырнадцатью на три тиража, было 3, и 0,06 с пятнадцатью — был 1. Причина в
@@ -1251,7 +1255,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
      девять тысяч независимых. Поэтому 14 и 15 стоят выше единицы — это уменьшает нашу
      долю в суперпризе, то есть страхует от главной ошибки модели. Обе цифры держатся
      на 3 и 1 наблюдении и поставлены с запасом, а не подогнаны. */
-  var FIX_BASE = {9:0.881, 10:0.803, 11:0.721, 12:0.652, 13:0.735, 14:1.5, 15:2.0};
+  var FIX_BASE = {9:0.879, 10:0.804, 11:0.722, 12:0.646, 13:0.622, 14:1.5, 15:2.0};
 
   function fixFactors(){ return FIX_BASE; }
 
@@ -1569,7 +1573,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
     h += '<h3>На чём это держится</h3><ul class="ev-ass">' +
          '<li>Вероятность исхода берётся из коэффициента конторы, маржа снимается методом Шина — он точнее простой нормировки, потому что не размазывает надбавку поровну, а учитывает, что на аутсайдерах она больше. Ничего более точного в открытых данных нет.</li>' +
-         '<li>Число соперников оценивается в предположении, что игроки выбирают исходы независимо друг от друга, а затем правится постоянным множителем, полученным из фактических выплат тиражей 4990, 5000 и 5006. Сверка с реальным тиражом показала, что независимость даёт слишком жирный правый хвост: настоящие купоны скоррелированы и проваливаются вместе. Поправка это частично лечит, но перекос в пользу редких комбинаций остаётся.</li>' +
+         '<li>Число соперников оценивается в предположении, что игроки выбирают исходы независимо друг от друга, а затем правится постоянным множителем, полученным из фактических выплат тиражей 4980, 4990, 5000 и 5006. Сверка с реальным тиражом показала, что независимость даёт слишком жирный правый хвост: настоящие купоны скоррелированы и проваливаются вместе. Поправка это частично лечит, но перекос в пользу редких комбинаций остаётся.</li>' +
          '<li>Суперприз в тираже 5007 накоплен за 16 тиражей и сравним со всем призовым фондом, поэтому слагаемые за 14 и 15 угаданных сильно тянут EV вверх — при том что их вероятность тысячные доли процента. Почти весь EV сидит в событиях, которые почти никогда не случаются.</li>' +
          '<li>Выплаты считаются от итогового призового фонда: пока приём идёт, вместо собранной на сейчас суммы берётся медиана завершённых тиражей. А вот доли пула — снимок на момент «Обновить тираж», к закрытию они ещё сдвинутся, так что чем раньше считаешь, тем грубее оценка.</li>' +
          '<li>Структура призов: 40% фонда делят все с 9 угаданными и больше, 20% — все с 10 и больше, 10% — с 11 и больше, и по 5% на каждый порог 12, 13, 14, 15; за 14 добавляется 10% суперприза, за 15 — 90%. Строка получает сумму по всем порогам, до которых дотянулась. Проверено на фактических выплатах тиража 5006 до копейки. Невыигранные пороги 14 и 15 уходят в суперприз — тоже сверено, расхождение 3 ₽.</li>' +
@@ -1814,6 +1818,110 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     "оаэ":"ae", "катар":"qa", "иран":"ir", "ирак":"iq", "иордания":"jo", "кувейт":"kw"
   };
 
+  /* Континентальные турниры: в шапке лиги стоит часть света, а не страна,
+     и одного флага на матч мало — команды бывают из разных стран. Тогда флаг
+     вешаем на каждую команду отдельно. Таблица собрана руками по участникам
+     еврокубков и АФК; чего в ней нет — остаётся без флага, а имя уходит
+     в консоль, чтобы таблицу пополнять. Частичного совпадения нет намеренно:
+     лучше без флага, чем с чужим. */
+  var CONTINENTS = {"европа":"eu","азия":null,"африка":null,"южная америка":null,
+    "северная америка":null,"мир":null,"世界":null};
+  var TEAMS = {
+    "арсенал":"gb-eng","астон вилла":"gb-eng","ливерпуль":"gb-eng","манчестер сити":"gb-eng",
+    "манчестер юнайтед":"gb-eng","челси":"gb-eng","тоттенхэм":"gb-eng","ньюкасл":"gb-eng",
+    "вест хэм":"gb-eng","брайтон":"gb-eng","эвертон":"gb-eng","фулхэм":"gb-eng",
+    "кристал пэлас":"gb-eng","ноттингем форест":"gb-eng","брентфорд":"gb-eng","борнмут":"gb-eng",
+    "вулверхэмптон":"gb-eng","лестер":"gb-eng","лидс":"gb-eng","бернли":"gb-eng","сандерленд":"gb-eng",
+    "селтик":"gb-sct","рейнджерс":"gb-sct","хартс":"gb-sct","хиберниан":"gb-sct","абердин":"gb-sct",
+    "нью-сейнтс":"gb-wls","линфилд":"gb-nir","ларн":"gb-nir","гленторан":"gb-nir","колрейн":"gb-nir",
+    "баллимена":"gb-nir","каррик рейнджерс":"gb-nir",
+    "реал мадрид":"es","барселона":"es","атлетико мадрид":"es","севилья":"es","вильярреал":"es",
+    "реал сосьедад":"es","атлетик бильбао":"es","бетис":"es","валенсия":"es","жирона":"es",
+    "осасуна":"es","сельта":"es","райо вальекано":"es","эспаньол":"es","мальорка":"es",
+    "хетафе":"es","алавес":"es","леванте":"es","эльче":"es","овьедо":"es","депортиво ла-корунья":"es",
+    "ювентус":"it","милан":"it","интер":"it","наполи":"it","рома":"it","лацио":"it","аталанта":"it",
+    "фиорентина":"it","болонья":"it","торино":"it","удинезе":"it","дженоа":"it","кальяри":"it",
+    "верона":"it","комо":"it","парма":"it","лечче":"it","сассуоло":"it","пиза":"it","кремонезе":"it",
+    "бавария":"de","боруссия дортмунд":"de","рб лейпциг":"de","байер":"de","байер леверкузен":"de",
+    "айнтрахт":"de","штутгарт":"de","хоффенхайм":"de","вольфсбург":"de","фрайбург":"de",
+    "вердер":"de","майнц":"de","аугсбург":"de","унион берлин":"de","боруссия менхенгладбах":"de",
+    "гамбург":"de","санкт-паули":"de","кельн":"de","хайденхайм":"de",
+    "псж":"fr","марсель":"fr","лион":"fr","монако":"fr","лилль":"fr","ницца":"fr","ланс":"fr",
+    "ренн":"fr","страсбур":"fr","нант":"fr","тулуза":"fr","брест":"fr","осер":"fr","гавр":"fr",
+    "анже":"fr","метц":"fr","лорьян":"fr","париж":"fr",
+    "бенфика":"pt","порту":"pt","спортинг":"pt","брага":"pt","витория гимарайнш":"pt",
+    "санта-клара":"pt","арока":"pt","риу аве":"pt","эштрела амадора":"pt","морейренсе":"pt",
+    "маритиму":"pt","фамаликан":"pt","каса пия":"pt",
+    "аякс":"nl","псв":"nl","фейеноорд":"nl","аз":"nl","твенте":"nl","утрехт":"nl",
+    "гоу эхед иглз":"nl","херенвен":"nl",
+    "андерлехт":"be","брюгге":"be","клуб брюгге":"be","генк":"be","гент":"be",
+    "юнион сен-жилуаз":"be","антверпен":"be","стандард":"be","шарлеруа":"be",
+    "зюльте-варегем":"be","кортрейк":"be","мехелен":"be",
+    "ред булл зальцбург":"at","зальцбург":"at","штурм":"at","рапид вена":"at",
+    "аустрия вена":"at","ласк":"at",
+    "янг бойз":"ch","базель":"ch","цюрих":"ch","серветт":"ch","люцерн":"ch","лугано":"ch",
+    "санкт-галлен":"ch",
+    "славия прага":"cz","спарта прага":"cz","виктория пльзень":"cz","баник":"cz",
+    "легия":"pl","ракув":"pl","лех познань":"pl","ягеллония":"pl","пяст гливице":"pl",
+    "радомяк радом":"pl",
+    "шахтер":"ua","динамо киев":"ua","заря":"ua","полесье":"ua",
+    "галатасарай":"tr","фенербахче":"tr","бешикташ":"tr","трабзонспор":"tr","башакшехир":"tr",
+    "самсунспор":"tr","касымпаша":"tr","генчлербирлиги":"tr",
+    "олимпиакос":"gr","панатинаикос":"gr","паок":"gr","аек":"gr","арис":"gr",
+    "динамо загреб":"hr","хайдук":"hr","риека":"hr",
+    "црвена звезда":"rs","партизан":"rs",
+    "копенгаген":"dk","мидтьюлланн":"dk","брондбю":"dk","норшелланн":"dk",
+    "мальме":"se","хеккен":"se","юргорден":"se","эльфсборг":"se","броммапойкарна":"se",
+    "браге":"se","сандвикенс":"se",
+    "буде-глимт":"no","мольде":"no","русенборг":"no","бранн":"no",
+    "маккаби тель-авив":"il","маккаби хайфа":"il","хапоэль беэр-шева":"il",
+    "омония":"cy","апоэл":"cy","пафос":"cy",
+    "фкса":"ro","университатя клуж":"ro","чфр клуж":"ro",
+    "лудогорец":"bg","левски":"bg","цска софия":"bg",
+    "ференцварош":"hu","пакш":"hu","слован братислава":"sk",
+    "марибор":"si","целе":"si","олимпия":"si",
+    "карабах":"az","нефтчи":"az","астана":"kz","кайрат":"kz","ноа":"am","арарат":"am",
+    "динамо тбилиси":"ge","брейдаблик":"is","викингур":"is","хик":"fi","купс":"fi",
+    "шемрок роверс":"ie","дандолк":"ie","дерри сити":"ie","шелбурн":"ie","слайго роверс":"ie",
+    "гэлуэй юнайтед":"ie","уотерфорд":"ie","сент-патрикс":"ie",
+    "шериф":"md","рига":"lv","жальгирис":"lt","левадия":"ee","флора":"ee",
+    "зенит":"ru","спартак":"ru","цска":"ru","локомотив":"ru","краснодар":"ru","динамо москва":"ru",
+    "рубин":"ru","родина":"ru","торпедо":"ru","ахмат":"ru","ростов":"ru","крылья советов":"ru",
+    "нижний новгород":"ru","балтика":"ru","сочи":"ru","оренбург":"ru","акрон":"ru","пари нн":"ru",
+    "эстеглаль":"ir","персеполис":"ir","сепахан":"ir","трактор":"ir",
+    "аль садд":"qa","аль райян":"qa","аль духаиль":"qa","аль гарафа":"qa",
+    "аль хиляль":"sa","аль наср":"sa","аль иттихад":"sa","аль шабаб":"sa",
+    "аль айн":"ae","аль вахда":"ae","аль джазира":"ae","шабаб аль ахли":"ae",
+    "насаф":"uz","пахтакор":"uz","аль шорта":"iq",
+    "аль ахли каир":"eg","замалек":"eg","пирамидс":"eg","серамека":"eg","нацбанк":"eg"
+  };
+
+  /* приводим имя к ключу: регистр, ё, кавычки и служебное «ФК» в сторону */
+  function teamCode(name){
+    var k = String(name || "").toLowerCase().replace(/ё/g, "е")
+      .replace(/[«»"'`]/g, " ").replace(/(^|\s)фк\.?(?=\s|$)/g, " ")
+      .replace(/\s+/g, " ").trim();
+    return TEAMS[k] || null;
+  }
+
+  /* лига вида «Европа. Лига Европы УЕФА» — часть света вместо страны */
+  function continentCode(league){
+    var head = String(league || "").split(".")[0].toLowerCase()
+      .replace(/ё/g, "е").replace(/\s+/g, " ").trim();
+    return Object.prototype.hasOwnProperty.call(CONTINENTS, head)
+      ? { hit: true, flag: CONTINENTS[head] } : { hit: false, flag: null };
+  }
+
+  function mkFlag(code, cls, title){
+    var img = document.createElement("img");
+    img.className = cls || "flag";
+    img.src = "https://flagcdn.com/w40/" + code + ".png";
+    img.alt = ""; img.loading = "lazy";
+    if(title) img.title = title;
+    img.onerror = function(){ this.remove(); };
+    return img;
+  }
+
   function flagCode(league){
     var head = String(league || "").split(".")[0];
     head = head.toLowerCase().replace(/ё/g, "е").replace(/\s+/g, " ").trim();
@@ -1845,23 +1953,28 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       var teams = document.createElement("div");
       teams.className = "teams";
       teams.title = m.home + " — " + m.away + (m.league ? " · " + m.league : "");
+      var cont = continentCode(m.league);
+      var hc = cont.hit ? teamCode(m.home) : null;
+      var ac = cont.hit ? teamCode(m.away) : null;
+      if(cont.hit && !hc && window.console && console.info){
+        console.info("ДЖЕК: нет в таблице клубов — " + m.home);
+      }
+      if(cont.hit && !ac && window.console && console.info){
+        console.info("ДЖЕК: нет в таблице клубов — " + m.away);
+      }
+      if(hc) teams.appendChild(mkFlag(hc, "tflag", m.home));
       teams.appendChild(document.createTextNode(m.home));
       var vs = document.createElement("span"); vs.className="vs"; vs.textContent="—";
       teams.appendChild(vs);
+      if(ac) teams.appendChild(mkFlag(ac, "tflag", m.away));
       teams.appendChild(document.createTextNode(m.away));
       fix.appendChild(teams);
       var meta = document.createElement("div");
       meta.className="meta";
-      var code = flagCode(m.league);
-      if(code){
-        var img = document.createElement("img");
-        img.className = "flag";
-        img.src = "https://flagcdn.com/w40/" + code + ".png";
-        img.alt = "";
-        img.loading = "lazy";
-        img.onerror = function(){ this.remove(); };
-        meta.appendChild(img);
-      }
+      /* флаг в подписи: страна турнира, а для континентальных — только если
+         на самих командах флагов не оказалось, иначе рябит */
+      var code = cont.hit ? ((hc || ac) ? null : cont.flag) : flagCode(m.league);
+      if(code) meta.appendChild(mkFlag(code, "flag"));
       meta.appendChild(document.createTextNode(
         [m.date, m.time, m.league].filter(Boolean).join("  ·  ")));
       fix.appendChild(meta);
@@ -3017,14 +3130,31 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     return m ? { tirazh: decodeURIComponent(m[1]), code: m[2] } : null;
   })();
 
+  /* ссылка на купон живёт дольше одного тиража: если в ней другой номер,
+     подтягиваем именно тот тираж, а не бросаем ссылку */
+  var linkPulling = false;
+
   function tryPendingLink(){
     if(!pendingLink || !state.matches.length) return;
     if(pendingLink.code.length !== state.matches.length) return;   /* ждём загрузки тиража */
     var p = pendingLink;
     if(p.tirazh && String(p.tirazh) !== String(state.tirazh)){
-      pendingLink = null;
-      say("Ссылка сделана для тиража №" + p.tirazh + ", а сейчас загружен №" + state.tirazh +
-          " — исходы из неё не проставлены.");
+      if(linkPulling || typeof fetch !== "function"){
+        pendingLink = null;
+        say("Тираж №" + p.tirazh + " из ссылки подгрузить не удалось, открыт №" + state.tirazh +
+            " — исходы не проставлены.");
+        return;
+      }
+      if(state.played.length && !window.confirm(
+          "Ссылка сделана для тиража №" + p.tirazh + ", а сейчас открыт №" + state.tirazh + ".\n" +
+          "Загрузить тираж из ссылки? Корзина очистится — вернуть можно кнопкой «Вернуть».")){
+        pendingLink = null;
+        say("Остались на тираже №" + state.tirazh + ". Исходы из ссылки не проставлены.");
+        return;
+      }
+      linkPulling = true;
+      say("Ссылка на тираж №" + p.tirazh + " — подгружаю его…");
+      pullTirazh(true, p.tirazh);
       return;
     }
     pendingLink = null;
@@ -3313,21 +3443,42 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     return list.length;
   }
 
-  function pullTirazh(silent){
+  /* выбираем тираж: либо заданный номером (ссылка на купон), либо текущий активный */
+  function findDrawing(rows, want){
+    var i;
+    if(want){
+      for(i=0;i<rows.length;i++) if(String(rows[i].number) === String(want)) return rows[i];
+      return null;
+    }
+    for(i=0;i<rows.length;i++) if(rows[i].status === "active") return rows[i];
+    return rows[0] || null;
+  }
+
+  function pullTirazh(silent, wantNumber){
     var btn = $("btnFetch");
     var lbl = btn.querySelector(".lbl") || btn;
     btn.disabled = true;
     btn.classList.add("is-loading");
     var was = lbl.textContent;
     lbl.textContent = "Загружаю…";
-    return fetch(API + "baltbet-main/drawings?page=1")
-      .then(function(r){ if(!r.ok) throw new Error("список тиражей: " + r.status); return r.json(); })
-      .then(function(j){
-        var rows = (j && j.data) || [];
-        var d = null;
-        for(var i=0;i<rows.length;i++){ if(rows[i].status === "active"){ d = rows[i]; break; } }
-        if(!d) d = rows[0];
-        if(!d) throw new Error("тиражи не найдены");
+    var firstRows = null;
+    /* одна страница выгрузки — 50 тиражей; если ищем конкретный номер, идём глубже */
+    function grab(page){
+      return fetch(API + "baltbet-main/drawings?page=" + page)
+        .then(function(r){ if(!r.ok) throw new Error("список тиражей: " + r.status); return r.json(); })
+        .then(function(j){
+          var rows = (j && j.data) || [];
+          if(firstRows === null) firstRows = rows;
+          var d = findDrawing(rows, wantNumber);
+          if(d) return d;
+          if(wantNumber && page < 3 && rows.length) return grab(page + 1);
+          return null;
+        });
+    }
+    return grab(1)
+      .then(function(d){
+        var rows = firstRows || [];
+        if(!d) throw new Error(wantNumber ? ("тираж №" + wantNumber + " не найден") : "тиражи не найдены");
         var haveApiData = state.matches.some(function(m){ return m.pct; });
         /* приём идёт до закрытия, поэтому запоминаем типичный ИТОГОВЫЙ фонд:
            медиану завершённых тиражей — по ней и надо считать выплаты */
@@ -3343,8 +3494,9 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         /* одна страница выгрузки — это 50 тиражей; для шкалы этого мало,
            поэтому остальные страницы дотягиваем следом и пересчитываем */
         loadHistory(rows);
-        /* тираж сменился, а в корзине уже что-то есть — молча не сносим */
-        if(silent && String(d.number) !== String(state.tirazh) && (state.played.length || state.rolls)){
+        /* тираж сменился, а в корзине уже что-то есть — молча не сносим.
+           Если номер запрошен явно (ссылка на купон), переход как раз и нужен. */
+        if(!wantNumber && silent && String(d.number) !== String(state.tirazh) && (state.played.length || state.rolls)){
           return { changed: d.number };
         }
         state.deadline = d.ended_at || "";
@@ -3559,7 +3711,12 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     render();
     /* если страница размещена в интернете — тихо проверить, не сменился ли тираж */
     if(typeof fetch === "function"){
-      setTimeout(function(){ pullTirazh(true); }, 300);
+      /* открыли ссылку на купон — грузим сразу ТОТ тираж, а не текущий */
+      setTimeout(function(){
+        var want = (pendingLink && pendingLink.tirazh) ? pendingLink.tirazh : null;
+        if(want) linkPulling = true;
+        pullTirazh(true, want);
+      }, 300);
     } else {
       tryPendingLink();                        /* без сети — ставим купон из ссылки по тому, что уже сохранено */
     }
