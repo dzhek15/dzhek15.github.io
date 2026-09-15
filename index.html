@@ -26,6 +26,7 @@ img{max-width:100%}
   --surface:#F8FAF9; --surface-2:#EFF2F1; --surface-3:#E0E6E4;
   --ink:#131A1B; --muted:#5C6A6B; --rule:#C7D0CE; --rule-strong:#A9B5B3;
   --accent:#3E5C76; --accent-ink:#FFFFFF;   /* стальной синий: раньше тут была охра */
+  --brand-dark:#1a1410; --brand-gold:#c9a24b;   /* палитра логотипа «Джек» */
   --o1:#1D5FA6; --ox:#5E6D6E; --o2:#A63A30;
   --o1-soft:#DCE8F5; --ox-soft:#E3E8E8; --o2-soft:#F6E0DD;
   --hot:#A63A30; --hot-soft:#F6E0DD; --cold:#1C6B4B;
@@ -40,6 +41,7 @@ img{max-width:100%}
     --surface:#182126; --surface-2:#1E282E; --surface-3:#26333A;
     --ink:#E3EBEA; --muted:#8FA1A2; --rule:#2A363C; --rule-strong:#3B4A51;
     --accent:#8EB3D4; --accent-ink:#0F1518;
+    --brand-dark:#120d0a; --brand-gold:#c9a24b;
     --o1:#69A8E4; --ox:#9BADAD; --o2:#E88374;
     --o1-soft:#15293C; --ox-soft:#222D31; --o2-soft:#3A2320;
     --hot:#E88374; --hot-soft:#3A2320; --cold:#5FC496;
@@ -48,6 +50,7 @@ img{max-width:100%}
   }
 }
 :root[data-theme="dark"]{
+  --brand-dark:#120d0a; --brand-gold:#c9a24b;
   --bg:#0F1518; --on-bg:#E3EBEA; --on-bg-muted:#8FA1A2;
   --surface:#182126; --surface-2:#1E282E; --surface-3:#26333A;
   --ink:#E3EBEA; --muted:#8FA1A2; --rule:#2A363C; --rule-strong:#3B4A51;
@@ -82,6 +85,7 @@ h1,h2,h3{font-family:"Chivo","IBM Plex Sans",system-ui,sans-serif; margin:0; tex
 
 /* ---------- header ---------- */
 .masthead{display:flex; flex-direction:column; align-items:center; text-align:center; gap:0}
+.logo{display:block; height:150px; width:auto; margin:0 auto 4px}
 .masthead h1{font-size:29px; font-weight:800; letter-spacing:-.02em}
 .masthead p{margin:6px auto 0; color:var(--muted); font-size:13.5px; max-width:56ch}
 .ticket{
@@ -251,7 +255,7 @@ button:disabled{opacity:.45; cursor:not-allowed}
   body{font-size:13.5px; padding-inline:14px; padding-block:16px 36px}
 
   /* шапка по центру */
-  .masthead h1{font-size:23px}
+  .logo{height:112px}
   .masthead p{font-size:12.5px}
   /* на узком экране ячейки раскладываем сеткой 2×2: пунктирные границы
      при переносе оставляли висящие обрывки линий */
@@ -353,7 +357,7 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 
 /* ---------- компактный вид: 15 матчей на один экран ---------- */
 [data-compact="1"] body{font-size:13px; padding-block:12px 20px}
-[data-compact="1"] .masthead h1{font-size:21px}
+[data-compact="1"] .logo{height:86px}
 [data-compact="1"] .masthead p{display:none}
 [data-compact="1"] .ticket{margin-top:10px}
 [data-compact="1"] .ticket .tk{padding:6px 14px; gap:1px}
@@ -394,7 +398,7 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 @media (max-width:820px){
   /* телефон в компактном виде: одна строка на матч, ничего не переносится */
   [data-compact="1"] body{padding-inline:8px; padding-block:8px 14px}
-  [data-compact="1"] .masthead h1{font-size:17px}
+  [data-compact="1"] .logo{height:70px}
   [data-compact="1"] .ticket{margin-top:8px}
   [data-compact="1"] .ticket .tk{flex:1 1 33%; min-width:0; padding:5px 4px;
     border-bottom:0; border-right:1px dashed var(--rule-strong)}
@@ -446,9 +450,11 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 }
 
 /* ---------- coupon ---------- */
-.coupon{margin-top:22px; border:1px solid var(--rule); border-radius:6px; overflow:hidden; background:var(--surface); box-shadow:var(--shadow)}
+/* чуть-чуть палитры логотипа: чёрная рамка с золотой окантовкой */
+.coupon{margin-top:22px; border:2px solid var(--brand-dark); border-radius:6px; overflow:hidden;
+  background:var(--surface); box-shadow:0 0 0 3px var(--brand-gold), var(--shadow)}
 .chead,.row{display:grid; grid-template-columns:26px minmax(0,1fr) repeat(3,54px) 176px; align-items:center; gap:9px; padding:8px 13px}
-.chead{background:var(--surface-2); border-bottom:1px solid var(--rule-strong); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
+.chead{background:var(--brand-dark); border-bottom:2px solid var(--brand-gold); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--brand-gold)}
 .chead .c{text-align:center}
 .row{border-bottom:1px solid var(--rule); transition:background-color .12s linear}
 .row:hover{background:var(--surface-2)}
@@ -691,8 +697,21 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 <div class="wrap">
 
   <header class="masthead">
-    <h1>Балтсистема</h1>
-    <p>Отмечаешь исходы вручную, помечаешь матчи «рандом» — бросок меняет их, фиксированные не трогает.</p>
+    <svg class="logo" viewBox="0 0 200 250" role="img" aria-label="Джек · Аналитика · 15" xmlns="http://www.w3.org/2000/svg">
+      <defs><linearGradient id="lgGold" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#e6c877"/><stop offset=".45" stop-color="#c9a24b"/><stop offset="1" stop-color="#8f6b28"/>
+      </linearGradient></defs>
+      <path d="M100 240C58 216 10 196 10 168V22a10 10 0 0 1 10-10h160a10 10 0 0 1 10 10v146c0 28-48 48-90 72z" fill="#1a1410" stroke="url(#lgGold)" stroke-width="3"/>
+      <path d="M100 231C64 210 19 192 19 166V27a6 6 0 0 1 6-6h150a6 6 0 0 1 6 6v139c0 26-45 44-81 65z" fill="none" stroke="#c9a24b" stroke-width="1" opacity=".55"/>
+      <circle cx="100" cy="64" r="31" fill="#120d0a" stroke="url(#lgGold)" stroke-width="2.5"/>
+      <path d="M84 64 L96 76 L117 46 L126 54 L96 92 L75 70 Z" fill="url(#lgGold)"/>
+      <path d="M84 64 L96 76 L96 92 L75 70 Z" fill="#7a5a21" opacity=".85"/>
+      <path d="M117 46 L126 54 L100 86 L96 78 Z" fill="#f0dca2" opacity=".55"/>
+      <text x="100" y="150" text-anchor="middle" font-family="Georgia,'Times New Roman',serif" font-size="38" font-weight="700" letter-spacing="2" fill="url(#lgGold)">ДЖЕК</text>
+      <path d="M52 163H148" stroke="#c9a24b" stroke-width="1" opacity=".6"/>
+      <text x="100" y="180" text-anchor="middle" font-family="Georgia,'Times New Roman',serif" font-size="10" letter-spacing="5" fill="#c9a24b" opacity=".85">АНАЛИТИКА</text>
+      <text x="100" y="211" text-anchor="middle" font-family="Georgia,'Times New Roman',serif" font-size="35" font-weight="700" fill="url(#lgGold)">15</text>
+    </svg>
     <div class="ticket">
       <div class="tk">
         <label for="tirazhName">Тираж №</label>
@@ -858,7 +877,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. Бросок ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 15.09 16:39 МСК</span>
+    <span class="build">сборка 15.09 17:20 МСК</span>
   </footer>
 </div>
 
