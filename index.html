@@ -114,10 +114,10 @@ input:focus-visible,button:focus-visible,summary:focus-visible,textarea:focus-vi
   box-shadow:var(--shadow); padding:18px 18px 16px;
   display:flex; flex-direction:column; align-items:center; gap:0;
 }
-.roll{display:flex; flex-direction:column; align-items:flex-end; gap:12px; width:100%}
-.roll-primary{display:flex; gap:12px; align-items:stretch; flex-wrap:wrap; justify-content:flex-end}
-.roll-crowd{display:flex; gap:12px; align-items:stretch; flex-wrap:wrap; justify-content:flex-end}
-.roll-secondary, .roll-modes{display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:flex-end}
+.roll{display:flex; flex-direction:column; align-items:stretch; gap:12px; width:fit-content; max-width:100%; margin-left:auto}
+.roll-primary{display:flex; gap:12px; align-items:stretch; flex-wrap:wrap; justify-content:center}
+.roll-crowd{display:flex; gap:12px; align-items:stretch; flex-wrap:wrap; justify-content:center}
+.roll-secondary, .roll-modes{display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:center}
 .roll-secondary button, .roll-modes button{font-size:13.5px; padding:7px 12px}
 .roll-secondary button[aria-pressed="true"]{background:var(--ink); color:var(--surface); border-color:var(--ink)}
 .view-strip{display:flex; justify-content:center; margin-top:14px}
@@ -155,7 +155,24 @@ button:disabled{opacity:.45; cursor:not-allowed}
   padding:12px 18px; border-radius:6px; border-color:var(--ink); background:transparent;
 }
 .btn-spin:hover:not(:disabled){background:var(--surface-3)}
+/* Цвет кнопки привязан к тому, что она делает: «большинство» — зелёная, как
+   стрелка ▲ у самого популярного исхода, «меньшинство» — красная, как ▼. */
 .btn-crowd{border-color:var(--accent); color:var(--accent); padding-block:13px}
+#btnMost{border-color:var(--cold); color:var(--cold)}
+#btnMost:hover:not(:disabled){background:#E7F1EC}
+#btnLeast{border-color:var(--hot); color:var(--hot)}
+#btnLeast:hover:not(:disabled){background:var(--hot-soft)}
+#btnMost:disabled, #btnLeast:disabled{border-color:var(--rule-strong); color:var(--muted); background:transparent}
+/* расчёт — синий, как исход «1» в таблице */
+.btn-ev{border-color:var(--o1); color:var(--o1)}
+.btn-ev:hover:not(:disabled){background:var(--o1-soft)}
+/* служебные и режимы — нейтральные, чтобы не спорили с действующими */
+.roll-secondary button{border-color:var(--rule-strong); color:var(--muted)}
+.roll-secondary button:hover:not(:disabled){color:var(--ink); border-color:var(--ink)}
+#btnReset{border-color:var(--hot); color:var(--hot)}
+#btnReset:hover:not(:disabled){background:var(--hot-soft)}
+.roll-modes button{border-style:dashed; border-color:var(--rule-strong); color:var(--muted)}
+.roll-modes button:hover:not(:disabled){color:var(--ink); border-color:var(--ink)}
 .btn-tip{border-color:var(--cold); color:var(--cold); padding-block:13px}
 .btn-tip:hover:not(:disabled){background:var(--o1-soft)}
 .btn-tip:disabled{border-color:var(--rule-strong); color:var(--muted)}
@@ -198,8 +215,7 @@ button:disabled{opacity:.45; cursor:not-allowed}
   .sum-now .delta{margin-left:0; width:100%}
   .roll-primary{width:100%; flex-direction:column; gap:9px}
   .roll-primary button{width:100%; justify-content:center}
-  .roll{align-items:stretch}
-  .roll-primary, .roll-secondary, .roll-modes{justify-content:center}
+  .roll{width:100%; margin-left:0}
   .roll-crowd{width:100%; display:grid; grid-template-columns:1fr 1fr; gap:9px}
   .roll-crowd button{width:100%; justify-content:center}
   .btn-roll{font-size:16px; padding:11px 18px}
@@ -398,7 +414,7 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
   font-size:13px; line-height:1; font-variant-numeric:tabular-nums; color:var(--muted)}
 .kf-col.fav{color:var(--cold); font-weight:600}
 .kf-col.dog{color:var(--hot); font-weight:600}
-.roll-ev{display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap}
+.roll-ev{display:flex; justify-content:center; gap:10px; flex-wrap:wrap}
 .pf-line{letter-spacing:.06em}
 .pf-tab th:first-child, .pf-tab td:first-child{text-align:center; width:26px; padding-left:2px}
 .pf-tab td:nth-child(2){text-align:right; color:var(--muted)}
@@ -530,10 +546,10 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 .panel-head button{padding:5px 10px; font-size:12.5px}
 .bank-cell.wide button.danger, .panel-head button.danger{background:var(--hot); border-color:var(--hot); color:#fff; font-weight:600}
 .bank-cell.wide button.danger:hover:not(:disabled), .panel-head button.danger:hover:not(:disabled){background:var(--hot); filter:brightness(1.08)}
-.hist{list-style:none; margin:12px 0 0; padding:0; display:flex; flex-direction:column; gap:6px; max-height:210px; overflow-y:auto}
-.hist li{display:flex; gap:10px; align-items:center; justify-content:space-between; font-size:13px; border-bottom:1px dotted var(--rule); padding-bottom:6px}
-.hist .sig{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.06em; overflow-wrap:anywhere}
-.hist button{padding:4px 9px; font-size:12px}
+.hist{list-style:none; margin:12px 0 0; padding:0; display:flex; flex-direction:column; gap:9px; max-height:340px; overflow-y:auto}
+.hist li{display:flex; gap:10px; align-items:center; justify-content:space-between; font-size:15px; border-bottom:1px dotted var(--rule); padding-bottom:9px}
+.hist .sig{font-family:"IBM Plex Mono",monospace; font-size:14px; letter-spacing:.08em; overflow-wrap:anywhere; margin-top:2px}
+.hist button{padding:6px 11px; font-size:13px}
 .hist-acts{display:flex; gap:6px; align-items:center; flex:0 0 auto}
 .hist-del{display:flex; align-items:center; justify-content:center; padding:4px 7px; color:var(--muted)}
 .hist-del svg{display:block}
