@@ -160,6 +160,15 @@ button:disabled{opacity:.45; cursor:not-allowed}
   padding:12px 18px; border-radius:6px; border-color:var(--ink); background:transparent;
 }
 .btn-spin:hover:not(:disabled){background:var(--surface-3)}
+/* «Случайный выбор» и число кликов — один сдвоенный элемент */
+.spin-group{display:inline-flex; align-items:stretch}
+.spin-group .btn-spin{border-top-right-radius:0; border-bottom-right-radius:0; border-right-width:0; padding-right:12px}
+.spin-in{width:5.5ch; text-align:center; font-family:"IBM Plex Mono",monospace; font-weight:600;
+  font-size:14.5px; padding:12px 4px; border:1px solid var(--ink); border-radius:0 6px 6px 0;
+  background:var(--surface); color:var(--ink); -moz-appearance:textfield}
+.spin-in::-webkit-outer-spin-button, .spin-in::-webkit-inner-spin-button{-webkit-appearance:none; margin:0}
+.spin-in:focus{outline:2px solid var(--accent); outline-offset:-2px}
+.btn-spin:disabled + .spin-in{border-color:var(--rule-strong); color:var(--muted)}
 /* Цвет кнопки привязан к тому, что она делает: «большинство» — зелёная, как
    стрелка ▲ у самого популярного исхода, «меньшинство» — красная, как ▼. */
 .btn-crowd{border-color:var(--accent); color:var(--accent); padding-block:13px}
@@ -233,6 +242,7 @@ button:disabled{opacity:.45; cursor:not-allowed}
   .roll-crowd button{width:100%; justify-content:center}
   .btn-roll{font-size:16px; padding:11px 18px}
   .btn-spin{font-size:13.5px; padding:10px 14px}
+  .spin-in{font-size:13.5px; padding:10px 4px}
   .roll-secondary, .roll-modes{display:grid; grid-template-columns:1fr 1fr; width:100%; gap:8px}
   .roll-secondary button:last-child:nth-child(odd){grid-column:1 / -1}
   .roll-view{width:100%; justify-content:center; gap:6px}
@@ -314,6 +324,7 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 [data-compact="1"] .console{margin-top:10px; padding:11px 12px 10px}
 [data-compact="1"] .btn-roll{font-size:14px; padding:8px 18px}
 [data-compact="1"] .btn-spin{font-size:12.5px; padding:8px 13px}
+[data-compact="1"] .spin-in{font-size:12.5px; padding:8px 3px}
 [data-compact="1"] .roll{gap:8px}
 [data-compact="1"] .knob-sep{margin:9px 0 8px}
 [data-compact="1"] .knobs{gap:8px 18px}
@@ -640,7 +651,11 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         <svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="1.5" y="1.5" width="17" height="17" rx="3" stroke="currentColor" stroke-width="1.7"/><circle cx="6.2" cy="6.2" r="1.5" fill="currentColor"/><circle cx="13.8" cy="13.8" r="1.5" fill="currentColor"/><circle cx="10" cy="10" r="1.5" fill="currentColor"/></svg>
         Бросить
       </button>
-      <button class="btn-spin" id="btnSpin" type="button">Случайный выбор ×<span id="spinLbl">1</span></button>
+      <span class="spin-group">
+        <button class="btn-spin" id="btnSpin" type="button">Случайный выбор ×</button>
+        <input type="number" id="spinCount" class="spin-in" value="1" min="1" max="100000" step="1"
+               aria-label="Сколько кликов за раз" title="Сколько раз прокрутить за одно нажатие">
+      </span>
       </div>
       <div class="roll-ev">
         <button class="btn-ev" id="btnEV" type="button" title="Посчитать матожидание купона: вероятности из коэффициентов, соперники — из долей пула">Оценить купон</button>
@@ -666,10 +681,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       <div class="knob">
         <label for="priceLine">Цена строки, ₽</label>
         <input type="number" id="priceLine" value="30" min="1" step="1">
-      </div>
-      <div class="knob">
-        <label for="spinCount">Кликов за раз</label>
-        <input type="number" id="spinCount" value="1" min="1" max="100000" step="1">
       </div>
       <div class="knob" id="knobGap" hidden>
         <label for="pctGap">Отрыв ▲▼, п.п.</label>
@@ -2402,7 +2413,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   $("spinCount").addEventListener("input", function(e){
     var v = Math.floor(Number(e.target.value));
     state.spins = (isFinite(v) && v >= 1) ? Math.min(100000, v) : 1;
-    $("spinLbl").textContent = fmt(state.spins);
     save();
   });
   $("spinCount").value = state.spins;
@@ -2419,7 +2429,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   });
   $("spinSpeed").addEventListener("change", function(e){ state.speed = Number(e.target.value); save(); });
   $("spinSpeed").value = String(state.speed);
-  $("spinLbl").textContent = fmt(state.spins);
 
   /* ---------- подтяжка тиража с totobrief ---------- */
   var API = "https://totobrief.com/api/v1/community/";
