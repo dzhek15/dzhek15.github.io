@@ -595,7 +595,8 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 .pick.won::after{content:""; position:absolute; left:50%; bottom:-6px; transform:translateX(-50%);
   width:5px; height:5px; border-radius:50%; background:var(--cold)}
 .mscore{margin-left:8px; font-family:"IBM Plex Mono",monospace; font-weight:600; color:var(--cold)}
-.mscore.live{color:var(--muted); font-weight:400}
+.mscore.live{color:var(--o1)}
+.mres{color:var(--o1)}
 [data-book="1"] .pick[aria-pressed="true"]{background:transparent; border-color:var(--rule-strong);
   color:var(--muted); box-shadow:none}
 [data-book="1"] .pick.bk-on{background:var(--warn); border-color:var(--warn); color:#fff;
@@ -900,7 +901,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. Бросок ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 16.09 04:40 МСК</span>
+    <span class="build">сборка 16.09 05:05 МСК</span>
   </footer>
 </div>
 
@@ -1988,12 +1989,18 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         [m.date, m.time, m.league].filter(Boolean).join("  ·  ")));
       if(m.res || m.score){
         var sc = document.createElement("span");
-        /* пока итог не пришёл, счёт живой — показываем его серым, без зелени:
-           0:2 на тридцатой минуте не то же самое, что 0:2 в конце */
+        /* подведённый счёт зелёный, живой — синий; сам исход всегда синий,
+           чтобы читался отдельно от счёта */
         sc.className = "mscore" + (m.res ? "" : " live");
-        sc.textContent = (m.score ? String(m.score).replace(/\s+/g, "") : "") +
-                         (m.res ? " · " + m.res : "");
+        sc.textContent = m.score ? String(m.score).replace(/\s+/g, "") : "";
         sc.title = m.res ? "матч сыгран, итог " + m.res : "счёт по ходу матча, итог ещё не подведён";
+        if(m.res){
+          var rs = document.createElement("span");
+          rs.className = "mres";
+          rs.textContent = (m.score ? " · " : "") + m.res;
+          rs.title = "итог матча";
+          sc.appendChild(rs);
+        }
         meta.appendChild(sc);
       }
       fix.appendChild(meta);
