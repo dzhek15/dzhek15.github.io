@@ -96,7 +96,7 @@ h1,h2,h3{font-family:"Chivo","IBM Plex Sans",system-ui,sans-serif; margin:0; tex
   border-right:1px dashed var(--rule-strong);
 }
 .ticket .tk:last-child{border-right:0}
-.ticket .k, .ticket label{font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted)}
+.ticket .k, .ticket label{font-size:11.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
 .ticket .v{font-family:"Chivo",sans-serif; font-weight:800; font-size:17px; line-height:1.1; font-variant-numeric:tabular-nums}
 .ticket .v.soon{color:var(--warn)}
 .ticket .v.shut{color:var(--hot)}
@@ -230,12 +230,14 @@ button:disabled{opacity:.45; cursor:not-allowed}
   /* шапка по центру */
   .masthead h1{font-size:23px}
   .masthead p{font-size:12.5px}
-  .ticket{margin-top:13px}
-  .ticket .tk{flex:1 1 45%; min-width:0; padding:9px 10px;
-    border-right:1px dashed var(--rule-strong); border-bottom:1px dashed var(--rule-strong)}
-  .ticket .tk:nth-child(even){border-right:0}
-  .ticket .tk:last-child{border-bottom:0; flex-basis:100%; border-right:0}
-  .ticket .v, #tirazhName{font-size:15.5px}
+  /* на узком экране ячейки раскладываем сеткой 2×2: пунктирные границы
+     при переносе оставляли висящие обрывки линий */
+  .ticket{margin-top:13px; display:grid; grid-template-columns:1fr 1fr; gap:1px;
+    background:var(--rule-strong)}
+  .ticket .tk{border:0; background:var(--surface); padding:10px 10px; min-width:0}
+  .ticket .tk:last-child{border:0}
+  .ticket .v, #tirazhName{font-size:16.5px}
+  .ticket .k, .ticket label{font-size:11px}
 
   .console{padding:14px 12px 13px; border-radius:7px}
   .sum-now .delta{margin-left:0; width:100%}
@@ -696,9 +698,9 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         <input type="number" id="priceLine" value="30" min="1" step="1">
       </div>
       <div class="knob" id="knobGap" hidden>
-        <label for="pctGap">Отрыв ▲▼, п.п.</label>
+        <label for="pctGap">Порог стрелок ▲▼, п.п.</label>
         <input type="number" id="pctGap" value="4" min="0" max="30" step="1"
-               title="На сколько пунктов лидер должен опережать ближайший исход, чтобы получить стрелку. 0 — помечать всегда">
+               title="На сколько пунктов доля лидера должна опережать ближайший исход, чтобы он получил стрелку ▲. 0 — помечать всегда. Работает только при включённых процентах">
       </div>
       <div class="knob">
         <label for="spinSpeed">Скорость прокрутки</label>
@@ -766,7 +768,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и список сыгранных хранятся в этом браузере: закроешь вкладку — всё останется. Бросок ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой сыгранный вариант обратно.
-    <span class="build">сборка 15.09 09:36 МСК</span>
+    <span class="build">сборка 15.09 09:47 МСК</span>
   </footer>
 </div>
 
@@ -1946,7 +1948,9 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       ? "Убрать коэффициенты конторы из строк"
       : "Показать под каждым исходом коэффициент конторы из того же тиража";
     $("pctLegend").hidden = !((havePct && state.showPct) || (haveKf && state.showKf));
-    $("knobGap").hidden = !havePct;
+    /* ручка влияет только на стрелки, а стрелки живут вместе с процентами —
+       прячем её, пока проценты выключены, иначе выглядит как неработающая */
+    $("knobGap").hidden = !(havePct && state.showPct);
     renderKickoff();
     renderHistory();
   }
