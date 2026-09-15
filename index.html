@@ -170,23 +170,28 @@ button:disabled{opacity:.45; cursor:not-allowed}
 .btn-roll svg{display:block; transition:transform .25s ease}
 .btn-roll:hover:not(:disabled) svg{transform:rotate(-18deg)}
 @media (prefers-reduced-motion: reduce){ .btn-roll svg{transition:none} .row{transition:none} }
+/* Кнопка, число и скорость — три отдельных элемента рядом, каждый в своей
+   рамке: слипшийся блок читался как одна большая плашка и мешал. */
 .btn-spin{
   font-family:"Chivo",sans-serif; font-weight:600; font-size:14.5px;
-  padding:12px 18px; border-radius:6px; border-color:var(--ink); background:transparent;
+  padding:12px 18px; border-radius:6px;
+  border:1px solid var(--accent); background:var(--accent); color:var(--accent-ink);
 }
-.btn-spin:hover:not(:disabled){background:var(--surface-3)}
-/* «Случайный выбор» и число кликов — один сдвоенный элемент */
-.spin-group{display:inline-flex; align-items:stretch}
-.spin-group .btn-spin{border-top-right-radius:0; border-bottom-right-radius:0; border-right-width:0; padding-right:12px}
+.btn-spin:hover:not(:disabled){filter:brightness(1.1)}
+/* «РАНДОМ», число кликов и скорость — три отдельных элемента рядом */
 .spin-in{width:5.5ch; text-align:center; font-family:"IBM Plex Mono",monospace; font-weight:600;
-  font-size:14.5px; padding:12px 4px; border:1px solid var(--ink); border-radius:0 6px 6px 0;
+  font-size:14.5px; padding:12px 4px; border:1px solid var(--ink); border-radius:6px;
   background:var(--surface); color:var(--ink); -moz-appearance:textfield}
 .spin-in::-webkit-outer-spin-button, .spin-in::-webkit-inner-spin-button{-webkit-appearance:none; margin:0}
 .spin-in:focus{outline:2px solid var(--accent); outline-offset:-2px}
-.btn-spin:disabled + .spin-in{border-color:var(--rule-strong); color:var(--muted)}
+.spin-group{display:inline-flex; align-items:stretch; gap:8px}
+.spin-group .spin-in{border-radius:6px; border-color:var(--accent);
+  background:var(--surface); color:var(--accent); font-weight:700}
+.btn-spin:disabled{background:var(--surface-3); border-color:var(--rule-strong); color:var(--muted)}
+.spin-group .btn-spin:disabled + .spin-in{border-color:var(--rule-strong); color:var(--muted)}
 /* Цвет кнопки привязан к тому, что она делает: «большинство» — зелёная, как
    стрелка ▲ у самого популярного исхода, «меньшинство» — красная, как ▼. */
-.btn-crowd{border-color:var(--accent); color:var(--accent); padding-block:13px}
+.btn-crowd{border-color:var(--accent); color:var(--accent); padding:7px 14px; font-size:13px}
 #btnMost{background:var(--cold); border-color:var(--cold); color:#fff}
 #btnLeast{background:var(--hot); border-color:var(--hot); color:#fff}
 #btnMost:hover:not(:disabled), #btnLeast:hover:not(:disabled){filter:brightness(1.1)}
@@ -338,6 +343,18 @@ button:disabled{opacity:.45; cursor:not-allowed}
 .knob label{font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
 .knob input{width:8ch; text-align:center; font-family:"IBM Plex Mono",monospace}
 .knob-hint{font-size:11px; font-family:"IBM Plex Mono",monospace; color:var(--muted); letter-spacing:.02em; min-height:13px}
+/* цена строки — главная ручка пульта, поэтому крупная и по центру */
+.knob-price{width:100%; align-items:center}
+.knob-price label{font-size:12px; letter-spacing:.12em}
+.knob-price input{width:7ch; font-family:"Chivo",sans-serif; font-weight:800; font-size:26px;
+  line-height:1.1; padding:8px 10px; text-align:center; font-variant-numeric:tabular-nums}
+.knob-price .knob-hint{font-size:13px; color:var(--ink)}
+/* скорость прокрутки стоит вплотную к числу кликов, одной группой */
+.spin-speed{border:1px solid var(--accent); border-radius:6px; padding:6px 10px;
+  font-size:13.5px; background:var(--surface); color:var(--accent); font-weight:600}
+.spin-speed option{background:var(--surface); color:var(--ink)}
+.btn-spin:disabled ~ .spin-speed{border-color:var(--rule-strong); color:var(--muted)}
+
 .roll-note{text-align:center}
 select{font:inherit; color:var(--ink); background:var(--surface); border:1px solid var(--rule-strong); border-radius:var(--r); padding:6px 9px}
 
@@ -782,9 +799,14 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     <div class="roll">
       <div class="roll-primary">
       <span class="spin-group">
-        <button class="btn-spin" id="btnSpin" type="button"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5.5h3.2l7.6 9h3.2"/><path d="M3 14.5h3.2l7.6-9h3.2"/><path d="M15 3.3l2.2 2.2-2.2 2.2"/><path d="M15 12.3l2.2 2.2-2.2 2.2"/></svg><span class="lbl">Случайный выбор ×</span></button>
+        <button class="btn-spin" id="btnSpin" type="button"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5.5h3.2l7.6 9h3.2"/><path d="M3 14.5h3.2l7.6-9h3.2"/><path d="M15 3.3l2.2 2.2-2.2 2.2"/><path d="M15 12.3l2.2 2.2-2.2 2.2"/></svg><span class="lbl">РАНДОМ ×</span></button>
         <input type="number" id="spinCount" class="spin-in" value="1" min="1" max="100000" step="1"
                aria-label="Сколько кликов за раз" title="Сколько раз прокрутить за одно нажатие">
+        <select id="spinSpeed" class="spin-speed" aria-label="Скорость прокрутки" title="Скорость прокрутки">
+          <option value="900">Медленно</option>
+          <option value="380">Средне</option>
+          <option value="70">Быстро</option>
+        </select>
       </span>
       </div>
       <div class="roll-ev">
@@ -809,17 +831,9 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     </div>
     <div class="knob-sep"></div>
     <div class="knobs">
-      <div class="knob">
+      <div class="knob knob-price">
         <label for="priceLine">Стоимость купона, ₽</label>
         <input type="number" id="priceLine" value="30" min="1" step="1" title="Цена одной строки в БК. Итог по всему купону считается ниже: цена строки × число комбинаций"><span class="knob-hint" id="priceHint"></span>
-      </div>
-      <div class="knob">
-        <label for="spinSpeed">Скорость прокрутки</label>
-        <select id="spinSpeed">
-          <option value="900">Медленно</option>
-          <option value="380">Средне</option>
-          <option value="70">Быстро</option>
-        </select>
       </div>
     </div>
   </div>
@@ -909,14 +923,14 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
 
   <div class="sticky-bar" id="stickyBar">
-    <button id="sbRoll" type="button">Случайный выбор</button>
+    <button id="sbRoll" type="button">РАНДОМ</button>
     <span class="sb-sum mono" id="sbSum">—</span>
     <button id="sbKeep" type="button">Записать</button>
   </div>
 
   <footer>
-    Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. «Случайный выбор» ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов, и кладёт получившийся вариант в корзину; строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 16.09 10:05 МСК</span>
+    Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. «РАНДОМ» ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; в корзину при этом ничего не уходит — для этого есть «Положить купон в корзину». Строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
+    <span class="build">сборка 16.09 13:10 МСК</span>
   </footer>
 </div>
 
@@ -2205,7 +2219,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     } else {
       var narrow = state.matches.filter(function(m){ return m.mode==="rand" && m.pool.length < 3; }).length;
       var frozen = state.matches.filter(function(m){ return m.mode==="rand" && m.pool.length === 1; }).length;
-      note.innerHTML = "«Случайный выбор» поставит по одному случайному исходу в <b>" + t.rand + "</b> матч(ах)" +
+      note.innerHTML = "«РАНДОМ» поставит по одному случайному исходу в <b>" + t.rand + "</b> матч(ах)" +
         (narrow ? ", в <b>" + narrow + "</b> из них — только из отмеченных" : "") +
         ". Зафиксировано руками: <b>" + t.locked + "</b>." +
         (frozen ? " <b>Внимание:</b> в " + frozen + " строк(ах) в жеребьёвке остался один исход — там при броске ничего не меняется" +
@@ -2647,6 +2661,20 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   var spinning = false;
   var hintSticky = false;
+
+  /* Прокрутка только расставляет исходы. В корзину вариант попадает
+     исключительно кнопкой «Положить купон в корзину» — иначе там копится
+     мусор, которого человек не просил. */
+  function afterSpin(n){
+    var t0 = tally();
+    var cost0 = t0.empty ? 0 : t0.combos * (Number(state.price) || 0);
+    save(); render();
+    var note = $("rollNote");
+    note.classList.add("done");
+    note.innerHTML = "РАНДОМ ×" + fmt(n) + " — остановилось на <b>" + fmt(t0.combos) +
+      "</b> комбинац(иях) на <b>" + fmt(cost0) + " ₽</b>. В корзину ничего не ушло: " +
+      "чтобы сохранить — «Положить купон в корзину».";
+  }
   $("btnSpin").addEventListener("click", function(){
     if(spinning) return;
     if(!state.matches.some(function(m){ return m.mode === "rand"; })) return;
@@ -2659,7 +2687,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       for(var q=0;q<n-1;q++) shuffleOnce();
       shuffleFresh();
       spinning = false;
-      commitVariant("Случайный выбор ×" + fmt(n) + " — остановилось на", "прокрутка ×" + fmt(n));
+      afterSpin(n);
       return;
     }
     var FRAMES = Math.min(n, 22);   /* число кадров фиксировано, скорость задаёт паузу между ними */
@@ -2682,7 +2710,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
           $("coupon").classList.remove("spinning");
           shuffleFresh(); paintPicks();
           spinning = false;
-          commitVariant("Случайный выбор ×" + fmt(n) + " — остановилось на", "прокрутка ×" + fmt(n));
+          afterSpin(n);
         }, Math.round(base * 1.6));
       }
     })();
@@ -3798,7 +3826,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         }
         else if(res) say("Тираж №" + res.number + " загружен с totobrief: " + res.n +
                     " матч(ей), проценты игроков и конторы подставлены в строки. Исходы и режимы не проставлены — " +
-                    "отмечай сам, а для «Случайного выбора» сначала нажми «Все в рандом».");
+                    "отмечай сам, а для «РАНДОМА» сначала нажми «Все в рандом».");
         if(res && !res.soft) tryPending();
       })
       .catch(function(err){
