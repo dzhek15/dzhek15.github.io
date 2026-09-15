@@ -887,7 +887,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. Бросок ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 15.09 19:55 МСК</span>
+    <span class="build">сборка 15.09 21:25 МСК</span>
   </footer>
 </div>
 
@@ -2719,6 +2719,72 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     return { base: base, swaps: swaps, probs: probs, pools: pools };
   }
 
+  /* Порог окупаемости замены: сброшенной толпы не меньше отданной вероятности,
+     и за один исход отдаём не больше 15 пунктов. */
+  var SWAP_MIN = 1, LOSS_CAP = 0.15;
+
+  /* Те же замены, но всегда в один заданный исход — нужно для ничейной линейки */
+  function gapSwapsTo(g, to){
+    var out = [], i;
+    for(i = 0; i < g.base.length; i++){
+      var fav = g.base[i];
+      if(fav === to) continue;
+      var pr = g.probs[i], pl = g.pools[i];
+      var loss = pr[fav] - pr[to], relief = pl[fav] - pl[to];
+      if(relief <= 0) continue;
+      out.push({ i: i, to: to, from: fav, loss: loss, relief: relief, score: relief / Math.max(loss, 1e-4) });
+    }
+    out.sort(function(a, b){ return b.score - a.score; });
+    return out;
+  }
+
+  /* Одна линейка расстановок: строка фаворитов плюс первые k замен из списка */
+  function gapBlock(title, lead, raw, g, sc, store, key){
+    /* окупающиеся замены идут первыми, внутри группы — по отдаче: иначе одна дорогая
+       замена в середине обрывала бы ★ раньше, чем кончились выгодные */
+    var swaps = raw.slice().sort(function(a, b){
+      var qa = (a.score >= SWAP_MIN && a.loss <= LOSS_CAP) ? 0 : 1;
+      var qb = (b.score >= SWAP_MIN && b.loss <= LOSS_CAP) ? 0 : 1;
+      return qa !== qb ? qa - qb : b.score - a.score;
+    });
+    var k, rec = 0;
+    for(k = 0; k < swaps.length; k++){
+      if(swaps[k].score >= SWAP_MIN && swaps[k].loss <= LOSS_CAP) rec = k + 1; else break;
+    }
+    var maxK = Math.min(swaps.length, 8);
+    var s = '<h3>' + title + '</h3><p class="ev-lead">' + lead + '</p>' +
+      '<table class="ev-tab"><thead><tr><th>Замен</th><th>Линия</th><th>Шанс 9+</th>' +
+      '<th>Отдача 9\u201312</th><th></th></tr></thead><tbody>';
+    var line = g.base.slice();
+    for(k = 0; k <= maxK; k++){
+      if(k > 0) line[swaps[k-1].i] = swaps[k-1].to;
+      var cur = line.slice();
+      store.push(cur);
+      var one = evOfLine(cur, g.probs, g.pools, sc.lines, sc.fund, sc.jack);
+      var e912 = 0;
+      one.rows.forEach(function(r){ if(r.k <= 12) e912 += r.part; });
+      s += '<tr' + (k === rec ? ' class="rec"' : '') + '><td>' + k + (k === rec ? ' \u2605' : '') + '</td>' +
+           '<td class="nw">' + cur.map(function(j){ return OUT[j]; }).join("") + '</td>' +
+           '<td>' + (evTail(one.qDist, 9) * 100).toFixed(2) + '%</td>' +
+           '<td>' + e912.toFixed(2) + ' \u20bd</td>' +
+           '<td><button type="button" class="gap-set" data-set="' + key + '" data-k="' + k + '">поставить</button></td></tr>';
+    }
+    s += '</tbody></table>';
+    s += '<p class="ev-note">' +
+         (rec ? '\u2605 — докуда замена сбрасывает толпы не меньше, чем отдаёт вероятности. Дальше платишь больше, чем получаешь. '
+              : 'Ни одна замена здесь не окупается: за каждый пункт вероятности сбрасывается меньше пункта толпы. ') +
+         'Порядок замен — по отдаче, поэтому цена по строкам не обязана расти ровно.</p>';
+    if(swaps.length){
+      s += '<p class="ev-note ev-swaps"><b>Порядок замен:</b> ' +
+        swaps.slice(0, maxK).map(function(sw, n){
+          return (n + 1) + ') матч ' + (sw.i + 1) + ' ' + OUT[sw.from] + '\u2192' + OUT[sw.to] +
+                 ' \u2014 отдаём ' + (sw.loss * 100).toFixed(1) + ' п.п., сбрасываем ' +
+                 (sw.relief * 100).toFixed(1) + ' п.п. толпы (\u00d7' + sw.score.toFixed(1) + ')';
+        }).join('; ') + '.</p>';
+    }
+    return s;
+  }
+
   /* фонд, суперприз и число строк — та же логика, что в «Оценить купон» */
   function evScene(){
     var price = Number(state.price) || 30;
@@ -2781,93 +2847,64 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
          'Брать недогруженный исход стоит там, где он и по оценке конторы не сильно хуже перегруженного, ' +
          'иначе сэкономишь на дележе приза, но проиграешь сам матч.</p>';
 
-    /* --- готовые расстановки: линия фаворитов плюс N самых дешёвых замен --- */
+    /* --- готовые расстановки: две линейки, обычная и ничейная --- */
     var g = gapSwaps(), sc = evScene();
-    window.__gapLines = [];
+    window.__gapLines = []; window.__gapLinesX = [];
     if(g && sc && g.base.length === 15){
-      /* замена окупается, если сброшенной толпы не меньше отданной вероятности (score >= 1),
-         и при этом за один исход мы не отдаём больше 15 пунктов вероятности */
-      var SWAP_MIN = 1, LOSS_CAP = 0.15;
-      var rec = 0;
-      for(var k = 0; k < g.swaps.length; k++){
-        if(g.swaps[k].score >= SWAP_MIN && g.swaps[k].loss <= LOSS_CAP) rec = k + 1; else break;
-      }
       var maxK = Math.min(g.swaps.length, 8);
-      h += '<h3>Готовые расстановки</h3>' +
-           '<p class="ev-lead">Линия фаворитов конторы, в которой N исходов заменены. Замены идут ' +
-           'по отдаче: сначала та, где на каждый отданный пункт вероятности сбрасывается больше всего ' +
-           'доли толпы. «Отдача 9–12» считается только по надёжным категориям: в 13–15 модель завышает ' +
-           'редкие комбинации, туда смотреть нельзя.</p>' +
-           '<table class="ev-tab"><thead><tr><th>Замен</th><th>Линия</th><th>Шанс 9+</th><th>Отдача 9–12</th><th></th></tr></thead><tbody>';
-      var line = g.base.slice();
-      for(k = 0; k <= maxK; k++){
-        if(k > 0) line[g.swaps[k-1].i] = g.swaps[k-1].to;
-        var cur = line.slice();
-        window.__gapLines.push(cur);
-        var one = evOfLine(cur, g.probs, g.pools, sc.lines, sc.fund, sc.jack);
-        var e912 = 0;
-        one.rows.forEach(function(r){ if(r.k <= 12) e912 += r.part; });
-        h += '<tr' + (k === rec ? ' class="rec"' : '') + '><td>' + k + (k === rec ? ' ★' : '') + '</td>' +
-             '<td class="nw">' + cur.map(function(j){ return OUT[j]; }).join("") + '</td>' +
-             '<td>' + (evTail(one.qDist, 9) * 100).toFixed(2) + '%</td>' +
-             '<td>' + e912.toFixed(2) + ' \u20bd</td>' +
-             '<td><button type="button" class="gap-set" data-k="' + k + '">поставить</button></td></tr>';
-      }
-      h += '</tbody></table>';
-      h += '<p class="ev-note">' +
-           (rec ? '★ — докуда замена сбрасывает толпы не меньше, чем отдаёт вероятности. Дальше платишь больше, чем получаешь. '
-                : 'Ни одна замена не окупается: в этом тираже за каждый пункт вероятности сбрасывается меньше пункта толпы. ') +
-           'Порядок замен — по отдаче, поэтому цена по строкам не обязана расти ровно.</p>';
-      if(g.swaps.length){
-        h += '<p class="ev-note ev-swaps"><b>Порядок замен:</b> ' +
-          g.swaps.slice(0, maxK).map(function(sw, n){
-            return (n + 1) + ') матч ' + (sw.i + 1) + ' ' + OUT[sw.from] + '\u2192' + OUT[sw.to] +
-                   ' \u2014 отдаём ' + (sw.loss * 100).toFixed(1) + ' п.п., сбрасываем ' +
-                   (sw.relief * 100).toFixed(1) + ' п.п. толпы (\u00d7' + sw.score.toFixed(1) + ')';
-          }).join('; ') + '.</p>';
+      h += gapBlock('Готовые расстановки',
+        'Линия фаворитов конторы, в которой N исходов заменены. Замены идут по отдаче: сначала та, где ' +
+        'на каждый отданный пункт вероятности сбрасывается больше всего доли толпы. «Отдача 9–12» ' +
+        'считается только по надёжным категориям: в 13–15 модель завышает редкие комбинации, туда ' +
+        'смотреть нельзя.',
+        g.swaps, g, sc, window.__gapLines, 'a');
+
+      /* Вторая линейка — замены только в ничью. В матче ничья часто окупается, но проигрывает
+         другой замене, и в первой таблице её не видно вовсе. Здесь видно, сколько она стоит. */
+      var xs = gapSwapsTo(g, 1), xOk = 0, q;
+      for(q = 0; q < xs.length; q++) if(xs[q].score >= SWAP_MIN && xs[q].loss <= LOSS_CAP) xOk++;
+      if(xs.length){
+        h += gapBlock('Расстановки с уклоном в ничью',
+          'То же самое, но замена всегда в ничью. Порог окупаемости проходят <b>' + xOk + '</b> ничьих из ' +
+          xs.length + ' возможных. Если обе таблицы совпали — значит толпа ничьи бросила, и они и так ' +
+          'лучший выбор в своих матчах.',
+          xs, g, sc, window.__gapLinesX, 'x');
       }
 
-      /* Почему в линиях нет ничьих — самый частый вопрос. Считаем по текущему тиражу. */
+      /* Почему в первой таблице нет ничьих — самый частый вопрос. Считаем по текущему тиражу. */
       var favX = 0, undX = 0, sumPX = 0, sumQX = 0;
       for(var t = 0; t < g.base.length; t++){
         if(g.base[t] === 1) favX++;
         sumPX += g.pools[t][1]; sumQX += g.probs[t][1];
       }
-      var undXAll = 0;
-      for(var t2 = 0; t2 < g.swaps.length; t2++){
-        if(g.swaps[t2].to === 1){ undXAll++; if(t2 < maxK) undX++; }
-      }
+      for(var t2 = 0; t2 < maxK; t2++) if(g.swaps[t2].to === 1) undX++;
       var n15 = g.base.length;
       h += '<h3>Откуда берутся ничьи</h3>' +
-        '<p class="ev-lead">Ничья попадает в линию двумя путями: либо она фаворит конторы, либо замена ' +
-        'на неё даёт лучшую отдачу — сбрасывает больше доли толпы на отданный пункт вероятности. ' +
-        'В этом тираже ничья — фаворит конторы в <b>' + favX + '</b> матч(ах) из ' + n15 +
-        ', а среди показанных замен ведёт в <b>' + undX + '</b>. ' +
-        (undXAll > undX
-          ? 'Ещё в ' + (undXAll - undX) + ' матч(ах) замена на ничью есть, но по отдаче не попала в первые ' + maxK + '. '
-          : '') +
+        '<p class="ev-lead">В первую таблицу ничья попадает двумя путями: либо она фаворит конторы, либо ' +
+        'замена на неё даёт лучшую отдачу среди замен своего матча. В этом тираже ничья — фаворит конторы ' +
+        'в <b>' + favX + '</b> матч(ах) из ' + n15 + ', а среди показанных замен ведёт в <b>' + undX + '</b>. ' +
         'На ничьи уходит в среднем ' + Math.round(sumPX / n15 * 100) + '% пула при оценке конторы ' +
         Math.round(sumQX / n15 * 100) + '%.</p>' +
         '<p class="ev-note">' +
         (favX + undX === 0
-          ? 'Поэтому ничьих в расстановках нет: они не выигрывают ни одно из двух сравнений. Это свойство ' +
-            'конкретного тиража, а не правило — как только народ начнёт ничьи недобирать, они появятся сами.'
-          : 'Поэтому ничьи в расстановках встречаются.') +
-        (favX + undX === 0
-          ? ' И наоборот: отсутствие ничьих в линии не значит, что их не будет в результатах — ' +
-            'в футболе ничьей заканчивается примерно каждый четвёртый матч, просто ни в одном из них ' +
-            'она не самый вероятный исход.'
-          : '') + '</p>';
+          ? 'Поэтому в первой таблице ничьих нет: в своих матчах они проиграли другой замене. Но ' +
+            (xOk ? 'окупается из них <b>' + xOk + '</b> — их и показывает вторая таблица. '
+                 : 'и по отдельности они не окупаются — вторая таблица показывает, во что это обходится. ')
+          : 'Поэтому ничьи в расстановках встречаются. ') +
+        'Отсутствие ничьих в линии не значит, что их не будет в результатах: в футболе ничьей ' +
+        'заканчивается примерно каждый четвёртый матч — просто это не делает её лучшей заменой.</p>';
     }
 
     $("evBody").innerHTML = h;
     [].slice.call($("evBody").querySelectorAll(".gap-set")).forEach(function(b){
       b.addEventListener("click", function(){
         var k = Number(b.getAttribute("data-k"));
-        var ln = (window.__gapLines || [])[k];
+        var set = b.getAttribute("data-set");
+        var ln = ((set === "x" ? window.__gapLinesX : window.__gapLines) || [])[k];
         if(ln) setLine(ln, k === 0
           ? "Поставлена линия фаворитов конторы, без замен."
-          : "Поставлена линия фаворитов с " + k + " " + plural(k, "заменой", "заменами", "заменами") + " по расхождениям.");
+          : "Поставлена линия фаворитов с " + k + " " + plural(k, "заменой", "заменами", "заменами") +
+            (set === "x" ? " в ничью." : " по расхождениям."));
       });
     });
     $("evBack").hidden = false;
