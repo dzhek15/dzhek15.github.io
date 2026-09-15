@@ -852,7 +852,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. Бросок ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 15.09 15:38 МСК</span>
+    <span class="build">сборка 15.09 15:42 МСК</span>
   </footer>
 </div>
 
@@ -921,6 +921,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       poolTypical: 0,
       ratioTypical: 0,
       ratioList: [],
+      ratioQ: [],
       jackWins: 0,
       finCount: 0,
       showPct: false,
@@ -1055,12 +1056,14 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       var vEl = $("tkVal");
       vEl.textContent = r.toFixed(2).replace(".", ",");
       vEl.classList.remove("good", "bad");
-      var word = "—";
-      if(rTyp > 0){
-        var rel = r / rTyp;
-        if(rel >= 1.15){ vEl.classList.add("good"); word = "щедрый"; }
-        else if(rel <= 0.85){ vEl.classList.add("bad"); word = "скупой"; }
-        else word = "обычный";
+      var word = "—", Q = state.ratioQ || [];
+      if(Q.length === 4){
+        if(r >= Q[3]){ vEl.classList.add("good"); word = "ТОП"; }
+        else if(r >= Q[2]){ vEl.classList.add("good"); word = "высокая"; }
+        else if(r >= Q[0]){ word = "средняя"; }
+        else { vEl.classList.add("bad"); word = "низкая"; }
+      } else if(rTyp > 0){
+        word = r >= rTyp ? "средняя" : "низкая";
       }
       vEl.textContent = word;
       $("tkValNote").innerHTML = "суперприз " + r.toFixed(2).replace(".", ",") +
@@ -2662,11 +2665,13 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
          num(r) + '</b>.' + (list.length ? ' Больше, чем в ' + pct + '% из ' + list.length + ' прошлых тиражей.' : '') + '</p>';
 
     if(list.length){
-      h += '<h3>Как читать это число</h3><table class="ev-tab"><tbody>' +
-        '<tr><td>до ' + num(q(0.25)) + '</td><td>скупой тираж, четверть самых бедных</td></tr>' +
-        '<tr><td>около ' + num(q(0.5)) + '</td><td>обычный, столько бывает чаще всего</td></tr>' +
-        '<tr><td>от ' + num(q(0.75)) + '</td><td>щедрый, четверть самых богатых</td></tr>' +
-        '<tr><td>от ' + num(q(0.95)) + '</td><td>такое бывает примерно раз в 20 тиражей</td></tr>' +
+      h += '<h3>Шкала</h3><p class="ev-lead">Построена по ' + list.length +
+        ' завершённым тиражам — по ним и видно, что для этого тотализатора много, а что мало.</p>' +
+        '<table class="ev-tab"><tbody>' +
+        '<tr><td>низкая</td><td>до ' + num(q(0.25)) + ' — четверть самых бедных тиражей</td></tr>' +
+        '<tr><td>средняя</td><td>' + num(q(0.25)) + ' – ' + num(q(0.75)) + ', сюда попадает половина всех тиражей</td></tr>' +
+        '<tr><td>высокая</td><td>от ' + num(q(0.75)) + ' — четверть самых богатых</td></tr>' +
+        '<tr><td>ТОП</td><td>от ' + num(q(0.95)) + ' — примерно раз в двадцать тиражей</td></tr>' +
         '</tbody></table>';
     }
 
@@ -2680,7 +2685,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
     h += '<h3>Чего это число не значит</h3>' +
          '<p class="ev-warn">Оно не делает тираж выигрышным. Суперприз выплачивается только за 14 и 15 угаданных, ' +
-         'а туда попадают очень редко, поэтому разница между скупым и щедрым тиражом — это несколько процентов отдачи, ' +
+         'а туда попадают очень редко, поэтому разница между низкой ценностью и ТОП — это несколько процентов отдачи, ' +
          'а не переход в плюс. Шанс угадать от этого числа не зависит вообще: он определяется матчами, а не размером суперприза.</p>';
 
     $("evTitle").textContent = "Ценность тиража";
@@ -2939,6 +2944,50 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     return true;
   }
 
+  var HIST_PAGES = 6;          /* 6 страниц по 50 тиражей ≈ год истории */
+  var histLoading = false;
+
+  /* Шкала ценности тиража строится по завершённым тиражам: медиана, четверти и
+     верхние 5%. Чем длиннее история, тем честнее шкала. */
+  function applyHistory(rows){
+    var fin = rows.filter(function(x){ return x.status === "finished" && Number(x.pool_sum) > 0; });
+    var pools = fin.map(function(x){ return Number(x.pool_sum); }).sort(function(a,b){ return a-b; });
+    var rr = fin.filter(function(x){ return Number(x.jackpot) > 0; })
+                .map(function(x){ return Number(x.jackpot) / Number(x.pool_sum); })
+                .sort(function(a,b){ return a-b; });
+    if(!rr.length) return;
+    var q = function(p){ return rr[Math.min(rr.length - 1, Math.round(p * (rr.length - 1)))]; };
+    state.poolTypical = pools.length ? pools[Math.floor(pools.length/2)] : state.poolTypical;
+    state.ratioTypical = q(0.5);
+    state.ratioQ = [q(0.25), q(0.5), q(0.75), q(0.95)];
+    state.ratioList = rr;
+    state.finCount = fin.length;
+    /* суперприз ровно в миллион — значит в прошлом тираже кто-то взял 15 из 15 */
+    state.jackWins = fin.filter(function(x){ return Number(x.jackpot) <= 1000001; }).length;
+  }
+
+  function loadHistory(firstPage){
+    if(histLoading || typeof fetch !== "function") return;
+    histLoading = true;
+    var jobs = [];
+    for(var p = 2; p <= HIST_PAGES; p++){
+      jobs.push(fetch(API + "baltbet-main/drawings?page=" + p)
+        .then(function(r){ return r.ok ? r.json() : null; })
+        .then(function(j){ return (j && j.data) || []; })
+        .catch(function(){ return []; }));
+    }
+    Promise.all(jobs).then(function(pages){
+      var seen = {}, all = [];
+      firstPage.concat.apply(firstPage, pages).forEach(function(x){
+        var k = String(x.number);
+        if(seen[k]) return;
+        seen[k] = 1; all.push(x);
+      });
+      applyHistory(all);
+      save(); render();
+    }).catch(function(){}).then(function(){ histLoading = false; });
+  }
+
   function applyDrawing(info){
     var evs = (info.events || []).slice().sort(function(a,b){ return (a.order||0) - (b.order||0); });
     var list = [];
@@ -3004,11 +3053,10 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
                      .map(function(x){ return Number(x.jackpot) / Number(x.pool_sum); })
                      .sort(function(a,b){ return a - b; });
         state.ratioTypical = rr.length ? rr[Math.floor(rr.length/2)] : 0;
-        state.ratioList = rr.slice(0, 80);
-        /* суперприз ровно в миллион — значит в прошлом тираже кто-то взял 15 из 15 */
-        var fin = rows.filter(function(x){ return x.status === "finished"; });
-        state.finCount = fin.length;
-        state.jackWins = fin.filter(function(x){ return Number(x.jackpot) <= 1000001; }).length;
+        applyHistory(rows);
+        /* одна страница выгрузки — это 50 тиражей; для шкалы этого мало,
+           поэтому остальные страницы дотягиваем следом и пересчитываем */
+        loadHistory(rows);
         /* тираж сменился, а в корзине уже что-то есть — молча не сносим */
         if(silent && String(d.number) !== String(state.tirazh) && (state.played.length || state.rolls)){
           return { changed: d.number };
