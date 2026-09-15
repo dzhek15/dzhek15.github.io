@@ -573,6 +573,8 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 .panel-head button{padding:5px 10px; font-size:12.5px}
 .bank-cell.wide button.danger, .panel-head button.danger{background:var(--hot); border-color:var(--hot); color:#fff; font-weight:600}
 .bank-cell.wide button.danger:hover:not(:disabled), .panel-head button.danger:hover:not(:disabled){background:var(--hot); filter:brightness(1.08)}
+.build{display:block; margin-top:8px; font-family:"IBM Plex Mono",monospace; font-size:11px;
+  letter-spacing:.04em; color:var(--muted); opacity:.75}
 .hist-sum{margin-left:8px; font-size:14px; letter-spacing:0; text-transform:none;
   color:var(--ink); font-weight:700; font-family:"IBM Plex Mono",monospace}
 .hist{list-style:none; margin:12px 0 0; padding:0; display:flex; flex-direction:column; gap:9px; max-height:340px; overflow-y:auto}
@@ -753,6 +755,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и список сыгранных хранятся в этом браузере: закроешь вкладку — всё останется. Бросок ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой сыгранный вариант обратно.
+    <span class="build">сборка 15.09 07:26 МСК</span>
   </footer>
 </div>
 
