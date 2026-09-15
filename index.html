@@ -189,9 +189,26 @@ button:disabled{opacity:.45; cursor:not-allowed}
 .roll-secondary button{border-color:var(--rule-strong); color:var(--muted)}
 .roll-secondary button:hover:not(:disabled){color:var(--ink); border-color:var(--ink)}
 /* служебные кнопки — такой же сплошной контур, как у остальных, без пунктира */
-#btnFetch, .roll-modes button{border-style:solid; border-width:1px;
+.roll-modes button{border-style:solid; border-width:1px;
   border-color:var(--ink); color:var(--ink); background:transparent}
-#btnFetch:hover:not(:disabled), .roll-modes button:hover:not(:disabled){background:var(--surface-3)}
+.roll-modes button:hover:not(:disabled){background:var(--surface-3)}
+/* «Обновить тираж» — единственная кнопка, которая ходит наружу за данными,
+   поэтому у неё фирменный охристый цвет и значок обновления */
+#btnFetch{background:var(--accent); border:1px solid var(--accent); color:var(--accent-ink);
+  display:inline-flex; align-items:center; gap:7px}
+#btnFetch svg{display:block}
+#btnFetch:hover:not(:disabled){background:var(--accent); border-color:var(--accent); filter:brightness(1.1)}
+#btnFetch:active:not(:disabled){transform:translateY(1px)}
+#btnFetch:disabled{opacity:.6}
+#btnFetch.is-loading svg{animation:fetchSpin .9s linear infinite; transform-origin:50% 50%}
+@keyframes fetchSpin{to{transform:rotate(360deg)}}
+/* значок + подпись: во всех кнопках пульта одинаково */
+.roll button:not(.btn-crowd), .keep-bar button, .hist-head-acts button, .acts button{
+  display:inline-flex; align-items:center; justify-content:center; gap:7px}
+.roll-crowd button{min-width:0}
+.roll button svg, .keep-bar button svg, .hist-head-acts button svg, .acts button svg{
+  display:block; flex:0 0 auto; opacity:.9}
+.roll button .lbl, .keep-bar button .lbl, .hist-head-acts button .lbl, .acts button .lbl{min-width:0; text-align:center}
 #btnUndo{border-color:var(--warn); color:var(--warn); display:inline-flex; align-items:center; gap:6px}
 #btnUndo svg{display:block}
 #btnUndo:hover:not(:disabled){background:var(--warn-bg); border-color:var(--warn)}
@@ -690,8 +707,8 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       <div class="panel-head">
         <h2>Корзина <span class="hist-sum" id="histSum"></span></h2>
         <div class="hist-head-acts">
-          <button id="btnSelAll" type="button" disabled title="Отметить или снять все варианты разом">Снять все</button>
-          <button id="btnClearHist" type="button" disabled>Очистить корзину</button>
+          <button id="btnSelAll" type="button" disabled title="Отметить или снять все варианты разом"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="13" height="13" rx="3"/><path d="M6.9 10.1l2.4 2.5 4.1-4.8"/></svg><span class="lbl">Снять все</span></button>
+          <button id="btnClearHist" type="button" disabled><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h12"/><path d="M8.5 6V4.5h3V6"/><path d="M6.5 6l.7 9.5h5.6L13.5 6"/></svg><span class="lbl">Очистить корзину</span></button>
         </div>
       </div>
       <ul class="hist" id="hist"></ul>
@@ -704,14 +721,14 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         Бросить
       </button>
       <span class="spin-group">
-        <button class="btn-spin" id="btnSpin" type="button">Случайный выбор ×</button>
+        <button class="btn-spin" id="btnSpin" type="button"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5.5h3.2l7.6 9h3.2"/><path d="M3 14.5h3.2l7.6-9h3.2"/><path d="M15 3.3l2.2 2.2-2.2 2.2"/><path d="M15 12.3l2.2 2.2-2.2 2.2"/></svg><span class="lbl">Случайный выбор ×</span></button>
         <input type="number" id="spinCount" class="spin-in" value="1" min="1" max="100000" step="1"
                aria-label="Сколько кликов за раз" title="Сколько раз прокрутить за одно нажатие">
       </span>
       </div>
       <div class="roll-ev">
-        <button class="btn-ev" id="btnEV" type="button" title="Посчитать матожидание купона: вероятности из коэффициентов, соперники — из долей пула">Оценить купон</button>
-        <button class="btn-ev" id="btnPF" type="button" title="Отобрать из системы строки, которые меньше всего пересекаются с выбором толпы">Отобрать строки</button>
+        <button class="btn-ev" id="btnEV" type="button" title="Посчитать матожидание купона: вероятности из коэффициентов, соперники — из долей пула"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5V9.5"/><path d="M10 16.5V4"/><path d="M15.5 16.5v-5"/></svg><span class="lbl">Оценить купон</span></button>
+        <button class="btn-ev" id="btnPF" type="button" title="Отобрать из системы строки, которые меньше всего пересекаются с выбором толпы"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 4.5h13l-5 5.8v5.2l-3 1.6v-6.8z"/></svg><span class="lbl">Отобрать строки</span></button>
       </div>
       <div class="roll-crowd">
         <button class="btn-spin btn-crowd" id="btnMost" type="button"><span class="ar">▲</span><span class="lbl-long">Проставить </span>большинство</button>
@@ -719,12 +736,12 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       </div>
       <div class="roll-secondary">
         <button id="btnUndo" type="button" disabled><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M7 4.5 3 8.5l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 8.5H12a4.5 4.5 0 0 1 0 9h-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Вернуть</button>
-        <button id="btnFetch" type="button" title="Забрать актуальный тираж Балтсистемы с totobrief">Обновить тираж</button>
-        <button id="btnReset" type="button" title="Снять отметки со всех строк, кроме зафиксированных. Откатывается кнопкой «Вернуть»">Очистить исходы</button>
+        <button id="btnFetch" type="button" title="Забрать актуальный тираж Балтсистемы с totobrief"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4.2 12.5a6 6 0 0 1 9.9-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M15.8 7.5a6 6 0 0 1-9.9 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M14.6 3.1v3.6h-3.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.4 16.9v-3.6h3.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lbl">Обновить тираж</span></button>
+        <button id="btnReset" type="button" title="Снять отметки со всех строк, кроме зафиксированных. Откатывается кнопкой «Вернуть»"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="13" height="13" rx="3"/><path d="M7.6 7.6l4.8 4.8"/><path d="M12.4 7.6l-4.8 4.8"/></svg><span class="lbl">Очистить исходы</span></button>
       </div>
       <div class="roll-modes">
-        <button id="btnMarkAll" type="button" title="Пометить «рандом» все строки, кроме зафиксированных. Где отмечено два-три исхода — жеребьёвка пойдёт только по ним">Все в рандом</button>
-        <button id="btnClearModes" type="button" title="Убрать «рандом» со всех строк и вернуть в жеребьёвку все три исхода. Зафиксированные строки не трогает">Снять режимы</button>
+        <button id="btnMarkAll" type="button" title="Пометить «рандом» все строки, кроме зафиксированных. Где отмечено два-три исхода — жеребьёвка пойдёт только по ним"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="13" height="13" rx="3"/><circle cx="7.2" cy="7.2" r="1.15" fill="currentColor" stroke="none"/><circle cx="12.8" cy="12.8" r="1.15" fill="currentColor" stroke="none"/></svg><span class="lbl">Все в рандом</span></button>
+        <button id="btnClearModes" type="button" title="Убрать «рандом» со всех строк и вернуть в жеребьёвку все три исхода. Зафиксированные строки не трогает"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="6.5"/><path d="M5.4 5.4l9.2 9.2"/></svg><span class="lbl">Снять режимы</span></button>
       </div>
     </div>
     </div>
@@ -747,7 +764,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   <p class="roll-note" id="rollNote"></p>
 
   <div class="keep-bar">
-    <button class="btn-keep" id="btnKeep" type="button">Положить купон в корзину</button>
+    <button class="btn-keep" id="btnKeep" type="button"><svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.2 7.5h13.6l-1.4 8.3a1.6 1.6 0 0 1-1.6 1.3H6.2a1.6 1.6 0 0 1-1.6-1.3z"/><path d="M7.3 7.5 9.4 2.9"/><path d="M12.7 7.5 10.6 2.9"/></svg><span class="lbl">Положить купон в корзину</span></button>
     <span class="keep-note" id="keepNote"></span>
   </div>
 
@@ -799,9 +816,9 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       <h2>Выгрузка</h2>
       <p class="empty" id="expNote"></p>
       <div class="acts">
-        <button id="btnCsv" type="button">Скачать CSV</button>
-        <button id="btnSend" type="button" title="Отправить файл в мессенджер, почту или скопировать в буфер">Отправить CSV</button>
-        <button id="btnLoadCsv" type="button" title="Открыть CSV и листать его варианты прямо в таблице матчей">Загрузить CSV</button>
+        <button id="btnCsv" type="button"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.5v8.5"/><path d="M6.6 8.8 10 12.2l3.4-3.4"/><path d="M3.8 15.5h12.4"/></svg><span class="lbl">Скачать CSV</span></button>
+        <button id="btnSend" type="button" title="Отправить файл в мессенджер, почту или скопировать в буфер"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3 3 8.6l5.6 2.3L11 16.7z"/><path d="M8.6 10.9 17 3"/></svg><span class="lbl">Отправить CSV</span></button>
+        <button id="btnLoadCsv" type="button" title="Открыть CSV и листать его варианты прямо в таблице матчей"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12.2V3.7"/><path d="M6.6 7.1 10 3.7l3.4 3.4"/><path d="M3.8 15.5h12.4"/></svg><span class="lbl">Загрузить CSV</span></button>
         <input type="file" id="fileCsv" accept=".csv,text/csv,text/plain" hidden>
       </div>
       <div id="csvFallback" hidden style="margin-top:12px">
@@ -820,7 +837,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. Бросок ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 15.09 13:28 МСК</span>
+    <span class="build">сборка 15.09 13:45 МСК</span>
   </footer>
 </div>
 
@@ -2038,12 +2055,12 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       : "";
     var sa = $("btnSelAll");
     sa.disabled = state.played.length === 0;
-    sa.textContent = (on === state.played.length && on > 0) ? "Снять все" : "Отметить все";
+    (sa.querySelector(".lbl") || sa).textContent = (on === state.played.length && on > 0) ? "Снять все" : "Отметить все";
     var cb = $("btnClearHist");
     cb.disabled = state.played.length === 0;
     if(cb.disabled && cb.classList.contains("danger")){
       clearArmed = 0; clearTimeout(clearTimer);
-      cb.textContent = "Очистить корзину"; cb.classList.remove("danger");
+      (cb.querySelector(".lbl") || cb).textContent = "Очистить корзину"; cb.classList.remove("danger");
     }
     state.played.forEach(function(h, i){
       var li = document.createElement("li");
@@ -2451,7 +2468,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     var b = $("btnClearHist");
     clearArmed = 0;
     clearTimeout(clearTimer);
-    b.textContent = "Очистить корзину";
+    (b.querySelector(".lbl") || b).textContent = "Очистить корзину";
     b.classList.remove("danger");
   }
 
@@ -2469,7 +2486,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     if(!state.played.length){ disarmClear(); return; }
     if(!clearArmed){
       clearArmed = 1;
-      b.textContent = "Точно очистить?";
+      (b.querySelector(".lbl") || b).textContent = "Точно очистить?";
       b.classList.add("danger");
       clearTimer = setTimeout(disarmClear, 4000);
       return;
@@ -2772,9 +2789,11 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   function pullTirazh(silent){
     var btn = $("btnFetch");
+    var lbl = btn.querySelector(".lbl") || btn;
     btn.disabled = true;
-    var was = btn.textContent;
-    btn.textContent = "Загружаю…";
+    btn.classList.add("is-loading");
+    var was = lbl.textContent;
+    lbl.textContent = "Загружаю…";
     return fetch(API + "baltbet-main/drawings?page=1")
       .then(function(r){ if(!r.ok) throw new Error("список тиражей: " + r.status); return r.json(); })
       .then(function(j){
@@ -2800,14 +2819,14 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
           .then(function(n){ return {n:n, number:d.number}; });
       })
       .then(function(res){
-        btn.disabled = false; btn.textContent = was;
+        btn.disabled = false; btn.classList.remove("is-loading"); lbl.textContent = was;
         if(res) say("Тираж №" + res.number + " загружен с totobrief: " + res.n +
                     " матч(ей), проценты игроков и конторы подставлены в строки. Исходы и режимы не проставлены — " +
                     "отмечай сам, а для броска сначала нажми «Все в рандом».");
         else if(!silent) say("Тираж №" + state.tirazh + " уже актуальный — обновлять нечего.");
       })
       .catch(function(err){
-        btn.disabled = false; btn.textContent = was;
+        btn.disabled = false; btn.classList.remove("is-loading"); lbl.textContent = was;
         if(!silent) say("Не удалось забрать тираж: " + (err && err.message ? err.message : err) +
                         ". На странице-артефакте запросы наружу запрещены — автоподтяжка работает только в размещённой версии.");
       });
