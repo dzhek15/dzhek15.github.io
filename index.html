@@ -627,8 +627,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         <span class="view-lbl">Вид</span>
         <button id="btnPct" type="button" aria-pressed="false" hidden>Показать проценты</button>
         <button id="btnKf" type="button" aria-pressed="false" hidden>Показать кэфы</button>
-        <button id="btnCompact" type="button" aria-pressed="false" title="Ужать всё так, чтобы 15 матчей влезли на один экран">Компактно</button>
-        <button id="btnFit" type="button" title="Подобрать масштаб так, чтобы весь купон влез в экран целиком">Влезть в экран</button>
         <span class="zoomctl" role="group" aria-label="Масштаб страницы">
           <button id="btnZoomOut" type="button" aria-label="Мельче" title="Мельче на 5%">−</button>
           <b id="zoomVal">100%</b>
@@ -757,7 +755,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и список сыгранных хранятся в этом браузере: закроешь вкладку — всё останется. Бросок ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой сыгранный вариант обратно.
-    <span class="build">сборка 15.09 08:40 МСК</span>
+    <span class="build">сборка 15.09 09:05 МСК</span>
   </footer>
 </div>
 
@@ -852,7 +850,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   if(!Array.isArray(state.played)) state.played = [];
   state.showPct = !!state.showPct;
   state.showKf  = !!state.showKf;
-  state.compact = !!state.compact;
+  state.compact = false;   /* компактный вид убран вместе с кнопкой */
   state.zoom = Number(state.zoom);
   if(!isFinite(state.zoom) || state.zoom <= 0) state.zoom = 1;
   state.zoom = Math.round(Math.max(ZMIN, Math.min(ZMAX, state.zoom)) * 100) / 100;
@@ -1866,9 +1864,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     }
 
     document.documentElement.setAttribute("data-compact", state.compact ? "1" : "0");
-    var cb2 = $("btnCompact");
-    cb2.setAttribute("aria-pressed", state.compact ? "true" : "false");
-    cb2.textContent = state.compact ? "Обычный вид" : "Компактно";
     applyZoom();
 
     var havePct = state.matches.some(function(m){ return m.pct; });
@@ -2544,29 +2539,9 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     save(); render();
   });
 
-  $("btnCompact").addEventListener("click", function(){
-    state.compact = !state.compact;
-    save(); render();
-  });
-
   $("btnZoomIn").addEventListener("click", function(){ setZoom((Number(state.zoom) || 1) + ZSTEP); });
   $("btnZoomOut").addEventListener("click", function(){ setZoom((Number(state.zoom) || 1) - ZSTEP); });
 
-  $("btnFit").addEventListener("click", function(){
-    var coup = $("coupon");
-    if(!coup) return;
-    var r = fitToScreen();
-    if(!r){ say("Не получилось измерить страницу — подкрути масштаб кнопками − и +."); return; }
-    say(r.zoom >= 1
-      ? "Все 15 матчей и так помещаются в экран — масштаб оставлен 100%."
-      : "Масштаб подобран: " + Math.round(r.zoom * 100) + "% — все 15 матчей влезают в экран." +
-        (r.compact ? " Заодно включил «Компактно»: без него пришлось бы ужимать до нечитаемого." : ""));
-    /* таблицу меряем отдельно от шапки, поэтому подводим её к верху экрана сами */
-    setTimeout(function(){
-      try { coup.scrollIntoView({block:"start", behavior:"smooth"}); }
-      catch(e){ coup.scrollIntoView(true); }
-    }, 60);
-  });
 
   /* ---------- csv ---------- */
   function enumerate(src){
