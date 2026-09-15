@@ -112,9 +112,13 @@ input:focus-visible,button:focus-visible,summary:focus-visible,textarea:focus-vi
 .console{
   margin-top:18px; background:var(--surface); border:1px solid var(--rule); border-radius:8px;
   box-shadow:var(--shadow); padding:18px 18px 16px;
-  display:flex; flex-direction:column; align-items:center; gap:0;
+  display:flex; flex-direction:column; align-items:stretch; gap:0;
 }
 .roll{display:flex; flex-direction:column; align-items:stretch; gap:12px; width:fit-content; max-width:100%; margin-left:auto}
+.console-top{display:flex; gap:20px; align-items:flex-start; width:100%}
+.hist-panel{flex:1 1 0; min-width:0; background:transparent; border:none; padding:0}
+.hist-panel .hist{max-height:430px}
+.console-top .roll{flex:0 0 auto}
 .roll-primary{display:flex; gap:12px; align-items:stretch; flex-wrap:wrap; justify-content:center}
 .roll-crowd{display:flex; gap:12px; align-items:stretch; flex-wrap:wrap; justify-content:center}
 .roll-secondary, .roll-modes{display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:center}
@@ -216,6 +220,10 @@ button:disabled{opacity:.45; cursor:not-allowed}
   .roll-primary{width:100%; flex-direction:column; gap:9px}
   .roll-primary button{width:100%; justify-content:center}
   .roll{width:100%; margin-left:0}
+  .console-top{flex-direction:column; gap:16px}
+  .console-top .roll{order:-1; width:100%}
+  .hist-panel{width:100%}
+  .hist-panel .hist{max-height:260px}
   .roll-crowd{width:100%; display:grid; grid-template-columns:1fr 1fr; gap:9px}
   .roll-crowd button{width:100%; justify-content:center}
   .btn-roll{font-size:16px; padding:11px 18px}
@@ -539,7 +547,7 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 }
 
 /* ---------- bottom ---------- */
-.grid2{display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:22px}
+.grid2{display:grid; grid-template-columns:1fr; gap:18px; margin-top:22px}
 .panel{background:var(--surface); border:1px solid var(--rule); border-radius:6px; padding:16px 18px}
 .panel h2{font-size:13px; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); font-weight:600; font-family:"IBM Plex Sans",sans-serif}
 .panel-head{display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap}
@@ -637,6 +645,15 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   <p class="hint" id="hint" hidden></p>
 
   <div class="console">
+    <div class="console-top">
+    <section class="panel hist-panel">
+      <div class="panel-head">
+        <h2>Сыгранные варианты</h2>
+        <button id="btnClearHist" type="button" disabled>Очистить список</button>
+      </div>
+      <ul class="hist" id="hist"></ul>
+      <p class="empty" id="histEmpty">Пока пусто. Каждый бросок и каждая прокрутка попадают сюда — и целиком уходят в CSV.</p>
+    </section>
     <div class="roll">
       <div class="roll-primary">
       <button class="btn-roll" id="btnRoll" type="button">
@@ -662,6 +679,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         <button id="btnMarkAll" type="button" title="Пометить «рандом» все строки, кроме зафиксированных. Где отмечено два-три исхода — жеребьёвка пойдёт только по ним">Все в рандом</button>
         <button id="btnClearModes" type="button" title="Убрать «рандом» со всех строк и вернуть в жеребьёвку все три исхода. Зафиксированные строки не трогает">Снять режимы</button>
       </div>
+    </div>
     </div>
     <div class="knob-sep"></div>
     <div class="knobs">
@@ -732,15 +750,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   </div>
 
   <div class="grid2">
-    <section class="panel">
-      <div class="panel-head">
-        <h2>Сыгранные варианты</h2>
-        <button id="btnClearHist" type="button" disabled>Очистить список</button>
-      </div>
-      <ul class="hist" id="hist"></ul>
-      <p class="empty" id="histEmpty">Пока пусто. Каждый бросок и каждая прокрутка попадают сюда — и целиком уходят в CSV.</p>
-    </section>
-
     <section class="panel">
       <h2>Выгрузка</h2>
       <p class="empty" id="expNote"></p>
