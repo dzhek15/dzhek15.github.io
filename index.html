@@ -2127,6 +2127,23 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     return true;
   }
 
+  /* При открытии и перезагрузке страницы купон должен быть пустым: проставленные
+     исходы — это заготовка, а не решение, и каждый раз начинать с чужой раскладки
+     неудобно. Зафиксированные строки не трогаем, а прежний набор кладём в историю,
+     чтобы «Вернуть» поднял его, если страницу перезагрузили случайно. */
+  function clearOnLoad(){
+    ensureShape();
+    var had = state.matches.some(function(m){ return m.mode !== "lock" && countPicks(m) > 0; });
+    if(!had) return false;
+    pushHistory("до очистки при загрузке");
+    state.matches.forEach(function(m){
+      if(m.mode === "lock") return;
+      m.picks = {"1":false, "X":false, "2":false};
+    });
+    save();
+    return true;
+  }
+
   /* вариант принят: +1 к счётчику, стоимость уходит в банк */
   function commitVariant(extra, label){
     state.rolls++;
@@ -2554,7 +2571,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     state.spent = 0;
     state.rolls = 0;
     histArmed = -1;
-    shuffleOnce();
     save();
     $("tirazhName").value = state.tirazh;
     render();
@@ -2593,7 +2609,8 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       .then(function(res){
         btn.disabled = false; btn.textContent = was;
         if(res) say("Тираж №" + res.number + " загружен с totobrief: " + res.n +
-                    " матч(ей), проценты игроков и конторы подставлены в строки. Всё помечено «рандом», исходы разыграны.");
+                    " матч(ей), проценты игроков и конторы подставлены в строки. Исходы не проставлены — " +
+                    "отмечай сам или нажми «Бросить», все строки помечены «рандом».");
         else if(!silent) say("Тираж №" + state.tirazh + " уже актуальный — обновлять нечего.");
       })
       .catch(function(err){
@@ -2789,7 +2806,8 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   window.addEventListener("error", function(ev){ boom(ev.error || ev.message); });
 
   try {
-    if(freshStart){ shuffleOnce(); save(); }   /* чистый старт: по одному исходу, счётчики в нуле */
+    if(freshStart){ save(); }
+    clearOnLoad();                             /* лист вариантов при загрузке пустой */
     render();
     /* если страница размещена в интернете — тихо проверить, не сменился ли тираж */
     if(state.rolls === 0 && !state.played.length && typeof fetch === "function"){
