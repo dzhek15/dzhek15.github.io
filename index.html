@@ -671,17 +671,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         <label for="spinCount">Кликов за раз</label>
         <input type="number" id="spinCount" value="1" min="1" max="100000" step="1">
       </div>
-      <div class="knob">
-        <label for="rollModeSel">Режим броска</label>
-        <select id="rollModeSel">
-          <option value="single">По одному исходу</option>
-          <option value="budget">До бюджета</option>
-        </select>
-      </div>
-      <div class="knob" id="knobTarget" hidden>
-        <label for="targetSum">Цель, ₽</label>
-        <input type="number" id="targetSum" value="0" min="0" step="30">
-      </div>
       <div class="knob" id="knobGap" hidden>
         <label for="pctGap">Отрыв ▲▼, п.п.</label>
         <input type="number" id="pctGap" value="4" min="0" max="30" step="1"
@@ -812,7 +801,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     return {
       tirazh: "5006",
       price: 30,
-      rollMode: "single",
       target: 0,
       pctGap: 4,
       rolls: 0,
@@ -846,7 +834,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   }catch(e){ state = seedState(); freshStart = true; }
   if(!Array.isArray(state.history)) state.history = [];
   if(!Array.isArray(state.played)) state.played = [];
-  if(state.rollMode !== "budget") state.rollMode = "single";
   state.showPct = !!state.showPct;
   state.showKf  = !!state.showKf;
   state.compact = !!state.compact;
@@ -1829,34 +1816,8 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
                   (frozen === t.rand ? ", поэтому прокрутка будет крутиться вхолостую" : "") +
                   ". Вернуть все три — кнопкой «Снять режимы»." : "");
     }
-    if(state.rollMode === "budget" && t.rand > 0){
-      var plan = planSizes(t.rand);
-      var wide = plan.sizes.filter(function(x){ return x > 1; }).length;
-      var fixedCombos = 1, badFixed = false;
-      state.matches.forEach(function(m){
-        if(m.mode === "rand") return;
-        var c = countPicks(m);
-        if(c === 0) badFixed = true;
-        fixedCombos *= c;
-      });
-      if(badFixed){
-        note.innerHTML = "Есть незаполненный матч вне рандома — сначала выбери в нём исход, иначе под сумму не подогнать.";
-      } else {
-        var total = fixedCombos * plan.combos;
-        var tgt = Number(state.target)||0;
-        var cst = total * (Number(state.price)||0);
-        note.innerHTML = "Бросок соберёт <b>" + fmt(total) + "</b> комбинац(ий) — <b>" +
-          fmt(cst) + " ₽</b> при цели " + fmt(tgt) + " ₽. " +
-          "Рандомных матчей: <b>" + t.rand + "</b>" + (wide ? ", из них с двумя-тремя исходами: <b>" + wide + "</b>" : ", все по одному исходу") +
-          ". Зафиксировано: <b>" + t.locked + "</b>." +
-          (wide === 0 ? " Число комбинаций при каждом броске будет одним и тем же — меняются только сами исходы. Чтобы оно росло, подними цель." : "");
-        var narrowed = state.matches.filter(function(m){ return m.mode==="rand" && m.pool.length < 3; }).length;
-        if(narrowed) note.innerHTML += " В <b>" + narrowed + "</b> матч(ах) жеребьёвка идёт не по всем трём исходам, а только по отмеченным.";
-      }
-    }
     $("btnUndo").disabled = state.history.length === 0 || spinning;
     $("btnKeep").disabled = t.empty > 0 || spinning;
-    $("knobTarget").hidden = state.rollMode !== "budget";
     $("sbRoll").disabled = $("btnRoll").disabled;
     $("sbKeep").disabled = $("btnKeep").disabled;
     $("sbSum").textContent = t.empty > 0
@@ -2012,43 +1973,12 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   /* Сколько исходов раздать каждому «рандомному» матчу, чтобы уложиться в цель.
      base — произведение исходов по матчам, которые бросок не трогает.
      Возвращает массив длины n из 1/2/3 (перемешанный) и итоговое число комбинаций. */
+  /* Бросок всегда ставит по одному исходу в каждую строку с «рандомом» —
+     режим до бюджета убран, ширину строк задаёшь руками. */
   function planSizes(n){
-    if(n <= 0) return {sizes:[], combos:0};
     var sizes = [];
-    var i;
-    if(state.rollMode === "single"){
-      for(i=0;i<n;i++) sizes.push(1);
-      return {sizes:sizes, combos:1};
-    }
-    var base = 1, hasEmptyFixed = false;
-    state.matches.forEach(function(m){
-      if(m.mode === "rand") return;
-      var c = countPicks(m);
-      if(c === 0) hasEmptyFixed = true;
-      base *= c;
-    });
-    var price = Number(state.price) || 0;
-    var target = Number(state.target) || 0;
-    var lines = (price > 0) ? Math.floor(target / price) : 0;
-    var budget = (hasEmptyFixed || base <= 0) ? 1 : Math.floor(lines / base);
-    if(!isFinite(budget) || budget < 1) budget = 1;
-
-    var caps = state.matches.filter(function(m){ return m.mode === "rand"; })
-      .map(function(m){ return Math.max(1, Math.min(3, m.pool.length)); });
-    var order = [];
-    for(i=0;i<n;i++){ sizes.push(1); order.push(i); }
-    /* случайный порядок раздачи, чтобы «широкие» матчи не липли к началу списка */
-    for(i=order.length-1;i>0;i--){
-      var j = Math.floor(Math.random()*(i+1));
-      var tmp = order[i]; order[i] = order[j]; order[j] = tmp;
-    }
-    var p = 1;
-    for(var k=0;k<order.length;k++){
-      var idx = order[k], cap = caps[idx] || 1;
-      if(cap >= 3 && p * 3 <= budget){ sizes[idx] = 3; p *= 3; }
-      else if(cap >= 2 && p * 2 <= budget){ sizes[idx] = 2; p *= 2; }
-    }
-    return {sizes:sizes, combos:p};
+    for(var i=0;i<n;i++) sizes.push(1);
+    return {sizes:sizes, combos:1};
   }
 
   function pickN(k, src){
@@ -2476,17 +2406,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     save();
   });
   $("spinCount").value = state.spins;
-  $("rollModeSel").addEventListener("change", function(e){
-    state.rollMode = (e.target.value === "budget") ? "budget" : "single";
-    save(); render();
-  });
-  $("rollModeSel").value = state.rollMode;
-  $("targetSum").addEventListener("input", function(e){
-    var v = Number(e.target.value);
-    state.target = (isFinite(v) && v > 0) ? v : 0;
-    save(); render();
-  });
-  $("targetSum").value = state.target;
   $("pctGap").addEventListener("input", function(e){
     var v = Math.round(Number(e.target.value));
     state.pctGap = (isFinite(v) && v >= 0 && v <= 30) ? v : 4;
