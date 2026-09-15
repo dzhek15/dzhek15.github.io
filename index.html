@@ -619,6 +619,11 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 .hist .sig{font-family:"IBM Plex Mono",monospace; font-size:14px; letter-spacing:.08em; overflow-wrap:anywhere; margin-top:2px}
 .hist button{padding:6px 11px; font-size:13px}
 .hist-acts{display:flex; gap:6px; align-items:center; flex:0 0 auto}
+.hist-head-acts{display:flex; gap:6px; align-items:center; flex-wrap:wrap; justify-content:flex-end}
+.hist-cb{display:flex; align-items:center; flex:0 0 auto; cursor:pointer; padding:2px}
+.hist-cb input{width:17px; height:17px; accent-color:var(--o1); cursor:pointer; margin:0}
+.hist li.is-off{opacity:.45}
+.hist li.is-off .sig{text-decoration:line-through}
 .hist-del{display:flex; align-items:center; justify-content:center; padding:4px 7px; color:var(--muted)}
 .hist-del svg{display:block}
 .hist-del:hover:not(:disabled){color:var(--hot); border-color:var(--hot)}
@@ -676,11 +681,14 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     <div class="console-top">
     <section class="panel hist-panel">
       <div class="panel-head">
-        <h2>Сыгранные варианты <span class="hist-sum" id="histSum"></span></h2>
-        <button id="btnClearHist" type="button" disabled>Очистить список</button>
+        <h2>Корзина <span class="hist-sum" id="histSum"></span></h2>
+        <div class="hist-head-acts">
+          <button id="btnSelAll" type="button" disabled title="Отметить или снять все варианты разом">Снять все</button>
+          <button id="btnClearHist" type="button" disabled>Очистить корзину</button>
+        </div>
       </div>
       <ul class="hist" id="hist"></ul>
-      <p class="empty" id="histEmpty">Пока пусто. Каждый бросок и каждая прокрутка попадают сюда — и целиком уходят в CSV.</p>
+      <p class="empty" id="histEmpty">Корзина пуста. Каждый бросок и каждая прокрутка падают сюда. В CSV уходят только отмеченные галочкой варианты.</p>
     </section>
     <div class="roll">
       <div class="roll-primary">
@@ -732,7 +740,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   <p class="roll-note" id="rollNote"></p>
 
   <div class="keep-bar">
-    <button class="btn-keep" id="btnKeep" type="button">Записать купон в сыгранные</button>
+    <button class="btn-keep" id="btnKeep" type="button">Положить купон в корзину</button>
     <span class="keep-note" id="keepNote"></span>
   </div>
 
@@ -804,8 +812,8 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   </div>
 
   <footer>
-    Купон и список сыгранных хранятся в этом браузере: закроешь вкладку — всё останется. Бросок ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой сыгранный вариант обратно.
-    <span class="build">сборка 15.09 12:35 МСК</span>
+    Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. Бросок ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
+    <span class="build">сборка 15.09 12:45 МСК</span>
   </footer>
 </div>
 
@@ -1572,7 +1580,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
            evMoney(x.ev) + '</td></tr>';
     });
     h += '</tbody></table>';
-    h += '<div class="pf-foot"><button class="btn-keep" id="pfSave" type="button">Записать отмеченные в сыгранные</button>' +
+    h += '<div class="pf-foot"><button class="btn-keep" id="pfSave" type="button">Положить отмеченные в корзину</button>' +
          '<span class="pf-note" id="pfNote"></span></div>';
 
     h += '<h3>Как отобрано</h3><ul class="ev-ass">' +
@@ -1656,7 +1664,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     if(state.played.length > 400) state.played.length = 400;
     save(); render();
     $("evBack").hidden = true;
-    say("Записано в сыгранные: " + fmt(added) + " строк(и) на " + fmt(added * price) + " ₽" +
+    say("Положено в корзину: " + fmt(added) + " строк(и) на " + fmt(added * price) + " ₽" +
         (dup ? ", пропущено повторов: " + fmt(dup) : "") +
         ". Они уйдут в CSV наравне с брошенными вариантами; убрать лишние можно корзиной в списке, откатить всё — кнопкой «Вернуть».");
   }
@@ -1938,7 +1946,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       : fmt(t.combos) + " комб. · " + fmt(t.combos * (Number(state.price)||0)) + " ₽";
     $("keepNote").textContent = t.empty > 0
       ? "Сначала выбери исход в каждом из " + t.empty + " пустых матч(ей)."
-      : "Купон, собранный руками, попадёт в список сыгранных и в CSV: " +
+      : "Купон, собранный руками, попадёт в корзину и в CSV: " +
         fmt(t.combos) + " строк, " + fmt(t.combos * (Number(state.price)||0)) + " ₽.";
 
     var price = Number(state.price) || 0;
@@ -1952,18 +1960,19 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     var plan = csvPlan();
     var en = $("expNote");
     if(plan.take.length){
-      en.textContent = "В файл уйдут все сыгранные варианты: " + plan.take.length +
+      en.textContent = "В файл уйдут отмеченные варианты из корзины: " + plan.take.length +
         " шт., " + fmt(plan.total) + " строк, " + fmt(plan.total * price) + " ₽." +
+        (plan.off ? " Без галочки и мимо файла: " + plan.off + "." : "") +
         (plan.skipped ? " Пропущено записей от другого списка матчей: " + plan.skipped + "." : "");
       $("btnCsv").disabled = plan.total > MAX_CSV;
       $("btnSend").disabled = $("btnCsv").disabled;
     } else if(t.empty){
-      en.textContent = "Список сыгранных пуст, а в купоне есть матчи без исхода — заполни или брось.";
+      en.textContent = (state.played.length ? "В корзине не отмечено ни одного варианта" : "Корзина пуста") + ", а в купоне есть матчи без исхода — заполни или брось.";
       $("btnCsv").disabled = true;
       $("btnSend").disabled = true;
     } else {
-      en.textContent = "Список сыгранных пуст — уйдёт то, что сейчас в купоне: " +
-        fmt(t.combos) + " строк, " + fmt(t.combos * price) + " ₽.";
+      en.textContent = (state.played.length ? "В корзине не отмечено ни одного варианта" : "Корзина пуста") +
+        " — уйдёт то, что сейчас в купоне: " + fmt(t.combos) + " строк, " + fmt(t.combos * price) + " ₽.";
       $("btnCsv").disabled = t.combos > MAX_CSV;
       $("btnSend").disabled = $("btnCsv").disabled;
     }
@@ -2009,23 +2018,44 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     $("histEmpty").hidden = state.played.length > 0;
     /* общая сумма по сыгранным: считаем прямо из списка, чтобы «Очистить список»
        обнулял её сам собой и не расходился со сводкой */
-    var sum = 0, rows = 0;
+    var sum = 0, rows = 0, on = 0;
     state.played.forEach(function(v){
+      if(v.sel === false) return;                 /* в сводку идёт то же, что уйдёт в файл */
       var n = variantCombos(v) || (v.combos || 0);
-      rows += n;
+      on++; rows += n;
       sum += (v.cost != null) ? Number(v.cost) : n * (Number(state.price) || 0);
     });
     $("histSum").textContent = state.played.length
-      ? fmt(state.played.length) + " шт. · " + fmt(rows) + " строк · " + fmt(sum) + " ₽"
+      ? "отмечено " + fmt(on) + " из " + fmt(state.played.length) +
+        " · " + fmt(rows) + " строк · " + fmt(sum) + " ₽"
       : "";
+    var sa = $("btnSelAll");
+    sa.disabled = state.played.length === 0;
+    sa.textContent = (on === state.played.length && on > 0) ? "Снять все" : "Отметить все";
     var cb = $("btnClearHist");
     cb.disabled = state.played.length === 0;
     if(cb.disabled && cb.classList.contains("danger")){
       clearArmed = 0; clearTimeout(clearTimer);
-      cb.textContent = "Очистить список"; cb.classList.remove("danger");
+      cb.textContent = "Очистить корзину"; cb.classList.remove("danger");
     }
     state.played.forEach(function(h, i){
       var li = document.createElement("li");
+      if(h.sel === false) li.classList.add("is-off");
+
+      var cbw = document.createElement("label");
+      cbw.className = "hist-cb";
+      cbw.title = "Галочка — вариант уходит в CSV. Снять — останется в корзине, но в файл не попадёт.";
+      var cbi = document.createElement("input");
+      cbi.type = "checkbox";
+      cbi.checked = h.sel !== false;
+      cbi.setAttribute("aria-label", "Выгружать вариант " + h.at + " · " + h.label + " в CSV");
+      cbi.addEventListener("change", function(){
+        h.sel = cbi.checked ? true : false;
+        save(); render();
+      });
+      cbw.appendChild(cbi);
+      li.appendChild(cbw);
+
       var left = document.createElement("div");
       var top = document.createElement("div");
       top.style.fontWeight = "500";
@@ -2069,6 +2099,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       });
 
       acts.appendChild(b); acts.appendChild(del);
+      left.style.flex = "1 1 auto"; left.style.minWidth = "0";
       li.appendChild(left); li.appendChild(acts);
       ul.appendChild(li);
     });
@@ -2413,9 +2444,18 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     var b = $("btnClearHist");
     clearArmed = 0;
     clearTimeout(clearTimer);
-    b.textContent = "Очистить список";
+    b.textContent = "Очистить корзину";
     b.classList.remove("danger");
   }
+
+  $("btnSelAll").addEventListener("click", function(){
+    if(!state.played.length) return;
+    var allOn = state.played.every(function(v){ return v.sel !== false; });
+    state.played.forEach(function(v){ v.sel = !allOn; });
+    save(); render();
+    say(allOn ? "Галочки сняты со всех вариантов — в CSV сейчас не уйдёт ни один."
+              : "Отмечены все варианты в корзине — в CSV уйдут все.");
+  });
 
   $("btnClearHist").addEventListener("click", function(){
     var b = $("btnClearHist");
@@ -2432,7 +2472,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     state.played = [];
     histArmed = -1;
     save(); render();
-    say("Список сыгранных вариантов очищен: убрано " + n + " шт. Купон и счётчики не тронуты.");
+    say("Корзина очищена: убрано " + n + " шт. Купон и счётчики не тронуты.");
   });
 
   /* Расстановка по долям игроков (строка «П»): most=true — самый популярный исход
@@ -2518,7 +2558,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   $("tirazhName").addEventListener("input", function(e){ state.tirazh = e.target.value; save(); });
   $("tirazhName").value = state.tirazh || "";
   /* ---------- Просмотр CSV: варианты листаются в таблице, как страницы книги ----------
-     Файл никуда не записывается: купон и «Сыгранные варианты» остаются нетронутыми,
+     Файл никуда не записывается: купон и корзина остаются нетронутыми,
      пока не нажмёшь «В купон». */
   function normOut(x){
     x = String(x == null ? "" : x).trim().toUpperCase();
@@ -2823,12 +2863,13 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   /* сколько матчей в текущем купоне — варианты с другим числом не выгружаем */
   function csvPlan(){
     var need = state.matches.length;
-    var take = [], skipped = 0, total = 0;
+    var take = [], skipped = 0, off = 0, total = 0;
     state.played.forEach(function(v){
       if(!Array.isArray(v.snap) || v.snap.length !== need || variantCombos(v) === 0){ skipped++; return; }
+      if(v.sel === false){ off++; return; }        /* галочка снята — в файл не идёт */
       take.push(v); total += variantCombos(v);
     });
-    return {take:take.slice().reverse(), skipped:skipped, total:total, need:need};
+    return {take:take.slice().reverse(), skipped:skipped, off:off, total:total, need:need};
   }
 
   function buildCsv(){
