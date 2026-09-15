@@ -98,6 +98,9 @@ h1,h2,h3{font-family:"Chivo","IBM Plex Sans",system-ui,sans-serif; margin:0; tex
 .ticket .tk:last-child{border-right:0}
 .ticket .k, .ticket label{font-size:11.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
 .tk-note{font-size:11px; color:var(--muted); margin-top:2px; text-align:center; line-height:1.25}
+.tk-btn{cursor:pointer}
+.tk-btn:hover{background:var(--surface-2)}
+.tk-why{font-style:normal; color:var(--o1); text-decoration:underline dotted; text-underline-offset:2px; white-space:nowrap}
 .ticket .v.good{color:var(--cold)}
 .ticket .v.bad{color:var(--hot)}
 .ticket .v{font-family:"Chivo",sans-serif; font-weight:800; font-size:17px; line-height:1.1; font-variant-numeric:tabular-nums}
@@ -523,6 +526,7 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 .ev-tab td{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums}
 .ev-cmp td:first-child{font-family:inherit}
 .ev-note, .ev-warn{margin:8px 0 0; font-size:12px; color:var(--muted)}
+.ev-lead{margin:8px 0 0; font-size:13.5px; line-height:1.5}
 .ev-alarm{margin:10px 0 0; padding:9px 11px; font-size:12.5px; line-height:1.45;
   background:var(--warn-bg); border:1px solid var(--warn); border-radius:var(--r); color:var(--warn)}
 .ev-inline{font-family:"IBM Plex Mono",monospace}
@@ -692,7 +696,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       <div class="tk"><span class="k">Приём до (МСК)</span><span class="v mono" id="koTime">—</span></div>
       <div class="tk"><span class="k">Осталось</span><span class="v mono" id="koLeft">—</span></div>
       <div class="tk" id="tkJackWrap" hidden><span class="k">Суперприз</span><span class="v mono" id="tkJack">—</span></div>
-      <div class="tk" id="tkValWrap" hidden title="Суперприз, делённый на призовой фонд тиража. Чем больше, тем больше чужих денег разыгрывается сверх собранного сегодня. «Обычно» — медиана этого же отношения по завершённым тиражам."><span class="k">Ценность тиража</span><span class="v mono" id="tkVal">—</span><span class="tk-note" id="tkValNote"></span></div>
+      <div class="tk tk-btn" id="tkValWrap" hidden role="button" tabindex="0" title="Нажми — объясню, что это за число и как его читать"><span class="k">Ценность тиража</span><span class="v" id="tkVal">—</span><span class="tk-note" id="tkValNote"></span></div>
     </div>
   </header>
 
@@ -848,7 +852,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. Бросок ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 15.09 15:09 МСК</span>
+    <span class="build">сборка 15.09 15:30 МСК</span>
   </footer>
 </div>
 
@@ -916,6 +920,9 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       poolSum: 0,
       poolTypical: 0,
       ratioTypical: 0,
+      ratioList: [],
+      jackWins: 0,
+      finCount: 0,
       showPct: false,
       showKf: false,
       compact: false,
@@ -1048,15 +1055,17 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       var vEl = $("tkVal");
       vEl.textContent = r.toFixed(2).replace(".", ",");
       vEl.classList.remove("good", "bad");
-      var note = "";
+      var word = "—";
       if(rTyp > 0){
         var rel = r / rTyp;
-        if(rel >= 1.15){ vEl.classList.add("good"); note = "выше обычного"; }
-        else if(rel <= 0.85){ vEl.classList.add("bad"); note = "ниже обычного"; }
-        else note = "как обычно";
-        note += " · обычно " + rTyp.toFixed(2).replace(".", ",");
+        if(rel >= 1.15){ vEl.classList.add("good"); word = "щедрый"; }
+        else if(rel <= 0.85){ vEl.classList.add("bad"); word = "скупой"; }
+        else word = "обычный";
       }
-      $("tkValNote").textContent = note;
+      vEl.textContent = word;
+      $("tkValNote").innerHTML = "суперприз " + r.toFixed(2).replace(".", ",") +
+        " от фонда" + (rTyp > 0 ? ", обычно " + rTyp.toFixed(2).replace(".", ",") : "") +
+        ' · <i class="tk-why">что это значит</i>';
     } else { vw.hidden = true; }
 
     /* на телефоне плитки лежат сеткой 2×2: нечётную последнюю растягиваем на всю ширину,
@@ -2621,6 +2630,69 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   $("tirazhName").addEventListener("input", function(e){ state.tirazh = e.target.value; save(); });
   $("tirazhName").value = state.tirazh || "";
+  /* ---------- Окно «Ценность тиража» ----------
+     Плитка в шапке показывает одно число, а здесь объясняем словами,
+     откуда оно берётся и как его читать. Всё считается по той же выгрузке. */
+  function plural(n, one, few, many){
+    var a = Math.abs(n) % 100, b = a % 10;
+    if(a > 10 && a < 20) return many;
+    if(b > 1 && b < 5) return few;
+    if(b === 1) return one;
+    return many;
+  }
+
+  function showValueInfo(){
+    var fund = Number(state.poolTypical) || Number(state.poolSum) || 0;
+    var jack = Number(state.jackpot) || 0;
+    if(!fund || !jack) return;
+    var r = jack / fund;
+    var list = (state.ratioList || []).slice().sort(function(a, b){ return a - b; });
+    var q = function(p){ return list.length ? list[Math.min(list.length - 1, Math.round(p * (list.length - 1)))] : 0; };
+    var num = function(x){ return x.toFixed(2).replace(".", ","); };
+    var below = 0;
+    for(var i = 0; i < list.length; i++) if(list[i] < r) below++;
+    var pct = list.length ? Math.round(100 * below / list.length) : 0;
+    var wins = Number(state.jackWins) || 0, fin = Number(state.finCount) || 0;
+    var perDraw = fund / 9;
+
+    var h = '<p class="ev-lead">Суперприз — это деньги, собранные в прошлых тиражах и никем не выигранные. ' +
+            'Сегодня они разыгрываются сверх того, что собрали сегодняшние игроки. Плитка показывает, ' +
+            'сколько таких «чужих» денег приходится на рубль сегодняшнего фонда.</p>';
+    h += '<p class="ev-lead"><b>' + evMoney(jack) + '</b> суперприза на <b>' + evMoney(fund) + '</b> фонда — это <b>' +
+         num(r) + '</b>.' + (list.length ? ' Больше, чем в ' + pct + '% из ' + list.length + ' прошлых тиражей.' : '') + '</p>';
+
+    if(list.length){
+      h += '<h3>Как читать это число</h3><table class="ev-tab"><tbody>' +
+        '<tr><td>до ' + num(q(0.25)) + '</td><td>скупой тираж, четверть самых бедных</td></tr>' +
+        '<tr><td>около ' + num(q(0.5)) + '</td><td>обычный, столько бывает чаще всего</td></tr>' +
+        '<tr><td>от ' + num(q(0.75)) + '</td><td>щедрый, четверть самых богатых</td></tr>' +
+        '<tr><td>' + num(q(1)) + '</td><td>самый большой за ' + list.length + ' тиражей</td></tr>' +
+        '</tbody></table>';
+    }
+
+    h += '<h3>Почему число скачет</h3><p class="ev-lead">Пока никто не угадал все 15, суперприз растёт примерно на ' +
+         evMoney(perDraw) + ' за тираж — это девятая часть фонда. Когда кто-то угадывает, он сбрасывается до миллиона, ' +
+         'и всё начинается сначала.' +
+         (wins && fin ? ' За последние ' + fin + ' тиражей это случилось ' + wins + ' ' + plural(wins, "раз", "раза", "раз") + ' — примерно раз в ' +
+          Math.round(fin / wins) + ' тиражей.' : '') + '</p>';
+    h += '<p class="ev-lead">Отсюда простое следствие: если ждёшь щедрый тираж, его можно просто дождаться. ' +
+         'Каждый тираж без выигрыша прибавляет к этому числу около ' + num(perDraw / fund) + '.</p>';
+
+    h += '<h3>Чего это число не значит</h3>' +
+         '<p class="ev-warn">Оно не делает тираж выигрышным. Суперприз выплачивается только за 14 и 15 угаданных, ' +
+         'а туда попадают очень редко, поэтому разница между скупым и щедрым тиражом — это несколько процентов отдачи, ' +
+         'а не переход в плюс. Шанс угадать от этого числа не зависит вообще: он определяется матчами, а не размером суперприза.</p>';
+
+    $("evTitle").textContent = "Ценность тиража";
+    $("evBody").innerHTML = h;
+    $("evBack").hidden = false;
+  }
+
+  $("tkValWrap").addEventListener("click", showValueInfo);
+  $("tkValWrap").addEventListener("keydown", function(e){
+    if(e.key === "Enter" || e.key === " "){ e.preventDefault(); showValueInfo(); }
+  });
+
   /* ---------- Купон по ссылке ----------
      15 цифр: 1 = «1», 2 = «X», 4 = «2», сумма — если отмечено несколько.
      Так купон переезжает с телефона на компьютер и обратно. */
@@ -2932,6 +3004,11 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
                      .map(function(x){ return Number(x.jackpot) / Number(x.pool_sum); })
                      .sort(function(a,b){ return a - b; });
         state.ratioTypical = rr.length ? rr[Math.floor(rr.length/2)] : 0;
+        state.ratioList = rr.slice(0, 80);
+        /* суперприз ровно в миллион — значит в прошлом тираже кто-то взял 15 из 15 */
+        var fin = rows.filter(function(x){ return x.status === "finished"; });
+        state.finCount = fin.length;
+        state.jackWins = fin.filter(function(x){ return Number(x.jackpot) <= 1000001; }).length;
         /* тираж сменился, а в корзине уже что-то есть — молча не сносим */
         if(silent && String(d.number) !== String(state.tirazh) && (state.played.length || state.rolls)){
           return { changed: d.number };
