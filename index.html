@@ -10,7 +10,8 @@
 <style>
 :root{color-scheme:light dark}
 *{box-sizing:border-box}
-/* Safari сам раздувает шрифт при широкой вёрстке под body.zoom — запрещаем */
+/* при body.zoom вёрстка становится широкой, и Safari сам увеличивает шрифт —
+   из-за этого проценты и кэфы в строках наезжали друг на друга. Запрещаем. */
 html{-webkit-text-size-adjust:100%; text-size-adjust:100%}
 body{margin:0; font:14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; background:#E6EAE8}
 img{max-width:100%}
@@ -417,15 +418,20 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 .chead .c{text-align:center}
 .row{border-bottom:1px solid var(--rule); transition:background-color .12s linear}
 .row:hover{background:var(--surface-2)}
-.row:hover.is-empty{background:var(--hot-soft)}
 .row:last-child{border-bottom:0}
 .row.is-lock{background:var(--surface-2)}
-.row.is-empty{background:var(--hot-soft)}
+/* Строка без выбранного исхода помечается полоской слева и бледным номером,
+   без заливки: красный фон на половине таблицы читался как ошибка. */
+.row.is-empty{position:relative; padding-left:19px}
+.row.is-empty::before{content:""; position:absolute; left:0; top:4px; bottom:4px; width:3px;
+  border-radius:0 2px 2px 0; background:var(--accent)}
+.row.is-empty .num{color:var(--accent); font-weight:600}
+.row.is-empty .teams{opacity:.72}
 .num{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--muted)}
 .fix{min-width:0}
-.teams{font-weight:500; font-size:14.5px; overflow-wrap:anywhere}
+.teams{font-weight:600; font-size:17px; line-height:1.3; overflow-wrap:anywhere}
 .teams .vs{color:var(--muted); font-weight:400; padding:0 4px}
-.meta{font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--muted); margin-top:1px; overflow-wrap:anywhere}
+.meta{font-family:"IBM Plex Mono",monospace; font-size:13px; color:var(--muted); margin-top:3px; overflow-wrap:anywhere}
 .pick-cell{display:flex; flex-direction:column; gap:4px; min-width:0}
 .pick-cell .pick{width:100%}
 .pct-col{display:flex; justify-content:center; gap:6px; font-family:"IBM Plex Mono",monospace;
@@ -755,7 +761,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и список сыгранных хранятся в этом браузере: закроешь вкладку — всё останется. Бросок ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой сыгранный вариант обратно.
-    <span class="build">сборка 15.09 09:05 МСК</span>
+    <span class="build">сборка 15.09 09:03 МСК</span>
   </footer>
 </div>
 
@@ -1019,8 +1025,9 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     return z;
   }
 
-  /* высота САМОЙ таблицы матчей: раньше мерили от верха экрана до её низа,
-     и в расчёт попадали шапка с пультом — масштаб выходил излишне мелким */
+  /* высота САМОЙ таблицы матчей при заданном масштабе.
+     Раньше мерили расстояние от верха экрана до её низа — в расчёт попадали
+     шапка и пульт, и масштаб выходил излишне мелким. */
   function measureBottom(z){
     var coup = $("coupon");
     if(!coup) return 0;
@@ -1048,7 +1055,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     return good === null ? z : good;
   }
 
-  /* подобрать масштаб так, чтобы купон целиком влез в высоту окна */
+  /* подобрать масштаб так, чтобы таблица матчей целиком влезла в высоту окна */
   function fitToScreen(){
     if(!$("coupon")) return null;
     var z = fitZoom();
@@ -2060,12 +2067,15 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
      чтобы «Вернуть» поднял его, если страницу перезагрузили случайно. */
   function clearOnLoad(){
     ensureShape();
-    var had = state.matches.some(function(m){ return m.mode !== "lock" && countPicks(m) > 0; });
+    var had = state.matches.some(function(m){
+      return countPicks(m) > 0 || m.mode !== "free" || (m.pool || OUT).length !== 3;
+    });
     if(!had) return false;
     pushHistory("до очистки при загрузке");
     state.matches.forEach(function(m){
-      if(m.mode === "lock") return;
       m.picks = {"1":false, "X":false, "2":false};
+      m.mode = "free";
+      m.pool = OUT.slice();
     });
     save();
     return true;
@@ -2453,7 +2463,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         home: t[0], away: t[1],
         picks: {"1":false,"X":false,"2":false},
         pool: OUT.slice(),
-        mode: "rand",
+        mode: "free",   /* режимы не проставляем: «рандом» ставится вручную или кнопкой */
         pct: (q.pool_win_1 != null) ? {
           pool: [q.pool_win_1, q.pool_draw, q.pool_win_2],
           bk:   [q.bk_win_1,   q.bk_draw,   q.bk_win_2]
@@ -2510,8 +2520,8 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       .then(function(res){
         btn.disabled = false; btn.textContent = was;
         if(res) say("Тираж №" + res.number + " загружен с totobrief: " + res.n +
-                    " матч(ей), проценты игроков и конторы подставлены в строки. Исходы не проставлены — " +
-                    "отмечай сам или нажми «Бросить», все строки помечены «рандом».");
+                    " матч(ей), проценты игроков и конторы подставлены в строки. Исходы и режимы не проставлены — " +
+                    "отмечай сам, а для броска сначала нажми «Все в рандом».");
         else if(!silent) say("Тираж №" + state.tirazh + " уже актуальный — обновлять нечего.");
       })
       .catch(function(err){
