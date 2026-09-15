@@ -697,11 +697,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         <label for="priceLine">Цена строки, ₽</label>
         <input type="number" id="priceLine" value="30" min="1" step="1">
       </div>
-      <div class="knob" id="knobGap" hidden>
-        <label for="pctGap">Порог стрелок ▲▼, п.п.</label>
-        <input type="number" id="pctGap" value="4" min="0" max="30" step="1"
-               title="На сколько пунктов доля лидера должна опережать ближайший исход, чтобы он получил стрелку ▲. 0 — помечать всегда. Работает только при включённых процентах">
-      </div>
       <div class="knob">
         <label for="spinSpeed">Скорость прокрутки</label>
         <select id="spinSpeed">
@@ -768,7 +763,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и список сыгранных хранятся в этом браузере: закроешь вкладку — всё останется. Бросок ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой сыгранный вариант обратно.
-    <span class="build">сборка 15.09 10:34 МСК</span>
+    <span class="build">сборка 15.09 10:42 МСК</span>
   </footer>
 </div>
 
@@ -829,7 +824,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       tirazh: "5006",
       price: 30,
       target: 0,
-      pctGap: 4,
       rolls: 0,
       deadline: "",
       jackpot: 0,
@@ -869,8 +863,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   state.zoom = Math.round(Math.max(ZMIN, Math.min(ZMAX, state.zoom)) * 100) / 100;
   state.target = Number(state.target);
   if(!isFinite(state.target) || state.target < 0) state.target = 0;
-  state.pctGap = Math.round(Number(state.pctGap));
-  if(!isFinite(state.pctGap) || state.pctGap < 0 || state.pctGap > 30) state.pctGap = 4;
   state.price = Number(state.price); if(!isFinite(state.price) || state.price <= 0) state.price = 30;
   state.rolls = Number(state.rolls); if(!isFinite(state.rolls) || state.rolls < 0) state.rolls = 0;
   state.spent = Number(state.spent); if(!isFinite(state.spent) || state.spent < 0) state.spent = 0;
@@ -1659,6 +1651,11 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     return FLAGS[head] || null;
   }
 
+  /* Насколько доля лидера должна опережать ближайший исход, чтобы он получил
+     стрелку ▲. Четыре пункта отсекают матчи вроде 36/27/37, где большинства
+     по сути нет. Настройку из интерфейса убрали — менять здесь. */
+  var PCT_GAP = 4;
+
   /* ---------- render ---------- */
   var rowsEl = $("rows");
 
@@ -1712,7 +1709,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         });
         if(vals.indexOf(null) < 0){
           var sorted = vals.slice().sort(function(a, b){ return b - a; });
-          var lead = Number(state.pctGap) || 0;
+          var lead = PCT_GAP;
           crowd = {
             top: (sorted[0] - sorted[1] >= lead) ? sorted[0] : null,
             low: (sorted[1] - sorted[2] >= lead) ? sorted[2] : null
@@ -1950,7 +1947,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     $("pctLegend").hidden = !((havePct && state.showPct) || (haveKf && state.showKf));
     /* ручка влияет только на стрелки, а стрелки живут вместе с процентами —
        прячем её, пока проценты выключены, иначе выглядит как неработающая */
-    $("knobGap").hidden = !(havePct && state.showPct);
     renderKickoff();
     renderHistory();
   }
@@ -2478,12 +2474,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     save();
   });
   $("spinCount").value = state.spins;
-  $("pctGap").addEventListener("input", function(e){
-    var v = Math.round(Number(e.target.value));
-    state.pctGap = (isFinite(v) && v >= 0 && v <= 30) ? v : 4;
-    save(); render();
-  });
-  $("pctGap").value = state.pctGap;
   $("sbRoll").addEventListener("click", function(){ $("btnRoll").click(); });
   $("sbKeep").addEventListener("click", function(){
     $("btnKeep").click();
