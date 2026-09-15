@@ -10,6 +10,8 @@
 <style>
 :root{color-scheme:light dark}
 *{box-sizing:border-box}
+/* Safari сам раздувает шрифт при широкой вёрстке под body.zoom — запрещаем */
+html{-webkit-text-size-adjust:100%; text-size-adjust:100%}
 body{margin:0; font:14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; background:#E6EAE8}
 img{max-width:100%}
 [hidden]{display:none !important}
@@ -755,7 +757,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и список сыгранных хранятся в этом браузере: закроешь вкладку — всё останется. Бросок ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой сыгранный вариант обратно.
-    <span class="build">сборка 15.09 07:26 МСК</span>
+    <span class="build">сборка 15.09 08:40 МСК</span>
   </footer>
 </div>
 
@@ -765,7 +767,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   var OUT = ["1","X","2"];
   var KEY = "baltsystem-kupon-v1";
   var MAX_CSV = 60000;
-  var ZMIN = 0.3, ZMAX = 1.5, ZSTEP = 0.05;
+  var ZMIN = 0.5, ZMAX = 1.5, ZSTEP = 0.05;
 
   var SEED = [
     ["14.09","21:15","Азия. Лига Чемпионов","Эстеглаль ФК","Аль Садд",[],"rand"],
@@ -1019,14 +1021,14 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     return z;
   }
 
-  /* нижняя граница купона на экране при заданном масштабе */
+  /* высота САМОЙ таблицы матчей: раньше мерили от верха экрана до её низа,
+     и в расчёт попадали шапка с пультом — масштаб выходил излишне мелким */
   function measureBottom(z){
     var coup = $("coupon");
     if(!coup) return 0;
-    window.scrollTo(0, 0);
     document.body.style.zoom = (z === 1 ? "" : String(z));
     void document.body.offsetHeight; /* заставляем пересчитать вёрстку */
-    return coup.getBoundingClientRect().bottom + 8;
+    return coup.getBoundingClientRect().height + 8;
   }
 
   /* Масштаб меняет ширину вёрстки, а с ней и высоту — поэтому не одна формула,
@@ -1038,7 +1040,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     for(var pass = 0; pass < 8; pass++){
       var bottom = measureBottom(z);
       if(!(bottom > 0)) break;
-      if(bottom <= have){ good = z; break; }   /* влезло — этот масштаб и берём */
+      if(bottom <= have){ good = z; break; }   /* таблица влезла — этот масштаб и берём */
       var guess = Math.floor((z * have / bottom) * 100) / 100;
       if(!isFinite(guess) || guess <= 0) guess = z - 0.05;
       if(guess > z - 0.02) guess = z - 0.02;   /* каждый проход обязан уменьшать масштаб */
@@ -2551,22 +2553,19 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   $("btnZoomOut").addEventListener("click", function(){ setZoom((Number(state.zoom) || 1) - ZSTEP); });
 
   $("btnFit").addEventListener("click", function(){
-    if(!$("coupon")) return;
-    /* подсказка встаёт над купоном и сдвигает его вниз — показываем её до замеров */
-    say("Подбираю масштаб, чтобы купон влез в экран целиком…");
+    var coup = $("coupon");
+    if(!coup) return;
     var r = fitToScreen();
     if(!r){ say("Не получилось измерить страницу — подкрути масштаб кнопками − и +."); return; }
     say(r.zoom >= 1
-      ? "Купон и так помещается в экран — масштаб оставлен 100%."
-      : "Масштаб подобран: " + Math.round(r.zoom * 100) + "% — купон влезает в экран целиком." +
+      ? "Все 15 матчей и так помещаются в экран — масштаб оставлен 100%."
+      : "Масштаб подобран: " + Math.round(r.zoom * 100) + "% — все 15 матчей влезают в экран." +
         (r.compact ? " Заодно включил «Компактно»: без него пришлось бы ужимать до нечитаемого." : ""));
-    /* итоговый текст подсказки длиннее заглушки — добираем масштаб, если купон снова вылез */
-    var z2 = fitZoom();
-    if(z2 < r.zoom){
-      setZoom(z2);
-      var hh = $("hint");
-      if(hh && !hh.hidden) hh.textContent = hh.textContent.replace(/\d+%/, Math.round(z2 * 100) + "%");
-    }
+    /* таблицу меряем отдельно от шапки, поэтому подводим её к верху экрана сами */
+    setTimeout(function(){
+      try { coup.scrollIntoView({block:"start", behavior:"smooth"}); }
+      catch(e){ coup.scrollIntoView(true); }
+    }, 60);
   });
 
   /* ---------- csv ---------- */
