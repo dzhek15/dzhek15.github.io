@@ -848,7 +848,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. Бросок ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 15.09 14:57 МСК</span>
+    <span class="build">сборка 15.09 15:09 МСК</span>
   </footer>
 </div>
 
@@ -2922,24 +2922,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         if(!d) d = rows[0];
         if(!d) throw new Error("тиражи не найдены");
         var haveApiData = state.matches.some(function(m){ return m.pct; });
-        /* тираж тот же — не пересобираем его заново, а только освежаем проценты и кэфы:
-           купон, режимы и корзина остаются как были */
-        /* тираж сменился, а в корзине уже что-то есть — молча не сносим */
-        if(silent && String(d.number) !== String(state.tirazh) && (state.played.length || state.rolls)){
-          return { changed: d.number };
-        }
-        if(haveApiData && String(d.number) === String(state.tirazh)){
-          return fetch(API + "drawing-info/" + d.id)
-            .then(function(r){ if(!r.ok) throw new Error("тираж " + d.number + ": " + r.status); return r.json(); })
-            .then(function(j2){
-              var info = j2.data || j2;
-              if(refreshPct(info)) return {soft:true, number:d.number};
-              return {n:applyDrawing(info), number:d.number};
-            });
-        }
-        state.deadline = d.ended_at || "";
-        state.jackpot = Number(d.jackpot) || 0;
-        state.poolSum = Number(d.pool_sum) || 0;
         /* приём идёт до закрытия, поэтому запоминаем типичный ИТОГОВЫЙ фонд:
            медиану завершённых тиражей — по ней и надо считать выплаты */
         var done = rows.filter(function(x){ return x.status === "finished" && Number(x.pool_sum) > 0; })
@@ -2950,6 +2932,24 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
                      .map(function(x){ return Number(x.jackpot) / Number(x.pool_sum); })
                      .sort(function(a,b){ return a - b; });
         state.ratioTypical = rr.length ? rr[Math.floor(rr.length/2)] : 0;
+        /* тираж сменился, а в корзине уже что-то есть — молча не сносим */
+        if(silent && String(d.number) !== String(state.tirazh) && (state.played.length || state.rolls)){
+          return { changed: d.number };
+        }
+        state.deadline = d.ended_at || "";
+        state.jackpot = Number(d.jackpot) || 0;
+        state.poolSum = Number(d.pool_sum) || 0;
+        /* тираж тот же — не пересобираем его заново, а только освежаем проценты и кэфы:
+           купон, режимы и корзина остаются как были */
+        if(haveApiData && String(d.number) === String(state.tirazh)){
+          return fetch(API + "drawing-info/" + d.id)
+            .then(function(r){ if(!r.ok) throw new Error("тираж " + d.number + ": " + r.status); return r.json(); })
+            .then(function(j2){
+              var info = j2.data || j2;
+              if(refreshPct(info)) return {soft:true, number:d.number};
+              return {n:applyDrawing(info), number:d.number};
+            });
+        }
         return fetch(API + "drawing-info/" + d.id)
           .then(function(r){ if(!r.ok) throw new Error("тираж " + d.number + ": " + r.status); return r.json(); })
           .then(function(j2){ return applyDrawing(j2.data || j2); })
