@@ -512,13 +512,11 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 }
 .pick{border-radius:3px}
 .pick[aria-pressed="true"]{color:var(--accent-ink); box-shadow:inset 0 -2px 0 rgba(0,0,0,.18)}
-.pick.p1[aria-pressed="true"]{background:var(--o1); border-color:var(--o1); color:#fff}
-.pick.px[aria-pressed="true"]{background:var(--ox); border-color:var(--ox); color:#fff}
-.pick.p2[aria-pressed="true"]{background:var(--o2); border-color:var(--o2); color:#fff}
-.pick.in-pool{border-style:dashed; border-width:2px; background:transparent; font-weight:600}
-.pick.p1.in-pool{border-color:var(--o1); color:var(--o1)}
-.pick.px.in-pool{border-color:var(--ox); color:var(--ox)}
-.pick.p2.in-pool{border-color:var(--o2); color:var(--o2)}
+/* Выбранный исход всегда синий: цвет означает «отмечено», а не какой это исход —
+   какой именно, и так написано на самой кнопке. */
+.pick[aria-pressed="true"]{background:var(--o1); border-color:var(--o1); color:#fff}
+.pick.in-pool{border-style:dashed; border-width:2px; background:transparent; font-weight:600;
+  border-color:var(--o1); color:var(--o1)}
 .pick.off-pool{opacity:.3; border-style:dotted}
 .pick{transition:background-color .13s linear, border-color .13s linear, color .13s linear}
 @keyframes pickPop{0%{transform:scale(.7); opacity:.3} 55%{transform:scale(1.07)} 100%{transform:scale(1); opacity:1}}
@@ -761,7 +759,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и список сыгранных хранятся в этом браузере: закроешь вкладку — всё останется. Бросок ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой сыгранный вариант обратно.
-    <span class="build">сборка 15.09 09:03 МСК</span>
+    <span class="build">сборка 15.09 09:18 МСК</span>
   </footer>
 </div>
 
