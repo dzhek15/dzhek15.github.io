@@ -781,10 +781,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     </section>
     <div class="roll">
       <div class="roll-primary">
-      <button class="btn-roll" id="btnRoll" type="button">
-        <svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="1.5" y="1.5" width="17" height="17" rx="3" stroke="currentColor" stroke-width="1.7"/><circle cx="6.2" cy="6.2" r="1.5" fill="currentColor"/><circle cx="13.8" cy="13.8" r="1.5" fill="currentColor"/><circle cx="10" cy="10" r="1.5" fill="currentColor"/></svg>
-        Бросить
-      </button>
       <span class="spin-group">
         <button class="btn-spin" id="btnSpin" type="button"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5.5h3.2l7.6 9h3.2"/><path d="M3 14.5h3.2l7.6-9h3.2"/><path d="M15 3.3l2.2 2.2-2.2 2.2"/><path d="M15 12.3l2.2 2.2-2.2 2.2"/></svg><span class="lbl">Случайный выбор ×</span></button>
         <input type="number" id="spinCount" class="spin-in" value="1" min="1" max="100000" step="1"
@@ -913,14 +909,14 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
 
   <div class="sticky-bar" id="stickyBar">
-    <button id="sbRoll" type="button">Бросить</button>
+    <button id="sbRoll" type="button">Случайный выбор</button>
     <span class="sb-sum mono" id="sbSum">—</span>
     <button id="sbKeep" type="button">Записать</button>
   </div>
 
   <footer>
-    Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. Бросок ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 16.09 09:15 МСК</span>
+    Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. «Случайный выбор» ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов, и кладёт получившийся вариант в корзину; строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
+    <span class="build">сборка 16.09 10:05 МСК</span>
   </footer>
 </div>
 
@@ -2201,25 +2197,24 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
     var note = $("rollNote");
     note.classList.remove("done");
-    $("btnRoll").disabled = t.rand === 0 || spinning;
     $("btnSpin").disabled = t.rand === 0 || spinning;
     if($("btnPreset")) $("btnPreset").disabled = spinning;
     if($("btnFinal")) $("btnFinal").disabled = spinning;
     if(t.rand===0){
-      note.innerHTML = "Ни один матч не помечен «рандом». Бросать нечего.";
+      note.innerHTML = "Ни один матч не помечен «рандом». Разыгрывать нечего.";
     } else {
       var narrow = state.matches.filter(function(m){ return m.mode==="rand" && m.pool.length < 3; }).length;
       var frozen = state.matches.filter(function(m){ return m.mode==="rand" && m.pool.length === 1; }).length;
-      note.innerHTML = "Бросок поставит по одному случайному исходу в <b>" + t.rand + "</b> матч(ах)" +
+      note.innerHTML = "«Случайный выбор» поставит по одному случайному исходу в <b>" + t.rand + "</b> матч(ах)" +
         (narrow ? ", в <b>" + narrow + "</b> из них — только из отмеченных" : "") +
         ". Зафиксировано руками: <b>" + t.locked + "</b>." +
         (frozen ? " <b>Внимание:</b> в " + frozen + " строк(ах) в жеребьёвке остался один исход — там при броске ничего не меняется" +
-                  (frozen === t.rand ? ", поэтому прокрутка будет крутиться вхолостую" : "") +
+                  (frozen === t.rand ? ", поэтому выбор будет крутиться вхолостую" : "") +
                   ". Вернуть все три — кнопкой «Снять режимы»." : "");
     }
     $("btnUndo").disabled = state.history.length === 0 || spinning;
     $("btnKeep").disabled = t.empty > 0 || spinning;
-    $("sbRoll").disabled = $("btnRoll").disabled;
+    $("sbRoll").disabled = $("btnSpin").disabled;
     $("sbKeep").disabled = $("btnKeep").disabled;
     $("sbSum").textContent = t.empty > 0
       ? t.empty + " матч(ей) без исхода"
@@ -2519,15 +2514,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       " ₽</b>. Всего по тиражу: <b>" + fmt(state.spent) + " ₽</b> за " + state.rolls + " вариант(ов).";
   }
 
-  $("btnRoll").addEventListener("click", function(){
-    if(spinning) return;
-    if(!state.matches.some(function(m){ return m.mode === "rand"; })) return;
-    pushHistory("до броска");
-    var fresh = shuffleFresh();
-    commitVariant(fresh ? "Брошено" : "Брошено (повтор: новых комбинаций в этом покрытии не осталось)",
-                  "бросок №" + (state.rolls + 1));
-  });
-
   /* купон собран руками — записать его в сыгранные, ничего не разыгрывая */
   $("btnKeep").addEventListener("click", function(){
     if(spinning) return;
@@ -2667,7 +2653,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     var n = Math.max(1, Math.min(100000, Math.floor(Number(state.spins) || 1)));
     pushHistory("до прокрутки");
     spinning = true;
-    $("btnSpin").disabled = true; $("btnRoll").disabled = true; $("btnUndo").disabled = true;
+    $("btnSpin").disabled = true; $("btnUndo").disabled = true;
     var base = Number(state.speed) || 0;
     if(base === 0){                       /* без анимации — считаем разом */
       for(var q=0;q<n-1;q++) shuffleOnce();
@@ -3599,7 +3585,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     save();
   });
   $("spinCount").value = state.spins;
-  $("sbRoll").addEventListener("click", function(){ $("btnRoll").click(); });
+  $("sbRoll").addEventListener("click", function(){ $("btnSpin").click(); });
   $("sbKeep").addEventListener("click", function(){
     $("btnKeep").click();
     $("hint").scrollIntoView({block:"center"});
@@ -3812,7 +3798,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         }
         else if(res) say("Тираж №" + res.number + " загружен с totobrief: " + res.n +
                     " матч(ей), проценты игроков и конторы подставлены в строки. Исходы и режимы не проставлены — " +
-                    "отмечай сам, а для броска сначала нажми «Все в рандом».");
+                    "отмечай сам, а для «Случайного выбора» сначала нажми «Все в рандом».");
         if(res && !res.soft) tryPending();
       })
       .catch(function(err){
