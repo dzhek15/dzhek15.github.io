@@ -302,6 +302,7 @@ button:disabled{opacity:.45; cursor:not-allowed}
 .knob{display:flex; flex-direction:column; gap:5px; align-items:center}
 .knob label{font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
 .knob input{width:8ch; text-align:center; font-family:"IBM Plex Mono",monospace}
+.knob-hint{font-size:11px; font-family:"IBM Plex Mono",monospace; color:var(--muted); letter-spacing:.02em; min-height:13px}
 .roll-note{text-align:center}
 select{font:inherit; color:var(--ink); background:var(--surface); border:1px solid var(--rule-strong); border-radius:var(--r); padding:6px 9px}
 
@@ -694,8 +695,8 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     <div class="knob-sep"></div>
     <div class="knobs">
       <div class="knob">
-        <label for="priceLine">Цена строки, ₽</label>
-        <input type="number" id="priceLine" value="30" min="1" step="1">
+        <label for="priceLine">Стоимость купона, ₽</label>
+        <input type="number" id="priceLine" value="30" min="1" step="1" title="Цена одной строки в БК. Итог по всему купону считается ниже: цена строки × число комбинаций"><span class="knob-hint" id="priceHint"></span>
       </div>
       <div class="knob">
         <label for="spinSpeed">Скорость прокрутки</label>
@@ -763,7 +764,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и список сыгранных хранятся в этом браузере: закроешь вкладку — всё останется. Бросок ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой сыгранный вариант обратно.
-    <span class="build">сборка 15.09 10:42 МСК</span>
+    <span class="build">сборка 15.09 10:52 МСК</span>
   </footer>
 </div>
 
@@ -1897,6 +1898,12 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         fmt(t.combos) + " строк, " + fmt(t.combos * (Number(state.price)||0)) + " ₽.";
 
     var price = Number(state.price) || 0;
+
+    $("priceHint").textContent = t.empty > 0
+      ? "нужны все 15 исходов"
+      : (t.combos > 1
+          ? fmt(price) + " × " + fmt(t.combos) + " = " + fmt(t.combos * price) + " ₽"
+          : fmt(price) + " ₽ за один вариант");
 
     var plan = csvPlan();
     var en = $("expNote");
