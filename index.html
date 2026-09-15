@@ -531,6 +531,27 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 .pick{transition:background-color .13s linear, border-color .13s linear, color .13s linear}
 @keyframes pickPop{0%{transform:scale(.7); opacity:.3} 55%{transform:scale(1.07)} 100%{transform:scale(1); opacity:1}}
 .pick.pop{animation:pickPop .24s cubic-bezier(.2,.9,.3,1)}
+/* --- просмотр CSV: листаем варианты, как книгу --- */
+.book-bar{margin-top:13px; display:flex; flex-wrap:wrap; gap:9px 14px; align-items:center;
+  justify-content:space-between; background:var(--warn-bg); border:1px solid var(--warn);
+  border-radius:var(--r); padding:9px 12px}
+.bk-name{font-family:"IBM Plex Mono",monospace; font-size:12px; font-weight:600; color:var(--warn); word-break:break-all}
+.bk-hit{display:block; font-size:11px; color:var(--muted); margin-top:2px}
+.bk-nav{display:flex; align-items:center; gap:6px}
+.bk-nav button{padding:5px 10px; font-size:13px; line-height:1.15}
+.bk-pos{display:flex; align-items:center; gap:5px; font-family:"IBM Plex Mono",monospace; font-size:12.5px}
+.bk-pos input{width:7ch; text-align:center; font-family:"IBM Plex Mono",monospace; padding:4px 5px}
+.bk-pos i{font-style:normal; color:var(--muted); white-space:nowrap}
+.bk-r{display:flex; gap:6px}
+[data-book="1"] .pick[aria-pressed="true"]{background:transparent; border-color:var(--rule-strong);
+  color:var(--muted); box-shadow:none}
+[data-book="1"] .pick.bk-on{background:var(--warn); border-color:var(--warn); color:#fff;
+  box-shadow:inset 0 -2px 0 rgba(0,0,0,.18)}
+[data-book="1"] .row .pick{pointer-events:none}
+[data-book="1"] .row .modes{opacity:.3; pointer-events:none}
+[data-book="1"] .roll, [data-book="1"] .sticky-bar, [data-book="1"] .keep-bar{opacity:.4; pointer-events:none}
+[data-book="1"] .coupon{box-shadow:0 0 0 2px var(--warn), var(--shadow)}
+@media(max-width:560px){ .book-bar{justify-content:center} .bk-l{width:100%; text-align:center} }
 .coupon.spinning{box-shadow:0 0 0 2px var(--accent), var(--shadow)}
 .coupon.spinning .row{background:transparent}
 @media (prefers-reduced-motion: reduce){ .pick{transition:none} .pick.pop{animation:none} }
@@ -715,6 +736,24 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     <span class="keep-note" id="keepNote"></span>
   </div>
 
+  <div class="book-bar" id="bookBar" hidden>
+    <div class="bk-l">
+      <span class="bk-name" id="bkName"></span>
+      <span class="bk-hit" id="bkHit"></span>
+    </div>
+    <div class="bk-nav">
+      <button id="bkFirst" type="button" title="К первому варианту" aria-label="К первому варианту">&#9198;</button>
+      <button id="bkPrev" type="button" title="Предыдущий вариант (стрелка влево, свайп вправо)" aria-label="Предыдущий вариант">&#9664;</button>
+      <span class="bk-pos"><input type="number" id="bkNum" min="1" step="1" aria-label="Номер варианта"><i id="bkTotal"></i></span>
+      <button id="bkNext" type="button" title="Следующий вариант (стрелка вправо, свайп влево)" aria-label="Следующий вариант">&#9654;</button>
+      <button id="bkLast" type="button" title="К последнему варианту" aria-label="К последнему варианту">&#9197;</button>
+    </div>
+    <div class="bk-r">
+      <button id="bkToCoupon" type="button" title="Перенести показанный вариант в купон и закрыть просмотр">В купон</button>
+      <button id="bkClose" type="button" title="Закрыть просмотр файла и вернуться к своему купону">Закрыть</button>
+    </div>
+  </div>
+
   <div class="coupon" id="coupon">
     <div class="chead">
       <div>№</div><div>Событие</div>
@@ -747,6 +786,8 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       <div class="acts">
         <button id="btnCsv" type="button">Скачать CSV</button>
         <button id="btnSend" type="button" title="Отправить файл в мессенджер, почту или скопировать в буфер">Отправить CSV</button>
+        <button id="btnLoadCsv" type="button" title="Открыть CSV и листать его варианты прямо в таблице матчей">Загрузить CSV</button>
+        <input type="file" id="fileCsv" accept=".csv,text/csv,text/plain" hidden>
       </div>
       <div id="csvFallback" hidden style="margin-top:12px">
         <p class="empty">Скачивание недоступно — скопируй отсюда:</p>
@@ -764,7 +805,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и список сыгранных хранятся в этом браузере: закроешь вкладку — всё останется. Бросок ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой сыгранный вариант обратно.
-    <span class="build">сборка 15.09 10:52 МСК</span>
+    <span class="build">сборка 15.09 12:35 МСК</span>
   </footer>
 </div>
 
@@ -774,6 +815,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   var OUT = ["1","X","2"];
   var KEY = "baltsystem-kupon-v1";
   var MAX_CSV = 60000;
+  var book = null;          /* открытый CSV: {name, rows:[["1","X",...]], idx} — только в памяти вкладки */
   var ZMIN = 0.5, ZMAX = 1.5, ZSTEP = 0.05;
 
   var SEED = [
@@ -1745,6 +1787,8 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         b.className = "pick " + (o==="1"?"p1":o==="X"?"px":"p2");
         b.textContent = o;
         b.setAttribute("aria-pressed", m.picks[o] ? "true" : "false");
+        if(book && book.rows[book.idx] && book.rows[book.idx].length === state.matches.length
+           && book.rows[book.idx][idx] === o) b.classList.add("bk-on");
         var inPool = m.pool.indexOf(o) >= 0;
         if(m.mode==="rand"){
           if(!inPool) b.classList.add("off-pool");
@@ -2473,6 +2517,148 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   $("tirazhName").addEventListener("input", function(e){ state.tirazh = e.target.value; save(); });
   $("tirazhName").value = state.tirazh || "";
+  /* ---------- Просмотр CSV: варианты листаются в таблице, как страницы книги ----------
+     Файл никуда не записывается: купон и «Сыгранные варианты» остаются нетронутыми,
+     пока не нажмёшь «В купон». */
+  function normOut(x){
+    x = String(x == null ? "" : x).trim().toUpperCase();
+    if(x === "\u0425") x = "X";           /* кириллическая Х из чужих файлов */
+    return (x === "1" || x === "X" || x === "2") ? x : null;
+  }
+
+  function parseCsvVariants(text){
+    var need = state.matches.length;
+    var lines = String(text).split(/\r?\n/);
+    var out = [], bad = 0, over = false;
+    for(var i=0;i<lines.length;i++){
+      var s = lines[i].trim();
+      if(!s) continue;
+      var parts = s.split(/[;,\t]/);
+      var cand = null;
+      if(parts.length === need) cand = parts;
+      else if(parts.length === need + 1) cand = parts.slice(1);   /* первое поле — цена строки */
+      if(!cand){ bad++; continue; }
+      var row = [], ok = true;
+      for(var j=0;j<need;j++){
+        var v = normOut(cand[j]);
+        if(!v){ ok = false; break; }
+        row.push(v);
+      }
+      if(!ok){ bad++; continue; }
+      if(out.length >= MAX_CSV){ over = true; break; }
+      out.push(row);
+    }
+    return { rows: out, bad: bad, over: over, need: need };
+  }
+
+  function bookShow(){
+    var bar = $("bookBar");
+    if(!book){
+      bar.hidden = true;
+      delete document.body.dataset.book;
+      render();
+      return;
+    }
+    bar.hidden = false;
+    document.body.dataset.book = "1";
+    $("bkName").textContent = book.name;
+    $("bkNum").max = book.rows.length;
+    $("bkNum").value = book.idx + 1;
+    $("bkTotal").textContent = "из " + fmt(book.rows.length);
+    var cur = book.rows[book.idx], same = 0;
+    state.matches.forEach(function(m, i){ if(cur[i] && m.picks[cur[i]]) same++; });
+    $("bkHit").textContent = "вариант " + fmt(book.idx + 1) +
+      " · совпадает с твоим купоном в " + same + " из " + cur.length + " матчей";
+    render();
+  }
+
+  function bookGo(n){
+    if(!book) return;
+    var L = book.rows.length;
+    book.idx = ((n % L) + L) % L;          /* по кругу: с последней страницы снова на первую */
+    bookShow();
+  }
+
+  function bookClose(msg){
+    book = null;
+    bookShow();
+    if(msg) $("expNote").textContent = msg;
+  }
+
+  $("btnLoadCsv").addEventListener("click", function(){ $("fileCsv").click(); });
+
+  $("fileCsv").addEventListener("change", function(e){
+    var f = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if(!f) return;
+    var rd = new FileReader();
+    rd.onload = function(){
+      var res = parseCsvVariants(rd.result);
+      if(!res.rows.length){
+        bookClose("В файле «" + f.name + "» не нашлось ни одной строки на " + res.need +
+          " матчей. Нужен CSV, где в строке либо " + res.need +
+          " исходов (1, X или 2), либо цена строки и следом " + res.need + " исходов.");
+        return;
+      }
+      book = { name: f.name, rows: res.rows, idx: 0 };
+      bookShow();
+      $("expNote").textContent = "Открыт файл " + f.name + ": " + fmt(res.rows.length) + " вариант(ов)." +
+        (res.bad ? " Пропущено строк не на " + res.need + " матчей: " + res.bad + "." : "") +
+        (res.over ? " Показаны первые " + fmt(MAX_CSV) + "." : "") +
+        " Листай стрелками или свайпом по таблице.";
+      try{ $("bookBar").scrollIntoView({ behavior:"smooth", block:"center" }); }catch(err){}
+    };
+    rd.onerror = function(){ $("expNote").textContent = "Не получилось прочитать файл."; };
+    rd.readAsText(f);
+  });
+
+  $("bkPrev").addEventListener("click", function(){ if(book) bookGo(book.idx - 1); });
+  $("bkNext").addEventListener("click", function(){ if(book) bookGo(book.idx + 1); });
+  $("bkFirst").addEventListener("click", function(){ bookGo(0); });
+  $("bkLast").addEventListener("click", function(){ if(book) bookGo(book.rows.length - 1); });
+  $("bkNum").addEventListener("input", function(e){
+    var n = Number(e.target.value);
+    if(book && isFinite(n) && n >= 1 && n <= book.rows.length) bookGo(Math.round(n) - 1);
+  });
+  $("bkClose").addEventListener("click", function(){ bookClose("Просмотр файла закрыт, купон остался прежним."); });
+  $("bkToCoupon").addEventListener("click", function(){
+    if(!book) return;
+    var cur = book.rows[book.idx].slice(), n = book.idx + 1;
+    pushHistory("до переноса варианта из CSV");
+    state.matches.forEach(function(m, i){
+      if(!cur[i]) return;
+      OUT.forEach(function(o){ m.picks[o] = (o === cur[i]); });
+      m.mode = "none";
+      m.pool = OUT.slice();
+    });
+    book = null;
+    bookShow();
+    save();
+    $("expNote").textContent = "Вариант " + fmt(n) + " перенесён в купон. Отменить — «Вернуть».";
+  });
+
+  document.addEventListener("keydown", function(e){
+    if(!book) return;
+    if(e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+    if(e.key === "ArrowRight"){ bookGo(book.idx + 1); e.preventDefault(); }
+    else if(e.key === "ArrowLeft"){ bookGo(book.idx - 1); e.preventDefault(); }
+    else if(e.key === "Escape"){ bookClose("Просмотр файла закрыт, купон остался прежним."); }
+  });
+
+  (function(){
+    var x0 = null, y0 = null, el = $("coupon");
+    el.addEventListener("touchstart", function(e){
+      if(!book || e.touches.length !== 1) return;
+      x0 = e.touches[0].clientX; y0 = e.touches[0].clientY;
+    }, { passive:true });
+    el.addEventListener("touchend", function(e){
+      if(!book || x0 === null) return;
+      var t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0;
+      x0 = null;
+      if(Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.6) bookGo(book.idx + (dx < 0 ? 1 : -1));
+    }, { passive:true });
+  })();
+
   $("priceLine").addEventListener("input", function(e){ state.price = Number(e.target.value)||0; save(); render(); });
   $("priceLine").value = state.price;
   $("spinCount").addEventListener("input", function(e){
