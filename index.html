@@ -901,7 +901,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. Бросок ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 16.09 07:10 МСК</span>
+    <span class="build">сборка 16.09 08:05 МСК</span>
   </footer>
 </div>
 
@@ -3899,9 +3899,12 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     return s;
   }
 
+  /* Системная выгрузка берёт ИМЕННО ТОТ КУПОН, который на экране: он и есть
+     одна строка с допами. Корзина идёт в файл, только если купон не заполнен —
+     иначе человек собирает систему, а получает старые броски. */
   function buildCsvSys(){
-    var price = Number(state.price) || 0;
-    var lines = [], plan = csvPlan();
+    var price = Number(state.price) > 0 ? Number(state.price) : 30;
+    var lines = [], src = "";
     var mk = function(snap){
       var cells = [], i, c;
       for(i = 0; i < snap.length; i++){
@@ -3911,17 +3914,18 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       }
       return String(price) + ";" + cells.join(";");
     };
-    if(plan.take.length){
+    var one = mk(state.matches);
+    if(one){ lines.push(one); src = "купон"; }
+    else {
+      var plan = csvPlan();
       for(var i = 0; i < plan.take.length; i++){
         var row = mk(plan.take[i].snap);
         if(row) lines.push(row);
       }
-    } else {
-      var one = mk(state.matches);
-      if(one) lines.push(one);
+      src = "корзина";
     }
     if(!lines.length) return null;
-    return lines.join("\n") + "\n";
+    return { csv: lines.join("\n") + "\n", rows: lines.length, price: price, src: src };
   }
 
   function saveCsvFile(csv, name){
@@ -3945,17 +3949,23 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   }
 
   $("btnCsvSys").addEventListener("click", function(){
-    var csv = buildCsvSys();
-    if(!csv){ $("expNote").textContent = "Нечего выгружать — в каком-то матче не выбран исход."; return; }
-    var rowsN = csv.replace(/\n+$/,"").split("\n").length;
-    var plan = csvPlan();
-    var combos = plan.take.length ? plan.total : (tally().combos || 0);
-    var price = Number(state.price) || 0;
-    var name = "export_sys_" + rowsN + "_" + (combos * price) + ".csv";
-    saveCsvFile(csv, name);
-    $("expNote").textContent = "Файл " + name + ": строк " + rowsN +
-      ", комбинаций " + fmt(combos) + ", сумма за вариант " + price + " ₽, итого " +
-      fmt(combos * price) + " ₽. Исходы записаны слитно — БалтБет посчитает допы сам.";
+    var out = buildCsvSys();
+    if(!out){
+      $("expNote").textContent = "Нечего выгружать: в купоне есть матч без исхода, а корзина пуста.";
+      return;
+    }
+    var combos = out.src === "купон" ? (tally().combos || 0) : csvPlan().total;
+    var name = "export_sys_" + out.rows + "_" + (combos * out.price) + ".csv";
+    saveCsvFile(out.csv, name);
+    var note = "Файл " + name + " — выгружен " +
+      (out.src === "купон" ? "КУПОН с экрана" : "корзина (купон не заполнен)") +
+      ": строк " + out.rows + ", комбинаций " + fmt(combos) +
+      ", сумма за вариант " + out.price + " ₽, итого " + fmt(combos * out.price) +
+      " ₽. Исходы записаны слитно — БалтБет посчитает допы сам.";
+    if(!(Number(state.price) > 0)) note += " Поле «Стоимость купона» пустое, поставил минимальные 30 ₽.";
+    if(out.src === "купон" && state.played.length)
+      note += " В корзине лежит " + state.played.length + " вариант(ов) — они в этот файл НЕ вошли.";
+    $("expNote").textContent = note;
   });
 
   $("btnCsv").addEventListener("click", function(){
