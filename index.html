@@ -525,6 +525,8 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 .ev-tab th{font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); font-weight:600}
 .ev-tab td{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums}
 .ev-tab td.nw{white-space:nowrap}
+.ev-tab tr.rec td{background:var(--o1-soft)}
+.ev-tab .gap-set{padding:3px 9px; font-size:12px}
 .ev-cmp td:first-child{font-family:inherit}
 .ev-note, .ev-warn{margin:8px 0 0; font-size:12px; color:var(--muted)}
 .ev-lead{margin:8px 0 0; font-size:13.5px; line-height:1.5}
@@ -856,7 +858,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. Бросок ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 15.09 16:04 МСК</span>
+    <span class="build">сборка 15.09 16:19 МСК</span>
   </footer>
 </div>
 
@@ -2657,6 +2659,46 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     return { d: d, over: over, under: under, pr: pr, pl: pl };
   }
 
+  /* Линия фаворитов и список замен на недогруженные исходы, от самой дешёвой
+     по потере вероятности к самой дорогой. */
+  function gapSwaps(){
+    var base = [], swaps = [], probs = [], pools = [], i, j;
+    for(i = 0; i < state.matches.length; i++){
+      var pr = evProbs(state.matches[i]), pl = evPool(state.matches[i]);
+      if(!pr || !pl) return null;
+      probs.push(pr); pools.push(pl);
+      var fav = 0, und = 0;
+      for(j = 1; j < 3; j++) if(pr[j] > pr[fav]) fav = j;
+      for(j = 1; j < 3; j++) if(pr[j] - pl[j] > pr[und] - pl[und]) und = j;
+      base.push(fav);
+      if(und !== fav) swaps.push({ i: i, to: und, loss: pr[fav] - pr[und] });
+    }
+    swaps.sort(function(a, b){ return a.loss - b.loss; });
+    return { base: base, swaps: swaps, probs: probs, pools: pools };
+  }
+
+  /* фонд, суперприз и число строк — та же логика, что в «Оценить купон» */
+  function evScene(){
+    var price = Number(state.price) || 30;
+    var poolNow = Number(state.poolSum) || 0;
+    var typical = Number(state.poolTypical) || 0;
+    var fund = (typical && poolNow < typical * 0.6) ? typical : poolNow;
+    if(!fund) return null;
+    return { fund: fund, jack: Number(state.jackpot) || 0, lines: (fund / 0.9) / price, price: price };
+  }
+
+  /* Ставит линию в купон: по одному исходу в каждом матче */
+  function setLine(line, label){
+    pushHistory("до расстановки по расхождениям");
+    state.matches.forEach(function(m, i){
+      OUT.forEach(function(o, k){ m.picks[o] = (k === line[i]); });
+      m.mode = "free"; m.pool = OUT.slice();
+    });
+    save(); render();
+    $("evBack").hidden = true;
+    say(label + " Отменить — «Вернуть».");
+  }
+
   function showCrowdGaps(){
     var rows = [], i;
     for(i = 0; i < state.matches.length; i++){
@@ -2696,7 +2738,49 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     h += '<p class="ev-warn">Расхождение говорит только о цене исхода, а не о его вероятности. ' +
          'Брать недогруженный исход стоит там, где он и по оценке конторы не сильно хуже перегруженного, ' +
          'иначе сэкономишь на дележе приза, но проиграешь сам матч.</p>';
+
+    /* --- готовые расстановки: линия фаворитов плюс N самых дешёвых замен --- */
+    var g = gapSwaps(), sc = evScene();
+    window.__gapLines = [];
+    if(g && sc && g.base.length === 15){
+      var LOSS_OK = 0.05;          /* замена дешёвая, если теряем меньше 5 пунктов вероятности */
+      var rec = 0;
+      for(var k = 0; k < g.swaps.length; k++) if(g.swaps[k].loss < LOSS_OK) rec = k + 1;
+      var maxK = Math.min(g.swaps.length, 8);
+      h += '<h3>Готовые расстановки</h3>' +
+           '<p class="ev-lead">Линия фаворитов конторы, в которой N самых дешёвых исходов заменены на ' +
+           'недогруженные толпой. «Отдача» считается только по надёжным категориям 9–12: в 13–15 ' +
+           'модель завышает редкие комбинации, туда смотреть нельзя.</p>' +
+           '<table class="ev-tab"><thead><tr><th>Замен</th><th>Линия</th><th>Шанс 9+</th><th>Отдача 9–12</th><th></th></tr></thead><tbody>';
+      var line = g.base.slice();
+      for(k = 0; k <= maxK; k++){
+        if(k > 0) line[g.swaps[k-1].i] = g.swaps[k-1].to;
+        var cur = line.slice();
+        window.__gapLines.push(cur);
+        var one = evOfLine(cur, g.probs, g.pools, sc.lines, sc.fund, sc.jack);
+        var e912 = 0;
+        one.rows.forEach(function(r){ if(r.k <= 12) e912 += r.part; });
+        h += '<tr' + (k === rec ? ' class="rec"' : '') + '><td>' + k + (k === rec ? ' ★' : '') + '</td>' +
+             '<td class="nw">' + cur.map(function(j){ return OUT[j]; }).join("") + '</td>' +
+             '<td>' + (evTail(one.qDist, 9) * 100).toFixed(2) + '%</td>' +
+             '<td>' + e912.toFixed(2) + ' \u20bd</td>' +
+             '<td><button type="button" class="gap-set" data-k="' + k + '">поставить</button></td></tr>';
+      }
+      h += '</tbody></table>';
+      if(rec) h += '<p class="ev-note">★ — докуда замены стоят меньше 5 пунктов вероятности каждая. ' +
+                   'Дальше цена растёт быстрее отдачи.</p>';
+    }
+
     $("evBody").innerHTML = h;
+    [].slice.call($("evBody").querySelectorAll(".gap-set")).forEach(function(b){
+      b.addEventListener("click", function(){
+        var k = Number(b.getAttribute("data-k"));
+        var ln = (window.__gapLines || [])[k];
+        if(ln) setLine(ln, k === 0
+          ? "Поставлена линия фаворитов конторы, без замен."
+          : "Поставлена линия фаворитов с " + k + " " + plural(k, "заменой", "заменами", "заменами") + " по расхождениям.");
+      });
+    });
     $("evBack").hidden = false;
   }
 
