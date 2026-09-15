@@ -114,10 +114,10 @@ input:focus-visible,button:focus-visible,summary:focus-visible,textarea:focus-vi
   box-shadow:var(--shadow); padding:18px 18px 16px;
   display:flex; flex-direction:column; align-items:center; gap:0;
 }
-.roll{display:flex; flex-direction:column; align-items:center; gap:12px; width:100%}
-.roll-primary{display:flex; gap:12px; align-items:stretch; flex-wrap:wrap; justify-content:center}
-.roll-crowd{display:flex; gap:12px; align-items:stretch; flex-wrap:wrap; justify-content:center}
-.roll-secondary, .roll-modes{display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:center}
+.roll{display:flex; flex-direction:column; align-items:flex-end; gap:12px; width:100%}
+.roll-primary{display:flex; gap:12px; align-items:stretch; flex-wrap:wrap; justify-content:flex-end}
+.roll-crowd{display:flex; gap:12px; align-items:stretch; flex-wrap:wrap; justify-content:flex-end}
+.roll-secondary, .roll-modes{display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:flex-end}
 .roll-secondary button, .roll-modes button{font-size:13.5px; padding:7px 12px}
 .roll-secondary button[aria-pressed="true"]{background:var(--ink); color:var(--surface); border-color:var(--ink)}
 .view-strip{display:flex; justify-content:center; margin-top:14px}
@@ -198,6 +198,8 @@ button:disabled{opacity:.45; cursor:not-allowed}
   .sum-now .delta{margin-left:0; width:100%}
   .roll-primary{width:100%; flex-direction:column; gap:9px}
   .roll-primary button{width:100%; justify-content:center}
+  .roll{align-items:stretch}
+  .roll-primary, .roll-secondary, .roll-modes{justify-content:center}
   .roll-crowd{width:100%; display:grid; grid-template-columns:1fr 1fr; gap:9px}
   .roll-crowd button{width:100%; justify-content:center}
   .btn-roll{font-size:16px; padding:11px 18px}
@@ -396,7 +398,7 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
   font-size:13px; line-height:1; font-variant-numeric:tabular-nums; color:var(--muted)}
 .kf-col.fav{color:var(--cold); font-weight:600}
 .kf-col.dog{color:var(--hot); font-weight:600}
-.roll-ev{display:flex; justify-content:center; gap:10px; flex-wrap:wrap}
+.roll-ev{display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap}
 .pf-line{letter-spacing:.06em}
 .pf-tab th:first-child, .pf-tab td:first-child{text-align:center; width:26px; padding-left:2px}
 .pf-tab td:nth-child(2){text-align:right; color:var(--muted)}
