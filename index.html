@@ -173,8 +173,12 @@ button:disabled{opacity:.45; cursor:not-allowed}
 /* служебные и режимы — нейтральные, чтобы не спорили с действующими */
 .roll-secondary button{border-color:var(--rule-strong); color:var(--muted)}
 .roll-secondary button:hover:not(:disabled){color:var(--ink); border-color:var(--ink)}
-#btnReset{border-color:var(--hot); color:var(--hot)}
-#btnReset:hover:not(:disabled){background:var(--hot-soft)}
+#btnUndo{border-color:var(--warn); color:var(--warn); display:inline-flex; align-items:center; gap:6px}
+#btnUndo svg{display:block}
+#btnUndo:hover:not(:disabled){background:var(--warn-bg); border-color:var(--warn)}
+#btnUndo:disabled{border-color:var(--rule-strong); color:var(--muted); background:transparent}
+#btnReset{border-color:var(--o1); color:var(--o1)}
+#btnReset:hover:not(:disabled){background:var(--o1-soft)}
 .roll-modes button{border-style:dashed; border-color:var(--rule-strong); color:var(--muted)}
 .roll-modes button:hover:not(:disabled){color:var(--ink); border-color:var(--ink)}
 .btn-tip{border-color:var(--cold); color:var(--cold); padding-block:13px}
@@ -548,6 +552,9 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 
 /* ---------- bottom ---------- */
 .grid2{display:grid; grid-template-columns:1fr; gap:18px; margin-top:22px}
+.grid2 .panel{text-align:center}
+.grid2 .panel .acts{justify-content:center}
+.grid2 .panel h2{text-align:center}
 .panel{background:var(--surface); border:1px solid var(--rule); border-radius:6px; padding:16px 18px}
 .panel h2{font-size:13px; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); font-weight:600; font-family:"IBM Plex Sans",sans-serif}
 .panel-head{display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap}
@@ -671,7 +678,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         <button class="btn-spin btn-crowd" id="btnLeast" type="button"><span class="lbl-long">Проставить </span>меньшинство</button>
       </div>
       <div class="roll-secondary">
-        <button id="btnUndo" type="button" disabled>Вернуть</button>
+        <button id="btnUndo" type="button" disabled><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M7 4.5 3 8.5l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 8.5H12a4.5 4.5 0 0 1 0 9h-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Вернуть</button>
         <button id="btnFetch" type="button" title="Забрать актуальный тираж Балтсистемы с totobrief">Обновить тираж</button>
         <button id="btnReset" type="button" title="Снять отметки со всех строк, кроме зафиксированных. Откатывается кнопкой «Вернуть»">Очистить исходы</button>
       </div>
@@ -719,6 +726,11 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   </div>
   <p class="roll-note" id="rollNote"></p>
 
+  <div class="keep-bar">
+    <button class="btn-keep" id="btnKeep" type="button">Записать купон в сыгранные</button>
+    <span class="keep-note" id="keepNote"></span>
+  </div>
+
   <div class="coupon" id="coupon">
     <div class="chead">
       <div>№</div><div>Событие</div>
@@ -733,11 +745,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     <span class="sw c">Зелёным ▲</span> — за исход больше всего игроков, <span class="sw h">красным ▼</span> — меньше всего.
     Отдельной строкой ниже — <span class="sw m">коэффициент конторы</span> (кнопка «Показать кэфы»): <span class="sw c">зелёный</span> — самый низкий в матче, то есть фаворит конторы, <span class="sw h">красный</span> — самый высокий, её аутсайдер. Прочерк значит, что на этот исход коэффициента в тираже нет. Зелёная стрелка и зелёный кэф на разных исходах — народ и контора расходятся.
   </p>
-
-  <div class="keep-bar">
-    <button class="btn-keep" id="btnKeep" type="button">Записать купон в сыгранные</button>
-    <span class="keep-note" id="keepNote"></span>
-  </div>
 
   <div class="ev-back" id="evBack" hidden>
     <div class="ev-box" role="dialog" aria-modal="true" aria-labelledby="evTitle">
