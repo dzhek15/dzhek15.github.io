@@ -272,6 +272,12 @@ button:disabled{opacity:.45; cursor:not-allowed}
   .spin-in{font-size:13.5px; padding:10px 4px}
   .roll-secondary, .roll-modes{display:grid; grid-template-columns:1fr 1fr; width:100%; gap:8px}
   .roll-secondary button:last-child:nth-child(odd){grid-column:1 / -1}
+  /* на телефоне меняем местами: «Очистить исходы» встаёт рядом с «Вернуть»,
+     а «Обновить тираж» уходит вниз на всю ширину */
+  #btnReset{order:2; grid-column:auto}
+  #btnFetch{order:3; grid-column:1 / -1}
+  /* со значком подпись «Очистить исходы» перестала влезать в половину строки */
+  .roll-secondary button, .roll-modes button{font-size:12.5px; padding:7px 8px; gap:5px; white-space:nowrap}
   .roll-view{width:100%; justify-content:center; gap:6px}
   .knobs{gap:11px 14px}
   .knob input, select{padding:5px 7px}
@@ -837,7 +843,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. Бросок ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 15.09 14:05 МСК</span>
+    <span class="build">сборка 15.09 14:23 МСК</span>
   </footer>
 </div>
 
