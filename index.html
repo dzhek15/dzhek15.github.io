@@ -879,6 +879,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       <p class="empty" id="expNote"></p>
       <div class="acts">
         <button id="btnCsv" type="button"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.5v8.5"/><path d="M6.6 8.8 10 12.2l3.4-3.4"/><path d="M3.8 15.5h12.4"/></svg><span class="lbl">Скачать CSV</span></button>
+        <button id="btnCsvSys" type="button" title="Одна строка на вариант: исходы пишутся слитно (12, 1X, 1X2), а БалтБет сам умножает сумму за вариант на число комбинаций"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.5v8.5"/><path d="M6.6 8.8 10 12.2l3.4-3.4"/><path d="M3.8 15.5h12.4"/><path d="M3.8 4.5h5"/></svg><span class="lbl">Скачать системой</span></button>
         <button id="btnSend" type="button" title="Отправить файл в мессенджер, почту или скопировать в буфер"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3 3 8.6l5.6 2.3L11 16.7z"/><path d="M8.6 10.9 17 3"/></svg><span class="lbl">Отправить CSV</span></button>
         <button id="btnLink" type="button" title="Скопировать адрес, по которому этот купон откроется на другом устройстве"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8.4 11.6a3.4 3.4 0 0 0 5 .3l2.3-2.3a3.4 3.4 0 0 0-4.8-4.8l-1.3 1.3"/><path d="M11.6 8.4a3.4 3.4 0 0 0-5-.3l-2.3 2.3a3.4 3.4 0 0 0 4.8 4.8l1.3-1.3"/></svg><span class="lbl">Ссылка на купон</span></button>
         <button id="btnLoadCsv" type="button" title="Открыть CSV и листать его варианты прямо в таблице матчей"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12.2V3.7"/><path d="M6.6 7.1 10 3.7l3.4 3.4"/><path d="M3.8 15.5h12.4"/></svg><span class="lbl">Загрузить CSV</span></button>
@@ -900,7 +901,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. Бросок ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 16.09 05:45 МСК</span>
+    <span class="build">сборка 16.09 07:10 МСК</span>
   </footer>
 </div>
 
@@ -2226,15 +2227,18 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         (plan.skipped ? " Пропущено записей от другого списка матчей: " + plan.skipped + "." : "");
       $("btnCsv").disabled = plan.total > MAX_CSV;
       $("btnSend").disabled = $("btnCsv").disabled;
+      $("btnCsvSys").disabled = false;
     } else if(t.empty){
       en.textContent = (state.played.length ? "В корзине не отмечено ни одного варианта" : "Корзина пуста") + ", а в купоне есть матчи без исхода — заполни или брось.";
       $("btnCsv").disabled = true;
       $("btnSend").disabled = true;
+      $("btnCsvSys").disabled = true;
     } else {
       en.textContent = (state.played.length ? "В корзине не отмечено ни одного варианта" : "Корзина пуста") +
         " — уйдёт то, что сейчас в купоне: " + fmt(t.combos) + " строк, " + fmt(t.combos * price) + " ₽.";
       $("btnCsv").disabled = t.combos > MAX_CSV;
       $("btnSend").disabled = $("btnCsv").disabled;
+      $("btnCsvSys").disabled = t.empty > 0;
     }
 
     document.documentElement.setAttribute("data-compact", state.compact ? "1" : "0");
@@ -3371,15 +3375,34 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       if(parts.length === need) cand = parts;
       else if(parts.length === need + 1) cand = parts.slice(1);   /* первое поле — цена строки */
       if(!cand){ bad++; continue; }
-      var row = [], ok = true;
+      /* ячейка может нести несколько исходов («12», «1X2») — это строка-система,
+         разворачиваем её во все комбинации */
+      var cols = [], ok = true;
       for(var j=0;j<need;j++){
-        var v = normOut(cand[j]);
-        if(!v){ ok = false; break; }
-        row.push(v);
+        var raw = String(cand[j] == null ? "" : cand[j]).trim().toUpperCase().replace(/[\s;,\/|-]/g, "");
+        var set = [], seen = {};
+        for(var c=0;c<raw.length;c++){
+          var v = normOut(raw.charAt(c));
+          if(!v){ ok = false; break; }
+          if(!seen[v]){ seen[v] = 1; set.push(v); }
+        }
+        if(!ok || !set.length){ ok = false; break; }
+        cols.push(set);
       }
       if(!ok){ bad++; continue; }
-      if(out.length >= MAX_CSV){ over = true; break; }
-      out.push(row);
+      var combo = [[]];
+      for(var j2=0;j2<cols.length;j2++){
+        var nx = [];
+        for(var r2=0;r2<combo.length;r2++)
+          for(var c2=0;c2<cols[j2].length;c2++) nx.push(combo[r2].concat(cols[j2][c2]));
+        combo = nx;
+        if(combo.length > MAX_CSV){ over = true; break; }
+      }
+      if(over && combo.length > MAX_CSV) combo = combo.slice(0, MAX_CSV);
+      for(var q2=0;q2<combo.length;q2++){
+        if(out.length >= MAX_CSV){ over = true; break; }
+        out.push(combo[q2]);
+      }
     }
     return { rows: out, bad: bad, over: over, need: need };
   }
@@ -3866,6 +3889,74 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     if(!lines.length) return null;
     return lines.join("\n") + "\n";
   }
+
+  /* Системный формат БалтБета: одна строка на вариант, исходы матча пишутся
+     слитно («12», «1X», «1X2»), а первое поле — сумма ЗА ВАРИАНТ, не за строку.
+     Шесть двоек при 30 ₽ за вариант БалтБет сам посчитает как 1 920 ₽. */
+  function csvCell(m){
+    var s = "";
+    for(var k = 0; k < 3; k++) if(m.picks[OUT[k]]) s += OUT[k];
+    return s;
+  }
+
+  function buildCsvSys(){
+    var price = Number(state.price) || 0;
+    var lines = [], plan = csvPlan();
+    var mk = function(snap){
+      var cells = [], i, c;
+      for(i = 0; i < snap.length; i++){
+        c = csvCell(snap[i]);
+        if(!c) return null;                    /* в матче не выбрано ничего */
+        cells.push(c);
+      }
+      return String(price) + ";" + cells.join(";");
+    };
+    if(plan.take.length){
+      for(var i = 0; i < plan.take.length; i++){
+        var row = mk(plan.take[i].snap);
+        if(row) lines.push(row);
+      }
+    } else {
+      var one = mk(state.matches);
+      if(one) lines.push(one);
+    }
+    if(!lines.length) return null;
+    return lines.join("\n") + "\n";
+  }
+
+  function saveCsvFile(csv, name){
+    if(!(window.claude && typeof window.claude.use === "function")){
+      try{
+        var blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
+        var a = document.createElement("a");
+        a.href = URL.createObjectURL(blob); a.download = name;
+        document.body.appendChild(a); a.click();
+        setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+        $("expNote").textContent = "Файл " + name + " сохранён в загрузки.";
+      }catch(e){ showFallback(csv); }
+      return;
+    }
+    var done = false;
+    window.claude.use("downloads").then(function(dl){
+      if(!dl || done) { if(!done) showFallback(csv); return; }
+      done = true;
+      dl.save({filename:name, data:csv}).catch(function(){ showFallback(csv); });
+    }).catch(function(){ showFallback(csv); });
+  }
+
+  $("btnCsvSys").addEventListener("click", function(){
+    var csv = buildCsvSys();
+    if(!csv){ $("expNote").textContent = "Нечего выгружать — в каком-то матче не выбран исход."; return; }
+    var rowsN = csv.replace(/\n+$/,"").split("\n").length;
+    var plan = csvPlan();
+    var combos = plan.take.length ? plan.total : (tally().combos || 0);
+    var price = Number(state.price) || 0;
+    var name = "export_sys_" + rowsN + "_" + (combos * price) + ".csv";
+    saveCsvFile(csv, name);
+    $("expNote").textContent = "Файл " + name + ": строк " + rowsN +
+      ", комбинаций " + fmt(combos) + ", сумма за вариант " + price + " ₽, итого " +
+      fmt(combos * price) + " ₽. Исходы записаны слитно — БалтБет посчитает допы сам.";
+  });
 
   $("btnCsv").addEventListener("click", function(){
     var csv = buildCsv();
