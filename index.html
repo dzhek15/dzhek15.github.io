@@ -589,6 +589,12 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 .bk-pos input{width:7ch; text-align:center; font-family:"IBM Plex Mono",monospace; padding:4px 5px}
 .bk-pos i{font-style:normal; color:var(--muted); white-space:nowrap}
 .bk-r{display:flex; gap:6px; flex-wrap:wrap}
+.csv-fmt{margin-top:11px; display:flex; flex-wrap:wrap; gap:6px 12px; align-items:center;
+  font-size:12px; color:var(--muted)}
+.csv-fmt select{padding:3px 6px; font-size:12px}
+#csvPrev{width:100%; font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--ink);
+  word-break:break-all; background:var(--surface-2); border:1px solid var(--rule); border-radius:var(--r);
+  padding:6px 8px; display:block}
 .bk-stat{display:block; font-size:11px; color:var(--cold); font-weight:600; margin-top:2px}
 /* фактический исход матча: зелёная обводка кнопки — точка под кнопкой
    налезала на проценты и читалась как часть стрелки ▲▼ */
@@ -885,6 +891,19 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         <button id="btnLoadCsv" type="button" title="Открыть CSV и листать его варианты прямо в таблице матчей"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12.2V3.7"/><path d="M6.6 7.1 10 3.7l3.4 3.4"/><path d="M3.8 15.5h12.4"/></svg><span class="lbl">Загрузить CSV</span></button>
         <input type="file" id="fileCsv" accept=".csv,text/csv,text/plain" hidden>
       </div>
+      <div class="csv-fmt">
+        <label for="csvSum">сумма в строке</label>
+        <select id="csvSum">
+          <option value="row">за весь купон (цена × комбинации)</option>
+          <option value="var">за один вариант (цена)</option>
+        </select>
+        <label for="csvSep">разделитель</label>
+        <select id="csvSep">
+          <option value=";">;</option>
+          <option value="; ">; с пробелом</option>
+        </select>
+        <code id="csvPrev"></code>
+      </div>
       <div id="csvFallback" hidden style="margin-top:12px">
         <p class="empty">Скачивание недоступно — скопируй отсюда:</p>
         <textarea id="csvOut" readonly></textarea>
@@ -901,7 +920,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. Бросок ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 16.09 08:05 МСК</span>
+    <span class="build">сборка 16.09 09:15 МСК</span>
   </footer>
 </div>
 
@@ -2243,6 +2262,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
     document.documentElement.setAttribute("data-compact", state.compact ? "1" : "0");
     applyZoom();
+    try{ updateCsvPrev(); }catch(e){}
 
     var havePct = state.matches.some(function(m){ return m.pct; });
     $("btnMost").disabled = !havePct || spinning;
@@ -3904,15 +3924,18 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
      иначе человек собирает систему, а получает старые броски. */
   function buildCsvSys(){
     var price = Number(state.price) > 0 ? Number(state.price) : 30;
+    var sep = state.csvSep === "; " ? "; " : ";";
+    var byRow = state.csvSum !== "var";        /* по умолчанию — сумма за весь купон */
     var lines = [], src = "";
     var mk = function(snap){
-      var cells = [], i, c;
+      var cells = [], i, c, n = 1;
       for(i = 0; i < snap.length; i++){
         c = csvCell(snap[i]);
         if(!c) return null;                    /* в матче не выбрано ничего */
+        n *= c.length;
         cells.push(c);
       }
-      return String(price) + ";" + cells.join(";");
+      return String(byRow ? price * n : price) + sep + cells.join(sep);
     };
     var one = mk(state.matches);
     if(one){ lines.push(one); src = "купон"; }
@@ -3948,6 +3971,22 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     }).catch(function(){ showFallback(csv); });
   }
 
+  function updateCsvPrev(){
+    var el = $("csvPrev");
+    if(!el) return;
+    var out = buildCsvSys();
+    el.textContent = out ? out.csv.split("\n")[0] : "строка появится, когда в каждом матче будет исход";
+  }
+
+  $("csvSum").value = state.csvSum === "var" ? "var" : "row";
+  $("csvSep").value = state.csvSep === "; " ? "; " : ";";
+  $("csvSum").addEventListener("change", function(e){
+    state.csvSum = e.target.value; save(); updateCsvPrev();
+  });
+  $("csvSep").addEventListener("change", function(e){
+    state.csvSep = e.target.value; save(); updateCsvPrev();
+  });
+
   $("btnCsvSys").addEventListener("click", function(){
     var out = buildCsvSys();
     if(!out){
@@ -3960,8 +3999,10 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     var note = "Файл " + name + " — выгружен " +
       (out.src === "купон" ? "КУПОН с экрана" : "корзина (купон не заполнен)") +
       ": строк " + out.rows + ", комбинаций " + fmt(combos) +
-      ", сумма за вариант " + out.price + " ₽, итого " + fmt(combos * out.price) +
-      " ₽. Исходы записаны слитно — БалтБет посчитает допы сам.";
+      ", цена одного варианта " + out.price + " ₽, итого " + fmt(combos * out.price) +
+      " ₽. Исходы записаны слитно.";
+    note += " Сумма в строке — " +
+      (state.csvSum === "var" ? "за один вариант" : "за весь купон") + ".";
     if(!(Number(state.price) > 0)) note += " Поле «Стоимость купона» пустое, поставил минимальные 30 ₽.";
     if(out.src === "купон" && state.played.length)
       note += " В корзине лежит " + state.played.length + " вариант(ов) — они в этот файл НЕ вошли.";
