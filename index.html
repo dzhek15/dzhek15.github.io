@@ -175,13 +175,12 @@ button:disabled{opacity:.45; cursor:not-allowed}
 /* Цвет кнопки привязан к тому, что она делает: «большинство» — зелёная, как
    стрелка ▲ у самого популярного исхода, «меньшинство» — красная, как ▼. */
 .btn-crowd{border-color:var(--accent); color:var(--accent); padding-block:13px}
-#btnMost, #btnLeast{background:var(--o1); border-color:var(--o1); color:#fff}
+#btnMost{background:var(--cold); border-color:var(--cold); color:#fff}
+#btnLeast{background:var(--o1); border-color:var(--o1); color:#fff}
 #btnMost:hover:not(:disabled), #btnLeast:hover:not(:disabled){filter:brightness(1.1)}
 #btnMost:disabled, #btnLeast:disabled{border-color:var(--rule-strong); color:var(--muted); background:transparent}
 /* стрелки те же, что в таблице: ▲ у большинства, ▼ у меньшинства */
-.ar{font-size:11px; margin-right:6px; vertical-align:1px}
-#btnMost .ar{color:#7BE2AE}
-#btnLeast .ar{color:#FFB3A7}
+.ar{font-size:11px; margin-right:6px; vertical-align:1px; color:rgba(255,255,255,.75)}
 #btnMost:disabled .ar, #btnLeast:disabled .ar{color:var(--muted)}
 /* расчёт — синий, как исход «1» в таблице */
 .btn-ev{border-color:var(--o1); color:var(--o1)}
@@ -189,14 +188,17 @@ button:disabled{opacity:.45; cursor:not-allowed}
 /* служебные и режимы — нейтральные, чтобы не спорили с действующими */
 .roll-secondary button{border-color:var(--rule-strong); color:var(--muted)}
 .roll-secondary button:hover:not(:disabled){color:var(--ink); border-color:var(--ink)}
+/* служебные кнопки — такой же сплошной контур, как у остальных, без пунктира */
+#btnFetch, .roll-modes button{border-style:solid; border-width:1px;
+  border-color:var(--ink); color:var(--ink); background:transparent}
+#btnFetch:hover:not(:disabled), .roll-modes button:hover:not(:disabled){background:var(--surface-3)}
 #btnUndo{border-color:var(--warn); color:var(--warn); display:inline-flex; align-items:center; gap:6px}
 #btnUndo svg{display:block}
 #btnUndo:hover:not(:disabled){background:var(--warn-bg); border-color:var(--warn)}
 #btnUndo:disabled{border-color:var(--rule-strong); color:var(--muted); background:transparent}
 #btnReset{border-color:var(--o1); color:var(--o1)}
 #btnReset:hover:not(:disabled){background:var(--o1-soft)}
-.roll-modes button{border-style:dashed; border-color:var(--rule-strong); color:var(--muted)}
-.roll-modes button:hover:not(:disabled){color:var(--ink); border-color:var(--ink)}
+
 .btn-tip{border-color:var(--cold); color:var(--cold); padding-block:13px}
 .btn-tip:hover:not(:disabled){background:var(--o1-soft)}
 .btn-tip:disabled{border-color:var(--rule-strong); color:var(--muted)}
@@ -764,7 +766,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и список сыгранных хранятся в этом браузере: закроешь вкладку — всё останется. Бросок ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой сыгранный вариант обратно.
-    <span class="build">сборка 15.09 09:28 МСК</span>
+    <span class="build">сборка 15.09 09:33 МСК</span>
   </footer>
 </div>
 
