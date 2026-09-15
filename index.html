@@ -562,6 +562,8 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 .panel-head button{padding:5px 10px; font-size:12.5px}
 .bank-cell.wide button.danger, .panel-head button.danger{background:var(--hot); border-color:var(--hot); color:#fff; font-weight:600}
 .bank-cell.wide button.danger:hover:not(:disabled), .panel-head button.danger:hover:not(:disabled){background:var(--hot); filter:brightness(1.08)}
+.hist-sum{margin-left:8px; font-size:14px; letter-spacing:0; text-transform:none;
+  color:var(--ink); font-weight:700; font-family:"IBM Plex Mono",monospace}
 .hist{list-style:none; margin:12px 0 0; padding:0; display:flex; flex-direction:column; gap:9px; max-height:340px; overflow-y:auto}
 .hist li{display:flex; gap:10px; align-items:center; justify-content:space-between; font-size:15px; border-bottom:1px dotted var(--rule); padding-bottom:9px}
 .hist .sig{font-family:"IBM Plex Mono",monospace; font-size:14px; letter-spacing:.08em; overflow-wrap:anywhere; margin-top:2px}
@@ -620,43 +622,13 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       </div>
   </div>
 
-  <div class="sum-now" id="sumNow">
-    <span class="big" id="sumBig">—</span>
-    <span class="sub" id="sumSub">накликано сейчас</span>
-    <span class="delta" id="sumDelta"></span>
-    <span class="sig-now mono" id="sigNow"></span>
-  </div>
-
-  <div class="bank" id="bankBox">
-    <div class="bank-cell">
-      <div class="k">Сыграно вариантов</div>
-      <div class="v mono" id="bkRolls">0</div>
-    </div>
-    <div class="bank-cell">
-      <div class="k">Потрачено, ₽</div>
-      <div class="v mono" id="bkSpent">0</div>
-    </div>
-    <div class="bank-cell wide">
-      <div class="bank-note" id="bkNote"></div>
-      <button id="btnBankReset" type="button">Обнулить счёт</button>
-    </div>
-  </div>
-
-  <div class="stats">
-    <div class="stat lead"><div class="k">Комбинаций</div><div class="v mono" id="sCombos">—</div></div>
-    <div class="stat lead"><div class="k">Сумма, ₽</div><div class="v mono" id="sCost">—</div></div>
-    <div class="stat"><div class="k">Одиночек</div><div class="v mono" id="sSingles">0</div></div>
-    <div class="stat"><div class="k">Двоек</div><div class="v mono" id="sDoubles">0</div></div>
-    <div class="stat"><div class="k">Троек</div><div class="v mono" id="sTriples">0</div></div>
-    <div class="stat alarm"><div class="k">Без выбора</div><div class="v mono" id="sEmpty">0</div></div>
-  </div>
   <p class="hint" id="hint" hidden></p>
 
   <div class="console">
     <div class="console-top">
     <section class="panel hist-panel">
       <div class="panel-head">
-        <h2>Сыгранные варианты</h2>
+        <h2>Сыгранные варианты <span class="hist-sum" id="histSum"></span></h2>
         <button id="btnClearHist" type="button" disabled>Очистить список</button>
       </div>
       <ul class="hist" id="hist"></ul>
@@ -1828,14 +1800,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     });
 
     var t = tally();
-    $("sCombos").textContent = t.empty ? "—" : fmt(t.combos);
-    $("sCost").textContent = t.empty ? "—" : fmt(t.combos * (Number(state.price)||0));
-    [["sSingles",t.singles],["sDoubles",t.doubles],["sTriples",t.triples],["sEmpty",t.empty]]
-      .forEach(function(pair){
-        var el = $(pair[0]);
-        el.textContent = pair[1];
-        el.classList.toggle("zero", pair[1] === 0);
-      });
 
     var hint = $("hint");
     if(hintSticky){ hintSticky = false; }
@@ -1903,31 +1867,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       : "Купон, собранный руками, попадёт в список сыгранных и в CSV: " +
         fmt(t.combos) + " строк, " + fmt(t.combos * (Number(state.price)||0)) + " ₽.";
 
-    var box = $("sumNow"); box.classList.remove("over","exact");
     var price = Number(state.price) || 0;
-    if(t.empty > 0){
-      $("sumBig").textContent = "—";
-      $("sumSub").textContent = "купон неполный: " + t.empty + " матч(ей) без исхода";
-      $("sumDelta").textContent = "";
-    } else {
-      var cost = t.combos * price;
-      $("sumBig").textContent = fmt(cost) + " ₽";
-      $("sumSub").textContent = "накликано сейчас — " + fmt(t.combos) + " комбинац(ий) по " + fmt(price) + " ₽";
-      $("sumDelta").textContent = (t.doubles + t.triples) === 0
-        ? "по одному исходу в каждом матче"
-        : "с расширением: " + (t.doubles + t.triples) + " матч(ей)";
-    }
-    $("sigNow").innerHTML = (state.rolls ? "<b>бросок №" + state.rolls + "</b> · " : "") +
-      signature(state.matches);
-
-    var spent = Number(state.spent) || 0;
-    var nextCost = t.empty ? 0 : t.combos * price;
-    $("bkRolls").textContent = state.rolls;
-    $("bkSpent").textContent = fmt(spent);
-    $("bkNote").textContent = state.rolls === 0
-      ? (nextCost ? "Следующий вариант — " + fmt(nextCost) + " ₽." : "Купон неполный.")
-      : "Сыграно " + state.rolls + " вариант(ов) по тиражу №" + (state.tirazh || "?") +
-        (nextCost ? ", следующий — " + fmt(nextCost) + " ₽." : ".");
 
     var plan = csvPlan();
     var en = $("expNote");
@@ -1989,6 +1929,17 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   function renderHistory(){
     var ul = $("hist"); ul.innerHTML = "";
     $("histEmpty").hidden = state.played.length > 0;
+    /* общая сумма по сыгранным: считаем прямо из списка, чтобы «Очистить список»
+       обнулял её сам собой и не расходился со сводкой */
+    var sum = 0, rows = 0;
+    state.played.forEach(function(v){
+      var n = variantCombos(v) || (v.combos || 0);
+      rows += n;
+      sum += (v.cost != null) ? Number(v.cost) : n * (Number(state.price) || 0);
+    });
+    $("histSum").textContent = state.played.length
+      ? fmt(state.played.length) + " шт. · " + fmt(rows) + " строк · " + fmt(sum) + " ₽"
+      : "";
     var cb = $("btnClearHist");
     cb.disabled = state.played.length === 0;
     if(cb.disabled && cb.classList.contains("danger")){
@@ -2550,19 +2501,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   $("spinSpeed").addEventListener("change", function(e){ state.speed = Number(e.target.value); save(); });
   $("spinSpeed").value = String(state.speed);
   $("spinLbl").textContent = fmt(state.spins);
-  var bankArmed = 0, bankTimer = null;
-  $("btnBankReset").addEventListener("click", function(){
-    var b = $("btnBankReset");
-    if(!bankArmed){
-      bankArmed = 1; b.textContent = "Точно обнулить?"; b.classList.add("danger");
-      bankTimer = setTimeout(function(){ bankArmed=0; b.textContent="Обнулить счёт"; b.classList.remove("danger"); }, 4000);
-      return;
-    }
-    clearTimeout(bankTimer); bankArmed = 0;
-    b.textContent = "Обнулить счёт"; b.classList.remove("danger");
-    state.spent = 0; state.rolls = 0;
-    save(); render();
-  });
 
   /* ---------- подтяжка тиража с totobrief ---------- */
   var API = "https://totobrief.com/api/v1/community/";
