@@ -680,6 +680,12 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 .empty{color:var(--muted); font-size:13px; margin-top:10px}
 textarea{width:100%; min-height:120px; font:13px/1.45 "IBM Plex Mono",monospace; color:var(--ink); background:var(--surface-2); border:1px solid var(--rule-strong); border-radius:var(--r); padding:9px; resize:vertical}
 .panel .acts{display:flex; gap:8px; flex-wrap:wrap; margin-top:11px}
+
+/* единый фирменный контур: чёрная рамка с золотой окантовкой на всех крупных блоках */
+.ticket, .console, .keep-bar, .grid2 > .panel{
+  border:2px solid var(--brand-dark);
+  box-shadow:0 0 0 3px var(--brand-gold), var(--shadow);
+}
 details summary{cursor:pointer; font-size:13px; color:var(--muted); font-weight:500}
 footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px solid var(--rule); padding-top:12px}
 
@@ -877,7 +883,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. Бросок ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 15.09 17:20 МСК</span>
+    <span class="build">сборка 15.09 17:48 МСК</span>
   </footer>
 </div>
 
