@@ -590,10 +590,9 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 .bk-pos i{font-style:normal; color:var(--muted); white-space:nowrap}
 .bk-r{display:flex; gap:6px; flex-wrap:wrap}
 .bk-stat{display:block; font-size:11px; color:var(--cold); font-weight:600; margin-top:2px}
-/* фактический исход матча: зелёная точка под кнопкой, видно и в просмотре файла */
-.pick{position:relative}
-.pick.won::after{content:""; position:absolute; left:50%; bottom:-6px; transform:translateX(-50%);
-  width:5px; height:5px; border-radius:50%; background:var(--cold)}
+/* фактический исход матча: зелёная обводка кнопки — точка под кнопкой
+   налезала на проценты и читалась как часть стрелки ▲▼ */
+.pick.won{outline:2px solid var(--cold); outline-offset:1px}
 .mscore{margin-left:8px; font-family:"IBM Plex Mono",monospace; font-weight:600; color:var(--cold)}
 .mscore.live{color:var(--o1)}
 .mres{color:var(--o1)}
@@ -901,7 +900,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. Бросок ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 16.09 05:05 МСК</span>
+    <span class="build">сборка 16.09 05:25 МСК</span>
   </footer>
 </div>
 
