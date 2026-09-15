@@ -588,7 +588,13 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 .bk-pos{display:flex; align-items:center; gap:5px; font-family:"IBM Plex Mono",monospace; font-size:12.5px}
 .bk-pos input{width:7ch; text-align:center; font-family:"IBM Plex Mono",monospace; padding:4px 5px}
 .bk-pos i{font-style:normal; color:var(--muted); white-space:nowrap}
-.bk-r{display:flex; gap:6px}
+.bk-r{display:flex; gap:6px; flex-wrap:wrap}
+.bk-stat{display:block; font-size:11px; color:var(--cold); font-weight:600; margin-top:2px}
+/* фактический исход матча: зелёная точка под кнопкой, видно и в просмотре файла */
+.pick{position:relative}
+.pick.won::after{content:""; position:absolute; left:50%; bottom:-6px; transform:translateX(-50%);
+  width:5px; height:5px; border-radius:50%; background:var(--cold)}
+.mscore{margin-left:8px; font-family:"IBM Plex Mono",monospace; font-weight:600; color:var(--cold)}
 [data-book="1"] .pick[aria-pressed="true"]{background:transparent; border-color:var(--rule-strong);
   color:var(--muted); box-shadow:none}
 [data-book="1"] .pick.bk-on{background:var(--warn); border-color:var(--warn); color:#fff;
@@ -825,6 +831,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     <div class="bk-l">
       <span class="bk-name" id="bkName"></span>
       <span class="bk-hit" id="bkHit"></span>
+      <span class="bk-stat" id="bkStat" hidden></span>
     </div>
     <div class="bk-nav">
       <button id="bkFirst" type="button" title="К первому варианту" aria-label="К первому варианту">&#9198;</button>
@@ -834,6 +841,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       <button id="bkLast" type="button" title="К последнему варианту" aria-label="К последнему варианту">&#9197;</button>
     </div>
     <div class="bk-r">
+      <button id="bkLink" type="button" title="Скопировать ссылку: по ней этот же список вариантов откроется у другого человека">Ссылка на файл</button>
       <button id="bkToCoupon" type="button" title="Перенести показанный вариант в купон и закрыть просмотр">В купон</button>
       <button id="bkClose" type="button" title="Закрыть просмотр файла и вернуться к своему купону">Закрыть</button>
     </div>
@@ -891,7 +899,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. Бросок ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 16.09 00:05 МСК</span>
+    <span class="build">сборка 16.09 04:20 МСК</span>
   </footer>
 </div>
 
@@ -1977,6 +1985,14 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       if(code) meta.appendChild(mkFlag(code, "flag"));
       meta.appendChild(document.createTextNode(
         [m.date, m.time, m.league].filter(Boolean).join("  ·  ")));
+      if(m.res || m.score){
+        var sc = document.createElement("span");
+        sc.className = "mscore";
+        sc.textContent = (m.score ? String(m.score).replace(/\s+/g, "") : "") +
+                         (m.res ? " · " + m.res : "");
+        sc.title = "матч сыгран";
+        meta.appendChild(sc);
+      }
       fix.appendChild(meta);
 
 
@@ -2025,6 +2041,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         b.type = "button";
         b.className = "pick " + (o==="1"?"p1":o==="X"?"px":"p2");
         b.textContent = o;
+        if(m.res === o) b.classList.add("won");
         b.setAttribute("aria-pressed", m.picks[o] ? "true" : "false");
         if(book && book.rows[book.idx] && book.rows[book.idx].length === state.matches.length
            && book.rows[book.idx][idx] === o) b.classList.add("bk-on");
@@ -3174,6 +3191,156 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     }
   });
 
+  /* ---------- Счёт по факту: сколько вариантов в файле ещё живы ----------
+     Считаем один раз на набор результатов и держим в book.stat: при 10 000
+     вариантов пересчёт на каждом листке был бы заметен. */
+  function bookStats(){
+    if(!book) return null;
+    var N = state.matches.length;
+    var res = state.matches.map(function(m){ return m.res || ""; });
+    var sig = res.join("");
+    if(book.sig === sig && book.stat) return book.stat;
+    var played = 0, i, k;
+    for(i = 0; i < res.length; i++) if(res[i]) played++;
+    var alive = {};
+    for(k = 0; k <= N; k++) alive[k] = 0;
+    for(var r = 0; r < book.rows.length; r++){
+      var row = book.rows[r], miss = 0;
+      for(i = 0; i < N; i++) if(res[i] && row[i] !== res[i]) miss++;
+      var max = N - miss;
+      for(k = 9; k <= max; k++) alive[k]++;
+    }
+    book.sig = sig;
+    book.stat = { played: played, alive: alive, n: book.rows.length };
+    return book.stat;
+  }
+
+  /* ---------- Ссылка на весь файл вариантов ----------
+     Каждый вариант — число в троичной системе (1=0, X=1, 2=2). Дальше пишем
+     не сами числа, а разницу с предыдущим, переменной длиной, и жмём gzip.
+     Систему это складывает почти в ничто: 9 664 варианта — около 300 символов. */
+  function b64u(u8){
+    var s = "", CH = 8000;
+    for(var i = 0; i < u8.length; i += CH)
+      s += String.fromCharCode.apply(null, u8.subarray(i, i + CH));
+    return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+
+  function unb64u(str){
+    var s = String(str).replace(/-/g, "+").replace(/_/g, "/");
+    while(s.length % 4) s += "=";
+    var bin = atob(s), u8 = new Uint8Array(bin.length);
+    for(var i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    return u8;
+  }
+
+  function varsEncode(rows, cb){
+    var N = state.matches.length, IX = {"1":0, "X":1, "2":2};
+    var bytes = [], prev = 0, r, i;
+    for(r = 0; r < rows.length; r++){
+      var n = 0, row = rows[r];
+      for(i = 0; i < N; i++){
+        var v = IX[row[i]];
+        if(v == null){ cb(null); return; }
+        n = n * 3 + v;
+      }
+      var d = n - prev; prev = n;
+      var z = d >= 0 ? d * 2 : (-d) * 2 - 1;
+      while(z >= 128){ bytes.push((z % 128) + 128); z = Math.floor(z / 128); }
+      bytes.push(z);
+    }
+    var u8 = new Uint8Array(bytes);
+    if(typeof CompressionStream === "function"){
+      try{
+        new Response(new Blob([u8]).stream().pipeThrough(new CompressionStream("gzip")))
+          .arrayBuffer()
+          .then(function(ab){ cb("z" + b64u(new Uint8Array(ab))); })
+          .catch(function(){ cb("r" + b64u(u8)); });
+        return;
+      }catch(e){}
+    }
+    cb("r" + b64u(u8));
+  }
+
+  function varsDecode(payload, N, cb){
+    var tag = String(payload).charAt(0), body;
+    try{ body = unb64u(String(payload).slice(1)); }
+    catch(e){ cb(null); return; }
+    var done = function(u8){
+      var rows = [], prev = 0, i = 0;
+      while(i < u8.length){
+        var z = 0, sh = 1, b;
+        while(i < u8.length){
+          b = u8[i++];
+          z += (b % 128) * sh;
+          if(b < 128) break;
+          sh *= 128;
+        }
+        var d = (z % 2) ? -((z + 1) / 2) : z / 2;
+        var n = prev + d; prev = n;
+        if(!(n >= 0)){ cb(null); return; }
+        var row = new Array(N);
+        for(var k = N - 1; k >= 0; k--){ row[k] = OUT[n % 3]; n = Math.floor(n / 3); }
+        rows.push(row);
+        if(rows.length >= MAX_CSV) break;
+      }
+      cb(rows.length ? rows : null);
+    };
+    if(tag === "z"){
+      if(typeof DecompressionStream !== "function"){ cb(null); return; }
+      try{
+        new Response(new Blob([body]).stream().pipeThrough(new DecompressionStream("gzip")))
+          .arrayBuffer()
+          .then(function(ab){ done(new Uint8Array(ab)); })
+          .catch(function(){ cb(null); });
+      }catch(e){ cb(null); }
+    } else if(tag === "r"){ done(body); }
+    else cb(null);
+  }
+
+  var pendingBook = (function(){
+    var m = String(location.hash || "").match(/^#v=([^-]*)-([A-Za-z0-9\-_]+)$/);
+    return m ? { tirazh: decodeURIComponent(m[1]), payload: m[2] } : null;
+  })();
+
+  function tryPendingBook(){
+    if(!pendingBook || !state.matches.length) return;
+    var p = pendingBook;
+    if(p.tirazh && String(p.tirazh) !== String(state.tirazh)){
+      if(linkPulling || typeof fetch !== "function"){
+        pendingBook = null;
+        say("Тираж №" + p.tirazh + " из ссылки подгрузить не удалось — варианты не открыть.");
+        return;
+      }
+      if(state.played.length && !window.confirm(
+          "Ссылка с вариантами сделана для тиража №" + p.tirazh +
+          ", а сейчас открыт №" + state.tirazh + ".\n" +
+          "Загрузить тираж из ссылки? Корзина очистится — вернуть можно кнопкой «Вернуть».")){
+        pendingBook = null;
+        say("Остались на тираже №" + state.tirazh + ". Варианты из ссылки не открыты.");
+        return;
+      }
+      linkPulling = true;
+      say("Ссылка со списком вариантов, тираж №" + p.tirazh + " — подгружаю его…");
+      pullTirazh(true, p.tirazh);
+      return;
+    }
+    pendingBook = null;
+    varsDecode(p.payload, state.matches.length, function(rows){
+      if(!rows){
+        say("Ссылку со списком вариантов развернуть не удалось — похоже, адрес обрезался при пересылке.");
+        return;
+      }
+      book = { name: "варианты по ссылке · тираж №" + (state.tirazh || ""), rows: rows, idx: 0 };
+      bookShow();
+      say("Из ссылки открыто " + fmt(rows.length) + " вариант(ов). Свой купон цел: листай стрелками " +
+          "или свайпом, «Закрыть» вернёт тебя к нему.");
+      try{ $("bookBar").scrollIntoView({ behavior:"smooth", block:"center" }); }catch(e){}
+    });
+  }
+
+  function tryPending(){ tryPendingLink(); tryPendingBook(); }
+
   /* ---------- Просмотр CSV: варианты листаются в таблице, как страницы книги ----------
      Файл никуда не записывается: купон и корзина остаются нетронутыми,
      пока не нажмёшь «В купон». */
@@ -3224,8 +3391,34 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     $("bkTotal").textContent = "из " + fmt(book.rows.length);
     var cur = book.rows[book.idx], same = 0;
     state.matches.forEach(function(m, i){ if(cur[i] && m.picks[cur[i]]) same++; });
-    $("bkHit").textContent = "вариант " + fmt(book.idx + 1) +
+    var line = "вариант " + fmt(book.idx + 1) +
       " · совпадает с твоим купоном в " + same + " из " + cur.length + " матчей";
+    var st = bookStats();
+    if(st && st.played){
+      var h = 0, ms = 0;
+      state.matches.forEach(function(m, i){
+        if(!m.res) return;
+        if(cur[i] === m.res) h++; else ms++;
+      });
+      line += " · по факту угадано " + h + " из " + st.played +
+              (ms ? ", максимум " + (cur.length - ms) : ", идёт на все " + cur.length);
+    }
+    $("bkHit").textContent = line;
+    var sb = $("bkStat");
+    if(st && st.played){
+      /* тиражи, где не выбыл ещё никто, сворачиваем в одну фразу: иначе на
+         телефоне строка растягивается на три ряда одинаковых чисел */
+      var parts = [], floor = 0, k;
+      for(k = 9; k <= cur.length; k++) if(st.alive[k] === st.n) floor = k;
+      for(k = cur.length; k > floor; k--) if(st.alive[k]) parts.push(k + "+ — " + fmt(st.alive[k]));
+      if(floor) parts.push("все " + fmt(st.n) + " ещё на " + floor + "+");
+      sb.textContent = "сыграно " + st.played + " из " + cur.length + " · в файле ещё живы: " +
+        (parts.length ? parts.join(", ") : "ни одного варианта на 9+");
+      sb.hidden = false;
+    } else {
+      sb.textContent = "";
+      sb.hidden = true;
+    }
     render();
   }
 
@@ -3277,6 +3470,36 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     var n = Number(e.target.value);
     if(book && isFinite(n) && n >= 1 && n <= book.rows.length) bookGo(Math.round(n) - 1);
   });
+  $("bkLink").addEventListener("click", function(){
+    if(!book) return;
+    var b = $("bkLink"), was = b.textContent;
+    b.disabled = true; b.textContent = "собираю…";
+    varsEncode(book.rows, function(p){
+      b.disabled = false; b.textContent = was;
+      if(!p){ $("expNote").textContent = "Не получилось упаковать варианты в ссылку."; return; }
+      var url = location.origin + location.pathname + "#v=" +
+                encodeURIComponent(state.tirazh || "") + "-" + p;
+      /* система жмётся почти в ничто, а вот файл из несвязанных строк раздувает
+         адрес: в Telegram одним сообщением влезает около 4 000 символов */
+      if(url.length > 8000){
+        $("expNote").textContent = "В ссылку это не влезает: получилось " + fmt(url.length) +
+          " символов, мессенджер такой адрес обрежет. Перешли сам файл — у второго человека он " +
+          "откроется кнопкой «Загрузить CSV».";
+        return;
+      }
+      var done = function(){
+        $("expNote").textContent = "Ссылка на файл скопирована: " + fmt(book.rows.length) +
+          " вариант(ов), " + fmt(url.length) + " символов. Кто её откроет — увидит тираж №" +
+          (state.tirazh || "") + " и этот же список в режиме просмотра; его собственный купон цел." +
+          (url.length > 3500 ? " Адрес длинный — в Telegram одним сообщением может не влезть, " +
+            "тогда пересылай файлом." : "");
+      };
+      if(navigator.clipboard && navigator.clipboard.writeText)
+        navigator.clipboard.writeText(url).then(done, function(){ showFallback(url); });
+      else showFallback(url);
+    });
+  });
+
   $("bkClose").addEventListener("click", function(){ bookClose("Просмотр файла закрыт, купон остался прежним."); });
   $("bkToCoupon").addEventListener("click", function(){
     if(!book) return;
@@ -3355,6 +3578,9 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       if(q.pool_win_1 != null) m.pct = { pool:[q.pool_win_1, q.pool_draw, q.pool_win_2],
                                          bk:  [q.bk_win_1,   q.bk_draw,   q.bk_win_2] };
       if(q.norm_win_1 != null) m.kf = [q.norm_win_1, q.norm_draw, q.norm_win_2];
+      /* сыгранные матчи: фактический исход и счёт приезжают в том же ответе */
+      m.res = normOut(evs[i].result) || "";
+      m.score = evs[i].score || "";
     }
     save(); render();
     return true;
@@ -3424,7 +3650,10 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
           bk:   [q.bk_win_1,   q.bk_draw,   q.bk_win_2]
         } : null,
         /* коэффициенты конторы приходят в том же ответе, отдельного источника не нужно */
-        kf: (q.norm_win_1 != null) ? [q.norm_win_1, q.norm_draw, q.norm_win_2] : null
+        kf: (q.norm_win_1 != null) ? [q.norm_win_1, q.norm_draw, q.norm_win_2] : null,
+        /* фактический исход и счёт — пусто, пока матч не сыгран */
+        res: normOut(e.result) || "",
+        score: e.score || ""
       });
     });
     if(!list.length) throw new Error("в ответе нет матчей");
@@ -3523,20 +3752,20 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         if(res && res.changed){
           say("На totobrief появился тираж №" + res.changed + ", а открыт №" + state.tirazh +
               ". Нажми «Обновить тираж», чтобы перейти на него — корзина при этом очистится.");
-          tryPendingLink();
+          tryPending();
         }
         else if(res && res.soft){
           if(!silent) say("Тираж №" + res.number + " тот же — обновил доли игроков и коэффициенты. Купон и корзина не тронуты.");
-          tryPendingLink();
+          tryPending();
         }
         else if(res) say("Тираж №" + res.number + " загружен с totobrief: " + res.n +
                     " матч(ей), проценты игроков и конторы подставлены в строки. Исходы и режимы не проставлены — " +
                     "отмечай сам, а для броска сначала нажми «Все в рандом».");
-        if(res && !res.soft) tryPendingLink();
+        if(res && !res.soft) tryPending();
       })
       .catch(function(err){
         btn.disabled = false; btn.classList.remove("is-loading"); lbl.textContent = was;
-        tryPendingLink();
+        tryPending();
         if(!silent) say("Не удалось забрать тираж: " + (err && err.message ? err.message : err) +
                         ". На странице-артефакте запросы наружу запрещены — автоподтяжка работает только в размещённой версии.");
       });
@@ -3713,12 +3942,13 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     if(typeof fetch === "function"){
       /* открыли ссылку на купон — грузим сразу ТОТ тираж, а не текущий */
       setTimeout(function(){
-        var want = (pendingLink && pendingLink.tirazh) ? pendingLink.tirazh : null;
+        var want = (pendingLink && pendingLink.tirazh) ? pendingLink.tirazh :
+                   (pendingBook && pendingBook.tirazh) ? pendingBook.tirazh : null;
         if(want) linkPulling = true;
         pullTirazh(true, want);
       }, 300);
     } else {
-      tryPendingLink();                        /* без сети — ставим купон из ссылки по тому, что уже сохранено */
+      tryPending();                        /* без сети — ставим купон из ссылки по тому, что уже сохранено */
     }
   } catch(e){ boom(e); }
   setInterval(function(){ try{ renderKickoff(); }catch(e){} }, 30000);
