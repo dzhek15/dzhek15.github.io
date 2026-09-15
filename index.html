@@ -149,7 +149,7 @@ button{font:inherit; cursor:pointer; border-radius:var(--r); border:1px solid va
 button:hover:not(:disabled){background:var(--surface-3)}
 button:disabled{opacity:.45; cursor:not-allowed}
 .btn-roll{
-  background:var(--accent); color:var(--accent-ink); border-color:var(--accent);
+  background:var(--o1); color:#fff; border-color:var(--o1);
   font-family:"Chivo",sans-serif; font-weight:800; font-size:17px; letter-spacing:.01em;
   padding:11px 24px; display:flex; gap:10px; align-items:center; border-radius:6px;
 }
@@ -175,11 +175,14 @@ button:disabled{opacity:.45; cursor:not-allowed}
 /* Цвет кнопки привязан к тому, что она делает: «большинство» — зелёная, как
    стрелка ▲ у самого популярного исхода, «меньшинство» — красная, как ▼. */
 .btn-crowd{border-color:var(--accent); color:var(--accent); padding-block:13px}
-#btnMost{border-color:var(--cold); color:var(--cold)}
-#btnMost:hover:not(:disabled){background:#E7F1EC}
-#btnLeast{border-color:var(--hot); color:var(--hot)}
-#btnLeast:hover:not(:disabled){background:var(--hot-soft)}
+#btnMost, #btnLeast{background:var(--o1); border-color:var(--o1); color:#fff}
+#btnMost:hover:not(:disabled), #btnLeast:hover:not(:disabled){filter:brightness(1.1)}
 #btnMost:disabled, #btnLeast:disabled{border-color:var(--rule-strong); color:var(--muted); background:transparent}
+/* стрелки те же, что в таблице: ▲ у большинства, ▼ у меньшинства */
+.ar{font-size:11px; margin-right:6px; vertical-align:1px}
+#btnMost .ar{color:#7BE2AE}
+#btnLeast .ar{color:#FFB3A7}
+#btnMost:disabled .ar, #btnLeast:disabled .ar{color:var(--muted)}
 /* расчёт — синий, как исход «1» в таблице */
 .btn-ev{border-color:var(--o1); color:var(--o1)}
 .btn-ev:hover:not(:disabled){background:var(--o1-soft)}
@@ -670,8 +673,8 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         <button class="btn-ev" id="btnPF" type="button" title="Отобрать из системы строки, которые меньше всего пересекаются с выбором толпы">Отобрать строки</button>
       </div>
       <div class="roll-crowd">
-        <button class="btn-spin btn-crowd" id="btnMost" type="button"><span class="lbl-long">Проставить </span>большинство</button>
-        <button class="btn-spin btn-crowd" id="btnLeast" type="button"><span class="lbl-long">Проставить </span>меньшинство</button>
+        <button class="btn-spin btn-crowd" id="btnMost" type="button"><span class="ar">▲</span><span class="lbl-long">Проставить </span>большинство</button>
+        <button class="btn-spin btn-crowd" id="btnLeast" type="button"><span class="ar">▼</span><span class="lbl-long">Проставить </span>меньшинство</button>
       </div>
       <div class="roll-secondary">
         <button id="btnUndo" type="button" disabled><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M7 4.5 3 8.5l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 8.5H12a4.5 4.5 0 0 1 0 9h-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Вернуть</button>
@@ -761,7 +764,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и список сыгранных хранятся в этом браузере: закроешь вкладку — всё останется. Бросок ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой сыгранный вариант обратно.
-    <span class="build">сборка 15.09 09:23 МСК</span>
+    <span class="build">сборка 15.09 09:28 МСК</span>
   </footer>
 </div>
 
