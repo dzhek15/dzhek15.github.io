@@ -343,12 +343,7 @@ button:disabled{opacity:.45; cursor:not-allowed}
 .knob label{font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
 .knob input{width:8ch; text-align:center; font-family:"IBM Plex Mono",monospace}
 .knob-hint{font-size:11px; font-family:"IBM Plex Mono",monospace; color:var(--muted); letter-spacing:.02em; min-height:13px}
-/* цена строки — главная ручка пульта, поэтому крупная и по центру */
-.knob-price{width:100%; align-items:center}
-.knob-price label{font-size:12px; letter-spacing:.12em}
-.knob-price input{width:7ch; font-family:"Chivo",sans-serif; font-weight:800; font-size:26px;
-  line-height:1.1; padding:8px 10px; text-align:center; font-variant-numeric:tabular-nums}
-.knob-price .knob-hint{font-size:13px; color:var(--ink)}
+/* цена строки переехала в полосу под купоном — см. .knob-edge */
 /* скорость прокрутки стоит вплотную к числу кликов, одной группой */
 .spin-speed{border:1px solid var(--accent); border-radius:6px; padding:6px 10px;
   font-size:13.5px; background:var(--surface); color:var(--accent); font-weight:600}
@@ -529,16 +524,19 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 .btn-ev{padding:10px 18px; font-size:14px; background:var(--surface); color:var(--ink);
   border:1px dashed var(--rule-strong); border-radius:var(--r); cursor:pointer}
 .btn-ev:hover{background:var(--surface-3)}
-.btn-brief{padding:12px 30px; font-size:15px; font-family:"Chivo",sans-serif; font-weight:600;
-  border:1px solid var(--o1); border-style:solid; background:var(--o1); color:#fff; min-width:230px;
-  justify-content:center}
-.btn-brief:hover:not(:disabled){background:var(--o1); filter:brightness(1.12)}
+/* золотой контур из палитры логотипа: заметно, но без заливки — рядом с синими
+   кнопками расчёта она и так читается как отдельное действие.
+   Буквы оставлены цветом текста: золото на светлом фоне не даёт контраста. */
+.btn-brief{padding:10px 24px; font-size:14px; font-weight:600;
+  border:1px solid var(--brand-gold); border-style:solid; background:var(--surface);
+  color:var(--ink); min-width:200px; justify-content:center}
+.btn-brief:hover:not(:disabled){background:rgba(201,162,75,.12)}
 @media (max-width:820px){ .roll-ev{width:100%; display:grid; grid-template-columns:1fr 1fr; gap:9px} .roll-ev .btn-ev{width:100%}
   /* на телефоне: «Оценить купон» и «Отобрать строки» в ряд, «Расхождения» отдельной строкой на всю ширину */
   .roll-ev #btnPF{order:1} .roll-ev #btnDiff{order:2; grid-column:1 / -1}
   .roll-brief{width:100%} .roll-brief .btn-brief{width:100%; min-width:0} }
 [data-compact="1"] .btn-ev{padding:7px 13px; font-size:12.5px}
-[data-compact="1"] .btn-brief{padding:9px 22px; font-size:13.5px; min-width:190px}
+[data-compact="1"] .btn-brief{padding:7px 18px; font-size:12.5px; min-width:170px}
 .ev-back{position:fixed; inset:0; background:rgba(19,26,27,.45); z-index:60;
   display:flex; align-items:center; justify-content:center; padding:16px}
 .ev-box{background:var(--surface); border:1px solid var(--rule); border-radius:var(--r);
@@ -681,19 +679,36 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 [data-compact="1"] .pool-tag{font-size:9px; padding:1px 3px}
 
 /* ---------- запись купона руками ---------- */
-.keep-bar{display:flex; flex-direction:column; align-items:center; justify-content:center;
-  text-align:center; gap:8px; margin-top:14px;
+/* Полоса под купоном: действие по центру, цена строки прижата к правому краю
+   отдельной колонкой. Раньше цена жила на пульте крупной ручкой и в компактном
+   виде пропадала вовсе — здесь она видна всегда и не спорит с кнопкой. */
+.keep-bar{display:flex; flex-direction:row; flex-wrap:wrap; align-items:center; justify-content:center;
+  text-align:center; gap:9px 14px; margin-top:14px;
   padding:13px 16px; border:1px solid var(--rule-strong); border-radius:6px;
   background:var(--surface); box-shadow:var(--shadow)}
+.keep-main{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; min-width:0}
+.knob-edge{margin-left:auto; flex:0 0 auto; align-items:center; gap:3px;
+  padding-left:14px; border-left:1px solid var(--rule)}
+.knob-edge label{font-size:9.5px; letter-spacing:.09em; white-space:nowrap}
+.knob-edge input{width:7ch; font-family:"Chivo",sans-serif; font-weight:700; font-size:16px;
+  padding:4px 6px; text-align:center; font-variant-numeric:tabular-nums}
+.knob-edge .knob-hint{font-size:11px; color:var(--muted); white-space:nowrap}
 .btn-keep{font-family:"Chivo",sans-serif; font-weight:700; font-size:14.5px;
   padding:9px 17px; border-radius:6px; border-color:var(--ink); background:var(--surface-2)}
 .btn-keep:hover:not(:disabled){background:var(--surface-3)}
-.keep-note{font-size:12.5px; color:var(--muted)}
+.keep-note{font-size:12.5px; color:var(--muted); flex-basis:100%; order:3; text-align:center}
 @media (max-width:560px){
-  .keep-bar{align-items:stretch; padding:11px 12px}
-  .btn-keep{width:100%; justify-content:center}
+  .keep-bar{align-items:center; padding:11px 12px; gap:8px 10px}
+  .btn-keep{width:100%; justify-content:center; font-size:12.5px; padding:8px 10px}
+  .keep-bar .keep-main{flex:1 1 auto; min-width:0}
+  .keep-bar .knob-edge{padding-left:0; border-left:none; gap:2px; margin-left:auto; margin-right:0}
+  .keep-bar .knob-edge label{font-size:8.5px; letter-spacing:.06em}
+  .keep-bar .knob-edge input{font-size:15px; width:7ch}
+  .keep-bar .knob-edge .knob-hint{font-size:10px}
 }
 [data-compact="1"] .keep-bar{margin-top:8px; padding:8px 11px; gap:6px 10px}
+[data-compact="1"] .knob-edge input{font-size:14px; padding:3px 5px}
+[data-compact="1"] .knob-edge .knob-hint{font-size:10px}
 [data-compact="1"] .btn-keep{font-size:13px; padding:6px 13px}
 [data-compact="1"] .keep-note{font-size:11px}
 
@@ -901,18 +916,17 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       
       </div>
     </div>
-    <div class="knob-sep"></div>
-    <div class="knobs">
-      <div class="knob knob-price">
-        <label for="priceLine">Стоимость купона, ₽</label>
-        <input type="number" id="priceLine" value="30" min="1" step="1" title="Цена одной строки в БК. Итог по всему купону считается ниже: цена строки × число комбинаций"><span class="knob-hint" id="priceHint"></span>
-      </div>
-    </div>
   </div>
   <p class="roll-note" id="rollNote"></p>
 
   <div class="keep-bar">
+    <div class="keep-main">
     <button class="btn-keep" id="btnKeep" type="button"><svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.2 7.5h13.6l-1.4 8.3a1.6 1.6 0 0 1-1.6 1.3H6.2a1.6 1.6 0 0 1-1.6-1.3z"/><path d="M7.3 7.5 9.4 2.9"/><path d="M12.7 7.5 10.6 2.9"/></svg><span class="lbl">Положить купон в корзину</span></button>
+    </div>
+    <div class="knob knob-price knob-edge">
+        <label for="priceLine">Стоимость купона, ₽</label>
+        <input type="number" id="priceLine" value="30" min="1" step="1" title="Цена одной строки в БК. Итог по всему купону считается ниже: цена строки × число комбинаций"><span class="knob-hint" id="priceHint"></span>
+      </div>
     <span class="keep-note" id="keepNote"></span>
   </div>
 
@@ -1012,7 +1026,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. «РАНДОМ» ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; в корзину при этом ничего не уходит — для этого есть «Положить купон в корзину». Строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 16.09 20:25 МСК</span>
+    <span class="build">сборка 16.09 20:45 МСК</span>
   </footer>
 </div>
 
