@@ -743,16 +743,22 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important}}
 
-    /* легенда под таблицей: три блока «образец — что значит», на телефоне друг под другом */
-    .pct-legend{display:grid !important; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); gap:12px 22px; margin:12px 2px 0; font-size:12.5px; line-height:1.35; align-items:start}
+    /* легенда под таблицей: три карточки по центру, в каждой «образец — что значит» */
+    .pct-legend{display:grid !important; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:12px; width:100%; box-sizing:border-box; margin:14px auto 0; padding:0; font-size:12.5px; line-height:1.35; align-items:stretch}
     .pct-legend[hidden]{display:none !important}
-    .pct-legend .lg-h{font-family:inherit; font-size:10.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin-bottom:5px}
-    .pct-legend .lg-sub{font-weight:400; letter-spacing:0; text-transform:none; opacity:.75}
-    .pct-legend .lg-row{display:grid; grid-template-columns:58px 1fr; gap:10px; align-items:baseline; padding:2px 0}
-    .pct-legend .lg-s{font-family:"IBM Plex Mono",monospace; font-weight:600; text-align:right; white-space:nowrap}
+    .pct-legend .lg-blk{background:var(--surface); border:1px solid var(--rule); border-radius:8px; padding:10px 14px 12px; color:var(--muted); box-shadow:var(--shadow)}
+    .pct-legend .lg-blk .sw{color:var(--ink)}
+    .pct-legend .lg-blk .sw.m{color:var(--muted)}
+    .pct-legend .lg-blk .sw.c, .pct-legend .lg-blk .lg-s.c{color:var(--cold)}
+    .pct-legend .lg-blk .sw.h, .pct-legend .lg-blk .lg-s.h{color:var(--hot)}
+    .pct-legend .lg-h{display:block; text-align:center; font-size:10.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; padding-bottom:7px; margin-bottom:8px; border-bottom:1px solid var(--rule)}
+    .pct-legend .lg-sub{display:block; margin-top:2px; font-weight:400; letter-spacing:0; text-transform:none; color:var(--muted)}
+    .pct-legend .lg-row{display:grid; grid-template-columns:62px 1fr; gap:10px; align-items:center; padding:3px 0}
+    .pct-legend .lg-s{display:inline-flex; align-items:center; justify-content:center; gap:4px; min-height:22px; padding:0 6px; border:1px solid var(--rule); border-radius:4px; font-family:"IBM Plex Mono",monospace; font-weight:600; white-space:nowrap}
     .pct-legend .lg-box{display:inline-block; min-width:18px; text-align:center; border:2px solid var(--cold); border-radius:4px; padding:0 4px; line-height:1.3}
-    .pct-legend .lg-tip{margin-top:5px; padding-left:68px; font-size:11.5px; opacity:.85}
-    @media (max-width:520px){ .pct-legend{font-size:12px; gap:10px} .pct-legend .lg-row{grid-template-columns:50px 1fr} .pct-legend .lg-tip{padding-left:60px} }
+    .pct-legend .lg-s:has(.lg-box){border-color:transparent}
+    .pct-legend .lg-tip{margin-top:8px; padding-top:7px; border-top:1px dashed var(--rule); text-align:center; font-size:11.5px}
+    @media (max-width:520px){ .pct-legend{font-size:12px; gap:10px} .pct-legend .lg-row{grid-template-columns:56px 1fr} }
   </style>
 
 <div class="wrap">
@@ -900,7 +906,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       <div class="lg-row"><span class="lg-s sw h">35 !</span><span>на ничью больше 30% игроков — ничья переоценена</span></div>
     </div>
     <div class="lg-blk">
-      <div class="lg-h sw">Коэффициенты <span class="lg-sub">(«Показать кэфы»)</span></div>
+      <div class="lg-h sw">Коэффициенты<span class="lg-sub">кнопка «Показать кэфы»</span></div>
       <div class="lg-row"><span class="lg-s sw c">2.20</span><span>самый низкий — фаворит конторы</span></div>
       <div class="lg-row"><span class="lg-s sw h">4.28</span><span>самый высокий — аутсайдер конторы</span></div>
       <div class="lg-row"><span class="lg-s sw m">—</span><span>коэффициента на этот исход нет</span></div>
@@ -957,7 +963,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. «РАНДОМ» ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; в корзину при этом ничего не уходит — для этого есть «Положить купон в корзину». Строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 16.09 15:10 МСК</span>
+    <span class="build">сборка 16.09 15:25 МСК</span>
   </footer>
 </div>
 
