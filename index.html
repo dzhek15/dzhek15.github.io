@@ -897,6 +897,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         <button id="btnCsv" type="button"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.5v8.5"/><path d="M6.6 8.8 10 12.2l3.4-3.4"/><path d="M3.8 15.5h12.4"/></svg><span class="lbl">Скачать CSV</span></button>
         <button id="btnCsvSys" type="button" title="Одна строка на вариант: исходы пишутся слитно (12, 1X, 1X2), а БалтБет сам умножает сумму за вариант на число комбинаций"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.5v8.5"/><path d="M6.6 8.8 10 12.2l3.4-3.4"/><path d="M3.8 15.5h12.4"/><path d="M3.8 4.5h5"/></svg><span class="lbl">Скачать системой</span></button>
         <button id="btnSend" type="button" title="Отправить файл в мессенджер, почту или скопировать в буфер"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3 3 8.6l5.6 2.3L11 16.7z"/><path d="M8.6 10.9 17 3"/></svg><span class="lbl">Отправить CSV</span></button>
+        <button id="btnSendSys" type="button" title="Отправить файл системой (исходы слитно: 12, 1X, 1X2) в мессенджер, почту или скопировать в буфер"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3 3 8.6l5.6 2.3L11 16.7z"/><path d="M8.6 10.9 17 3"/><path d="M3 15.5h5"/></svg><span class="lbl">Отправить систему</span></button>
         <button id="btnLink" type="button" title="Скопировать адрес, по которому этот купон откроется на другом устройстве"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8.4 11.6a3.4 3.4 0 0 0 5 .3l2.3-2.3a3.4 3.4 0 0 0-4.8-4.8l-1.3 1.3"/><path d="M11.6 8.4a3.4 3.4 0 0 0-5-.3l-2.3 2.3a3.4 3.4 0 0 0 4.8 4.8l1.3-1.3"/></svg><span class="lbl">Ссылка на купон</span></button>
         <button id="btnLoadCsv" type="button" title="Открыть CSV и листать его варианты прямо в таблице матчей"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12.2V3.7"/><path d="M6.6 7.1 10 3.7l3.4 3.4"/><path d="M3.8 15.5h12.4"/></svg><span class="lbl">Загрузить CSV</span></button>
         <input type="file" id="fileCsv" accept=".csv,text/csv,text/plain" hidden>
@@ -930,7 +931,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. «РАНДОМ» ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; в корзину при этом ничего не уходит — для этого есть «Положить купон в корзину». Строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 16.09 13:10 МСК</span>
+    <span class="build">сборка 16.09 13:00 МСК</span>
   </footer>
 </div>
 
@@ -2268,6 +2269,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       $("btnSend").disabled = $("btnCsv").disabled;
       $("btnCsvSys").disabled = t.empty > 0;
     }
+    $("btnSendSys").disabled = $("btnCsvSys").disabled;
 
     document.documentElement.setAttribute("data-compact", state.compact ? "1" : "0");
     applyZoom();
@@ -4021,6 +4023,35 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     if(out.src === "купон" && state.played.length)
       note += " В корзине лежит " + state.played.length + " вариант(ов) — они в этот файл НЕ вошли.";
     $("expNote").textContent = note;
+  });
+
+  $("btnSendSys").addEventListener("click", function(){
+    var out = buildCsvSys();
+    if(!out){
+      $("expNote").textContent = "Нечего отправлять: в купоне есть матч без исхода, а корзина пуста.";
+      return;
+    }
+    var combos = out.src === "купон" ? (tally().combos || 0) : csvPlan().total;
+    var total = combos * out.price;
+    var name = "export_sys_" + out.rows + "_" + total + ".csv";
+    var what = (out.src === "купон" ? "купон с экрана" : "корзина") + ": вариантов " + out.rows +
+      ", комбинаций " + fmt(combos) + ", итого " + fmt(total) + " ₽";
+    var extra = (out.src === "купон" && state.played.length)
+      ? " В корзине лежит " + state.played.length + " вариант(ов) — они в этот файл НЕ вошли." : "";
+
+    var file = null;
+    try{ file = new File([out.csv], name, {type:"text/csv"}); }catch(e){}
+
+    if(file && navigator.canShare && navigator.canShare({files:[file]}) && navigator.share){
+      navigator.share({files:[file], title:"Тираж №" + (state.tirazh||""), text:"Система Балтсистемы — " + what})
+        .then(function(){ $("expNote").textContent = "Файл " + name + " отправлен (" + what + ")." + extra; })
+        .catch(function(err){
+          if(err && err.name === "AbortError"){ $("expNote").textContent = "Отправка отменена."; return; }
+          copyCsv(out.csv, name);
+        });
+      return;
+    }
+    copyCsv(out.csv, name);
   });
 
   $("btnCsv").addEventListener("click", function(){
