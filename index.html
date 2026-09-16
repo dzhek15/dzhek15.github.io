@@ -129,14 +129,29 @@ input:focus-visible,button:focus-visible,summary:focus-visible,textarea:focus-vi
   box-shadow:var(--shadow); padding:18px 18px 16px;
   display:flex; flex-direction:column; align-items:stretch; gap:0;
 }
-.roll{display:flex; flex-direction:column; align-items:stretch; gap:12px; width:fit-content; max-width:100%; margin-left:auto}
+.roll{display:flex; flex-direction:column; align-items:stretch; gap:12px; width:fit-content; max-width:100%; margin-left:auto;
+}
 /* две равные половины: слева сыгранные, справа кнопки */
 .console-top{display:grid; grid-template-columns:1fr 1fr; gap:20px; align-items:start; width:100%}
 .hist-panel{min-width:0; background:transparent; border:none; padding:0}
 .hist-panel .hist{max-height:430px}
 .console-top .roll{width:100%; max-width:100%; margin:0; min-width:0}
 .roll-primary{display:flex; gap:12px; align-items:stretch; flex-wrap:wrap; justify-content:center}
-.roll-crowd{display:flex; gap:12px; align-items:stretch; flex-wrap:wrap; justify-content:center}
+/* Группы пульта в общей рамке: тот же пунктир и та же подложка, что у группы
+   «Вид», чтобы пульт читался как несколько блоков, а не одна длинная лента.
+   Подпись живёт внутри рамки, поэтому линии по бокам от неё убраны — в коробке
+   они спорят с самой рамкой. */
+.roll-group{display:flex; flex-direction:column; gap:10px; width:100%; min-width:0;
+  container-type:inline-size; container-name:rollgrp;
+  padding:7px 12px 12px; border:1px dashed var(--rule-strong); border-radius:6px;
+  background:var(--surface-2)}
+.roll .roll-group .roll-cap{margin:0; justify-content:center; color:var(--muted)}
+.roll .roll-group .roll-cap::before, .roll .roll-group .roll-cap::after{display:none}
+/* Три кнопки равными долями. Ширина решается по САМОМУ ПУЛЬТУ, а не по окну:
+   на планшете пульт занимает половину экрана и «большинство» там обрезалось,
+   хотя окно широкое. Контейнерный запрос это ловит, медиазапрос — нет. */
+.roll-crowd{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); grid-auto-rows:1fr; gap:10px}
+.btn-crowd{width:100%; height:100%; justify-content:center; text-align:center}
 .roll-secondary, .roll-modes{display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:center}
 .roll-secondary button, .roll-modes button{font-size:13.5px; padding:7px 12px}
 .roll-secondary button[aria-pressed="true"]{background:var(--ink); color:var(--surface); border-color:var(--ink)}
@@ -184,7 +199,11 @@ button:disabled{opacity:.45; cursor:not-allowed}
   background:var(--surface); color:var(--ink); -moz-appearance:textfield}
 .spin-in::-webkit-outer-spin-button, .spin-in::-webkit-inner-spin-button{-webkit-appearance:none; margin:0}
 .spin-in:focus{outline:2px solid var(--accent); outline-offset:-2px}
-.spin-group{display:inline-flex; align-items:stretch; gap:8px}
+/* три элемента жеребьёвки: кнопка тянется, число и скорость держат свою ширину.
+   На узком пульте переносятся, а не вылезают за рамку группы. */
+.spin-group{display:flex; align-items:stretch; gap:8px; flex-wrap:wrap; justify-content:center; max-width:100%}
+.spin-group .btn-spin{flex:1 1 auto; min-width:0; justify-content:center}
+.spin-group .spin-in, .spin-group .spin-speed{flex:0 0 auto}
 .spin-group .spin-in{border-radius:6px; border-color:var(--accent);
   background:var(--surface); color:var(--accent); font-weight:700}
 .btn-spin:disabled{background:var(--surface-3); border-color:var(--rule-strong); color:var(--muted)}
@@ -289,6 +308,8 @@ button:disabled{opacity:.45; cursor:not-allowed}
   .spin-in{font-size:13.5px; padding:10px 4px}
   .roll-secondary, .roll-modes{display:grid; grid-template-columns:1fr 1fr; width:100%; gap:8px}
   .roll-secondary button:last-child:nth-child(odd){grid-column:1 / -1}
+  /* ряд из одной кнопки не должен прижиматься к левому краю группы */
+  .roll-group .roll-secondary:has(> button:only-child){grid-template-columns:1fr; justify-items:center}
   /* на телефоне меняем местами: «Очистить исходы» встаёт рядом с «Вернуть»,
      а «Обновить тираж» уходит вниз на всю ширину */
   #btnReset{order:2; grid-column:auto}
@@ -798,9 +819,14 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     #btnMid{background:var(--ox); border-color:var(--ox); color:#fff}
     #btnLink.ok{background:var(--cold) !important; border-color:var(--cold) !important; color:#fff !important}
     /* три кнопки «Заполнить» в один ряд: подпись раздела уже говорит «проставить», слово в кнопках лишнее */
-    .roll .roll-crowd{display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px}
+    .roll .roll-crowd{display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); grid-auto-rows:1fr; gap:8px}
     .roll .roll-crowd .lbl-long{display:none}
-    .roll .roll-crowd button{width:100%; min-width:0; padding-left:8px; padding-right:8px; white-space:nowrap}
+    .roll .roll-crowd button{width:100%; height:100%; min-width:0; padding-left:8px; padding-right:8px; white-space:nowrap}
+    /* Ширину решает САМ ПУЛЬТ, а не окно: на планшете он занимает половину экрана,
+       и «большинство» обрезалось при широком окне. Медиазапрос такого не ловит. */
+    @container rollgrp (max-width:430px){
+      .roll .roll-crowd{grid-template-columns:1fr}
+    }
     #btnMid:hover:not(:disabled){filter:brightness(1.1)}
     #btnMid:disabled{border-color:var(--rule-strong); color:var(--muted); background:transparent}
     #btnMid:disabled .ar{color:var(--muted)}
@@ -873,6 +899,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
           <button id="btnUndo" type="button" disabled><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M7 4.5 3 8.5l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 8.5H12a4.5 4.5 0 0 1 0 9h-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Вернуть</button>
           <button id="btnFetch" type="button" title="Забрать актуальный тираж Балтсистемы с totobrief"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4.2 12.5a6 6 0 0 1 9.9-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M15.8 7.5a6 6 0 0 1-9.9 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M14.6 3.1v3.6h-3.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.4 16.9v-3.6h3.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lbl">Обновить тираж</span></button>
         </div>
+        <div class="roll-group">
         <div class="roll-cap">Заполнить</div>
         <div class="roll-crowd">
         <button class="btn-spin btn-crowd" id="btnMost" type="button"><span class="ar">▲</span><span class="lbl-long">Проставить </span>большинство</button>
@@ -882,6 +909,8 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         <div class="roll-secondary">
           <button id="btnReset" type="button" title="Снять отметки со всех строк, кроме зафиксированных. Откатывается кнопкой «Вернуть»"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="13" height="13" rx="3"/><path d="M7.6 7.6l4.8 4.8"/><path d="M12.4 7.6l-4.8 4.8"/></svg><span class="lbl">Очистить исходы</span></button>
         </div>
+        </div>
+        <div class="roll-group">
         <div class="roll-cap">Рандом</div>
         <div class="roll-modes">
         <button id="btnMarkAll" type="button" title="Пометить «рандом» все строки, кроме зафиксированных. Где отмечено два-три исхода — жеребьёвка пойдёт только по ним"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="13" height="13" rx="3"/><circle cx="7.2" cy="7.2" r="1.15" fill="currentColor" stroke="none"/><circle cx="12.8" cy="12.8" r="1.15" fill="currentColor" stroke="none"/></svg><span class="lbl">Все в рандом</span></button>
@@ -899,6 +928,8 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         </select>
       </span>
       </div>
+        </div>
+        <div class="roll-group">
         <div class="roll-cap">Аналитика</div>
         <div class="roll-ev">
         <button class="btn-ev" id="btnEV" type="button" title="Посчитать матожидание купона: вероятности из коэффициентов, соперники — из долей пула"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5V9.5"/><path d="M10 16.5V4"/><path d="M15.5 16.5v-5"/></svg><span class="lbl">Оценить купон</span></button>
@@ -906,7 +937,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
                 <button class="btn-ev" id="btnPF" type="button" title="Отобрать из системы строки, которые меньше всего пересекаются с выбором толпы"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 4.5h13l-5 5.8v5.2l-3 1.6v-6.8z"/></svg><span class="lbl">Отобрать строки</span></button>
         <button class="btn-ev" id="btnBrief" type="button" title="Собрать систему с гарантией: часть строк купона вместо всех"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3.5" width="15" height="13" rx="1.5"/><path d="M2.5 8h15"/><path d="M7.5 8v8.5"/><path d="M12.5 8v8.5"/></svg><span class="lbl">Бриф</span></button>
       </div>
-        
+        </div>
     </div>
   </div>
   <p class="roll-note" id="rollNote"></p>
@@ -1018,7 +1049,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. «РАНДОМ» ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; в корзину при этом ничего не уходит — для этого есть «Положить купон в корзину». Строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 16.09 21:05 МСК</span>
+    <span class="build">сборка 16.09 21:35 МСК</span>
   </footer>
 </div>
 
