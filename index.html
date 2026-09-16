@@ -757,6 +757,10 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     .pct-legend .lg-s:has(.lg-box){border-color:transparent}
     .bk-msg{background:transparent !important; color:var(--ink) !important; border:1px dashed var(--brand-gold, #c9a24b) !important}
     #tirazhName{border-bottom:0 !important; cursor:default; pointer-events:none}
+    /* пульт по шагам: служебная строка, затем «Заполнить / Рандом / Проверить» с подписями-разделителями */
+    .roll .roll-service{justify-content:space-between}
+    .roll .roll-cap{display:flex; align-items:center; gap:10px; margin:6px 0 -4px; font-size:10px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--muted)}
+    .roll .roll-cap::before, .roll .roll-cap::after{content:""; flex:1; height:1px; background:var(--rule)}
     .pct-legend .lg-tip{margin-top:8px; padding-top:7px; border-top:1px dashed var(--rule); text-align:center; font-size:11.5px}
     @media (max-width:520px){ .pct-legend{font-size:12px; gap:10px} .pct-legend .lg-row{grid-template-columns:56px 1fr} }
   </style>
@@ -820,7 +824,24 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       <p class="empty" id="histEmpty">Корзина пуста. Каждый бросок и каждая прокрутка падают сюда. В CSV уходят только отмеченные галочкой варианты.</p>
     </section>
     <div class="roll">
-      <div class="roll-primary">
+        <div class="roll-secondary roll-service">
+          <button id="btnUndo" type="button" disabled><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M7 4.5 3 8.5l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 8.5H12a4.5 4.5 0 0 1 0 9h-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Вернуть</button>
+          <button id="btnFetch" type="button" title="Забрать актуальный тираж Балтсистемы с totobrief"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4.2 12.5a6 6 0 0 1 9.9-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M15.8 7.5a6 6 0 0 1-9.9 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M14.6 3.1v3.6h-3.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.4 16.9v-3.6h3.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lbl">Обновить тираж</span></button>
+        </div>
+        <div class="roll-cap">Заполнить</div>
+        <div class="roll-crowd">
+        <button class="btn-spin btn-crowd" id="btnMost" type="button"><span class="ar">▲</span><span class="lbl-long">Проставить </span>большинство</button>
+        <button class="btn-spin btn-crowd" id="btnLeast" type="button"><span class="ar">▼</span><span class="lbl-long">Проставить </span>меньшинство</button>
+      </div>
+        <div class="roll-secondary">
+          <button id="btnReset" type="button" title="Снять отметки со всех строк, кроме зафиксированных. Откатывается кнопкой «Вернуть»"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="13" height="13" rx="3"/><path d="M7.6 7.6l4.8 4.8"/><path d="M12.4 7.6l-4.8 4.8"/></svg><span class="lbl">Очистить исходы</span></button>
+        </div>
+        <div class="roll-cap">Рандом</div>
+        <div class="roll-modes">
+        <button id="btnMarkAll" type="button" title="Пометить «рандом» все строки, кроме зафиксированных. Где отмечено два-три исхода — жеребьёвка пойдёт только по ним"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="13" height="13" rx="3"/><circle cx="7.2" cy="7.2" r="1.15" fill="currentColor" stroke="none"/><circle cx="12.8" cy="12.8" r="1.15" fill="currentColor" stroke="none"/></svg><span class="lbl">Все в рандом</span></button>
+        <button id="btnClearModes" type="button" title="Убрать «рандом» со всех строк и вернуть в жеребьёвку все три исхода. Зафиксированные строки не трогает"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="6.5"/><path d="M5.4 5.4l9.2 9.2"/></svg><span class="lbl">Снять режимы</span></button>
+      </div>
+        <div class="roll-primary">
       <span class="spin-group">
         <button class="btn-spin" id="btnSpin" type="button"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5.5h3.2l7.6 9h3.2"/><path d="M3 14.5h3.2l7.6-9h3.2"/><path d="M15 3.3l2.2 2.2-2.2 2.2"/><path d="M15 12.3l2.2 2.2-2.2 2.2"/></svg><span class="lbl">РАНДОМ ×</span></button>
         <input type="number" id="spinCount" class="spin-in" value="1" min="1" max="100000" step="1"
@@ -832,25 +853,13 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         </select>
       </span>
       </div>
-      <div class="roll-ev">
+        <div class="roll-cap">Проверить</div>
+        <div class="roll-ev">
         <button class="btn-ev" id="btnEV" type="button" title="Посчитать матожидание купона: вероятности из коэффициентов, соперники — из долей пула"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5V9.5"/><path d="M10 16.5V4"/><path d="M15.5 16.5v-5"/></svg><span class="lbl">Оценить купон</span></button>
         <button class="btn-ev" id="btnDiff" type="button" title="Где доля игроков сильнее всего расходится с оценкой конторы"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.5v13"/><path d="M4.5 6.5h11"/><path d="M2.5 12.2 4.9 7l2.4 5.2a2.6 2.6 0 0 1-4.8 0z"/><path d="M12.7 12.2 15.1 7l2.4 5.2a2.6 2.6 0 0 1-4.8 0z"/></svg><span class="lbl">Расхождения</span></button>
         <button class="btn-ev" id="btnPF" type="button" title="Отобрать из системы строки, которые меньше всего пересекаются с выбором толпы"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 4.5h13l-5 5.8v5.2l-3 1.6v-6.8z"/></svg><span class="lbl">Отобрать строки</span></button>
       </div>
-      <div class="roll-crowd">
-        <button class="btn-spin btn-crowd" id="btnMost" type="button"><span class="ar">▲</span><span class="lbl-long">Проставить </span>большинство</button>
-        <button class="btn-spin btn-crowd" id="btnLeast" type="button"><span class="ar">▼</span><span class="lbl-long">Проставить </span>меньшинство</button>
       </div>
-      <div class="roll-secondary">
-        <button id="btnUndo" type="button" disabled><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M7 4.5 3 8.5l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 8.5H12a4.5 4.5 0 0 1 0 9h-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Вернуть</button>
-        <button id="btnFetch" type="button" title="Забрать актуальный тираж Балтсистемы с totobrief"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4.2 12.5a6 6 0 0 1 9.9-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M15.8 7.5a6 6 0 0 1-9.9 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M14.6 3.1v3.6h-3.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.4 16.9v-3.6h3.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lbl">Обновить тираж</span></button>
-        <button id="btnReset" type="button" title="Снять отметки со всех строк, кроме зафиксированных. Откатывается кнопкой «Вернуть»"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="13" height="13" rx="3"/><path d="M7.6 7.6l4.8 4.8"/><path d="M12.4 7.6l-4.8 4.8"/></svg><span class="lbl">Очистить исходы</span></button>
-      </div>
-      <div class="roll-modes">
-        <button id="btnMarkAll" type="button" title="Пометить «рандом» все строки, кроме зафиксированных. Где отмечено два-три исхода — жеребьёвка пойдёт только по ним"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="13" height="13" rx="3"/><circle cx="7.2" cy="7.2" r="1.15" fill="currentColor" stroke="none"/><circle cx="12.8" cy="12.8" r="1.15" fill="currentColor" stroke="none"/></svg><span class="lbl">Все в рандом</span></button>
-        <button id="btnClearModes" type="button" title="Убрать «рандом» со всех строк и вернуть в жеребьёвку все три исхода. Зафиксированные строки не трогает"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="6.5"/><path d="M5.4 5.4l9.2 9.2"/></svg><span class="lbl">Снять режимы</span></button>
-      </div>
-    </div>
     </div>
     <div class="knob-sep"></div>
     <div class="knobs">
@@ -963,7 +972,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. «РАНДОМ» ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; в корзину при этом ничего не уходит — для этого есть «Положить купон в корзину». Строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 16.09 15:50 МСК</span>
+    <span class="build">сборка 16.09 16:00 МСК</span>
   </footer>
 </div>
 
