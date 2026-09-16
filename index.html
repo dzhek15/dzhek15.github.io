@@ -934,7 +934,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. «РАНДОМ» ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; в корзину при этом ничего не уходит — для этого есть «Положить купон в корзину». Строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 16.09 14:05 МСК</span>
+    <span class="build">сборка 16.09 14:15 МСК</span>
   </footer>
 </div>
 
@@ -3852,8 +3852,13 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     state.jackWins = fin.filter(function(x){ return Number(x.jackpot) <= 1000001; }).length;
   }
 
+  /* история нужна только для медиан фонда и суперприза — раз в 6 часов хватает.
+     Без этого опрос счёта раз в минуту каждый раз тянул бы ещё 5 страниц списка тиражей */
+  var histAt = 0;
   function loadHistory(firstPage){
     if(histLoading || typeof fetch !== "function") return;
+    if(histAt && Date.now() - histAt < 6 * 3600 * 1000) return;
+    histAt = Date.now();
     histLoading = true;
     var jobs = [];
     for(var p = 2; p <= HIST_PAGES; p++){
