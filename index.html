@@ -934,7 +934,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. «РАНДОМ» ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; в корзину при этом ничего не уходит — для этого есть «Положить купон в корзину». Строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 16.09 13:50 МСК</span>
+    <span class="build">сборка 16.09 14:05 МСК</span>
   </footer>
 </div>
 
@@ -1119,6 +1119,14 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     return best;
   }
 
+  /* время последнего ответа totobrief, по МСК */
+  function resStamp(){
+    if(!state.resAt) return "";
+    var d = new Date(Number(state.resAt) + 3 * 3600000);
+    var two = function(x){ return (x < 10 ? "0" : "") + x; };
+    return two(d.getUTCHours()) + ":" + two(d.getUTCMinutes());
+  }
+
   function renderKickoff(){
     var tc = $("tkCount"); /* плитку «Матчей» убрали — оставляем проверку на случай возврата */
     if(tc) tc.textContent = state.matches.length;
@@ -1176,7 +1184,10 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     var diff = ts - Date.now();
     if(diff <= 0){
       tv.classList.add("shut"); lv.classList.add("shut");
-      lv.textContent = "закрыт";
+      lv.textContent = "закрыт" + (state.resAt ? " · обн. " + resStamp() : "");
+      lv.title = state.matches.length && state.matches.every(function(m){ return m.res; })
+        ? "Все результаты подведены, автообновление остановлено"
+        : "Пока идут матчи, счёт сам обновляется раз в минуту (если вкладка открыта)";
       return;
     }
     var mins = Math.floor(diff / 60000);
@@ -3550,6 +3561,8 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       line += " · по факту угадано " + h + " из " + st.played +
               (ms ? ", максимум " + (cur.length - ms) : ", идёт на все " + cur.length);
     }
+    var ko = kickoffMs();
+    if(ko != null && ko <= Date.now() && state.resAt) line += " · обновлено " + resStamp();
     $("bkHit").textContent = line;
     var sb = $("bkStat");
     if(st && st.played){
@@ -3811,7 +3824,9 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       m.res = normOut(evs[i].result) || "";
       m.score = evs[i].score || "";
     }
-    save(); render();
+    state.resAt = Date.now();          /* когда данные с totobrief пришли в последний раз */
+    save();
+    if(book) bookShow(); else render();   /* bookShow сам вызывает render и пересчитывает «по факту угадано» */
     return true;
   }
 
@@ -3891,6 +3906,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     state.matches = list;
     state.tirazh = String(info.number || state.tirazh);
     state.deadline = info.ended_at || state.deadline;
+    state.resAt = Date.now();
     state.played = [];
     state.spent = 0;
     state.rolls = 0;
@@ -4000,7 +4016,10 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       });
   }
 
-  $("btnFetch").addEventListener("click", function(){ pullTirazh(false); });
+  $("btnFetch").addEventListener("click", function(){
+    /* в просмотре файла освежаем открытый тираж, а не переходим на следующий */
+    if(book) pullTirazh(false, state.tirazh); else pullTirazh(false);
+  });
 
   $("btnPct").addEventListener("click", function(){
     state.showPct = !state.showPct;
@@ -4336,15 +4355,32 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   /* пока приём идёт и вкладка открыта, доли игроков сами подтягиваются раз в 7 минут:
      они ползут весь день, а «большинство/меньшинство» считаются именно по ним */
+  /* автообновление (вкладка в фоне — не опрашиваем):
+     — приём идёт — раз в 7 минут, доли игроков ползут медленно;
+     — приём закрыт, а в тираже есть неподведённые матчи — раз в минуту, ради счёта.
+       Тянем ОТКРЫТЫЙ тираж по номеру, чтобы не перескочить на следующий;
+     — все результаты подведены или приём закрылся больше 3 дней назад — не опрашиваем */
+  var lastAuto = Date.now();
   setInterval(function(){
     try{
       if(document.hidden) return;
       if(typeof fetch !== "function") return;
+      if(!state.matches.length) return;
       var ts = kickoffMs();
-      if(ts === null || ts - Date.now() <= 0) return;      /* приём закрыт — обновлять нечего */
-      pullTirazh(true);
+      if(ts == null) return;
+      var now = Date.now(), open = ts - now > 0;
+      if(!open){
+        if(!state.tirazh) return;
+        if(now - ts > 3 * 24 * 3600 * 1000) return;
+        if(state.matches.every(function(m){ return m.res; })) return;
+      }
+      var every = open ? 7 * 60 * 1000 : 60 * 1000;
+      if(now - lastAuto < every - 2000) return;
+      if($("btnFetch").disabled) return;      /* прошлый запрос ещё идёт */
+      lastAuto = now;
+      if(open && !book) pullTirazh(true); else pullTirazh(true, state.tirazh);
     }catch(e){}
-  }, 7 * 60 * 1000);
+  }, 15 * 1000);
 })();
 </script>
 
