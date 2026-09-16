@@ -934,7 +934,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. «РАНДОМ» ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; в корзину при этом ничего не уходит — для этого есть «Положить купон в корзину». Строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 16.09 13:40 МСК</span>
+    <span class="build">сборка 16.09 13:50 МСК</span>
   </footer>
 </div>
 
@@ -2086,8 +2086,8 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         b.textContent = o;
         if(m.res === o) b.classList.add("won");
         b.setAttribute("aria-pressed", m.picks[o] ? "true" : "false");
-        if(book && book.rows[book.idx] && book.rows[book.idx].length === state.matches.length
-           && book.rows[book.idx][idx] === o) b.classList.add("bk-on");
+        if(book && bookPages()[book.idx] && bookPages()[book.idx].length === state.matches.length
+           && String(bookPages()[book.idx][idx]).indexOf(o) >= 0) b.classList.add("bk-on");
         var inPool = m.pool.indexOf(o) >= 0;
         if(m.mode==="rand"){
           if(!inPool) b.classList.add("off-pool");
@@ -3292,7 +3292,36 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     return u8;
   }
 
-  function varsEncode(rows, cb){
+  /* сжатие байтов для ссылки: gzip, если браузер умеет, иначе как есть */
+  function packBytes(u8, zt, rt, cb){
+    if(typeof CompressionStream === "function"){
+      try{
+        new Response(new Blob([u8]).stream().pipeThrough(new CompressionStream("gzip")))
+          .arrayBuffer()
+          .then(function(ab){ cb(zt + b64u(new Uint8Array(ab))); })
+          .catch(function(){ cb(rt + b64u(u8)); });
+        return;
+      }catch(e){}
+    }
+    cb(rt + b64u(u8));
+  }
+
+  function varsEncode(rows, cb, pages){
+    /* в файле есть строки-системы — шлём сами строки (маска исходов на матч: 1=«1», 2=«X», 4=«2»),
+       чтобы у получателя было столько же купонов, сколько в файле, а не развёрнутые варианты */
+    if(pages === undefined && book && book.rows === rows) pages = book.pages;
+    if(pages && pages.some(function(p){ return p.some(function(c){ return String(c).length > 1; }); })){
+      var mb = [], NN = state.matches.length;
+      for(var pp = 0; pp < pages.length; pp++)
+        for(var jj = 0; jj < NN; jj++){
+          var cc = String(pages[pp][jj] || "");
+          var mk = (cc.indexOf("1") >= 0 ? 1 : 0) | (cc.indexOf("X") >= 0 ? 2 : 0) | (cc.indexOf("2") >= 0 ? 4 : 0);
+          if(!mk){ cb(null); return; }
+          mb.push(mk);
+        }
+      packBytes(new Uint8Array(mb), "y", "s", cb);
+      return;
+    }
     var N = state.matches.length, IX = {"1":0, "X":1, "2":2};
     var bytes = [], prev = 0, r, i;
     for(r = 0; r < rows.length; r++){
@@ -3321,6 +3350,41 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   }
 
   function varsDecode(payload, N, cb){
+    var tag0 = String(payload).charAt(0);
+    if(tag0 === "y" || tag0 === "s"){
+      var body0;
+      try{ body0 = unb64u(String(payload).slice(1)); }catch(e){ cb(null); return; }
+      var fin = function(u8){
+        if(!u8.length || u8.length % N){ cb(null); return; }
+        var pages = [], rows = [];
+        for(var p0 = 0; p0 < u8.length; p0 += N){
+          var page = [], combo = [[]];
+          for(var j0 = 0; j0 < N; j0++){
+            var mk = u8[p0 + j0], set = [];
+            for(var oi = 0; oi < 3; oi++) if(mk & (1 << oi)) set.push(OUT[oi]);
+            if(!set.length){ cb(null); return; }
+            page.push(set.join(""));
+            var nx = [];
+            for(var a0 = 0; a0 < combo.length; a0++)
+              for(var b0 = 0; b0 < set.length; b0++) nx.push(combo[a0].concat(set[b0]));
+            combo = nx;
+          }
+          pages.push(page);
+          for(var q0 = 0; q0 < combo.length && rows.length < MAX_CSV; q0++) rows.push(combo[q0]);
+        }
+        cb(rows, pages);
+      };
+      if(tag0 === "y"){
+        if(typeof DecompressionStream !== "function"){ cb(null); return; }
+        try{
+          new Response(new Blob([body0]).stream().pipeThrough(new DecompressionStream("gzip")))
+            .arrayBuffer()
+            .then(function(ab){ fin(new Uint8Array(ab)); })
+            .catch(function(){ cb(null); });
+        }catch(e){ cb(null); }
+      } else fin(body0);
+      return;
+    }
     var tag = String(payload).charAt(0), body;
     try{ body = unb64u(String(payload).slice(1)); }
     catch(e){ cb(null); return; }
@@ -3384,12 +3448,13 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       return;
     }
     pendingBook = null;
-    varsDecode(p.payload, state.matches.length, function(rows){
+    varsDecode(p.payload, state.matches.length, function(rows, pages){
       if(!rows){
         say("Ссылку со списком вариантов развернуть не удалось — похоже, адрес обрезался при пересылке.");
         return;
       }
-      book = { name: "варианты по ссылке · тираж №" + (state.tirazh || ""), rows: rows, idx: 0 };
+      book = { name: "варианты по ссылке · тираж №" + (state.tirazh || ""), rows: rows, pages: pages || null,
+              lines: pages ? pages.length : 0, idx: 0 };
       bookShow();
       say("Из ссылки открыто " + fmt(rows.length) + " вариант(ов). Свой купон цел: листай стрелками " +
           "или свайпом, «Закрыть» вернёт тебя к нему.");
@@ -3411,7 +3476,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   function parseCsvVariants(text){
     var need = state.matches.length;
     var lines = String(text).split(/\r?\n/);
-    var out = [], bad = 0, over = false;
+    var out = [], pages = [], bad = 0, over = false;
     for(var i=0;i<lines.length;i++){
       var s = lines[i].trim();
       if(!s) continue;
@@ -3435,6 +3500,8 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         cols.push(set);
       }
       if(!ok){ bad++; continue; }
+      /* страница просмотра — строка файла как есть: «1X» в матче подсвечивает обе кнопки */
+      pages.push(cols.map(function(set){ return OUT.filter(function(o){ return set.indexOf(o) >= 0; }).join(""); }));
       var combo = [[]];
       for(var j2=0;j2<cols.length;j2++){
         var nx = [];
@@ -3449,7 +3516,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         out.push(combo[q2]);
       }
     }
-    return { rows: out, bad: bad, over: over, need: need };
+    return { rows: out, pages: pages, bad: bad, over: over, need: need };
   }
 
   function bookShow(){
@@ -3464,19 +3531,21 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     document.body.dataset.book = "1";
     $("bkName").textContent = book.name + (book.lines && book.lines !== book.rows.length
       ? " · " + fmt(book.lines) + " строк → " + fmt(book.rows.length) + " вариантов" : "");
-    $("bkNum").max = book.rows.length;
+    $("bkNum").max = bookPages().length;
     $("bkNum").value = book.idx + 1;
-    $("bkTotal").textContent = "из " + fmt(book.rows.length);
-    var cur = book.rows[book.idx], same = 0;
-    state.matches.forEach(function(m, i){ if(cur[i] && m.picks[cur[i]]) same++; });
-    var line = "вариант " + fmt(book.idx + 1) +
+    $("bkTotal").textContent = "из " + fmt(bookPages().length);
+    var cur = bookPages()[book.idx], same = 0, combosHere = 1;
+    cur.forEach(function(c){ combosHere *= String(c).length || 1; });
+    state.matches.forEach(function(m, i){ if(cur[i] && String(cur[i]).split("").some(function(o){ return m.picks[o]; })) same++; });
+    var line = (book.pages && book.pages.length !== book.rows.length ? "купон " : "вариант ") + fmt(book.idx + 1) +
+      (combosHere > 1 ? " (система на " + fmt(combosHere) + " вар.)" : "") +
       " · совпадает с твоим купоном в " + same + " из " + cur.length + " матчей";
     var st = bookStats();
     if(st && st.played){
       var h = 0, ms = 0;
       state.matches.forEach(function(m, i){
         if(!m.res) return;
-        if(cur[i] === m.res) h++; else ms++;
+        if(String(cur[i]).indexOf(m.res) >= 0) h++; else ms++;
       });
       line += " · по факту угадано " + h + " из " + st.played +
               (ms ? ", максимум " + (cur.length - ms) : ", идёт на все " + cur.length);
@@ -3502,12 +3571,18 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   function bookGo(n){
     if(!book) return;
-    var L = book.rows.length;
+    var L = bookPages().length;
     book.idx = ((n % L) + L) % L;          /* по кругу: с последней страницы снова на первую */
     bookShow();
   }
 
   /* сообщение прямо в полосе просмотра файла — нижняя «Выгрузка» часто за экраном */
+  /* страницы просмотра: строки файла как есть (системы не разворачиваем); варианты — book.rows */
+  function bookPages(){
+    if(!book) return [];
+    return (book.pages && book.pages.length) ? book.pages : book.rows;
+  }
+
   function bookMsg(msg){
     var el = $("bkMsg"); if(!el) return;
     el.textContent = msg || "";
@@ -3526,6 +3601,11 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       return { csv: book.text.replace(/\r\n?/g, "\n").replace(/\n*$/, "\n"),
                name: /\.csv$/i.test(book.name) ? book.name : nm + ".csv",
                what: "файл " + book.name + " как есть (строк " + fmt(book.lines || 0) + ", вариантов " + fmt(book.rows.length) + ")" };
+    }
+    if(sys && book.pages && book.pages.length){
+      var pl = book.pages.map(function(r){ return String(price) + ";" + r.join(";"); });
+      return { csv: pl.join("\n") + "\n", name: nm + "_sys_" + pl.length + ".csv",
+               what: "системой: строк " + fmt(pl.length) + ", вариантов " + fmt(book.rows.length) };
     }
     var lines = book.rows.map(function(r){ return String(price) + ";" + r.join(";"); });
     return { csv: lines.join("\n") + "\n", name: nm + "_" + lines.length + "v.csv",
@@ -3569,7 +3649,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
           " исходов (1, X или 2), либо цена строки и следом " + res.need + " исходов.");
         return;
       }
-      book = { name: f.name, rows: res.rows, idx: 0, text: String(rd.result || ""),
+      book = { name: f.name, rows: res.rows, pages: res.pages, idx: 0, text: String(rd.result || ""),
                 lines: String(rd.result || "").split(/\r?\n/).filter(function(l){ return l.trim(); }).length };
       bookShow();
       $("expNote").textContent = "Открыт файл " + f.name + ": " + fmt(res.rows.length) + " вариант(ов)." +
@@ -3587,10 +3667,10 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   $("bkPrev").addEventListener("click", function(){ if(book) bookGo(book.idx - 1); });
   $("bkNext").addEventListener("click", function(){ if(book) bookGo(book.idx + 1); });
   $("bkFirst").addEventListener("click", function(){ bookGo(0); });
-  $("bkLast").addEventListener("click", function(){ if(book) bookGo(book.rows.length - 1); });
+  $("bkLast").addEventListener("click", function(){ if(book) bookGo(bookPages().length - 1); });
   $("bkNum").addEventListener("input", function(e){
     var n = Number(e.target.value);
-    if(book && isFinite(n) && n >= 1 && n <= book.rows.length) bookGo(Math.round(n) - 1);
+    if(book && isFinite(n) && n >= 1 && n <= bookPages().length) bookGo(Math.round(n) - 1);
   });
   $("bkLink").addEventListener("click", function(){
     if(!book) return;
@@ -3652,11 +3732,11 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   $("bkClose").addEventListener("click", function(){ bookClose("Просмотр файла закрыт, купон остался прежним."); });
   $("bkToCoupon").addEventListener("click", function(){
     if(!book) return;
-    var cur = book.rows[book.idx].slice(), n = book.idx + 1;
+    var cur = bookPages()[book.idx].slice(), n = book.idx + 1;
     pushHistory("до переноса варианта из CSV");
     state.matches.forEach(function(m, i){
       if(!cur[i]) return;
-      OUT.forEach(function(o){ m.picks[o] = (o === cur[i]); });
+      OUT.forEach(function(o){ m.picks[o] = String(cur[i]).indexOf(o) >= 0; });
       m.mode = "none";
       m.pool = OUT.slice();
     });
