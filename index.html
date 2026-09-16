@@ -759,6 +759,10 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     #tirazhName{border-bottom:0 !important; cursor:default; pointer-events:none}
     /* пульт по шагам: служебная строка, затем «Заполнить / Рандом / Проверить» с подписями-разделителями */
     .roll .roll-service{justify-content:space-between}
+    #btnMid{background:var(--ox); border-color:var(--ox); color:#fff}
+    #btnMid:hover:not(:disabled){filter:brightness(1.1)}
+    #btnMid:disabled{border-color:var(--rule-strong); color:var(--muted); background:transparent}
+    #btnMid:disabled .ar{color:var(--muted)}
     .roll .roll-cap{display:flex; align-items:center; gap:10px; margin:6px 0 -4px; font-size:10px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--muted)}
     .roll .roll-cap::before, .roll .roll-cap::after{content:""; flex:1; height:1px; background:var(--rule)}
     .pct-legend .lg-tip{margin-top:8px; padding-top:7px; border-top:1px dashed var(--rule); text-align:center; font-size:11.5px}
@@ -831,6 +835,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         <div class="roll-cap">Заполнить</div>
         <div class="roll-crowd">
         <button class="btn-spin btn-crowd" id="btnMost" type="button"><span class="ar">▲</span><span class="lbl-long">Проставить </span>большинство</button>
+        <button class="btn-spin btn-crowd" id="btnMid" type="button"><span class="ar">◆</span><span class="lbl-long">Проставить </span>средние</button>
         <button class="btn-spin btn-crowd" id="btnLeast" type="button"><span class="ar">▼</span><span class="lbl-long">Проставить </span>меньшинство</button>
       </div>
         <div class="roll-secondary">
@@ -972,7 +977,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. «РАНДОМ» ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; в корзину при этом ничего не уходит — для этого есть «Положить купон в корзину». Строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 16.09 16:00 МСК</span>
+    <span class="build">сборка 16.09 16:10 МСК</span>
   </footer>
 </div>
 
@@ -2334,6 +2339,8 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     var havePct = state.matches.some(function(m){ return m.pct; });
     $("btnMost").disabled = !havePct || spinning;
     $("btnLeast").disabled = !havePct || spinning;
+    $("btnMid").disabled = !havePct || spinning;
+    $("btnMid").title = havePct ? "В каждом матче поставить исход со средней долей игроков — между самым популярным и самым редким" : "Нет процентов — сначала «Обновить тираж»";
     $("btnMost").title = havePct
       ? "В каждом матче поставить исход, который выбрало больше всего игроков"
       : "Нет процентов — сначала «Обновить тираж»";
@@ -2839,7 +2846,8 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       say("В строках нет процентов — сначала нажми «Обновить тираж», чтобы подтянуть доли игроков с totobrief.");
       return;
     }
-    pushHistory(most ? "до расстановки большинства" : "до расстановки меньшинства");
+    var mid = most === "mid";   /* «средние»: исход со средней долей игроков — не самый популярный и не самый редкий */
+    pushHistory(mid ? "до расстановки средних" : (most ? "до расстановки большинства" : "до расстановки меньшинства"));
     var set = 0, locked = 0, noData = 0, ties = 0;
     state.matches.forEach(function(m){
       if(!(m.pct && m.pct.pool)){ noData++; return; }
@@ -2847,9 +2855,10 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       var vals = [];
       for(var i=0;i<3;i++){
         var v = Number(m.pct.pool[i]);
-        vals.push(isFinite(v) ? v : (most ? -1 : Infinity));
+        vals.push(isFinite(v) ? v : (mid ? NaN : (most ? -1 : Infinity)));
       }
-      var target = most ? Math.max(vals[0], vals[1], vals[2]) : Math.min(vals[0], vals[1], vals[2]);
+      var target = mid ? vals.slice().sort(function(a, b){ return a - b; })[1]
+                     : (most ? Math.max(vals[0], vals[1], vals[2]) : Math.min(vals[0], vals[1], vals[2]));
       if(!isFinite(target)){ noData++; return; }
       if(vals.filter(function(x){ return x === target; }).length > 1) ties++;
       m.picks = {"1":false,"X":false,"2":false};
@@ -2859,7 +2868,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     });
     save(); render();
     var t0 = tally();
-    say((most ? "Большинство" : "Меньшинство") + " по долям игроков проставлено в " + set + " матч(ах)" +
+    say((mid ? "Средние" : (most ? "Большинство" : "Меньшинство")) + " по долям игроков проставлено в " + set + " матч(ах)" +
         (locked ? ", зафиксированных не трогал: " + locked : "") +
         (noData ? ", без процентов пропущено: " + noData : "") +
         (ties ? ", в " + ties + " матч(ах) доли совпали — взят первый по порядку 1/X/2" : "") +
@@ -2868,6 +2877,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   }
 
   $("btnMost").addEventListener("click", function(){ pickByCrowd(true); });
+  $("btnMid").addEventListener("click", function(){ pickByCrowd("mid"); });
   $("btnLeast").addEventListener("click", function(){ pickByCrowd(false); });
 
   $("btnMarkAll").addEventListener("click", function(){
