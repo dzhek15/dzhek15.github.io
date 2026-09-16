@@ -612,7 +612,9 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 #csvPrev{width:100%; font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--ink);
   word-break:break-all; background:var(--surface-2); border:1px solid var(--rule); border-radius:var(--r);
   padding:6px 8px; display:block}
-.bk-stat{display:block; font-size:11px; color:var(--cold); font-weight:600; margin-top:2px}
+.bk-msg{display:block; font-size:12px; line-height:1.35; color:#1a1410; background:#fff3c4; border:1px solid #c9a24b; border-radius:4px; padding:3px 7px; margin-top:4px; font-weight:600}
+    .bk-r button.ok{background:#2e7d32 !important; color:#fff !important; border-color:#2e7d32 !important}
+    .bk-stat{display:block; font-size:11px; color:var(--cold); font-weight:600; margin-top:2px}
 /* фактический исход матча: зелёная обводка кнопки — точка под кнопкой
    налезала на проценты и читалась как часть стрелки ▲▼ */
 .pick.won{outline:2px solid var(--cold); outline-offset:1px}
@@ -849,6 +851,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       <span class="bk-name" id="bkName"></span>
       <span class="bk-hit" id="bkHit"></span>
       <span class="bk-stat" id="bkStat" hidden></span>
+      <span class="bk-msg" id="bkMsg" hidden></span>
     </div>
     <div class="bk-nav">
       <button id="bkFirst" type="button" title="К первому варианту" aria-label="К первому варианту">&#9198;</button>
@@ -931,7 +934,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. «РАНДОМ» ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; в корзину при этом ничего не уходит — для этого есть «Положить купон в корзину». Строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 16.09 13:00 МСК</span>
+    <span class="build">сборка 16.09 13:30 МСК</span>
   </footer>
 </div>
 
@@ -2270,6 +2273,12 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       $("btnCsvSys").disabled = t.empty > 0;
     }
     $("btnSendSys").disabled = $("btnCsvSys").disabled;
+    if(book){
+      ["btnCsv","btnSend","btnCsvSys","btnSendSys"].forEach(function(id){ $(id).disabled = false; });
+      en.textContent = "Открыт файл «" + book.name + "» — пока он открыт, кнопки ниже работают с НИМ, а не с корзиной: «CSV» — " +
+        fmt(book.rows.length) + " вариант(ов) по одному в строке" + (book.text ? ", «системой» — сам файл как есть" : "") +
+        ". Закроешь просмотр — кнопки вернутся к корзине и купону.";
+    }
 
     document.documentElement.setAttribute("data-compact", state.compact ? "1" : "0");
     applyZoom();
@@ -3453,7 +3462,8 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     }
     bar.hidden = false;
     document.body.dataset.book = "1";
-    $("bkName").textContent = book.name;
+    $("bkName").textContent = book.name + (book.lines && book.lines !== book.rows.length
+      ? " · " + fmt(book.lines) + " строк → " + fmt(book.rows.length) + " вариантов" : "");
     $("bkNum").max = book.rows.length;
     $("bkNum").value = book.idx + 1;
     $("bkTotal").textContent = "из " + fmt(book.rows.length);
@@ -3497,8 +3507,47 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     bookShow();
   }
 
+  /* сообщение прямо в полосе просмотра файла — нижняя «Выгрузка» часто за экраном */
+  function bookMsg(msg){
+    var el = $("bkMsg"); if(!el) return;
+    el.textContent = msg || "";
+    el.hidden = !(msg && book);
+  }
+  function bookSay(msg){ $("expNote").textContent = msg; bookMsg(msg); }
+
+  /* пока открыт файл, «Скачать/Отправить» работают с НИМ, а не с корзиной:
+     «CSV» — по одному варианту в строке, «системой» — сам файл как есть */
+  function bookExport(sys){
+    var price = Number(state.price) > 0 ? Number(state.price) : 30;
+    var nm = String(book.name || "варианты").replace(/\.csv$/i, "").replace(/[\\\/:*?"<>|·№]+/g, " ").trim().replace(/\s+/g, "_");
+    if(sys && book.text){
+      return { csv: book.text.replace(/\r\n?/g, "\n").replace(/\n*$/, "\n"),
+               name: /\.csv$/i.test(book.name) ? book.name : nm + ".csv",
+               what: "файл " + book.name + " как есть (строк " + fmt(book.lines || 0) + ", вариантов " + fmt(book.rows.length) + ")" };
+    }
+    var lines = book.rows.map(function(r){ return String(price) + ";" + r.join(";"); });
+    return { csv: lines.join("\n") + "\n", name: nm + "_" + lines.length + "v.csv",
+             what: fmt(lines.length) + " вариант(ов) из файла, по одному в строке, " + fmt(lines.length * price) + " ₽" };
+  }
+
+  function shareCsv(csv, name, text, okMsg){
+    var file = null;
+    try{ file = new File([csv], name, {type:"text/csv"}); }catch(e){}
+    if(file && navigator.canShare && navigator.canShare({files:[file]}) && navigator.share){
+      navigator.share({files:[file], title:"Тираж №" + (state.tirazh||""), text:text})
+        .then(function(){ bookSay(okMsg); })
+        .catch(function(err){
+          if(err && err.name === "AbortError"){ bookSay("Отправка отменена."); return; }
+          copyCsv(csv, name);
+        });
+      return;
+    }
+    copyCsv(csv, name);
+  }
+
   function bookClose(msg){
     book = null;
+    bookMsg("");
     bookShow();
     if(msg) $("expNote").textContent = msg;
   }
@@ -3518,9 +3567,12 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
           " исходов (1, X или 2), либо цена строки и следом " + res.need + " исходов.");
         return;
       }
-      book = { name: f.name, rows: res.rows, idx: 0 };
+      book = { name: f.name, rows: res.rows, idx: 0, text: String(rd.result || ""),
+                lines: String(rd.result || "").split(/\r?\n/).filter(function(l){ return l.trim(); }).length };
       bookShow();
       $("expNote").textContent = "Открыт файл " + f.name + ": " + fmt(res.rows.length) + " вариант(ов)." +
+        (book.lines && book.lines !== res.rows.length ? " В самом файле " + fmt(book.lines) +
+          " строк: строки-системы (1X, X2…) развёрнуты в отдельные варианты." : "") +
         (res.bad ? " Пропущено строк не на " + res.need + " матчей: " + res.bad + "." : "") +
         (res.over ? " Показаны первые " + fmt(MAX_CSV) + "." : "") +
         " Листай стрелками или свайпом по таблице.";
@@ -3540,31 +3592,58 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   });
   $("bkLink").addEventListener("click", function(){
     if(!book) return;
-    var b = $("bkLink"), was = b.textContent;
-    b.disabled = true; b.textContent = "собираю…";
-    varsEncode(book.rows, function(p){
-      b.disabled = false; b.textContent = was;
-      if(!p){ $("expNote").textContent = "Не получилось упаковать варианты в ссылку."; return; }
-      var url = location.origin + location.pathname + "#v=" +
-                encodeURIComponent(state.tirazh || "") + "-" + p;
-      /* система жмётся почти в ничто, а вот файл из несвязанных строк раздувает
-         адрес: в Telegram одним сообщением влезает около 4 000 символов */
+    var b = $("bkLink"), was = "Ссылка на файл", n = book.rows.length;
+    b.disabled = true; b.classList.remove("ok"); b.textContent = "собираю…";
+    bookMsg("Собираю ссылку на " + fmt(n) + " вариант(ов)…");
+    var urlP = new Promise(function(res, rej){
+      varsEncode(book.rows, function(p){
+        if(!p){ rej(new Error("pack")); return; }
+        res(location.origin + location.pathname + "#v=" + encodeURIComponent(state.tirazh || "") + "-" + p);
+      });
+    });
+    /* пока идёт сжатие, Safari теряет «нажатие» и молча не пишет в буфер.
+       ClipboardItem с обещанием занимает буфер сразу, а текст подкладывает, когда он готов */
+    var wrote = null;
+    if(window.ClipboardItem && navigator.clipboard && navigator.clipboard.write){
+      try{
+        var blobP = urlP.then(function(url){
+          if(url.length > 8000) throw new Error("long");
+          return new Blob([url], {type:"text/plain"});
+        });
+        blobP.catch(function(){});
+        wrote = navigator.clipboard.write([new ClipboardItem({"text/plain": blobP})]);
+        wrote.catch(function(){});
+      }catch(e){ wrote = null; }
+    }
+    var reset = function(){ b.disabled = false; };
+    urlP.then(function(url){
       if(url.length > 8000){
-        $("expNote").textContent = "В ссылку это не влезает: получилось " + fmt(url.length) +
-          " символов, мессенджер такой адрес обрежет. Перешли сам файл — у второго человека он " +
-          "откроется кнопкой «Загрузить CSV».";
+        reset(); b.textContent = was;
+        bookSay("В ссылку это не влезает: получилось " + fmt(url.length) + " символов, мессенджер такой адрес обрежет. " +
+          "Перешли сам файл кнопкой «Отправить CSV» — у второго человека он откроется кнопкой «Загрузить CSV».");
         return;
       }
       var done = function(){
-        $("expNote").textContent = "Ссылка на файл скопирована: " + fmt(book.rows.length) +
-          " вариант(ов), " + fmt(url.length) + " символов. Кто её откроет — увидит тираж №" +
-          (state.tirazh || "") + " и этот же список в режиме просмотра; его собственный купон цел." +
-          (url.length > 3500 ? " Адрес длинный — в Telegram одним сообщением может не влезть, " +
-            "тогда пересылай файлом." : "");
+        reset(); b.textContent = "Скопировано ✓"; b.classList.add("ok");
+        setTimeout(function(){ b.textContent = was; b.classList.remove("ok"); }, 3000);
+        bookSay("Ссылка скопирована в буфер: " + fmt(n) + " вариант(ов), " + fmt(url.length) +
+          " символов. Вставь её в сообщение — кто откроет, увидит тираж №" + (state.tirazh || "") +
+          " и этот же список в режиме просмотра; его собственный купон цел." +
+          (url.length > 3500 ? " Адрес длинный — в Telegram одним сообщением может не влезть, тогда пересылай файлом." : ""));
       };
-      if(navigator.clipboard && navigator.clipboard.writeText)
-        navigator.clipboard.writeText(url).then(done, function(){ showFallback(url); });
-      else showFallback(url);
+      var manual = function(){
+        reset(); b.textContent = was;
+        bookSay("Скопировать в буфер автоматически не вышло — ссылка в окне, скопируй её оттуда.");
+        try{ window.prompt("Ссылка на файл — скопируй:", url); }catch(e){ showFallback(url); }
+      };
+      var viaText = function(){
+        if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done, manual);
+        else manual();
+      };
+      if(wrote) wrote.then(done, viaText); else viaText();
+    }, function(){
+      reset(); b.textContent = was;
+      bookSay("Не получилось упаковать варианты в ссылку.");
     });
   });
 
@@ -4004,6 +4083,12 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   });
 
   $("btnCsvSys").addEventListener("click", function(){
+    if(book){
+      var bx = bookExport(true);
+      saveCsvFile(bx.csv, bx.name);
+      bookSay("Скачан " + bx.what + ".");
+      return;
+    }
     var out = buildCsvSys();
     if(!out){
       $("expNote").textContent = "Нечего выгружать: в купоне есть матч без исхода, а корзина пуста.";
@@ -4026,6 +4111,11 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   });
 
   $("btnSendSys").addEventListener("click", function(){
+    if(book){
+      var bx = bookExport(true);
+      shareCsv(bx.csv, bx.name, "Система из файла — " + bx.what, "Отправлен " + bx.what + ".");
+      return;
+    }
     var out = buildCsvSys();
     if(!out){
       $("expNote").textContent = "Нечего отправлять: в купоне есть матч без исхода, а корзина пуста.";
@@ -4055,6 +4145,12 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   });
 
   $("btnCsv").addEventListener("click", function(){
+    if(book){
+      var bx = bookExport(false);
+      saveCsvFile(bx.csv, bx.name);
+      bookSay("Скачано: " + bx.what + ".");
+      return;
+    }
     var csv = buildCsv();
     if(!csv){ $("expNote").textContent = "Нечего выгружать — купон пустой."; return; }
     var rowsN = csv.replace(/\n+$/,"").split("\n").length;
@@ -4083,6 +4179,11 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   });
 
   $("btnSend").addEventListener("click", function(){
+    if(book){
+      var bx = bookExport(false);
+      shareCsv(bx.csv, bx.name, "Варианты из файла — " + bx.what, "Отправлено: " + bx.what + ".");
+      return;
+    }
     var csv = buildCsv();
     if(!csv){ $("expNote").textContent = "Нечего отправлять — купон пустой."; return; }
     var rowsN = csv.replace(/\n+$/,"").split("\n").length;
@@ -4108,6 +4209,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       navigator.clipboard.writeText(csv).then(function(){
         $("expNote").textContent = "Отправка файлом тут недоступна, поэтому содержимое " + name +
           " скопировано в буфер — вставляй куда нужно.";
+        bookMsg($("expNote").textContent);
       }).catch(function(){ showFallback(csv); });
     } else {
       showFallback(csv);
@@ -4115,6 +4217,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   }
 
   function showFallback(csv){
+    bookMsg("Скопировать не вышло — текст лежит в поле внизу, в панели «Выгрузка».");
     $("csvFallback").hidden = false;
     $("csvOut").value = csv;
     $("csvOut").focus();
