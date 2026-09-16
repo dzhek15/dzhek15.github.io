@@ -742,7 +742,18 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   .modes{justify-content:flex-start}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important}}
-</style>
+
+    /* легенда под таблицей: три блока «образец — что значит», на телефоне друг под другом */
+    .pct-legend{display:grid !important; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); gap:12px 22px; margin:12px 2px 0; font-size:12.5px; line-height:1.35; align-items:start}
+    .pct-legend[hidden]{display:none !important}
+    .pct-legend .lg-h{font-family:inherit; font-size:10.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin-bottom:5px}
+    .pct-legend .lg-sub{font-weight:400; letter-spacing:0; text-transform:none; opacity:.75}
+    .pct-legend .lg-row{display:grid; grid-template-columns:58px 1fr; gap:10px; align-items:baseline; padding:2px 0}
+    .pct-legend .lg-s{font-family:"IBM Plex Mono",monospace; font-weight:600; text-align:right; white-space:nowrap}
+    .pct-legend .lg-box{display:inline-block; min-width:18px; text-align:center; border:2px solid var(--cold); border-radius:4px; padding:0 4px; line-height:1.3}
+    .pct-legend .lg-tip{margin-top:5px; padding-left:68px; font-size:11.5px; opacity:.85}
+    @media (max-width:520px){ .pct-legend{font-size:12px; gap:10px} .pct-legend .lg-row{grid-template-columns:50px 1fr} .pct-legend .lg-tip{padding-left:60px} }
+  </style>
 
 <div class="wrap">
 
@@ -880,11 +891,28 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     <div id="rows"></div>
   </div>
 
-  <p class="pct-legend" id="pctLegend" hidden>
-    Под исходом: <span class="sw">жирным</span> — доля игроков, <span class="sw m">бледным</span> — оценка конторы, в процентах.
-    <span class="sw c">Зелёным ▲</span> — за исход больше всего игроков, <span class="sw h">красным ▼</span> — меньше всего.
-    Отдельной строкой ниже — <span class="sw m">коэффициент конторы</span> (кнопка «Показать кэфы»): <span class="sw c">зелёный</span> — самый низкий в матче, то есть фаворит конторы, <span class="sw h">красный</span> — самый высокий, её аутсайдер. Прочерк значит, что на этот исход коэффициента в тираже нет. Зелёная стрелка и зелёный кэф на разных исходах — народ и контора расходятся. Когда матч сыгран, рядом с лигой встаёт <span class="sw c">счёт</span> и синим — исход, а сам исход обводится <span class="sw c">зелёной рамкой</span> в строке; пока идёт игра, счёт показывается синим и без рамки — итог ещё не подведён.
-  </p>
+  <div class="pct-legend" id="pctLegend" hidden>
+    <div class="lg-blk">
+      <div class="lg-h sw">Под кнопкой исхода</div>
+      <div class="lg-row"><span class="lg-s"><span class="sw">31</span> <span class="sw m">37</span></span><span>жирное — доля игроков, бледное — оценка конторы, в %</span></div>
+      <div class="lg-row"><span class="lg-s sw c">▲</span><span>за этот исход больше всего игроков</span></div>
+      <div class="lg-row"><span class="lg-s sw h">▼</span><span>за этот исход меньше всего игроков</span></div>
+      <div class="lg-row"><span class="lg-s sw h">35 !</span><span>на ничью больше 30% игроков — ничья переоценена</span></div>
+    </div>
+    <div class="lg-blk">
+      <div class="lg-h sw">Коэффициенты <span class="lg-sub">(«Показать кэфы»)</span></div>
+      <div class="lg-row"><span class="lg-s sw c">2.20</span><span>самый низкий — фаворит конторы</span></div>
+      <div class="lg-row"><span class="lg-s sw h">4.28</span><span>самый высокий — аутсайдер конторы</span></div>
+      <div class="lg-row"><span class="lg-s sw m">—</span><span>коэффициента на этот исход нет</span></div>
+      <div class="lg-tip">▲ и зелёный кэф на разных исходах — народ и контора расходятся</div>
+    </div>
+    <div class="lg-blk">
+      <div class="lg-h sw">Результат матча</div>
+      <div class="lg-row"><span class="lg-s" style="color:var(--o1)">1 : 0</span><span>идёт игра, итог ещё не подведён</span></div>
+      <div class="lg-row"><span class="lg-s sw c">2 : 1</span><span>матч сыгран, рядом синим — исход</span></div>
+      <div class="lg-row"><span class="lg-s"><span class="lg-box">1</span></span><span>выигравший исход обведён рамкой</span></div>
+    </div>
+  </div>
 
   <div class="ev-back" id="evBack" hidden>
     <div class="ev-box" role="dialog" aria-modal="true" aria-labelledby="evTitle">
@@ -929,7 +957,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. «РАНДОМ» ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; в корзину при этом ничего не уходит — для этого есть «Положить купон в корзину». Строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 16.09 15:00 МСК</span>
+    <span class="build">сборка 16.09 15:10 МСК</span>
   </footer>
 </div>
 
