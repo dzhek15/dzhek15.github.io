@@ -558,6 +558,11 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 .ev-tab td.nw{white-space:nowrap}
 .ev-tab tr.rec td{background:var(--o1-soft)}
 .ev-tab .gap-set{padding:3px 9px; font-size:12px}
+.vrd{font-family:"Inter",system-ui,sans-serif; font-size:11px; font-weight:600;
+  text-transform:uppercase; letter-spacing:.03em; padding:2px 7px; border-radius:var(--r); white-space:nowrap}
+.vrd.trap{background:var(--hot-soft); color:var(--hot)}
+.vrd.val{background:var(--o1-soft); color:var(--o1)}
+.vrd.neut{color:var(--muted)}
 .ev-cmp td:first-child{font-family:inherit}
 .ev-note, .ev-warn{margin:8px 0 0; font-size:12px; color:var(--muted)}
 .ev-lead{margin:8px 0 0; font-size:13.5px; line-height:1.5}
@@ -982,7 +987,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. «РАНДОМ» ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; в корзину при этом ничего не уходит — для этого есть «Положить купон в корзину». Строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 16.09 16:25 МСК</span>
+    <span class="build">сборка 16.09 19:30 МСК</span>
   </footer>
 </div>
 
@@ -1354,8 +1359,14 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
      крупные системы: если чья-то система на тысячи строк легла рядом с итогом, она одна
      забирает половину верхних категорий, и победителей в полтора раза больше модели.
      13 держится на единицах победителей (гармоническое 0,58, по суммам 0,87) — взято 0,70.
-     14 и 15 выше единицы: большие системы ближе к верху, чем независимые строки. */
-  var FIX_BASE = {9:0.945, 10:0.927, 11:0.892, 12:0.830, 13:0.70, 14:1.2, 15:2.0};
+     14 выше единицы: большие системы ближе к верху, чем независимые строки.
+     15 измерена отдельно и напрямую, не по выплатам: суперприз сбрасывается ровно в
+     1 000 000, когда его берут, значит по каждому тиражу известен факт взятия. На 197
+     подряд идущих парах тиражей 4810-5007 сбросов восемь, все внутри 170 тиражей с
+     полными котировками. Модель при множителе 1 ждёт 7,70 тиражей со взятием, при 2,0 —
+     14,02. Оценка максимального правдоподобия 1,05, интервал 0,48-1,95, так что прежняя
+     двойка лежит за его краем (z = -1,88). Поставлено 1,05. */
+  var FIX_BASE = {9:0.945, 10:0.927, 11:0.892, 12:0.830, 13:0.70, 14:1.2, 15:1.05};
 
   function fixFactors(){ return FIX_BASE; }
 
@@ -2179,18 +2190,19 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         cell.appendChild(b);
 
         if(state.showPct && m.pct && m.pct.pool){
-          var pl = Number(m.pct.pool[i]), bk = Number(m.pct.bk[i]);
+          var pl = Number(m.pct.pool[i]);
+          var bk = m.pct.bk ? Number(m.pct.bk[i]) : null;
           var isTop = !!(crowd && crowd.top !== null && pl === crowd.top);
           var isLow = !!(crowd && crowd.low !== null && pl === crowd.low && !isTop);
           /* правило форума 1x2.su: больше 30% пула на ничью в футболе — исход переоценён */
           var xOver = (i === 1 && pl > 30);
           var col = document.createElement("div");
           col.className = "pct-col" + (isTop ? " lead" : (isLow ? " rare" : "")) + (xOver ? " x-over" : "");
-          col.title = "Игроки " + pl + "% · контора " + bk + "%" +
+          col.title = "Игроки " + pl + "%" + (bk === null ? "" : " · контора " + bk + "%") +
             (isTop ? " — больше всего игроков в этом матче, приз делить со многими"
              : isLow ? " — меньше всего игроков в этом матче" : "") +
             (xOver ? ". На ничью ушло больше 30% пула — по правилу форума такой исход переоценён" : "");
-          col.innerHTML = '<b>' + pl + '</b><i>' + bk + '</i>' + (xOver ? '<u>!</u>' : '');
+          col.innerHTML = '<b>' + pl + '</b><i>' + (bk === null ? '\u2014' : bk) + '</i>' + (xOver ? '<u>!</u>' : '');
           cell.appendChild(col);
         }
 
@@ -2942,7 +2954,27 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       if(pl[i] - pr[i] > pl[over] - pr[over]) over = i;
       if(pr[i] - pl[i] > pr[under] - pl[under]) under = i;
     }
-    return { d: d, over: over, under: under, pr: pr, pl: pl };
+    var gOver  = (pl[over]  - pr[over])  * 100;   /* насколько толпа грузит выше рынка, п.п. */
+    var gUnder = (pr[under] - pl[under]) * 100;  /* насколько толпа жалеет ниже рынка, п.п. */
+    return { d: d, over: over, under: under, pr: pr, pl: pl, gOver: gOver, gUnder: gUnder,
+             vrd: gapVerdict(gOver, gUnder) };
+  }
+
+  /* Пороги проверены ровно этим правилом на архиве из 2856 матчей 192 тиражей.
+     Толпа грузит исход на 10+ п.п. выше рынка (424 случая): сама даёт ему 54,7%,
+     контора 41,8%, а выпадает он в 40,3% — права контора, а не толпа. ЛОВУШКА:
+     исход и дорогой при делёжке, и заходит куда реже, чем о нём думают.
+     Толпа жалеет исход на 5+ п.п. (711 случаев): даёт ему 23,9%, контора 30,2%,
+     выпадает 28,1%. ЦЕННОСТЬ: заходит заметно чаще, чем считает толпа, а приз
+     делить с меньшим числом людей. Контора тут тоже мажет, но втрое слабее. */
+  function gapVerdict(gOver, gUnder){
+    if(gOver >= 10) return { k: "trap", t: "ловушка", why:
+      "толпа грузит этот исход на " + gOver.toFixed(0) + " п.п. выше рынка. " +
+      "На архиве такие исходы заходят в 40,3% случаев против 54,7%, которые им даёт толпа" };
+    if(gUnder >= 5) return { k: "val", t: "ценность", why:
+      "толпа жалеет этот исход на " + gUnder.toFixed(0) + " п.п. против рынка. " +
+      "На архиве такие исходы заходят в 28,1% случаев против 23,9%, которые им даёт толпа" };
+    return { k: "neut", t: "\u2014", why: "толпа и контора близки, брать нечего" };
   }
 
   /* Линия фаворитов и список замен на недогруженные исходы, от самой дешёвой
@@ -3078,16 +3110,30 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     }
     rows.sort(function(a, b){ return b.d - a.d; });
     var pc = function(x){ return Math.round(x * 100) + "%"; };
+    var nTrap = 0, nVal = 0;
+    rows.forEach(function(g){ if(g.vrd.k === "trap") nTrap++; if(g.vrd.k === "val") nVal++; });
     var h = '<p class="ev-lead">Здесь матчи выстроены по тому, насколько доля игроков расходится с оценкой ' +
             'конторы. Верх списка — места, где толпа ошибается сильнее всего: её перегруженный исход стоит ' +
             'дорого (приз делить со многими), а недогруженный при той же вероятности достаётся дешевле.</p>';
+    h += '<p class="ev-lead"><b>Пороги проверены этим же правилом на 2856 матчах из 192 тиражей.</b> ' +
+         'Толпа грузит исход на 10 и более пунктов выше рынка (424 случая): даёт ему 54,7%, контора 41,8%, ' +
+         'а выпадает он в 40,3% — права контора. Толпа жалеет исход на 5 и более пунктов (711 случаев): ' +
+         'даёт ему 23,9%, контора 30,2%, выпадает 28,1%. Толпа мажет на 14 пунктов в первом случае и на 4 ' +
+         'во втором, контора — на 1,5 и 2,1. Поэтому расхождение с рынком читается как вердикт, ' +
+         'а не как подсказка. В среднем на тираж выходит 2,2 ловушки и 3,7 ценных исхода.</p>';
+    h += '<p class="ev-note">Сейчас в тираже: ловушек — ' + nTrap + ', ценных исходов — ' + nVal + '.</p>';
     h += '<p class="ev-note">В столбцах: исход, доля игроков → оценка конторы.</p>' +
-         '<table class="ev-tab"><thead><tr><th>Матч</th><th>Толпа грузит</th><th>Толпа жалеет</th><th>Расх.</th></tr></thead><tbody>';
+         '<table class="ev-tab"><thead><tr><th>Матч</th><th>Толпа грузит</th><th>Толпа жалеет</th><th>Вердикт</th><th>Расх.</th></tr></thead><tbody>';
     rows.forEach(function(g){
       var nm = (g.idx + 1) + ". " + g.m.home + " — " + g.m.away;
+      var vt = g.vrd.k === "trap" ? (OUT[g.over] + " ловушка")
+             : g.vrd.k === "val"  ? (OUT[g.under] + " ценность") : "\u2014";
       h += '<tr><td>' + nm + '</td>' +
-           '<td class="nw">' + OUT[g.over] + '  ' + pc(g.pl[g.over]) + ' \u2192 ' + pc(g.pr[g.over]) + '</td>' +
-           '<td class="nw">' + OUT[g.under] + '  ' + pc(g.pl[g.under]) + ' \u2192 ' + pc(g.pr[g.under]) + '</td>' +
+           '<td class="nw">' + OUT[g.over] + '  ' + pc(g.pl[g.over]) + ' \u2192 ' + pc(g.pr[g.over]) +
+             (g.gOver >= 10 ? '  (+' + g.gOver.toFixed(0) + ')' : '') + '</td>' +
+           '<td class="nw">' + OUT[g.under] + '  ' + pc(g.pl[g.under]) + ' \u2192 ' + pc(g.pr[g.under]) +
+             (g.gUnder >= 5 ? '  (\u2212' + g.gUnder.toFixed(0) + ')' : '') + '</td>' +
+           '<td class="nw"><span class="vrd ' + g.vrd.k + '" title="' + g.vrd.why + '">' + vt + '</span></td>' +
            '<td>' + (g.d * 100).toFixed(1) + '</td></tr>';
     });
     h += '</tbody></table>';
@@ -3858,6 +3904,17 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   /* ---------- подтяжка тиража с totobrief ---------- */
   var API = "https://totobrief.com/api/v1/community/";
 
+  /* Доли игроков и оценка конторы приезжают в одном ответе, но появляются в РАЗНОЕ
+     время: у только что открытого тиража пула ещё нет, а коэффициенты уже есть.
+     Раньше обе части висели на одном условии, и на свежем тираже расчёт молчал
+     целиком. Теперь каждая половина живёт сама по себе. */
+  function mkPct(q){
+    var pool = (q.pool_win_1 != null) ? [q.pool_win_1, q.pool_draw, q.pool_win_2] : null;
+    var bk   = (q.bk_win_1   != null) ? [q.bk_win_1,   q.bk_draw,   q.bk_win_2]   : null;
+    if(!pool && !bk) return null;
+    return { pool: pool, bk: bk };
+  }
+
   function splitTeams(name){
     var parts = String(name || "").split(/\s+[—–−-]\s+/);
     if(parts.length < 2) return null;
@@ -3875,8 +3932,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     }
     for(i = 0; i < evs.length; i++){
       var q = evs[i].quotes || {}, m = state.matches[i];
-      if(q.pool_win_1 != null) m.pct = { pool:[q.pool_win_1, q.pool_draw, q.pool_win_2],
-                                         bk:  [q.bk_win_1,   q.bk_draw,   q.bk_win_2] };
+      var np = mkPct(q); if(np) m.pct = np;
       if(q.norm_win_1 != null) m.kf = [q.norm_win_1, q.norm_draw, q.norm_win_2];
       /* сыгранные матчи: фактический исход и счёт приезжают в том же ответе */
       m.res = normOut(evs[i].result) || "";
@@ -3952,10 +4008,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         picks: {"1":false,"X":false,"2":false},
         pool: OUT.slice(),
         mode: "free",   /* режимы не проставляем: «рандом» ставится вручную или кнопкой */
-        pct: (q.pool_win_1 != null) ? {
-          pool: [q.pool_win_1, q.pool_draw, q.pool_win_2],
-          bk:   [q.bk_win_1,   q.bk_draw,   q.bk_win_2]
-        } : null,
+        pct: mkPct(q),
         /* коэффициенты конторы приходят в том же ответе, отдельного источника не нужно */
         kf: (q.norm_win_1 != null) ? [q.norm_win_1, q.norm_draw, q.norm_win_2] : null,
         /* фактический исход и счёт — пусто, пока матч не сыгран */
