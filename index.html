@@ -563,6 +563,9 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 .vrd.trap{background:var(--hot-soft); color:var(--hot)}
 .vrd.val{background:var(--o1-soft); color:var(--o1)}
 .vrd.neut{color:var(--muted)}
+.ev-tab td.brief-no{color:var(--muted); font-family:"Inter",system-ui,sans-serif; font-size:12px; text-align:right}
+.brief-pre{font-family:"IBM Plex Mono",monospace; font-size:12px; line-height:1.55; white-space:pre;
+  overflow-x:auto; background:var(--ox-soft); padding:10px 12px; border-radius:var(--r); margin-top:6px}
 .ev-cmp td:first-child{font-family:inherit}
 .ev-note, .ev-warn{margin:8px 0 0; font-size:12px; color:var(--muted)}
 .ev-lead{margin:8px 0 0; font-size:13.5px; line-height:1.5}
@@ -872,6 +875,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         <div class="roll-ev">
         <button class="btn-ev" id="btnEV" type="button" title="Посчитать матожидание купона: вероятности из коэффициентов, соперники — из долей пула"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5V9.5"/><path d="M10 16.5V4"/><path d="M15.5 16.5v-5"/></svg><span class="lbl">Оценить купон</span></button>
         <button class="btn-ev" id="btnDiff" type="button" title="Где доля игроков сильнее всего расходится с оценкой конторы"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.5v13"/><path d="M4.5 6.5h11"/><path d="M2.5 12.2 4.9 7l2.4 5.2a2.6 2.6 0 0 1-4.8 0z"/><path d="M12.7 12.2 15.1 7l2.4 5.2a2.6 2.6 0 0 1-4.8 0z"/></svg><span class="lbl">Расхождения</span></button>
+        <button class="btn-ev" id="btnBrief" type="button" title="Собрать систему с гарантией: часть строк купона вместо всех"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3.5" width="15" height="13" rx="1.5"/><path d="M2.5 8h15"/><path d="M7.5 8v8.5"/><path d="M12.5 8v8.5"/></svg><span class="lbl">Бриф</span></button>
         <button class="btn-ev" id="btnPF" type="button" title="Отобрать из системы строки, которые меньше всего пересекаются с выбором толпы"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 4.5h13l-5 5.8v5.2l-3 1.6v-6.8z"/></svg><span class="lbl">Отобрать строки</span></button>
       </div>
       </div>
@@ -987,7 +991,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. «РАНДОМ» ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; в корзину при этом ничего не уходит — для этого есть «Положить купон в корзину». Строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 16.09 19:30 МСК</span>
+    <span class="build">сборка 16.09 20:15 МСК</span>
   </footer>
 </div>
 
@@ -1342,6 +1346,130 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     setZoom(z);
     return {zoom: z, compact: turnedCompact};
   }
+
+
+  /* ---------- Бриф-система: покрывающий код ----------
+     Задача. В купоне часть матчей закрыта одним исходом, часть двумя-тремя. Полное
+     покрытие — это все комбинации, и оно дорогое. Бриф-система берёт подмножество
+     строк с обещанием: КАКОЙ БЫ исход внутри купона ни выпал, хотя бы одна строка
+     угадает не меньше g матчей из пятнадцати.
+     Матчи с одним исходом угадываются всегда, поэтому вся геометрия живёт только на
+     «широких» матчах: если их m штук, промахнуться можно максимум по r = 15 - g
+     координатам. То есть нужен покрывающий код радиуса r — набор точек, шары вокруг
+     которых накрывают весь куб.
+     Строим жадно: каждый раз берём точку, чей шар закрывает больше всего ещё не
+     закрытого. Пересчитываем лениво (CELF): в куче лежат устаревшие оценки, и точка
+     берётся, только если её свежая оценка не хуже верхушки. Ничьи разрешаем по
+     меньшему индексу — без этого результат хуже на 5-6%. */
+  /* Сколько точек в шаре радиуса r: свёртка по координатам, dp[d] — сумма
+     произведений (размер-1) по всем d-подмножествам координат. */
+  function briefBall(sizes, r){
+    var dp = [1], k, i;
+    for(k = 0; k < sizes.length; k++){
+      dp.push(0);
+      for(i = dp.length - 1; i > 0; i--) dp[i] += dp[i-1] * (sizes[k] - 1);
+    }
+    var tot = 0;
+    for(var d = 0; d <= r && d < dp.length; d++) tot += dp[d];
+    return tot;
+  }
+
+  function briefBuild(sets, g, budgetMs){
+    budgetMs = budgetMs || 25000;
+    var n = sets.length, wide = [], fixed = [], i, k;
+    for(i = 0; i < n; i++){ (sets[i].length > 1 ? wide : fixed).push(i); }
+    var m = wide.length, r = n - g;
+    if(r < 0) return { err: "гарантия больше числа матчей" };
+    if(r >= m){
+      var one = []; for(i = 0; i < n; i++) one.push(sets[i][0]);
+      return { lines: [one], U: 1, rows: 1, m: m, r: r };
+    }
+    var sizes = [], U = 1;
+    for(k = 0; k < m; k++){ sizes.push(sets[wide[k]].length); U *= sizes[k]; }
+    if(U > BRIEF_CAP_U) return { tooBig: true, U: U, m: m, r: r };
+
+    var mul = new Array(m); mul[0] = 1;
+    for(k = 1; k < m; k++) mul[k] = mul[k-1] * sizes[k-1];
+    var v = new Int32Array(m);
+    function dec(x){ for(var j = 0; j < m; j++) v[j] = Math.floor(x / mul[j]) % sizes[j]; }
+    function walk(x, depth, start, fn){
+      fn(x);
+      if(depth === r) return;
+      for(var p = start; p < m; p++){
+        var base = Math.floor(x / mul[p]) % sizes[p];
+        for(var val = 0; val < sizes[p]; val++){
+          if(val === base) continue;
+          walk(x + (val - base) * mul[p], depth + 1, p + 1, fn);
+        }
+      }
+    }
+    var covered = new Uint8Array(U), left = U, code = [];
+    var heap = new Int32Array(U + 1), hkey = new Int32Array(U + 1), hstamp = new Int32Array(U + 1), hn = 0;
+    function push(key, x, st){
+      hn++; heap[hn] = x; hkey[hn] = key; hstamp[hn] = st;
+      var c = hn, t;
+      while(c > 1){
+        var pp = c >> 1;
+        if(hkey[pp] > hkey[c] || (hkey[pp] === hkey[c] && heap[pp] <= heap[c])) break;
+        t = heap[pp]; heap[pp] = heap[c]; heap[c] = t;
+        t = hkey[pp]; hkey[pp] = hkey[c]; hkey[c] = t;
+        t = hstamp[pp]; hstamp[pp] = hstamp[c]; hstamp[c] = t;
+        c = pp;
+      }
+    }
+    function pop(){
+      var topX = heap[1], topSt = hstamp[1], t;
+      heap[1] = heap[hn]; hkey[1] = hkey[hn]; hstamp[1] = hstamp[hn]; hn--;
+      var c = 1;
+      for(;;){
+        var l = c << 1, rr = l + 1, b = c;
+        if(l  <= hn && (hkey[l]  > hkey[b] || (hkey[l]  === hkey[b] && heap[l]  < heap[b]))) b = l;
+        if(rr <= hn && (hkey[rr] > hkey[b] || (hkey[rr] === hkey[b] && heap[rr] < heap[b]))) b = rr;
+        if(b === c) break;
+        t = heap[b]; heap[b] = heap[c]; heap[c] = t;
+        t = hkey[b]; hkey[b] = hkey[c]; hkey[c] = t;
+        t = hstamp[b]; hstamp[b] = hstamp[c]; hstamp[c] = t;
+        c = b;
+      }
+      return { x: topX, st: topSt };
+    }
+    var ballSize = 0; walk(0, 0, 0, function(){ ballSize++; });
+    for(var x = 0; x < U; x++) push(ballSize, x, 0);
+
+    var gen = 0, t0 = Date.now(), cnt = 0;
+    var counter = function(y){ if(!covered[y]) cnt++; };
+    var marker = function(y){ if(!covered[y]){ covered[y] = 1; left--; } };
+    while(left > 0){
+      if((gen & 31) === 0 && Date.now() - t0 > budgetMs)
+        return { slow: true, U: U, m: m, r: r, ms: Date.now() - t0 };
+      var best = -1;
+      for(;;){
+        if(hn === 0) break;
+        var top = pop();
+        if(top.st === gen){ best = top.x; break; }
+        cnt = 0; walk(top.x, 0, 0, counter);
+        if(cnt === 0) continue;
+        if(hn === 0 || cnt >= hkey[1]){ best = top.x; break; }
+        push(cnt, top.x, gen);
+      }
+      if(best < 0) break;
+      code.push(best);
+      walk(best, 0, 0, marker);
+      gen++;
+    }
+    var lines = [];
+    for(i = 0; i < code.length; i++){
+      dec(code[i]);
+      var row = new Array(n), j;
+      for(j = 0; j < fixed.length; j++) row[fixed[j]] = sets[fixed[j]][0];
+      for(j = 0; j < m; j++) row[wide[j]] = sets[wide[j]][v[j]];
+      lines.push(row);
+    }
+    return { lines: lines, U: U, rows: lines.length, m: m, r: r, ms: Date.now() - t0 };
+  }
+
+  /* потолки: выше первого предупреждаем о долгом счёте, выше второго не беремся вовсе */
+  var BRIEF_CAP_U = 400000, BRIEF_WARN_WORK = 8e6, BRIEF_MAX_WORK = 1.2e8;
 
   /* ---------- матожидание купона ---------- */
   /* Доли призового фонда по категориям (в процентах от оборота; в сумме 90,
@@ -3214,6 +3342,151 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   }
 
   $("btnDiff").addEventListener("click", showCrowdGaps);
+
+  /* ---------- Окно «Бриф-система» ---------- */
+  function briefSets(){
+    var sets = [], bad = -1;
+    for(var i = 0; i < state.matches.length; i++){
+      var m = state.matches[i], cur = [];
+      for(var k = 0; k < 3; k++) if(m.picks[OUT[k]]) cur.push(k);
+      if(!cur.length){ bad = i; break; }
+      sets.push(cur);
+    }
+    return { sets: sets, bad: bad };
+  }
+
+  function briefPrice(){ return Number(state.price) > 0 ? Number(state.price) : 30; }
+
+  function briefCsv(lines){
+    var price = briefPrice(), sep = state.csvSep === "; " ? "; " : ";";
+    var out = lines.map(function(L){
+      return String(price) + sep + L.map(function(j){ return OUT[j]; }).join(sep);
+    });
+    return out.join("\n") + "\n";
+  }
+
+  /* Посчитанные системы кэшируем, но только для ТОГО купона, из которого их собрали:
+     иначе поменял исходы — а в таблице висят вчерашние строки. Подпись купона — это
+     сами выбранные исходы по всем матчам. */
+  window.__brief = {};
+  function briefSig(sets){
+    return sets.map(function(a){ return a.join(""); }).join("-");
+  }
+  function briefCache(sets){
+    var sig = briefSig(sets);
+    if(window.__brief.__sig !== sig){ window.__brief = { __sig: sig }; }
+    return window.__brief;
+  }
+
+  function briefRow(g, sets, sizes, U){
+    var r = state.matches.length - g;
+    var wideSizes = sizes.filter(function(x){ return x > 1; });
+    var m = wideSizes.length;
+    var key = "g" + g;
+    var have = briefCache(sets)[key];
+    var cells;
+    if(have && have.rows){
+      var cost = have.rows * briefPrice();
+      var save = U > 0 ? (100 * (1 - have.rows / U)) : 0;
+      cells = '<td><b>' + fmt(have.rows) + '</b></td><td>' + fmt(cost) + ' ₽</td>' +
+              '<td>' + (U === have.rows ? "—" : "−" + save.toFixed(0) + "%") + '</td>' +
+              '<td class="nw"><button type="button" class="gap-set brief-csv" data-g="' + g + '">скачать CSV</button>' +
+              ' <button type="button" class="gap-set brief-prev" data-g="' + g + '">строки</button></td>';
+    } else if(have && have.tooBig){
+      cells = '<td colspan="4" class="brief-no">вселенная ' + fmt(have.U) + ' — не берусь</td>';
+    } else if(have && have.slow){
+      cells = '<td colspan="4" class="brief-no">не уложился за ' + Math.round(have.ms/1000) + ' с</td>';
+    } else {
+      var ball = briefBall(wideSizes, r);
+      var work = U * ball;
+      if(r >= m) cells = '<td><b>1</b></td><td>' + fmt(briefPrice()) + ' ₽</td><td>−' + (100*(1-1/U)).toFixed(0) + '%</td>' +
+                         '<td class="nw"><button type="button" class="gap-set brief-go" data-g="' + g + '">собрать</button></td>';
+      else if(U > BRIEF_CAP_U || work > BRIEF_MAX_WORK)
+        cells = '<td colspan="4" class="brief-no">слишком большой перебор (' + fmt(U) + ' × ' + fmt(ball) + ')</td>';
+      else
+        cells = '<td colspan="3" class="brief-no">' +
+                (work > BRIEF_WARN_WORK ? ("считать примерно " + Math.max(1, Math.round(work / 4e6)) + " с") : "не посчитано") +
+                '</td><td class="nw"><button type="button" class="gap-set brief-go" data-g="' + g + '">собрать</button></td>';
+    }
+    return '<tr><td>' + g + ' из 15</td>' + cells + '</tr>';
+  }
+
+  function showBrief(){
+    $("evTitle").textContent = "Бриф-система";
+    var bs = briefSets();
+    if(bs.bad >= 0){
+      $("evBody").innerHTML = '<p class="ev-warn">В матче №' + (bs.bad + 1) +
+        ' не выбран ни один исход. Бриф-система строится от готового купона: отметь исходы во всех пятнадцати матчах, ' +
+        'а где не уверен — по два или по три.</p>';
+      $("evBack").hidden = false;
+      return;
+    }
+    var sets = bs.sets, sizes = sets.map(function(a){ return a.length; });
+    briefCache(sets);                    /* чужой купон в кэше — выбрасываем */
+    var U = 1; sizes.forEach(function(x){ U *= x; });
+    var one = sizes.filter(function(x){ return x === 1; }).length;
+    var two = sizes.filter(function(x){ return x === 2; }).length;
+    var tri = sizes.filter(function(x){ return x === 3; }).length;
+    var price = briefPrice();
+
+    var h = '<p class="ev-lead">Бриф-система — это часть строк купона вместо всех. ' +
+      'Обещание такое: какой бы исход внутри твоего купона ни выпал, хотя бы одна строка системы угадает ' +
+      'не меньше заявленного. Платишь меньше, а взамен отказываешься от верхних категорий: гарантия 14 ' +
+      'означает, что пятнадцать из пятнадцати ты возьмёшь только случайно, а не по построению.</p>';
+    h += '<p class="ev-note">Купон сейчас: одиночек ' + one + ', двоек ' + two + ', троек ' + tri +
+         '. Полное покрытие — <b>' + fmt(U) + '</b> строк на <b>' + fmt(U * price) + ' ₽</b> по ' + fmt(price) + ' ₽ за строку.</p>';
+
+    if(U === 1){
+      h += '<p class="ev-warn">В купоне нет ни одной двойки или тройки — сокращать нечего, это и есть одна строка.</p>';
+      $("evBody").innerHTML = h; $("evBack").hidden = false; return;
+    }
+
+    h += '<table class="ev-tab"><thead><tr><th>Гарантия</th><th>Строк</th><th>Цена</th><th>Дешевле</th><th></th></tr></thead><tbody>';
+    h += '<tr><td>15 из 15</td><td><b>' + fmt(U) + '</b></td><td>' + fmt(U * price) + ' ₽</td><td>—</td>' +
+         '<td class="nw">полное покрытие</td></tr>';
+    for(var g = 14; g >= 9; g--) h += briefRow(g, sets, sizes, U);
+    h += '</tbody></table>';
+    h += '<p class="ev-note">Числа детерминированы: один и тот же купон всегда даёт одну и ту же систему. ' +
+         'Считается жадным покрытием, а оно не обязано быть минимальным — на десяти двойках с гарантией 14 ' +
+         'выходит 135 строк, теоретический минимум 120. Разницу в 12% считаю честной ценой за то, что расчёт ' +
+         'идёт доли секунды прямо в браузере.</p>';
+    h += '<div id="briefPrev"></div>';
+    $("evBody").innerHTML = h;
+
+    [].slice.call($("evBody").querySelectorAll(".brief-go")).forEach(function(b){
+      b.addEventListener("click", function(){
+        var g = Number(b.getAttribute("data-g"));
+        b.textContent = "считаю…"; b.disabled = true;
+        setTimeout(function(){
+          briefCache(sets)["g" + g] = briefBuild(sets, g, 30000);
+          showBrief();
+        }, 30);
+      });
+    });
+    [].slice.call($("evBody").querySelectorAll(".brief-csv")).forEach(function(b){
+      b.addEventListener("click", function(){
+        var g = Number(b.getAttribute("data-g")), res = briefCache(sets)["g" + g];
+        if(!res || !res.lines) return;
+        saveCsvFile(briefCsv(res.lines), "brief_" + (state.tirazh || "tirazh") + "_g" + g + "_" + res.rows + ".csv");
+      });
+    });
+    [].slice.call($("evBody").querySelectorAll(".brief-prev")).forEach(function(b){
+      b.addEventListener("click", function(){
+        var g = Number(b.getAttribute("data-g")), res = briefCache(sets)["g" + g];
+        if(!res || !res.lines) return;
+        var head = res.lines.slice(0, 20).map(function(L, i){
+          return (i + 1) + ". " + L.map(function(j){ return OUT[j]; }).join("");
+        }).join("\n");
+        $("briefPrev").innerHTML = '<h3>Первые строки системы (гарантия ' + g + ')</h3>' +
+          '<pre class="brief-pre">' + head + (res.rows > 20 ? "\n… и ещё " + fmt(res.rows - 20) + " строк" : "") + '</pre>';
+        $("briefPrev").scrollIntoView({behavior:"smooth", block:"nearest"});
+      });
+    });
+    $("evBack").hidden = false;
+  }
+
+  $("btnBrief").addEventListener("click", showBrief);
+
 
   /* ---------- Окно «Ценность тиража» ----------
      Плитка в шапке показывает одно число, а здесь объясняем словами,
