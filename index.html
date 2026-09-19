@@ -273,8 +273,11 @@ button:disabled{opacity:.45; cursor:not-allowed}
 #btnUndo svg{display:block}
 #btnUndo:hover:not(:disabled){background:var(--o1-soft); border-color:var(--o1)}
 #btnUndo:disabled{border-color:var(--rule-strong); color:var(--muted); background:transparent}
-#btnReset{border-color:var(--o1); color:var(--o1)}
-#btnReset:hover:not(:disabled){background:var(--o1-soft)}
+.roll-group > .roll-secondary{width:100%}
+#btnReset{flex:1 1 100%; width:100%; justify-content:center; font-family:"Chivo",sans-serif; font-weight:600;
+  font-size:14.5px; padding:12px 18px; border-radius:6px; border-color:var(--o1); background:var(--o1); color:#fff}
+#btnReset:hover:not(:disabled){filter:brightness(1.1); background:var(--o1)}
+#btnReset:disabled{background:transparent; border-color:var(--rule-strong); color:var(--muted)}
 
 .btn-tip{border-color:var(--cold); color:var(--cold); padding-block:13px}
 .btn-tip:hover:not(:disabled){background:var(--o1-soft)}
@@ -516,7 +519,7 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 /* чуть-чуть палитры логотипа: чёрная рамка с золотой окантовкой */
 .coupon{margin-top:22px; border:2px solid var(--brand-dark); border-radius:6px; overflow:hidden;
   background:var(--surface); box-shadow:0 0 0 3px var(--brand-gold), var(--shadow)}
-.chead,.row{display:grid; grid-template-columns:26px minmax(0,1fr) repeat(3,54px) 176px; align-items:center; gap:9px; padding:8px 13px}
+.chead,.row{display:grid; grid-template-columns:26px minmax(0,1fr) repeat(3,54px) 214px; align-items:center; gap:9px; padding:8px 13px}
 .chead{background:var(--brand-dark); border-bottom:2px solid var(--brand-gold); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--brand-gold)}
 .chead .c{text-align:center}
 .row{border-bottom:1px solid var(--rule); transition:background-color .12s linear}
@@ -555,8 +558,33 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
   font-size:13px; line-height:1; font-variant-numeric:tabular-nums; color:var(--muted)}
 .kf-col.fav{color:var(--cold); font-weight:600}
 .kf-col.dog{color:var(--hot); font-weight:600}
+/* «Линия → факт»: как заканчивались матчи Балтсистемы с такой же линией конторы */
+.lf-col{margin-top:4px; text-align:center; font-family:"IBM Plex Mono",monospace;
+  font-size:13px; line-height:1; font-variant-numeric:tabular-nums; color:var(--muted); cursor:help}
+.lf-col b{font-weight:600; color:var(--ink)}
+.lf-col.up b{color:var(--cold)}
+.lf-col.down b{color:var(--hot)}
+.lf-col.thin b{opacity:.5}
+[data-compact="1"] .lf-col{font-size:11px}
+/* ярус лиги: А — топ, Б — вторые лиги, В — третьи и ниже, где ничьих больше, а фавориты ненадёжны */
+.tier{display:inline-block; margin-left:8px; padding:0 5px; border-radius:3px; font-family:"Chivo",sans-serif;
+  font-size:10.5px; font-weight:800; letter-spacing:.06em; line-height:16px; vertical-align:1px;
+  border:1px solid var(--rule-strong); color:var(--muted); cursor:help}
+.tier.t-v{border-color:var(--warn); color:var(--warn); background:var(--warn-bg)}
+/* название команды кликабельно — история её матчей в тото */
+.tm{cursor:pointer; border-bottom:1px dotted transparent; transition:color .12s linear}
+.tm:hover{color:var(--accent); border-bottom-color:var(--accent)}
+.mode.srch{padding-left:8px; padding-right:8px}
+/* на телефоне «Вернуть» и «Обновить тираж» — в один ряд, а не полкнопки над целой */
+@media (max-width:600px){ .roll-service{grid-template-columns:1fr 1fr} .roll-service #btnFetch{order:0; grid-column:auto} }
+.th-tab td.tm-me{font-weight:600; color:var(--ink)}
+.th-tab td.tm-me span.side{color:var(--muted); font-weight:400; font-size:11px; margin-left:4px}
+.th-res{font-weight:700} .th-res.w{color:var(--cold)} .th-res.l{color:var(--hot)}
+.th-sum{display:flex; flex-wrap:wrap; gap:6px 18px; margin:4px 0 6px; font-size:13px}
+.th-sum b{font-family:"IBM Plex Mono",monospace}
 /* Аналитика — сетка два на два. Колонки равные, кнопки тянутся по ячейке,
    поэтому все четыре одного размера, а ряд читается как один блок. */
+.roll-ev .btn-ev:last-child:nth-child(odd){grid-column:1 / -1}
 .roll-ev{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); grid-auto-rows:1fr; gap:10px;
   width:100%; max-width:520px; margin:0 auto}
 .pf-line{letter-spacing:.06em}
@@ -903,6 +931,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         <span class="view-lbl">Вид</span>
         <button id="btnPct" type="button" aria-pressed="false" hidden>Показать проценты</button>
         <button id="btnKf" type="button" aria-pressed="false" hidden>Показать кэфы</button>
+        <button id="btnLF" type="button" aria-pressed="false" hidden title="Как заканчивались матчи Балтсистемы с такой же линией конторы">Линия → факт</button>
         <span class="zoomctl" role="group" aria-label="Масштаб страницы">
           <button id="btnZoomOut" type="button" aria-label="Мельче" title="Мельче на 5%">−</button>
           <b id="zoomVal">100%</b>
@@ -1026,6 +1055,13 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       <div class="lg-row"><span class="lg-s sw m">—</span><span>коэффициента на этот исход нет</span></div>
       <div class="lg-tip">▲ и зелёный кэф на разных исходах — народ и контора расходятся</div>
     </div>
+    <div class="lg-blk" id="lgLF" hidden>
+      <div class="lg-h sw">Линия → факт<span class="lg-sub">кнопка «Линия → факт»</span></div>
+      <div class="lg-row"><span class="lg-s sw">38</span><span>как часто исход заходил в матчах тото с такой же линией конторы, в %</span></div>
+      <div class="lg-row"><span class="lg-s sw c">45</span><span>заходил чаще, чем обещала контора (на 5 пп и больше)</span></div>
+      <div class="lg-row"><span class="lg-s sw h">31</span><span>заходил реже, чем обещала контора</span></div>
+      <div class="lg-row"><span class="lg-s sw m">27</span><span>бледное — похожих матчей меньше 20, цифра ненадёжна</span></div>
+    </div>
     <div class="lg-blk">
       <div class="lg-h sw">Результат матча</div>
       <div class="lg-row"><span class="lg-s" style="color:var(--o1)">1 : 0</span><span>идёт игра, итог ещё не подведён</span></div>
@@ -1077,7 +1113,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. «РАНДОМ» ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; в корзину при этом ничего не уходит — для этого есть «Положить купон в корзину». Строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 20.09 02:20 МСК</span>
+    <span class="build">сборка 20.09 03:30 МСК</span>
   </footer>
 </div>
 
@@ -1177,6 +1213,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   if(!Array.isArray(state.played)) state.played = [];
   state.showPct = !!state.showPct;
   state.showKf  = !!state.showKf;
+  state.showLF  = !!state.showLF;
   /* один шаг назад: предыдущий тираж хранится целиком для просмотра, купон он не трогает */
   if(!state.prev || !Array.isArray(state.prev.matches) || !state.prev.matches.length) state.prev = null;
   state.viewPrev = !!(state.viewPrev && state.prev);
@@ -2273,9 +2310,159 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
      по сути нет. Настройку из интерфейса убрали — менять здесь. */
   var PCT_GAP = 4;
 
+  /* ---------- история тиражей для разбора матчей ----------
+     data/api/history.json собирает зеркало (GitHub Actions): все завершённые тиражи
+     с линией конторы, долями пула и итогом. Отсюда — «Линия → факт», ярусы и история команд. */
+  var hist = { ev: [], at: 0, loading: false, tiers: null, count: 0 };
+  function loadHist(){
+    if(hist.loading || typeof fetch !== "function") return;
+    if(hist.at && Date.now() - hist.at < 6 * 3600 * 1000) return;
+    hist.loading = true;
+    fetch("data/api/history.json?t=" + Math.floor(Date.now() / 3600000))
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){
+        if(!j || !j.draws) return;
+        var ev = [];
+        Object.keys(j.draws).forEach(function(n){
+          var d = j.draws[n];
+          (d.ev || []).forEach(function(e){
+            ev.push({ n: Number(n), at: d.ended_at || "", home: e[0], away: e[1], ch: e[2] || "",
+                      bk: (e[3] != null && e[4] != null && e[5] != null) ? [Number(e[3]), Number(e[4]), Number(e[5])] : null,
+                      pool: (e[6] != null) ? [Number(e[6]), Number(e[7]), Number(e[8])] : null,
+                      res: e[9] || "", score: e[10] || "" });
+          });
+        });
+        ev.sort(function(a, b){ return b.n - a.n; });
+        hist.ev = ev; hist.count = Object.keys(j.draws).length; hist.at = Date.now(); hist.tiers = null;
+        if(!book) render();
+      })
+      .catch(function(){})
+      .then(function(){ hist.loading = false; });
+  }
+
+  /* ярус лиги по названию турнира — та же классификация, что в расчёте по 33 тиражам */
+  var TIER_V = ["серия c","3-я","3-й дивизион","1-я лига","2-я лига","национальная лига","истмийск","южная футбольная",
+    "северная премьер","примера b","трофей футбольной","путь регионов","до 23","израиль","болгария. 2","сербия. 1-я",
+    "австрия. 2","венгрия. 2","бельгия. 2","португалия. 2","швеция. 1-й","иордания. 1","эквадор. серия b","кубок серии c"];
+  var TIER_B = ["чемпионшип","ла лига 2","лига 2","серия b","2-я бундеслига","1-й дивизион","турция. 1-я","примера насьональ",
+    "суперэттан","чемпионат до"];
+  function tierOf(ch){
+    var c = String(ch || "").toLowerCase();
+    if(!c) return "";
+    if(c.indexOf("англия. 1-я лига") === 0 || c.indexOf("англия. 2-я лига") === 0) return "В";
+    if(c.indexOf("россия. 1-я лига") === 0) return "Б";
+    var i;
+    for(i = 0; i < TIER_V.length; i++) if(c.indexOf(TIER_V[i]) >= 0) return "В";
+    for(i = 0; i < TIER_B.length; i++) if(c.indexOf(TIER_B[i]) >= 0) return "Б";
+    return "А";
+  }
+  /* сводка по ярусам из истории: сколько обещал фаворит конторы, сколько прошёл, сколько ничьих */
+  function tierStats(){
+    if(hist.tiers) return hist.tiers;
+    var acc = { "А": {n:0, prom:0, hit:0, dr:0}, "Б": {n:0, prom:0, hit:0, dr:0}, "В": {n:0, prom:0, hit:0, dr:0} };
+    hist.ev.forEach(function(e){
+      if(!e.bk || !e.res) return;
+      var t = tierOf(e.ch); if(!acc[t]) return;
+      var f = 0; if(e.bk[1] > e.bk[f]) f = 1; if(e.bk[2] > e.bk[f]) f = 2;
+      var a = acc[t]; a.n++; a.prom += e.bk[f]; a.hit += (OUT[f] === e.res) ? 1 : 0; a.dr += (e.res === "X") ? 1 : 0;
+    });
+    hist.tiers = acc;
+    return acc;
+  }
+  function tierTitle(t){
+    var names = { "А": "ярус А — топ-лиги", "Б": "ярус Б — вторые лиги", "В": "ярус В — третьи лиги и ниже, Израиль, молодёжь" };
+    var st = tierStats()[t], s = names[t] || "";
+    if(st && st.n >= 30){
+      s += ". В истории тото " + st.n + " матч(ей): фаворит конторы обещал " + Math.round(st.prom / st.n) +
+           "%, прошёл " + Math.round(100 * st.hit / st.n) + "%; ничьих " + Math.round(100 * st.dr / st.n) + "%";
+    }
+    if(t === "В") s += ". Правило: ярус В никогда одиночкой";
+    return s;
+  }
+  /* «Линия → факт»: матчи истории с такой же линией конторы (±tol пп по каждому исходу) */
+  function lineFact(bk){
+    if(!bk || !hist.ev.length) return null;
+    var b = bk.map(Number), tol = 4, cnt = [0,0,0], n = 0, i, e;
+    function pass(t){
+      cnt = [0,0,0]; n = 0;
+      for(i = 0; i < hist.ev.length; i++){
+        e = hist.ev[i];
+        if(!e.bk || !e.res) continue;
+        if(Math.abs(e.bk[0] - b[0]) > t || Math.abs(e.bk[1] - b[1]) > t || Math.abs(e.bk[2] - b[2]) > t) continue;
+        n++; cnt[OUT.indexOf(e.res)]++;
+      }
+    }
+    pass(tol);
+    if(n < 20){ tol = 6; pass(tol); }
+    if(!n) return null;
+    return { n: n, tol: tol, pct: cnt.map(function(c){ return Math.round(100 * c / n); }) };
+  }
+  function normTeam(x){ return String(x || "").toLowerCase().replace(/ё/g, "е").replace(/[^a-zа-я0-9]+/g, ""); }
+  function fmtDay(iso){
+    var ms = mskIso(iso); if(ms === null) return "";
+    var d = new Date(ms + 3 * 3600000), p = function(x){ return (x < 10 ? "0" : "") + x; };
+    return p(d.getUTCDate()) + "." + p(d.getUTCMonth() + 1);
+  }
+  /* история команды в Балтсистеме: последние появления, линия, пул, итог */
+  function showTeam(name){
+    var key = normTeam(name), rows = [];
+    hist.ev.forEach(function(e){
+      var isH = normTeam(e.home) === key, isA = normTeam(e.away) === key;
+      if(isH || isA) rows.push({ e: e, home: isH });
+    });
+    $("evTitle").textContent = name + " в Балтсистеме";
+    var box = $("evBody");
+    if(!hist.ev.length){
+      box.innerHTML = '<p class="ev-warn">История тиражей ещё не загрузилась — попробуй через минуту.</p>';
+      $("evBack").hidden = false; return;
+    }
+    if(!rows.length){
+      box.innerHTML = '<p class="ev-warn">В истории (' + hist.count + ' тиражей) эта команда не встречалась.</p>';
+      $("evBack").hidden = false; return;
+    }
+    var w = 0, d = 0, l = 0, favN = 0, favHit = 0;
+    rows.forEach(function(r){
+      var e = r.e, mine = r.home ? "1" : "2";
+      if(e.res === "X") d++; else if(e.res === mine) w++; else l++;
+      if(e.bk){
+        var f = 0; if(e.bk[1] > e.bk[f]) f = 1; if(e.bk[2] > e.bk[f]) f = 2;
+        if(OUT[f] === mine){ favN++; if(e.res === mine) favHit++; }
+      }
+    });
+    var h = '<div class="th-sum"><span>появлений <b>' + rows.length + '</b></span>' +
+      '<span>В <b>' + w + '</b> · Н <b>' + d + '</b> · П <b>' + l + '</b></span>' +
+      (favN ? '<span>фаворитом конторы <b>' + favN + '</b>, прошла <b>' + favHit + '</b></span>' : '') + '</div>';
+    h += '<table class="ev-tab th-tab"><tr><th>Тираж</th><th>Дата</th><th style="text-align:left">Матч</th><th>Линия БК</th><th>Пул</th><th>Итог</th><th>Счёт</th></tr>';
+    rows.slice(0, 12).forEach(function(r){
+      var e = r.e, mine = r.home ? "1" : "2";
+      var cls = (e.res === "X") ? "" : (e.res === mine ? " w" : " l");
+      var opp = r.home ? e.away : e.home;
+      h += '<tr><td class="nw">' + e.n + '</td><td class="nw">' + fmtDay(e.at) + '</td>' +
+        '<td class="tm-me" style="text-align:left">' + escHtml(r.home ? name : opp) + ' — ' + escHtml(r.home ? opp : name) +
+        '<span class="side">' + (r.home ? "дома" : "в гостях") + '</span></td>' +
+        '<td class="nw">' + (e.bk ? e.bk.join(" / ") : "—") + '</td>' +
+        '<td class="nw">' + (e.pool ? e.pool.join(" / ") : "—") + '</td>' +
+        '<td class="nw th-res' + cls + '">' + escHtml(e.res) + '</td>' +
+        '<td class="nw">' + escHtml(String(e.score || "").replace(/\s+/g, "")) + '</td></tr>';
+    });
+    h += '</table>';
+    if(rows.length > 12) h += '<p class="ev-note">Показаны последние 12 из ' + rows.length + '.</p>';
+    h += '<p class="ev-note">Линия и пул — доли в процентах 1 / X / 2 на момент закрытия тиража. История: ' + hist.count + ' тиражей.</p>';
+    box.innerHTML = h;
+    $("evBack").hidden = false;
+  }
+
   /* ---------- render ---------- */
   var rowsEl = $("rows");
 
+  /* название команды — ссылка на её историю в тото */
+  function mkTeam(name){
+    var t = document.createElement("span");
+    t.className = "tm"; t.textContent = name;
+    t.title = "История команды в Балтсистеме";
+    t.addEventListener("click", function(){ showTeam(name); });
+    return t;
+  }
   function render(){
     ensureShape();
     syncTirNav();
@@ -2305,11 +2492,11 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         console.info("ДЖЕК: нет в таблице клубов — " + m.away);
       }
       if(hc) teams.appendChild(mkFlag(hc, "tflag", m.home));
-      teams.appendChild(document.createTextNode(m.home));
+      teams.appendChild(mkTeam(m.home));
       var vs = document.createElement("span"); vs.className="vs"; vs.textContent="—";
       teams.appendChild(vs);
       if(ac) teams.appendChild(mkFlag(ac, "tflag", m.away));
-      teams.appendChild(document.createTextNode(m.away));
+      teams.appendChild(mkTeam(m.away));
       fix.appendChild(teams);
       var meta = document.createElement("div");
       meta.className="meta";
@@ -2319,6 +2506,13 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       if(code) meta.appendChild(mkFlag(code, "flag"));
       meta.appendChild(document.createTextNode(
         [m.date, m.time, m.league].filter(Boolean).join("  ·  ")));
+      var tr = tierOf(m.league);
+      if(tr){
+        var tg = document.createElement("span");
+        tg.className = "tier" + (tr === "В" ? " t-v" : "");
+        tg.textContent = tr; tg.title = tierTitle(tr);
+        meta.appendChild(tg);
+      }
       if(m.res || m.score){
         var sc = document.createElement("span");
         /* подведённый счёт зелёный, живой — синий; сам исход всегда синий,
@@ -2375,6 +2569,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
       var picksWrap = document.createElement("div");
       picksWrap.className = "picks-m";
+      var lfRow = (state.showLF && m.pct && m.pct.bk) ? lineFact(m.pct.bk) : null;
 
       OUT.forEach(function(o,i){
         var cell = document.createElement("div");
@@ -2452,6 +2647,18 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
           cell.appendChild(kf);
         }
 
+        if(state.showLF && lfRow){
+          var lf = document.createElement("div");
+          var lp = lfRow.pct[i], lb = Number(m.pct.bk[i]);
+          lf.className = "lf-col" + (lfRow.n < 20 ? " thin" : "") +
+            (lfRow.n >= 20 && lp - lb >= 5 ? " up" : (lfRow.n >= 20 && lb - lp >= 5 ? " down" : ""));
+          lf.innerHTML = "<b>" + lp + "</b>";
+          lf.title = "При линии " + m.pct.bk.join("/") + " (±" + lfRow.tol + " пп) исход " + o + " заходил в " + lp +
+            "% из " + lfRow.n + " матчей истории; контора даёт " + lb + "%" +
+            (lfRow.n < 20 ? ". Похожих матчей мало — цифра ненадёжна" : "");
+          cell.appendChild(lf);
+        }
+
         picksWrap.appendChild(cell);
       });
       row.appendChild(picksWrap);
@@ -2494,8 +2701,18 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         save(); render();
       });
 
+      var bSrch = document.createElement("button");
+      bSrch.type = "button"; bSrch.className = "mode srch";
+      bSrch.title = "Составы и новости по матчу — поиск откроется в новой вкладке";
+      bSrch.setAttribute("aria-label", "Найти новости: " + m.home + " — " + m.away);
+      bSrch.innerHTML = '<svg width="12" height="12" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="2"/><path d="M13 13l4.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+      bSrch.addEventListener("click", function(){
+        var q = m.home + " " + m.away + " составы новости";
+        window.open("https://www.google.com/search?q=" + encodeURIComponent(q), "_blank", "noopener");
+      });
       modes.appendChild(bRand);
       modes.appendChild(bLock);
+      modes.appendChild(bSrch);
       row.appendChild(modes);
 
       rowsEl.appendChild(row);
@@ -2618,7 +2835,13 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     kb.title = state.showKf
       ? "Убрать коэффициенты конторы из строк"
       : "Показать под каждым исходом коэффициент конторы из того же тиража";
-    $("pctLegend").hidden = !((havePct && state.showPct) || (haveKf && state.showKf));
+    var haveBk = state.matches.some(function(m){ return m.pct && m.pct.bk; });
+    var lb = $("btnLF");
+    lb.hidden = !(haveBk && hist.ev.length);
+    lb.setAttribute("aria-pressed", state.showLF ? "true" : "false");
+    lb.textContent = state.showLF ? "Скрыть линия → факт" : "Линия → факт";
+    $("lgLF").hidden = !(state.showLF && !lb.hidden);
+    $("pctLegend").hidden = !((havePct && state.showPct) || (haveKf && state.showKf) || (state.showLF && !lb.hidden));
     /* ручка влияет только на стрелки, а стрелки живут вместе с процентами —
        прячем её, пока проценты выключены, иначе выглядит как неработающая */
     renderKickoff();
@@ -4768,6 +4991,10 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     state.showKf = !state.showKf;
     save(); render();
   });
+  $("btnLF").addEventListener("click", function(){
+    state.showLF = !state.showLF;
+    save(); render();
+  });
 
   $("btnZoomIn").addEventListener("click", function(){ setZoom((Number(state.zoom) || 1) + ZSTEP); });
   $("btnZoomOut").addEventListener("click", function(){ setZoom((Number(state.zoom) || 1) - ZSTEP); });
@@ -5071,6 +5298,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         if(want) linkPulling = true;
         pullTirazh(true, want);
         setTimeout(seedPrev, 4000);          /* прошлый тираж — фоном, когда текущий уже на месте */
+        setTimeout(loadHist, 2500);          /* история тиражей для разбора — тоже фоном */
       }, 300);
     } else {
       tryPending();                        /* без сети — ставим купон из ссылки по тому, что уже сохранено */
@@ -5090,6 +5318,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     try{
       if(document.hidden) return;
       if(typeof fetch !== "function") return;
+      loadHist();                           /* сама решает, пора ли: не чаще раза в 6 часов */
       if(state.viewPrev && state.prev && !prevDone() && Date.now() - lastPrev > 60 * 1000){
         lastPrev = Date.now(); refreshPrev();
       }
