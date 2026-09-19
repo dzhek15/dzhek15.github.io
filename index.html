@@ -960,7 +960,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         <div class="roll-group">
         <div class="roll-cap">Аналитика</div>
         <div class="roll-ev">
-        <button class="btn-ev" id="btnEV" type="button" title="Посчитать матожидание купона: вероятности из коэффициентов, соперники — из долей пула"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5V9.5"/><path d="M10 16.5V4"/><path d="M15.5 16.5v-5"/></svg><span class="lbl">Оценить купон</span></button>
         <button class="btn-ev" id="btnDiff" type="button" title="Где доля игроков сильнее всего расходится с оценкой конторы"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.5v13"/><path d="M4.5 6.5h11"/><path d="M2.5 12.2 4.9 7l2.4 5.2a2.6 2.6 0 0 1-4.8 0z"/><path d="M12.7 12.2 15.1 7l2.4 5.2a2.6 2.6 0 0 1-4.8 0z"/></svg><span class="lbl">Расхождения</span></button>
                 <button class="btn-ev" id="btnPF" type="button" title="Отобрать из системы строки, которые меньше всего пересекаются с выбором толпы"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 4.5h13l-5 5.8v5.2l-3 1.6v-6.8z"/></svg><span class="lbl">Отобрать строки</span></button>
         <button class="btn-ev" id="btnBrief" type="button" title="Собрать систему с гарантией: часть строк купона вместо всех"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3.5" width="15" height="13" rx="1.5"/><path d="M2.5 8h15"/><path d="M7.5 8v8.5"/><path d="M12.5 8v8.5"/></svg><span class="lbl">Бриф</span></button>
@@ -1078,7 +1077,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. «РАНДОМ» ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; в корзину при этом ничего не уходит — для этого есть «Положить купон в корзину». Строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 20.09 01:30 МСК</span>
+    <span class="build">сборка 20.09 02:20 МСК</span>
   </footer>
 </div>
 
@@ -4759,7 +4758,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     save(); render();
   });
 
-  $("btnEV").addEventListener("click", function(){ showEV(); });
+  /* кнопка «Оценить купон» снята 20.09.2026 — расчёт EV не пригодился; showEV оставлен на случай возврата */
   $("btnPF").addEventListener("click", function(){ showPortfolio(); });
   $("evClose").addEventListener("click", function(){ $("evBack").hidden = true; });
   $("evBack").addEventListener("click", function(e){ if(e.target === $("evBack")) $("evBack").hidden = true; });
