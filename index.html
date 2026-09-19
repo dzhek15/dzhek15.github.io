@@ -104,6 +104,8 @@ h1,h2,h3{font-family:"Chivo","IBM Plex Sans",system-ui,sans-serif; margin:0; tex
 .ticket .tk:last-child{border-right:0}
 .ticket .k, .ticket label{font-size:11.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
 .tk-note{font-size:11px; color:var(--muted); margin-top:2px; text-align:center; line-height:1.25}
+.feed-note{color:var(--warn); font-weight:600; letter-spacing:.02em; cursor:help}
+.feed-note #tkFeedNote{color:var(--muted); font-weight:400}
 .tk-btn{cursor:pointer}
 .tk-btn:hover{background:var(--surface-2)}
 .tk-why{font-style:normal; color:var(--o1); text-decoration:underline dotted; text-underline-offset:2px; white-space:nowrap}
@@ -116,6 +118,26 @@ h1,h2,h3{font-family:"Chivo","IBM Plex Sans",system-ui,sans-serif; margin:0; tex
   font-size:17px; padding:1px 4px; border:0; border-bottom:1px dashed var(--rule-strong);
   border-radius:0; background:transparent}
 #tirazhName:focus{outline:none; border-bottom-color:var(--accent)}
+.tir-nav{display:inline-flex; align-items:center; gap:3px}
+.tir-nav button{width:24px; height:24px; padding:0; border:1px solid var(--rule-strong); border-radius:50%;
+  background:transparent; color:var(--ink); font:700 17px/1 "IBM Plex Mono",monospace; cursor:pointer;
+  display:inline-flex; align-items:center; justify-content:center}
+.tir-nav button:hover:not(:disabled){background:var(--surface-2); border-color:var(--accent); color:var(--accent)}
+.tir-nav button:disabled{opacity:.28; cursor:default}
+body.is-prev #tirazhName{color:var(--brand-gold)}
+.prev-bar{margin:0 0 10px; padding:9px 13px; border:1px solid var(--brand-gold); border-radius:var(--r);
+  background:var(--surface); box-shadow:var(--shadow); display:flex; flex-wrap:wrap; gap:6px 14px; align-items:center;
+  font-size:13px; color:var(--muted)}
+.prev-bar b{color:var(--ink); font-family:"IBM Plex Mono",monospace; font-weight:600}
+.prev-bar .pb-t{color:var(--brand-gold); font-family:"Chivo",sans-serif; font-weight:800; font-size:14px; letter-spacing:.02em}
+.prev-bar .pb-back{margin-left:auto; border:1px solid var(--brand-gold); color:var(--brand-gold); background:transparent;
+  border-radius:var(--r); padding:5px 11px; font:600 12px "IBM Plex Sans",sans-serif; cursor:pointer}
+.prev-bar .pb-back:hover{background:var(--surface-2)}
+body.is-prev .console-top, body.is-prev .roll, body.is-prev .keep-bar, body.is-prev .book-bar, body.is-prev #rollNote,
+body.is-prev #hint, body.is-prev .grid2, body.is-prev .pct-legend{display:none !important}
+body.is-prev .row .pick{cursor:default; opacity:.45}
+body.is-prev .row .pick.won{opacity:1; border-width:2px}
+body.is-prev .row .modes{visibility:hidden}
 input[type=text],input[type=number]{
   font:inherit; color:var(--ink); background:var(--surface); border:1px solid var(--rule-strong);
   border-radius:var(--r); padding:6px 9px;
@@ -366,6 +388,9 @@ button:disabled{opacity:.45; cursor:not-allowed}
 .knob label{font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
 .knob input{width:8ch; text-align:center; font-family:"IBM Plex Mono",monospace}
 .knob-hint{font-size:11px; font-family:"IBM Plex Mono",monospace; color:var(--muted); letter-spacing:.02em; min-height:13px}
+.knob-hint.warn{color:var(--hot); font-weight:600}
+.knob-edge .knob-hint.warn{white-space:normal; max-width:160px; text-align:center; line-height:1.25}
+#priceLine.warn{border-color:var(--hot); color:var(--hot); background:var(--hot-soft)}
 /* цена строки переехала в полосу под купоном — см. .knob-edge */
 /* скорость прокрутки стоит вплотную к числу кликов, одной группой */
 .spin-speed{border:1px solid var(--accent); border-radius:6px; padding:6px 10px;
@@ -859,7 +884,12 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     <div class="ticket">
       <div class="tk">
         <label for="tirazhName">Тираж №</label>
-        <input type="text" id="tirazhName" value="5006" readonly tabindex="-1" aria-readonly="true" title="Номер тиража подставляется сам при «Обновить тираж»">
+        <span class="tir-nav">
+          <button id="btnTirPrev" type="button" aria-label="Предыдущий тираж" title="Предыдущий тираж: результаты и счёт. Купон не трогается" disabled>&#8249;</button>
+          <input type="text" id="tirazhName" value="5006" readonly tabindex="-1" aria-readonly="true" title="Номер тиража подставляется сам при «Обновить тираж»">
+          <button id="btnTirNext" type="button" aria-label="Вернуться к текущему тиражу" title="Вернуться к текущему тиражу" disabled>&#8250;</button>
+        </span>
+        <span class="tk-note feed-note" id="tkFeedWrap" hidden title="totobrief не отвечает — данные взяты из зеркала, которое GitHub снимает каждые полчаса"><span id="tkFeed">зеркало</span><span id="tkFeedNote"></span></span>
       </div>
       <div class="tk"><span class="k">Приём до (МСК)</span><span class="v mono" id="koTime">—</span></div>
       <div class="tk"><span class="k">Осталось</span><span class="v mono" id="koLeft">—</span></div>
@@ -945,8 +975,8 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     <button class="btn-keep" id="btnKeep" type="button"><svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.2 7.5h13.6l-1.4 8.3a1.6 1.6 0 0 1-1.6 1.3H6.2a1.6 1.6 0 0 1-1.6-1.3z"/><path d="M7.3 7.5 9.4 2.9"/><path d="M12.7 7.5 10.6 2.9"/></svg><span class="lbl">Положить купон в корзину</span></button>
     </div>
     <div class="knob knob-price knob-edge">
-        <label for="priceLine">Стоимость купона, ₽</label>
-        <input type="number" id="priceLine" value="30" min="1" step="1" title="Цена одной строки в БК. Итог по всему купону считается ниже: цена строки × число комбинаций"><span class="knob-hint" id="priceHint"></span>
+        <label for="priceLine">Цена за вариант, ₽</label>
+        <input type="number" id="priceLine" value="30" min="1" step="1" title="Цена ОДНОГО варианта — как в квитанции БалтБета «Сумма за вариант». Обычно 30. Итог по купону = цена × число комбинаций"><span class="knob-hint" id="priceHint"></span>
       </div>
     <span class="keep-note" id="keepNote"></span>
   </div>
@@ -972,6 +1002,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     </div>
   </div>
 
+  <div class="prev-bar" id="prevBar" hidden></div>
   <div class="coupon" id="coupon">
     <div class="chead">
       <div>№</div><div>Событие</div>
@@ -1047,7 +1078,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. «РАНДОМ» ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; в корзину при этом ничего не уходит — для этого есть «Положить купон в корзину». Строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 16.09 21:50 МСК</span>
+    <span class="build">сборка 20.09 01:30 МСК</span>
   </footer>
 </div>
 
@@ -1147,6 +1178,10 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   if(!Array.isArray(state.played)) state.played = [];
   state.showPct = !!state.showPct;
   state.showKf  = !!state.showKf;
+  /* один шаг назад: предыдущий тираж хранится целиком для просмотра, купон он не трогает */
+  if(!state.prev || !Array.isArray(state.prev.matches) || !state.prev.matches.length) state.prev = null;
+  state.viewPrev = !!(state.viewPrev && state.prev);
+  if(state.tirazhId == null) state.tirazhId = null;
   state.compact = false;   /* компактный вид убран вместе с кнопкой */
   state.zoom = Number(state.zoom);
   if(!isFinite(state.zoom) || state.zoom <= 0) state.zoom = 1;
@@ -1283,6 +1318,17 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
     var tv = $("koTime"), lv = $("koLeft");
     tv.classList.remove("soon","shut"); lv.classList.remove("soon","shut");
+    if(state.viewPrev && state.prev){
+      var pts = mskIso(state.prev.deadline), pt = function(x){ return (x<10?"0":"") + x; };
+      if(pts !== null){
+        var pm = new Date(pts + 3*3600000);
+        tv.textContent = pt(pm.getUTCDate()) + "." + pt(pm.getUTCMonth()+1) + " · " + pt(pm.getUTCHours()) + ":" + pt(pm.getUTCMinutes());
+      } else tv.textContent = "—";
+      tv.classList.add("shut"); lv.classList.add("shut");
+      lv.textContent = prevDone() ? "сыгран" : "идёт";
+      lv.title = prevDone() ? "Все результаты прошлого тиража подведены" : "Счёт прошлого тиража обновляется раз в минуту, пока открыт просмотр";
+      return;
+    }
     var ts = kickoffMs();
     if(ts === null){
       tv.textContent = "—";
@@ -2233,6 +2279,8 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   function render(){
     ensureShape();
+    syncTirNav();
+    if(state.viewPrev && state.prev){ renderPrevView(); return; }
     rowsEl.innerHTML = "";
     state.matches.forEach(function(m, idx){
       var n = countPicks(m);
@@ -2497,11 +2545,19 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
     var price = Number(state.price) || 0;
 
-    $("priceHint").textContent = t.empty > 0
+    var ph = $("priceHint");
+    ph.textContent = t.empty > 0
       ? "нужны все 15 исходов"
       : (t.combos > 1
-          ? fmt(price) + " × " + fmt(t.combos) + " = " + fmt(t.combos * price) + " ₽"
+          ? fmt(price) + " ₽ × " + fmt(t.combos) + " вар. = " + fmt(t.combos * price) + " ₽ за купон"
           : fmt(price) + " ₽ за один вариант");
+    /* в поле должна стоять цена ОДНОГО варианта: однажды 240 вместо 30 стоило восьмикратной ставки */
+    var priceOdd = price > 100;
+    if(priceOdd && t.empty === 0){
+      ph.textContent = "это за ОДИН вариант! спишут " + fmt(t.combos * price) + " ₽";
+    }
+    ph.classList.toggle("warn", priceOdd);
+    $("priceLine").classList.toggle("warn", priceOdd);
 
     var plan = csvPlan();
     var en = $("expNote");
@@ -3123,6 +3179,8 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   });
 
   $("tirazhName").addEventListener("input", function(e){ state.tirazh = e.target.value; save(); });
+  $("btnTirPrev").addEventListener("click", enterPrev);
+  $("btnTirNext").addEventListener("click", leavePrev);
   $("tirazhName").value = state.tirazh || "";
   /* ---------- Окно «Расхождения с толпой» ----------
      Считаем, насколько доли игроков расходятся с оценкой конторы. Мера — сумма
@@ -4232,6 +4290,70 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   /* ---------- подтяжка тиража с totobrief ---------- */
   var API = "https://totobrief.com/api/v1/community/";
+  /* Зеркало: GitHub Actions раз в полчаса кладёт снимок того же API в data/api/
+     (drawings-N.json, drawing-info-ID.json, status.json). Когда totobrief лежит,
+     сайт читает их — те же форматы, тот же код разбора. Если лежит долго,
+     скрипт зеркала подкладывает состав тиража и результаты со stavka.tv
+     (id вида «s5012», без процентов и коэффициентов). */
+  var MIRROR = "data/api/";
+  var feed = { src: "", statusAt: 0, status: null };
+  function mirrorPath(path){
+    var m = /^baltbet-main\/drawings\?page=(\d+)$/.exec(path);
+    if(m) return MIRROR + "drawings-" + m[1] + ".json";
+    m = /^drawing-info\/([\w-]+)$/.exec(path);
+    if(m) return MIRROR + "drawing-info-" + m[1] + ".json";
+    return null;
+  }
+  function apiFetch(path){
+    return fetch(API + path)
+      .then(function(r){
+        if(!r.ok) throw new Error("totobrief " + r.status);
+        if(feed.src !== "live"){ feed.src = "live"; showFeed(); }
+        return r;
+      })
+      .catch(function(err){
+        var mp = mirrorPath(path);
+        if(!mp) throw err;
+        /* минутный штамп обходит кэш GitHub Pages (10 минут) */
+        return fetch(mp + "?t=" + Math.floor(Date.now() / 60000))
+          .then(function(r){
+            if(!r.ok) throw err;
+            if(feed.src !== "mirror"){ feed.src = "mirror"; showFeed(); }
+            return r;
+          });
+      });
+  }
+  /* штамп по Москве; short — без даты, если это сегодня */
+  function fmtStamp(iso, short){
+    var ms = Date.parse(iso || "");
+    if(!isFinite(ms)) return "";
+    var d = new Date(ms + 3 * 3600000), p = function(x){ return (x < 10 ? "0" : "") + x; };
+    var t = p(d.getUTCHours()) + ":" + p(d.getUTCMinutes());
+    if(short && d.toISOString().slice(0, 10) === new Date(Date.now() + 3 * 3600000).toISOString().slice(0, 10)) return t;
+    return p(d.getUTCDate()) + "." + p(d.getUTCMonth() + 1) + " " + t;
+  }
+  function showFeed(){
+    var wrap = $("tkFeedWrap");
+    if(feed.src !== "mirror"){ wrap.hidden = true; return; }
+    wrap.hidden = false;
+    $("tkFeedNote").textContent = "";
+    if(Date.now() - feed.statusAt < 10 * 60000){ feedNote(); return; }
+    feed.statusAt = Date.now();
+    fetch(MIRROR + "status.json?t=" + Math.floor(Date.now() / 60000))
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){ feed.status = j; feedNote(); })
+      .catch(function(){ feedNote(); });
+  }
+  function feedNote(){
+    var st = feed.status, note = $("tkFeedNote"), wrap = $("tkFeedWrap");
+    if(!st){ note.textContent = ""; return; }
+    var tb = fmtStamp(st.totobrief_ok_at), sv = fmtStamp(st.stavka_ok_at);
+    note.textContent = tb ? " · totobrief " + fmtStamp(st.totobrief_ok_at, true) : " · снимка totobrief нет";
+    wrap.title = "totobrief не отвечает — данные взяты из зеркала на GitHub." +
+      (tb ? " Последний живой снимок totobrief (проценты и коэффициенты на тот момент): " + tb + " МСК." : "") +
+      (sv ? " Составы и результаты со stavka.tv: " + sv + " МСК." : "") +
+      (st.updated_at ? " Зеркало обновлено " + fmtStamp(st.updated_at) + " МСК." : "");
+  }
 
   /* Доли игроков и оценка конторы приезжают в одном ответе, но появляются в РАЗНОЕ
      время: у только что открытого тиража пула ещё нет, а коэффициенты уже есть.
@@ -4268,6 +4390,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       m.score = evs[i].score || "";
     }
     state.resAt = Date.now();          /* когда данные с totobrief пришли в последний раз */
+    if(info.id) state.tirazhId = info.id;
     save();
     if(book) bookShow(); else render();   /* bookShow сам вызывает render и пересчитывает «по факту угадано» */
     return true;
@@ -4305,7 +4428,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     histLoading = true;
     var jobs = [];
     for(var p = 2; p <= HIST_PAGES; p++){
-      jobs.push(fetch(API + "baltbet-main/drawings?page=" + p)
+      jobs.push(apiFetch("baltbet-main/drawings?page=" + p)
         .then(function(r){ return r.ok ? r.json() : null; })
         .then(function(j){ return (j && j.data) || []; })
         .catch(function(){ return []; }));
@@ -4348,6 +4471,12 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     if(!list.length) throw new Error("в ответе нет матчей");
 
     pushHistory("до обновления тиража", true);
+    /* тираж сменился — прошлый уходит в «один шаг назад» (только результаты и счёт) */
+    if(state.matches.length && state.tirazh && String(info.number) !== String(state.tirazh)){
+      state.prev = snapPrev(state.tirazh, state.tirazhId, state.deadline, state.matches);
+    }
+    state.viewPrev = false;
+    state.tirazhId = info.id || null;
     state.matches = list;
     state.tirazh = String(info.number || state.tirazh);
     state.deadline = info.ended_at || state.deadline;
@@ -4360,6 +4489,161 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     $("tirazhName").value = state.tirazh;
     render();
     return list.length;
+  }
+
+  /* ---------- предыдущий тираж: один шаг назад ---------- */
+  function snapPrev(tirazh, id, deadline, matches){
+    return {
+      tirazh: String(tirazh || ""), id: id || null, deadline: deadline || "", at: Date.now(),
+      matches: matches.map(function(m){
+        return { home: m.home, away: m.away, league: m.league || "", res: m.res || "", score: m.score || "" };
+      })
+    };
+  }
+  function prevDone(){
+    return !!(state.prev && state.prev.matches.every(function(m){ return m.res; }));
+  }
+  /* счёт и итоги прошлого тиража — тем же ответом drawing-info */
+  function refreshPrev(){
+    var p = state.prev;
+    if(!p || !p.id || typeof fetch !== "function" || prevDone()) return;
+    apiFetch("drawing-info/" + p.id)
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){
+        if(!j) return;
+        var info = j.data || j;
+        var evs = (info.events || []).slice().sort(function(a,b){ return (a.order||0) - (b.order||0); });
+        if(evs.length !== p.matches.length) return;
+        evs.forEach(function(e, i){
+          p.matches[i].res = normOut(e.result) || "";
+          p.matches[i].score = e.score || "";
+        });
+        p.at = Date.now();
+        save();
+        if(state.viewPrev) render();
+      })
+      .catch(function(){});
+  }
+  /* при первом запуске после обновления прошлого тиража ещё нет — подтягиваем его по номеру */
+  function seedPrev(){
+    if(state.prev || !state.tirazh || typeof fetch !== "function") return;
+    var wantN = Number(state.tirazh) - 1;
+    if(!isFinite(wantN) || wantN <= 0) return;
+    apiFetch("baltbet-main/drawings?page=1")
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){
+        var rows = (j && j.data) || [], d = null, i;
+        for(i = 0; i < rows.length; i++) if(String(rows[i].number) === String(wantN)){ d = rows[i]; break; }
+        if(!d) return null;
+        return apiFetch("drawing-info/" + d.id).then(function(r){ return r.ok ? r.json() : null; })
+          .then(function(j2){
+            if(!j2) return;
+            var info = j2.data || j2;
+            var evs = (info.events || []).slice().sort(function(a,b){ return (a.order||0) - (b.order||0); });
+            var list = [];
+            evs.forEach(function(e){
+              var t = splitTeams(e.name);
+              if(!t) return;
+              list.push({ home: t[0], away: t[1], league: e.championship || "",
+                          res: normOut(e.result) || "", score: e.score || "" });
+            });
+            if(!list.length) return;
+            if(state.prev) return;                       /* пока тянули, тираж уже сменился */
+            state.prev = snapPrev(d.number, d.id, d.ended_at || "", list);
+            save(); render();
+          });
+      })
+      .catch(function(){});
+  }
+  function renderPrevView(){
+    var p = state.prev;
+    rowsEl.innerHTML = "";
+    p.matches.forEach(function(m, idx){
+      var row = document.createElement("div");
+      row.className = "row";
+      var num = document.createElement("div");
+      num.className = "num"; num.textContent = String(idx + 1);
+      row.appendChild(num);
+      var fix = document.createElement("div");
+      fix.className = "fix";
+      var teams = document.createElement("div");
+      teams.className = "teams";
+      teams.title = m.home + " — " + m.away + (m.league ? " · " + m.league : "");
+      var cont = continentCode(m.league);
+      var hc = cont.hit ? teamCode(m.home) : null;
+      var ac = cont.hit ? teamCode(m.away) : null;
+      if(hc) teams.appendChild(mkFlag(hc, "tflag", m.home));
+      teams.appendChild(document.createTextNode(m.home));
+      var vs = document.createElement("span"); vs.className = "vs"; vs.textContent = "—";
+      teams.appendChild(vs);
+      if(ac) teams.appendChild(mkFlag(ac, "tflag", m.away));
+      teams.appendChild(document.createTextNode(m.away));
+      if(m.res || m.score){
+        var sc = document.createElement("span");
+        sc.className = "mscore" + (m.res ? "" : " live");
+        sc.textContent = m.score ? String(m.score).replace(/\s+/g, "") : "";
+        sc.title = m.res ? "матч сыгран, итог " + m.res : "счёт по ходу матча, итог ещё не подведён";
+        if(m.res){
+          var rs = document.createElement("span");
+          rs.className = "mres";
+          rs.textContent = (m.score ? " · " : "") + m.res;
+          sc.appendChild(rs);
+        }
+        teams.appendChild(sc);
+      }
+      fix.appendChild(teams);
+      var meta = document.createElement("div");
+      meta.className = "meta";
+      var code = cont.hit ? ((hc || ac) ? null : cont.flag) : flagCode(m.league);
+      if(code) meta.appendChild(mkFlag(code, "flag"));
+      meta.appendChild(document.createTextNode(m.league || ""));
+      fix.appendChild(meta);
+      row.appendChild(fix);
+      var picksWrap = document.createElement("div");
+      picksWrap.className = "picks-m";
+      OUT.forEach(function(o){
+        var cell = document.createElement("div");
+        cell.className = "pick-cell";
+        var b = document.createElement("button");
+        b.type = "button"; b.disabled = true;
+        b.className = "pick " + (o === "1" ? "p1" : o === "X" ? "px" : "p2");
+        b.textContent = o;
+        if(m.res === o) b.classList.add("won");
+        cell.appendChild(b);
+        picksWrap.appendChild(cell);
+      });
+      row.appendChild(picksWrap);
+      var modes = document.createElement("div");
+      modes.className = "modes";
+      row.appendChild(modes);
+      rowsEl.appendChild(row);
+    });
+    var done = p.matches.filter(function(m){ return m.res; }).length;
+    var live = p.matches.filter(function(m){ return !m.res && m.score; }).length;
+    var bar = $("prevBar");
+    bar.innerHTML = '<span class="pb-t">Просмотр тиража ' + escHtml(p.tirazh) + '</span>' +
+      '<span>сыграно <b>' + done + '</b> из ' + p.matches.length + '</span>' +
+      (live ? '<span>идёт <b>' + live + '</b></span>' : '') +
+      (p.at ? '<span>обновлено <b>' + new Date(p.at).toTimeString().slice(0,5) + '</b></span>' : '') +
+      '<button type="button" class="pb-back" id="btnPrevBack">К текущему тиражу &#8250;</button>';
+    bar.hidden = false;
+    $("btnPrevBack").addEventListener("click", leavePrev);
+  }
+  function escHtml(x){ return String(x).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+  function enterPrev(){
+    if(!state.prev) return;
+    state.viewPrev = true; save(); render(); renderKickoff(); refreshPrev();
+  }
+  function leavePrev(){
+    state.viewPrev = false; save(); render(); renderKickoff();
+  }
+  function syncTirNav(){
+    var inPrev = !!(state.viewPrev && state.prev);
+    document.body.classList.toggle("is-prev", inPrev);
+    $("btnTirPrev").disabled = !state.prev || inPrev;
+    $("btnTirNext").disabled = !inPrev;
+    $("tirazhName").value = inPrev ? state.prev.tirazh : (state.tirazh || "");
+    if(!inPrev) $("prevBar").hidden = true;
   }
 
   /* выбираем тираж: либо заданный номером (ссылка на купон), либо текущий активный */
@@ -4383,7 +4667,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     var firstRows = null;
     /* одна страница выгрузки — 50 тиражей; если ищем конкретный номер, идём глубже */
     function grab(page){
-      return fetch(API + "baltbet-main/drawings?page=" + page)
+      return apiFetch("baltbet-main/drawings?page=" + page)
         .then(function(r){ if(!r.ok) throw new Error("список тиражей: " + r.status); return r.json(); })
         .then(function(j){
           var rows = (j && j.data) || [];
@@ -4424,7 +4708,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         /* тираж тот же — не пересобираем его заново, а только освежаем проценты и кэфы:
            купон, режимы и корзина остаются как были */
         if(haveApiData && String(d.number) === String(state.tirazh)){
-          return fetch(API + "drawing-info/" + d.id)
+          return apiFetch("drawing-info/" + d.id)
             .then(function(r){ if(!r.ok) throw new Error("тираж " + d.number + ": " + r.status); return r.json(); })
             .then(function(j2){
               var info = j2.data || j2;
@@ -4432,7 +4716,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
               return {n:applyDrawing(info), number:d.number};
             });
         }
-        return fetch(API + "drawing-info/" + d.id)
+        return apiFetch("drawing-info/" + d.id)
           .then(function(r){ if(!r.ok) throw new Error("тираж " + d.number + ": " + r.status); return r.json(); })
           .then(function(j2){ return applyDrawing(j2.data || j2); })
           .then(function(n){ return {n:n, number:d.number}; });
@@ -4448,15 +4732,19 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
           if(!silent) say("Тираж №" + res.number + " тот же — обновил доли игроков и коэффициенты. Купон и корзина не тронуты.");
           tryPending();
         }
-        else if(res) say("Тираж №" + res.number + " загружен с totobrief: " + res.n +
-                    " матч(ей), проценты игроков и конторы подставлены в строки. Исходы и режимы не проставлены — " +
-                    "отмечай сам, а для «РАНДОМА» сначала нажми «Все в рандом».");
+        else if(res){
+          var noPct = !state.matches.some(function(m){ return m.pct; });
+          say("Тираж №" + res.number + (feed.src === "mirror" ? " загружен из зеркала (totobrief не отвечает): " : " загружен с totobrief: ") + res.n +
+              " матч(ей)" + (noPct ? ", процентов игроков и коэффициентов у этого снимка нет — только состав и дедлайн."
+                                   : ", проценты игроков и конторы подставлены в строки.") +
+              " Исходы и режимы не проставлены — отмечай сам, а для «РАНДОМА» сначала нажми «Все в рандом».");
+        }
         if(res && !res.soft) tryPending();
       })
       .catch(function(err){
         btn.disabled = false; btn.classList.remove("is-loading"); lbl.textContent = was;
         tryPending();
-        if(!silent) say("Не удалось забрать тираж: " + (err && err.message ? err.message : err) +
+        if(!silent) say("Не удалось забрать тираж ни с totobrief, ни из зеркала: " + (err && err.message ? err.message : err) +
                         ". На странице-артефакте запросы наружу запрещены — автоподтяжка работает только в размещённой версии.");
       });
   }
@@ -4783,6 +5071,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
                    (pendingBook && pendingBook.tirazh) ? pendingBook.tirazh : null;
         if(want) linkPulling = true;
         pullTirazh(true, want);
+        setTimeout(seedPrev, 4000);          /* прошлый тираж — фоном, когда текущий уже на месте */
       }, 300);
     } else {
       tryPending();                        /* без сети — ставим купон из ссылки по тому, что уже сохранено */
@@ -4797,11 +5086,14 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
      — приём закрыт, а в тираже есть неподведённые матчи — раз в минуту, ради счёта.
        Тянем ОТКРЫТЫЙ тираж по номеру, чтобы не перескочить на следующий;
      — все результаты подведены или приём закрылся больше 3 дней назад — не опрашиваем */
-  var lastAuto = Date.now();
+  var lastAuto = Date.now(), lastPrev = 0;
   setInterval(function(){
     try{
       if(document.hidden) return;
       if(typeof fetch !== "function") return;
+      if(state.viewPrev && state.prev && !prevDone() && Date.now() - lastPrev > 60 * 1000){
+        lastPrev = Date.now(); refreshPrev();
+      }
       if(!state.matches.length) return;
       var ts = kickoffMs();
       if(ts == null) return;
