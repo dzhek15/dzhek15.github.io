@@ -33,8 +33,10 @@ STAVKA = "https://stavka.tv/promo/sets/baltbet-superexpress-toto"
 UA = "Mozilla/5.0 (X11; Linux x86_64) dzhek-feed/1.0 (+https://dzhek15.github.io)"
 PAGES = 6            # столько страниц списка тиражей читает сайт для шкалы «ценность тиража»
 KEEP_INFO = 8        # сколько drawing-info хранить (активный + последние завершённые)
+HIST_PAGES = 20      # глубина истории: страниц списка по 50 тиражей (≈ 1000 тиражей, почти три года)
 HIST_FETCH = 80      # сколько недостающих завершённых тиражей дотягивать в историю за один запуск
-HIST_MAX = 400       # сколько тиражей держать в history.json (≈ год с небольшим)
+HIST_MAX = 1000      # сколько тиражей держать в history.json
+HIST_MIN_RES = 12    # тираж берём в историю, если итог есть хотя бы у стольких матчей (отменённые — пусто)
 MSK = timezone(timedelta(hours=3))
 
 DASH = re.compile(r"\s+[—–−-]\s+")
@@ -369,7 +371,7 @@ def add_hist(hist, row, info):
     evs = sorted(d.get("events") or [], key=lambda e: e.get("order") or 0)
     rows = [hist_row(e) for e in evs]
     rows = [r for r in rows if r]
-    if len(rows) < 10 or any(r[9] is None for r in rows):
+    if len(rows) < 10 or sum(1 for r in rows if r[9]) < HIST_MIN_RES:
         return False
     hist["draws"][str(row["number"])] = {"id": row.get("id"), "ended_at": row.get("ended_at"),
                                          "pool_sum": row.get("pool_sum"), "jackpot": row.get("jackpot"), "ev": rows}
@@ -381,10 +383,22 @@ def build_history(pages, infos):
     Сначала берём то, что уже снято (infos), потом дотягиваем недостающие, не больше HIST_FETCH за раз."""
     hist = rd("history.json", {"draws": {}})
     hist.setdefault("draws", {})
+    hist.setdefault("skip", {})            # тиражи без итогов (много отмен) — не дёргать их каждый запуск
     added = 0
     rows = []
     for pg in pages:
         rows += [r for r in (pg.get("data") or []) if r.get("status") == "finished" and not r.get("synthetic")]
+    # список тиражей глубже, чем зеркало для сайта: страницы 7..HIST_PAGES читаем только ради истории
+    for p in range(len(pages) + 1, HIST_PAGES + 1):
+        try:
+            j = jget(TB + "baltbet-main/drawings?page=%d" % p)
+        except Exception as e:
+            log("история: страница", p, "не снялась:", e)
+            break
+        more = [r for r in ((j or {}).get("data") or []) if r.get("status") == "finished"]
+        if not more:
+            break
+        rows += more
     for r in rows:
         k = str(r.get("number"))
         if k in hist["draws"]:
@@ -395,13 +409,16 @@ def build_history(pages, infos):
     fetched = 0
     for r in rows:                      # список идёт от новых к старым — так и дотягиваем
         k = str(r.get("number"))
-        if k in hist["draws"] or fetched >= HIST_FETCH:
+        if k in hist["draws"] or k in hist["skip"] or fetched >= HIST_FETCH:
             continue
         try:
             info = jget(TB + "drawing-info/%s" % r["id"])
             fetched += 1
             if add_hist(hist, r, info):
                 added += 1
+            else:
+                hist["skip"][k] = "нет итогов"
+                added += 1              # пометка тоже изменение файла — иначе не запишется
         except Exception as e:
             log("история: тираж", k, "не снялся:", e)
             break
