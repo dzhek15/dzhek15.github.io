@@ -33,6 +33,8 @@ STAVKA = "https://stavka.tv/promo/sets/baltbet-superexpress-toto"
 UA = "Mozilla/5.0 (X11; Linux x86_64) dzhek-feed/1.0 (+https://dzhek15.github.io)"
 PAGES = 6            # столько страниц списка тиражей читает сайт для шкалы «ценность тиража»
 KEEP_INFO = 8        # сколько drawing-info хранить (активный + последние завершённые)
+HIST_FETCH = 80      # сколько недостающих завершённых тиражей дотягивать в историю за один запуск
+HIST_MAX = 400       # сколько тиражей держать в history.json (≈ год с небольшим)
 MSK = timezone(timedelta(hours=3))
 
 DASH = re.compile(r"\s+[—–−-]\s+")
@@ -343,6 +345,75 @@ def merge_stavka(st, pages, infos):
     return notes
 
 
+# ---------------------------------------------------------------- история для разбора матчей
+def hist_row(e):
+    """[home, away, championship, bk1, bkX, bk2, pool1, poolX, pool2, result, score]"""
+    t = DASH.split(e.get("name") or "", 1)
+    if len(t) != 2:
+        return None
+    q = e.get("quotes") or {}
+    def g(k):
+        v = q.get(k)
+        return v if isinstance(v, (int, float)) else None
+    res = e.get("result")
+    res = "X" if res in ("X", "Х", "x") else (str(res) if res in ("1", "2", 1, 2) else None)
+    return [t[0].strip(), t[1].strip(), e.get("championship") or "",
+            g("bk_win_1"), g("bk_draw"), g("bk_win_2"),
+            g("pool_win_1"), g("pool_draw"), g("pool_win_2"),
+            res, e.get("score") or None]
+
+
+def add_hist(hist, row, info):
+    """Кладёт завершённый тираж в историю, если у всех матчей есть результат."""
+    d = (info or {}).get("data") or info or {}
+    evs = sorted(d.get("events") or [], key=lambda e: e.get("order") or 0)
+    rows = [hist_row(e) for e in evs]
+    rows = [r for r in rows if r]
+    if len(rows) < 10 or any(r[9] is None for r in rows):
+        return False
+    hist["draws"][str(row["number"])] = {"id": row.get("id"), "ended_at": row.get("ended_at"),
+                                         "pool_sum": row.get("pool_sum"), "jackpot": row.get("jackpot"), "ev": rows}
+    return True
+
+
+def build_history(pages, infos):
+    """history.json — все завершённые тиражи из списка с линией конторы, долями пула и итогом.
+    Сначала берём то, что уже снято (infos), потом дотягиваем недостающие, не больше HIST_FETCH за раз."""
+    hist = rd("history.json", {"draws": {}})
+    hist.setdefault("draws", {})
+    added = 0
+    rows = []
+    for pg in pages:
+        rows += [r for r in (pg.get("data") or []) if r.get("status") == "finished" and not r.get("synthetic")]
+    for r in rows:
+        k = str(r.get("number"))
+        if k in hist["draws"]:
+            continue
+        info = infos.get(str(r.get("id")))
+        if info and add_hist(hist, r, info):
+            added += 1
+    fetched = 0
+    for r in rows:                      # список идёт от новых к старым — так и дотягиваем
+        k = str(r.get("number"))
+        if k in hist["draws"] or fetched >= HIST_FETCH:
+            continue
+        try:
+            info = jget(TB + "drawing-info/%s" % r["id"])
+            fetched += 1
+            if add_hist(hist, r, info):
+                added += 1
+        except Exception as e:
+            log("история: тираж", k, "не снялся:", e)
+            break
+    keys = sorted(hist["draws"], key=lambda x: int(x) if x.isdigit() else 0)
+    for k in keys[:-HIST_MAX]:
+        hist["draws"].pop(k, None)
+    hist["updated_at"] = now_iso()
+    hist["count"] = len(hist["draws"])
+    log("история: %d тиражей, добавлено %d, дотянуто %d" % (len(hist["draws"]), added, fetched))
+    return hist, added
+
+
 def main():
     status = rd("status.json", {})
     pages = [rd("drawings-%d.json" % p, None) for p in range(1, PAGES + 1)]
@@ -355,6 +426,7 @@ def main():
     infos = {k: v for k, v in infos.items() if v}
 
     tb_ok = False
+    hist_changed = False
     tb_err = st_err = None
     try:
         pages, infos_new = snap_totobrief()
@@ -365,6 +437,13 @@ def main():
             pg["data"] = [r for r in (pg.get("data") or []) if not r.get("synthetic")]
         tb_ok = True
         log("totobrief: %d страниц, %d drawing-info" % (len(pages), len(infos_new)))
+        try:
+            hist, hist_added = build_history(pages, infos)
+            if hist_added:
+                hist_changed = wr("history.json", hist)
+                status["history_count"] = hist["count"]
+        except Exception as e:
+            log("история не собралась:", repr(e))
     except Exception as e:
         log("totobrief недоступен:", repr(e))
         tb_err = repr(e)[:160]
@@ -404,7 +483,7 @@ def main():
             os.remove(os.path.join(OUT, fn))
             removed = True
 
-    changed = 1 if removed else 0
+    changed = (1 if removed else 0) + (1 if hist_changed else 0)
     for i, pg in enumerate(pages):
         changed += wr("drawings-%d.json" % (i + 1), pg)
     for k, v in infos.items():
