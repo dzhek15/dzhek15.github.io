@@ -1095,7 +1095,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. «РАНДОМ» ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; в корзину при этом ничего не уходит — для этого есть «Положить купон в корзину». Строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 20.09 05:15 МСК</span>
+    <span class="build">сборка 20.09 16:05 МСК</span>
   </footer>
 </div>
 
@@ -4294,10 +4294,21 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   function bookExport(sys){
     /* цена — из самого файла (первое поле первой строки), иначе из поля «Стоимость купона», минимум 30 */
     var fp = book.text ? Number(String(book.text).split(/\r?\n/)[0].split(";")[0].trim()) : NaN;
-    var price = fp >= 30 ? fp : (Number(state.price) >= 30 ? Number(state.price) : 30);
+    var price = (fp >= 30 && fp <= 1000) ? fp : (Number(state.price) >= 30 ? Number(state.price) : 30);
     var nm = String(book.name || "варианты").replace(/\.csv$/i, "").replace(/[\\\/:*?"<>|·№]+/g, " ").trim().replace(/\s+/g, "_");
     if(sys && book.text){
-      return { csv: book.text.replace(/\r\n?/g, "\n").replace(/\n*$/, "\n"),
+      /* файл отдаём как есть, но первое поле каждой строки приводим к цене ОДНОГО варианта:
+         старые выгрузки писали туда сумму за всю систему (30 × комбинации) */
+      var fixed = book.text.replace(/\r\n?/g, "\n").replace(/\n*$/, "").split("\n").map(function(ln){
+        var f = ln.split(";");
+        if(f.length < 16) return ln;
+        var v = Number(String(f[0]).trim()), n = 1;
+        for(var k = 1; k < f.length; k++){ var t = String(f[k]).trim(); if(t) n *= t.length; }
+        var one = (n > 1 && v >= 30 * n && v % n === 0) ? v / n : v;
+        f[0] = String(one >= 30 ? one : 30);
+        return f.join(";");
+      }).join("\n") + "\n";
+      return { csv: fixed,
                name: /\.csv$/i.test(book.name) ? book.name : nm + ".csv",
                what: "файл " + book.name + " как есть (строк " + fmt(book.lines || 0) + ", вариантов " + fmt(book.rows.length) + ")" };
     }
@@ -5050,7 +5061,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   function buildCsvSys(){
     var price = Number(state.price) > 0 ? Number(state.price) : 30;
     var sep = state.csvSep === "; " ? "; " : ";";
-    var byRow = state.csvSum !== "var";        /* по умолчанию — сумма за весь купон */
+    /* первое поле — ВСЕГДА цена одного варианта (30 ₽); БалтБет сам умножает её на число комбинаций */
     var lines = [], src = "";
     var mk = function(snap){
       var cells = [], i, c, n = 1;
@@ -5060,7 +5071,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         n *= c.length;
         cells.push(c);
       }
-      return String(byRow ? price * n : price) + sep + cells.join(sep);
+      return String(price) + sep + cells.join(sep);
     };
     var one = mk(state.matches);
     if(one){ lines.push(one); src = "купон"; }
@@ -5104,7 +5115,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   }
 
   /* настройки «сумма в строке» и «разделитель» убраны с экрана: остаются прежние значения
-     из state (по умолчанию — сумма за весь купон и «;»), поменять можно только в коде */
+     из state (сумма в строке теперь всегда цена одного варианта, разделитель «;»), поменять можно только в коде */
 
   $("btnCsvSys").addEventListener("click", function(){
     if(book){
