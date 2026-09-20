@@ -104,6 +104,12 @@ h1,h2,h3{font-family:"Chivo","IBM Plex Sans",system-ui,sans-serif; margin:0; tex
 .ticket .tk:last-child{border-right:0}
 .ticket .k, .ticket label{font-size:11.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
 .tk-note{font-size:11px; color:var(--muted); margin-top:2px; text-align:center; line-height:1.25}
+/* шесть плиток держим одним рядом: подписи переносятся внутри плитки, а не выталкивают её вниз */
+@media (min-width:821px){
+  .ticket{flex-wrap:nowrap; align-items:stretch}
+  .ticket .tk{flex:1 1 0; min-width:0; padding:10px 12px; justify-content:center}
+  .ticket .tk .tk-note{max-width:210px}
+}
 .feed-note{color:var(--warn); font-weight:600; letter-spacing:.02em; cursor:help}
 .feed-note #tkFeedNote{color:var(--muted); font-weight:400}
 .tk-btn{cursor:pointer}
@@ -470,7 +476,7 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
   [data-compact="1"] .ticket .tk:last-child{flex-basis:33%; border-right:0}
   [data-compact="1"] .ticket .k, [data-compact="1"] .ticket label{font-size:8px; letter-spacing:.06em}
   [data-compact="1"] .ticket .v, [data-compact="1"] #tirazhName{font-size:13px}
-  [data-compact="1"] #tkJackWrap{display:none}
+  [data-compact="1"] #tkJackWrap, [data-compact="1"] #tkFundWrap{display:none}
 
   [data-compact="1"] .console{margin-top:8px; padding:9px 8px}
   [data-compact="1"] .roll-primary{flex-direction:row; gap:6px}
@@ -912,6 +918,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       <div class="tk"><span class="k">Приём до (МСК)</span><span class="v mono" id="koTime">—</span></div>
       <div class="tk"><span class="k">Осталось</span><span class="v mono" id="koLeft">—</span></div>
       <div class="tk" id="tkJackWrap" hidden><span class="k">Суперприз</span><span class="v mono" id="tkJack">—</span></div>
+      <div class="tk" id="tkFundWrap" hidden title="Пул — призовой фонд тиража (90% всех ставок), делится между угадавшими 9 и больше. У БалтБета это «Возможный выигрыш». Пока идёт приём, пул растёт"><span class="k">Пул</span><span class="v mono" id="tkFund">—</span></div>
       <div class="tk tk-btn" id="tkValWrap" hidden role="button" tabindex="0" title="Нажми — объясню, что это за число и как его читать"><span class="k">Ценность тиража</span><span class="v" id="tkVal">—</span><span class="tk-note" id="tkValNote"></span></div>
     </div>
   </header>
@@ -1095,7 +1102,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. «РАНДОМ» ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; в корзину при этом ничего не уходит — для этого есть «Положить купон в корзину». Строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 20.09 16:05 МСК</span>
+    <span class="build">сборка 20.09 17:10 МСК</span>
   </footer>
 </div>
 
@@ -1295,19 +1302,36 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   function renderKickoff(){
     var tc = $("tkCount"); /* плитку «Матчей» убрали — оставляем проверку на случай возврата */
     if(tc) tc.textContent = state.matches.length;
+    /* всё в шапке — по тиражу, который на экране: листаешь стрелками — меняется и суперприз */
+    var inPrevK = !!(state.viewPrev && state.prev);
+    var jackShow = inPrevK
+      ? (Number(state.prev.jack) || Number(((state.drawByNo || {})[state.prev.tirazh] || {}).jack) || 0)
+      : (Number(state.jackpot) || 0);
     var jw = $("tkJackWrap");
-    if(state.jackpot){
+    if(jackShow){
       jw.hidden = false;
-      $("tkJack").textContent = fmt(state.jackpot) + " ₽";
+      $("tkJack").textContent = fmt(jackShow) + " ₽";
     } else { jw.hidden = true; }
+
+    /* пул тиража, который сейчас на экране (у БалтБета — «Возможный выигрыш»);
+       листаешь тираж стрелками — меняется и пул */
+    var fw = $("tkFundWrap");
+    var inPrevF = !!(state.viewPrev && state.prev);
+    var fShow = inPrevF
+      ? (Number(((state.drawByNo || {})[state.prev.tirazh] || {}).pool) || Number(state.prev.pool) || 0)
+      : (Number(state.poolSum) || 0);
+    if(fShow > 0){
+      fw.hidden = false;
+      $("tkFund").textContent = fmt(fShow) + " ₽";
+    } else { fw.hidden = true; }
 
     /* ценность тиража: суперприз к типичному фонду, сравниваем с обычным уровнем */
     var vw = $("tkValWrap");
     var fundNow = Number(state.poolTypical) || Number(state.poolSum) || 0;
     var rTyp = Number(state.ratioTypical) || 0;
-    if(state.jackpot && fundNow){
+    if(jackShow && fundNow){
       vw.hidden = false;
-      var r = state.jackpot / fundNow;
+      var r = jackShow / fundNow;
       var vEl = $("tkVal");
       vEl.textContent = r.toFixed(2).replace(".", ",");
       vEl.classList.remove("good", "bad");
@@ -1335,15 +1359,16 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
     var tv = $("koTime"), lv = $("koLeft");
     tv.classList.remove("soon","shut"); lv.classList.remove("soon","shut");
+    if(lv.previousElementSibling) lv.previousElementSibling.textContent = (state.viewPrev && state.prev) ? "Статус" : "Осталось";
     if(state.viewPrev && state.prev){
       var pts = mskIso(state.prev.deadline), pt = function(x){ return (x<10?"0":"") + x; };
       if(pts !== null){
         var pm = new Date(pts + 3*3600000);
         tv.textContent = pt(pm.getUTCDate()) + "." + pt(pm.getUTCMonth()+1) + " · " + pt(pm.getUTCHours()) + ":" + pt(pm.getUTCMinutes());
       } else tv.textContent = "—";
-      tv.classList.add("shut"); lv.classList.add("shut");
+      /* прошлый тираж — без красного: приём по нему давно закрыт, это не тревога */
       lv.textContent = prevDone() ? "сыгран" : "идёт";
-      lv.title = prevDone() ? "Все результаты прошлого тиража подведены" : "Счёт прошлого тиража обновляется раз в минуту, пока открыт просмотр";
+      lv.title = prevDone() ? "Все результаты прошлого тиража подведены" : "Счёт прошлого тиража обновляется раз в 30 секунд, пока открыт просмотр";
       return;
     }
     var ts = kickoffMs();
@@ -1363,7 +1388,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       lv.textContent = "закрыт" + (state.resAt ? " · обн. " + resStamp() : "");
       lv.title = state.matches.length && state.matches.every(function(m){ return m.res; })
         ? "Все результаты подведены, автообновление остановлено"
-        : "Пока идут матчи, счёт сам обновляется раз в минуту (если вкладка открыта)";
+        : "Пока идут матчи, счёт сам обновляется раз в 30 секунд (если вкладка открыта)";
       return;
     }
     var mins = Math.floor(diff / 60000);
@@ -4511,7 +4536,8 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     return null;
   }
   function apiFetch(path){
-    return fetch(API + path)
+    /* no-store: браузер (особенно Safari на телефоне) иначе отдаёт счёт из своего кэша */
+    return fetch(API + path, {cache: "no-store"})
       .then(function(r){
         if(!r.ok) throw new Error("totobrief " + r.status);
         if(feed.src !== "live"){ feed.src = "live"; showFeed(); }
@@ -4679,7 +4705,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     pushHistory("до обновления тиража", true);
     /* тираж сменился — прошлый уходит в «один шаг назад» (только результаты и счёт) */
     if(state.matches.length && state.tirazh && String(info.number) !== String(state.tirazh)){
-      state.prev = snapPrev(state.tirazh, state.tirazhId, state.deadline, state.matches);
+      state.prev = snapPrev(state.tirazh, state.tirazhId, state.deadline, state.matches, state.poolSum);
     }
     state.viewPrev = false;
     state.tirazhId = info.id || null;
@@ -4698,9 +4724,12 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   }
 
   /* ---------- предыдущий тираж: один шаг назад ---------- */
-  function snapPrev(tirazh, id, deadline, matches){
+  function snapPrev(tirazh, id, deadline, matches, pool){
+    /* собственные дата, пул и суперприз тиража — из списка тиражей, если он уже подтянут */
+    var own = (state.drawByNo || {})[String(tirazh || "")] || {};
     return {
-      tirazh: String(tirazh || ""), id: id || null, deadline: deadline || "", at: Date.now(),
+      tirazh: String(tirazh || ""), id: id || null, deadline: own.end || deadline || "", at: Date.now(),
+      pool: own.pool || Number(pool) || 0, jack: own.jack || 0,
       matches: matches.map(function(m){
         return { home: m.home, away: m.away, league: m.league || "", res: m.res || "", score: m.score || "" };
       })
@@ -4755,7 +4784,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
             });
             if(!list.length) return;
             if(state.prev) return;                       /* пока тянули, тираж уже сменился */
-            state.prev = snapPrev(d.number, d.id, d.ended_at || "", list);
+            state.prev = snapPrev(d.number, d.id, d.ended_at || "", list, d.pool_sum);
             save(); render();
           });
       })
@@ -4896,6 +4925,18 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
                        .map(function(x){ return Number(x.pool_sum); })
                        .sort(function(a,b){ return a - b; });
         state.poolTypical = done.length ? done[Math.floor(done.length/2)] : 0;
+        /* пул каждого тиража из списка — для просмотра прошлого тиража стрелками */
+        var pbn = {};
+        rows.forEach(function(x){
+          pbn[String(x.number)] = { pool: Number(x.pool_sum) || 0, jack: Number(x.jackpot) || 0, end: x.ended_at || "" };
+        });
+        state.drawByNo = pbn;
+        /* прошлый тираж мог сохраниться уже с датой и пулом нового — берём его собственные из списка */
+        if(state.prev && pbn[state.prev.tirazh]){
+          if(pbn[state.prev.tirazh].end) state.prev.deadline = pbn[state.prev.tirazh].end;
+          if(pbn[state.prev.tirazh].pool) state.prev.pool = pbn[state.prev.tirazh].pool;
+          if(pbn[state.prev.tirazh].jack) state.prev.jack = pbn[state.prev.tirazh].jack;
+        }
         var rr = rows.filter(function(x){ return x.status === "finished" && Number(x.pool_sum) > 0 && Number(x.jackpot) > 0; })
                      .map(function(x){ return Number(x.jackpot) / Number(x.pool_sum); })
                      .sort(function(a,b){ return a - b; });
@@ -5291,16 +5332,26 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
      они ползут весь день, а «большинство/меньшинство» считаются именно по ним */
   /* автообновление (вкладка в фоне — не опрашиваем):
      — приём идёт — раз в 7 минут, доли игроков ползут медленно;
-     — приём закрыт, а в тираже есть неподведённые матчи — раз в минуту, ради счёта.
+     — приём закрыт, а в тираже есть неподведённые матчи — раз в 30 секунд, ради счёта;
+       при возврате на вкладку — сразу.
        Тянем ОТКРЫТЫЙ тираж по номеру, чтобы не перескочить на следующий;
      — все результаты подведены или приём закрылся больше 3 дней назад — не опрашиваем */
   var lastAuto = Date.now(), lastPrev = 0;
-  setInterval(function(){
+  var LIVE_EVERY = 30 * 1000;              /* счёт идущих матчей — раз в 30 секунд */
+  /* вернулся на вкладку (телефон разблокировал, переключился из другого приложения) —
+     счёт тянем сразу, не дожидаясь очередного круга: пока вкладка в фоне, опроса нет */
+  document.addEventListener("visibilitychange", function(){
+    if(document.hidden) return;
+    lastAuto = 0; lastPrev = 0;
+    setTimeout(autoTick, 300);
+  });
+  setInterval(autoTick, 10 * 1000);
+  function autoTick(){
     try{
       if(document.hidden) return;
       if(typeof fetch !== "function") return;
       loadHist();                           /* сама решает, пора ли: не чаще раза в 6 часов */
-      if(state.viewPrev && state.prev && !prevDone() && Date.now() - lastPrev > 60 * 1000){
+      if(state.viewPrev && state.prev && !prevDone() && Date.now() - lastPrev > LIVE_EVERY - 2000){
         lastPrev = Date.now(); refreshPrev();
       }
       if(!state.matches.length) return;
@@ -5312,13 +5363,13 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         if(now - ts > 3 * 24 * 3600 * 1000) return;
         if(state.matches.every(function(m){ return m.res; })) return;
       }
-      var every = open ? 7 * 60 * 1000 : 60 * 1000;
+      var every = open ? 7 * 60 * 1000 : LIVE_EVERY;
       if(now - lastAuto < every - 2000) return;
       if($("btnFetch").disabled) return;      /* прошлый запрос ещё идёт */
       lastAuto = now;
       if(open && !book) pullTirazh(true); else pullTirazh(true, state.tirazh);
     }catch(e){}
-  }, 15 * 1000);
+  }
 })();
 </script>
 
