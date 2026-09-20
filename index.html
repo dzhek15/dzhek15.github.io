@@ -558,19 +558,6 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
   font-size:13px; line-height:1; font-variant-numeric:tabular-nums; color:var(--muted)}
 .kf-col.fav{color:var(--cold); font-weight:600}
 .kf-col.dog{color:var(--hot); font-weight:600}
-/* «Линия → факт»: как заканчивались матчи Балтсистемы с такой же линией конторы */
-.lf-col{margin-top:4px; text-align:center; font-family:"IBM Plex Mono",monospace;
-  font-size:13px; line-height:1; font-variant-numeric:tabular-nums; color:var(--muted); cursor:help}
-.lf-col b{font-weight:600; color:var(--ink)}
-.lf-col.up b{color:var(--cold)}
-.lf-col.down b{color:var(--hot)}
-.lf-col.thin b{opacity:.5}
-[data-compact="1"] .lf-col{font-size:11px}
-/* ярус лиги: А — топ, Б — вторые лиги, В — третьи и ниже, где ничьих больше, а фавориты ненадёжны */
-.tier{display:inline-block; margin-left:8px; padding:0 5px; border-radius:3px; font-family:"Chivo",sans-serif;
-  font-size:10.5px; font-weight:800; letter-spacing:.06em; line-height:16px; vertical-align:1px;
-  border:1px solid var(--rule-strong); color:var(--muted); cursor:help}
-.tier.t-v{border-color:var(--warn); color:var(--warn); background:var(--warn-bg)}
 /* название команды кликабельно — история её матчей в тото */
 .tm{cursor:pointer; border-bottom:1px dotted transparent; transition:color .12s linear}
 .tm:hover{color:var(--accent); border-bottom-color:var(--accent)}
@@ -931,7 +918,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         <span class="view-lbl">Вид</span>
         <button id="btnPct" type="button" aria-pressed="false" hidden>Показать проценты</button>
         <button id="btnKf" type="button" aria-pressed="false" hidden>Показать кэфы</button>
-        <button id="btnLF" type="button" aria-pressed="false" hidden title="Как заканчивались матчи Балтсистемы с такой же линией конторы">Линия → факт</button>
         <span class="zoomctl" role="group" aria-label="Масштаб страницы">
           <button id="btnZoomOut" type="button" aria-label="Мельче" title="Мельче на 5%">−</button>
           <b id="zoomVal">100%</b>
@@ -1055,13 +1041,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       <div class="lg-row"><span class="lg-s sw m">—</span><span>коэффициента на этот исход нет</span></div>
       <div class="lg-tip">▲ и зелёный кэф на разных исходах — народ и контора расходятся</div>
     </div>
-    <div class="lg-blk" id="lgLF" hidden>
-      <div class="lg-h sw">Линия → факт<span class="lg-sub">кнопка «Линия → факт»</span></div>
-      <div class="lg-row"><span class="lg-s sw">38</span><span>как часто исход заходил в матчах тото с такой же линией конторы, в %</span></div>
-      <div class="lg-row"><span class="lg-s sw c">45</span><span>заходил чаще, чем обещала контора (на 5 пп и больше)</span></div>
-      <div class="lg-row"><span class="lg-s sw h">31</span><span>заходил реже, чем обещала контора</span></div>
-      <div class="lg-row"><span class="lg-s sw m">27</span><span>бледное — похожих матчей меньше 20, цифра ненадёжна</span></div>
-    </div>
     <div class="lg-blk">
       <div class="lg-h sw">Результат матча</div>
       <div class="lg-row"><span class="lg-s" style="color:var(--o1)">1 : 0</span><span>идёт игра, итог ещё не подведён</span></div>
@@ -1113,7 +1092,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. «РАНДОМ» ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; в корзину при этом ничего не уходит — для этого есть «Положить купон в корзину». Строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 20.09 03:30 МСК</span>
+    <span class="build">сборка 20.09 03:50 МСК</span>
   </footer>
 </div>
 
@@ -1213,7 +1192,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   if(!Array.isArray(state.played)) state.played = [];
   state.showPct = !!state.showPct;
   state.showKf  = !!state.showKf;
-  state.showLF  = !!state.showLF;
   /* один шаг назад: предыдущий тираж хранится целиком для просмотра, купон он не трогает */
   if(!state.prev || !Array.isArray(state.prev.matches) || !state.prev.matches.length) state.prev = null;
   state.viewPrev = !!(state.viewPrev && state.prev);
@@ -2312,8 +2290,8 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   /* ---------- история тиражей для разбора матчей ----------
      data/api/history.json собирает зеркало (GitHub Actions): все завершённые тиражи
-     с линией конторы, долями пула и итогом. Отсюда — «Линия → факт», ярусы и история команд. */
-  var hist = { ev: [], at: 0, loading: false, tiers: null, count: 0 };
+     с линией конторы, долями пула и итогом. Отсюда — история команды по клику на название. */
+  var hist = { ev: [], at: 0, loading: false, count: 0 };
   function loadHist(){
     if(hist.loading || typeof fetch !== "function") return;
     if(hist.at && Date.now() - hist.at < 6 * 3600 * 1000) return;
@@ -2333,70 +2311,13 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
           });
         });
         ev.sort(function(a, b){ return b.n - a.n; });
-        hist.ev = ev; hist.count = Object.keys(j.draws).length; hist.at = Date.now(); hist.tiers = null;
+        hist.ev = ev; hist.count = Object.keys(j.draws).length; hist.at = Date.now();
         if(!book) render();
       })
       .catch(function(){})
       .then(function(){ hist.loading = false; });
   }
 
-  /* ярус лиги по названию турнира — та же классификация, что в расчёте по 33 тиражам */
-  var TIER_V = ["серия c","3-я","3-й дивизион","1-я лига","2-я лига","национальная лига","истмийск","южная футбольная",
-    "северная премьер","примера b","трофей футбольной","путь регионов","до 23","израиль","болгария. 2","сербия. 1-я",
-    "австрия. 2","венгрия. 2","бельгия. 2","португалия. 2","швеция. 1-й","иордания. 1","эквадор. серия b","кубок серии c"];
-  var TIER_B = ["чемпионшип","ла лига 2","лига 2","серия b","2-я бундеслига","1-й дивизион","турция. 1-я","примера насьональ",
-    "суперэттан","чемпионат до"];
-  function tierOf(ch){
-    var c = String(ch || "").toLowerCase();
-    if(!c) return "";
-    if(c.indexOf("англия. 1-я лига") === 0 || c.indexOf("англия. 2-я лига") === 0) return "В";
-    if(c.indexOf("россия. 1-я лига") === 0) return "Б";
-    var i;
-    for(i = 0; i < TIER_V.length; i++) if(c.indexOf(TIER_V[i]) >= 0) return "В";
-    for(i = 0; i < TIER_B.length; i++) if(c.indexOf(TIER_B[i]) >= 0) return "Б";
-    return "А";
-  }
-  /* сводка по ярусам из истории: сколько обещал фаворит конторы, сколько прошёл, сколько ничьих */
-  function tierStats(){
-    if(hist.tiers) return hist.tiers;
-    var acc = { "А": {n:0, prom:0, hit:0, dr:0}, "Б": {n:0, prom:0, hit:0, dr:0}, "В": {n:0, prom:0, hit:0, dr:0} };
-    hist.ev.forEach(function(e){
-      if(!e.bk || !e.res) return;
-      var t = tierOf(e.ch); if(!acc[t]) return;
-      var f = 0; if(e.bk[1] > e.bk[f]) f = 1; if(e.bk[2] > e.bk[f]) f = 2;
-      var a = acc[t]; a.n++; a.prom += e.bk[f]; a.hit += (OUT[f] === e.res) ? 1 : 0; a.dr += (e.res === "X") ? 1 : 0;
-    });
-    hist.tiers = acc;
-    return acc;
-  }
-  function tierTitle(t){
-    var names = { "А": "ярус А — топ-лиги", "Б": "ярус Б — вторые лиги", "В": "ярус В — третьи лиги и ниже, Израиль, молодёжь" };
-    var st = tierStats()[t], s = names[t] || "";
-    if(st && st.n >= 30){
-      s += ". В истории тото " + st.n + " матч(ей): фаворит конторы обещал " + Math.round(st.prom / st.n) +
-           "%, прошёл " + Math.round(100 * st.hit / st.n) + "%; ничьих " + Math.round(100 * st.dr / st.n) + "%";
-    }
-    if(t === "В") s += ". Правило: ярус В никогда одиночкой";
-    return s;
-  }
-  /* «Линия → факт»: матчи истории с такой же линией конторы (±tol пп по каждому исходу) */
-  function lineFact(bk){
-    if(!bk || !hist.ev.length) return null;
-    var b = bk.map(Number), tol = 4, cnt = [0,0,0], n = 0, i, e;
-    function pass(t){
-      cnt = [0,0,0]; n = 0;
-      for(i = 0; i < hist.ev.length; i++){
-        e = hist.ev[i];
-        if(!e.bk || !e.res) continue;
-        if(Math.abs(e.bk[0] - b[0]) > t || Math.abs(e.bk[1] - b[1]) > t || Math.abs(e.bk[2] - b[2]) > t) continue;
-        n++; cnt[OUT.indexOf(e.res)]++;
-      }
-    }
-    pass(tol);
-    if(n < 20){ tol = 6; pass(tol); }
-    if(!n) return null;
-    return { n: n, tol: tol, pct: cnt.map(function(c){ return Math.round(100 * c / n); }) };
-  }
   function normTeam(x){ return String(x || "").toLowerCase().replace(/ё/g, "е").replace(/[^a-zа-я0-9]+/g, ""); }
   function fmtDay(iso){
     var ms = mskIso(iso); if(ms === null) return "";
@@ -2506,13 +2427,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       if(code) meta.appendChild(mkFlag(code, "flag"));
       meta.appendChild(document.createTextNode(
         [m.date, m.time, m.league].filter(Boolean).join("  ·  ")));
-      var tr = tierOf(m.league);
-      if(tr){
-        var tg = document.createElement("span");
-        tg.className = "tier" + (tr === "В" ? " t-v" : "");
-        tg.textContent = tr; tg.title = tierTitle(tr);
-        meta.appendChild(tg);
-      }
       if(m.res || m.score){
         var sc = document.createElement("span");
         /* подведённый счёт зелёный, живой — синий; сам исход всегда синий,
@@ -2569,7 +2483,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
       var picksWrap = document.createElement("div");
       picksWrap.className = "picks-m";
-      var lfRow = (state.showLF && m.pct && m.pct.bk) ? lineFact(m.pct.bk) : null;
 
       OUT.forEach(function(o,i){
         var cell = document.createElement("div");
@@ -2645,18 +2558,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
                 : isDog ? " — самый высокий в матче, контора считает исход наименее вероятным" : ""))
             : "Контора коэффициент на этот исход не дала";
           cell.appendChild(kf);
-        }
-
-        if(state.showLF && lfRow){
-          var lf = document.createElement("div");
-          var lp = lfRow.pct[i], lb = Number(m.pct.bk[i]);
-          lf.className = "lf-col" + (lfRow.n < 20 ? " thin" : "") +
-            (lfRow.n >= 20 && lp - lb >= 5 ? " up" : (lfRow.n >= 20 && lb - lp >= 5 ? " down" : ""));
-          lf.innerHTML = "<b>" + lp + "</b>";
-          lf.title = "При линии " + m.pct.bk.join("/") + " (±" + lfRow.tol + " пп) исход " + o + " заходил в " + lp +
-            "% из " + lfRow.n + " матчей истории; контора даёт " + lb + "%" +
-            (lfRow.n < 20 ? ". Похожих матчей мало — цифра ненадёжна" : "");
-          cell.appendChild(lf);
         }
 
         picksWrap.appendChild(cell);
@@ -2835,13 +2736,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     kb.title = state.showKf
       ? "Убрать коэффициенты конторы из строк"
       : "Показать под каждым исходом коэффициент конторы из того же тиража";
-    var haveBk = state.matches.some(function(m){ return m.pct && m.pct.bk; });
-    var lb = $("btnLF");
-    lb.hidden = !(haveBk && hist.ev.length);
-    lb.setAttribute("aria-pressed", state.showLF ? "true" : "false");
-    lb.textContent = state.showLF ? "Скрыть линия → факт" : "Линия → факт";
-    $("lgLF").hidden = !(state.showLF && !lb.hidden);
-    $("pctLegend").hidden = !((havePct && state.showPct) || (haveKf && state.showKf) || (state.showLF && !lb.hidden));
+    $("pctLegend").hidden = !((havePct && state.showPct) || (haveKf && state.showKf));
     /* ручка влияет только на стрелки, а стрелки живут вместе с процентами —
        прячем её, пока проценты выключены, иначе выглядит как неработающая */
     renderKickoff();
@@ -4989,10 +4884,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   $("btnKf").addEventListener("click", function(){
     state.showKf = !state.showKf;
-    save(); render();
-  });
-  $("btnLF").addEventListener("click", function(){
-    state.showLF = !state.showLF;
     save(); render();
   });
 
