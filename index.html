@@ -562,6 +562,9 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 .tm{cursor:pointer; border-bottom:1px dotted transparent; transition:color .12s linear}
 .tm:hover{color:var(--accent); border-bottom-color:var(--accent)}
 .mode.srch{padding-left:8px; padding-right:8px}
+.mode.srch .fs-mark{font:800 10.5px/1 "Chivo",sans-serif; letter-spacing:.06em; color:var(--hot)}
+.mode.srch:hover .fs-mark{color:var(--surface)}
+.mode.srch:hover{background:var(--hot); border-color:var(--hot)}
 /* на телефоне «Вернуть» и «Обновить тираж» — в один ряд, а не полкнопки над целой */
 @media (max-width:600px){ .roll-service{grid-template-columns:1fr 1fr} .roll-service #btnFetch{order:0; grid-column:auto} }
 .th-tab td.tm-me{font-weight:600; color:var(--ink)}
@@ -1092,7 +1095,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. «РАНДОМ» ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; в корзину при этом ничего не уходит — для этого есть «Положить купон в корзину». Строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 20.09 03:50 МСК</span>
+    <span class="build">сборка 20.09 04:20 МСК</span>
   </footer>
 </div>
 
@@ -2376,6 +2379,41 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   /* ---------- render ---------- */
   var rowsEl = $("rows");
 
+  /* лупа: страница хозяев на flashscore.ru. Команду ищем тем же API, что и сам Flashscore
+     (project 46 = flashscore.ru, lang 12 = русские названия). Молодёжки, дубли и женские
+     отсеиваем, при нескольких тёзках берём страну турнира. Не нашли — обычный поиск. */
+  var FS_API = "https://s.livesport.services/api/v2/search/?lang-id=12&type-ids=1,2,3,4&sport-ids=1&project-id=46&project-type-id=1&q=";
+  var fsCache = {};
+  function fsCountry(league){ var m = /^([^.]+)\./.exec(String(league || "")); return m ? m[1].trim() : ""; }
+  function fsPick(list, country){
+    var bad = /U1\d|U2\d|\(Ж\)|\(Б\)|\(Мол\)|\sB$|\sC$|\sII$/;
+    var teams = (list || []).filter(function(x){
+      return x && x.type && x.type.name === "Team" && x.url && x.id && !bad.test(x.name || "");
+    });
+    if(country){
+      for(var i = 0; i < teams.length; i++){
+        if(teams[i].defaultCountry && teams[i].defaultCountry.name === country) return teams[i];
+      }
+    }
+    return teams[0] || null;
+  }
+  function openFs(m){
+    var w = window.open("", "_blank");          /* вкладку открываем сразу — после fetch браузер её заблокирует */
+    var fallback = "https://www.google.com/search?q=" + encodeURIComponent(m.home + " " + m.away + " flashscore");
+    var key = normTeam(m.home) + "|" + fsCountry(m.league);
+    function go(url){ if(w) w.location = url; else window.open(url, "_blank", "noopener"); }
+    if(fsCache[key]){ go(fsCache[key]); return; }
+    if(typeof fetch !== "function"){ go(fallback); return; }
+    fetch(FS_API + encodeURIComponent(m.home))
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){
+        var t = fsPick(j, fsCountry(m.league));
+        if(!t) throw new Error("команда не нашлась");
+        fsCache[key] = "https://www.flashscore.ru/team/" + t.url + "/" + t.id + "/";
+        go(fsCache[key]);
+      })
+      .catch(function(){ go(fallback); });
+  }
   /* название команды — ссылка на её историю в тото */
   function mkTeam(name){
     var t = document.createElement("span");
@@ -2604,13 +2642,10 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
       var bSrch = document.createElement("button");
       bSrch.type = "button"; bSrch.className = "mode srch";
-      bSrch.title = "Составы и новости по матчу — поиск откроется в новой вкладке";
-      bSrch.setAttribute("aria-label", "Найти новости: " + m.home + " — " + m.away);
-      bSrch.innerHTML = '<svg width="12" height="12" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="2"/><path d="M13 13l4.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
-      bSrch.addEventListener("click", function(){
-        var q = m.home + " " + m.away + " составы новости";
-        window.open("https://www.google.com/search?q=" + encodeURIComponent(q), "_blank", "noopener");
-      });
+      bSrch.title = "Открыть на Flashscore: страница хозяев, ближайший матч — сверху";
+      bSrch.setAttribute("aria-label", "Открыть на Flashscore: " + m.home + " — " + m.away);
+      bSrch.innerHTML = '<b class="fs-mark">FS</b>';
+      bSrch.addEventListener("click", function(){ openFs(m); });
       modes.appendChild(bRand);
       modes.appendChild(bLock);
       modes.appendChild(bSrch);
