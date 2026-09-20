@@ -1095,7 +1095,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. «РАНДОМ» ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; в корзину при этом ничего не уходит — для этого есть «Положить купон в корзину». Строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 20.09 04:35 МСК</span>
+    <span class="build">сборка 20.09 04:55 МСК</span>
   </footer>
 </div>
 
@@ -2397,20 +2397,33 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     }
     return teams[0] || null;
   }
+  /* одна команда → {url, id} с кэшем по названию и стране турнира */
+  function fsTeam(name, country){
+    var key = normTeam(name) + "|" + country;
+    if(fsCache[key]) return Promise.resolve(fsCache[key]);
+    return fetch(FS_API + encodeURIComponent(name))
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){
+        var t = fsPick(j, country);
+        if(!t) return null;
+        fsCache[key] = { url: t.url, id: t.id };
+        return fsCache[key];
+      });
+  }
   function openFs(m){
     var w = window.open("", "_blank");          /* вкладку открываем сразу — после fetch браузер её заблокирует */
     var fallback = "https://www.google.com/search?q=" + encodeURIComponent(m.home + " " + m.away + " flashscore");
-    var key = normTeam(m.home) + "|" + fsCountry(m.league);
     function go(url){ if(w) w.location = url; else window.open(url, "_blank", "noopener"); }
-    if(fsCache[key]){ go(fsCache[key]); return; }
     if(typeof fetch !== "function"){ go(fallback); return; }
-    fetch(FS_API + encodeURIComponent(m.home))
-      .then(function(r){ return r.ok ? r.json() : null; })
-      .then(function(j){
-        var t = fsPick(j, fsCountry(m.league));
-        if(!t) throw new Error("команда не нашлась");
-        fsCache[key] = "https://www.flashscore.ru/team/" + t.url + "/" + t.id + "/";
-        go(fsCache[key]);
+    var country = fsCountry(m.league);
+    Promise.all([fsTeam(m.home, country), fsTeam(m.away, country)])
+      .then(function(t){
+        var h = t[0], a = t[1];
+        /* страница матча: Flashscore сам подставляет ближайшую встречу этих двух команд.
+           Нашли только хозяев — открываем их страницу, матч там первой строкой */
+        if(h && a) go("https://www.flashscore.ru/match/football/" + h.url + "-" + h.id + "/" + a.url + "-" + a.id + "/");
+        else if(h) go("https://www.flashscore.ru/team/" + h.url + "/" + h.id + "/");
+        else go(fallback);
       })
       .catch(function(){ go(fallback); });
   }
@@ -2642,7 +2655,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
       var bSrch = document.createElement("button");
       bSrch.type = "button"; bSrch.className = "mode srch";
-      bSrch.title = "Открыть на Flashscore: страница хозяев, ближайший матч — сверху";
+      bSrch.title = "Открыть матч на Flashscore";
       bSrch.setAttribute("aria-label", "Открыть на Flashscore: " + m.home + " — " + m.away);
       bSrch.innerHTML = '<b class="fs-mark">F<i>S</i></b>';
       bSrch.addEventListener("click", function(){ openFs(m); });
