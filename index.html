@@ -561,10 +561,10 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 /* название команды кликабельно — история её матчей в тото */
 .tm{cursor:pointer; border-bottom:1px dotted transparent; transition:color .12s linear}
 .tm:hover{color:var(--accent); border-bottom-color:var(--accent)}
-.mode.srch{padding-left:8px; padding-right:8px}
-.mode.srch .fs-mark{font:800 10.5px/1 "Chivo",sans-serif; letter-spacing:.06em; color:var(--hot)}
-.mode.srch:hover .fs-mark{color:var(--surface)}
-.mode.srch:hover{background:var(--hot); border-color:var(--hot)}
+.mode.srch{padding-left:8px; padding-right:8px; background:var(--brand-dark); border-color:var(--brand-gold)}
+.mode.srch .fs-mark{font:800 11px/1 "Chivo",sans-serif; letter-spacing:.06em; color:var(--brand-gold)}
+.mode.srch .fs-mark i{font-style:normal; color:#E8453C}
+.mode.srch:hover{background:#2a221c; border-color:var(--brand-gold); box-shadow:0 0 0 1px var(--brand-gold) inset}
 /* на телефоне «Вернуть» и «Обновить тираж» — в один ряд, а не полкнопки над целой */
 @media (max-width:600px){ .roll-service{grid-template-columns:1fr 1fr} .roll-service #btnFetch{order:0; grid-column:auto} }
 .th-tab td.tm-me{font-weight:600; color:var(--ink)}
@@ -1095,7 +1095,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. «РАНДОМ» ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; в корзину при этом ничего не уходит — для этого есть «Положить купон в корзину». Строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 20.09 04:20 МСК</span>
+    <span class="build">сборка 20.09 04:35 МСК</span>
   </footer>
 </div>
 
@@ -2644,7 +2644,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       bSrch.type = "button"; bSrch.className = "mode srch";
       bSrch.title = "Открыть на Flashscore: страница хозяев, ближайший матч — сверху";
       bSrch.setAttribute("aria-label", "Открыть на Flashscore: " + m.home + " — " + m.away);
-      bSrch.innerHTML = '<b class="fs-mark">FS</b>';
+      bSrch.innerHTML = '<b class="fs-mark">F<i>S</i></b>';
       bSrch.addEventListener("click", function(){ openFs(m); });
       modes.appendChild(bRand);
       modes.appendChild(bLock);
