@@ -1,1 +1,1 @@
-{"history_count":996,"stavka_current":5014,"stavka_error":null,"stavka_ok":true,"stavka_ok_at":"2026-09-21T18:48:59Z","totobrief_error":null,"totobrief_ok":true,"totobrief_ok_at":"2026-09-21T18:48:59Z","updated_at":"2026-09-21T18:48:59Z"}
+{"history_count":996,"stavka_current":5014,"stavka_error":"IncompleteRead(1981895 bytes read, 2450128 more expected)","stavka_ok":false,"stavka_ok_at":"2026-09-21T18:48:59Z","totobrief_error":null,"totobrief_ok":true,"totobrief_ok_at":"2026-09-21T19:22:16Z","updated_at":"2026-09-21T19:22:16Z"}
