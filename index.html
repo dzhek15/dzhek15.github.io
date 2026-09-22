@@ -36,8 +36,12 @@ img{max-width:100%}
   --shadow:0 1px 0 rgba(19,26,27,.06), 0 6px 18px -12px rgba(19,26,27,.35);
   --r:4px;
 
-  /* лёгкое сияние на фоне страницы — золото сверху (в цвет логотипа), сталь в углу */
-  --bg-glow-1:rgba(201,162,75,.11); --bg-glow-2:rgba(62,92,118,.08);
+  /* лёгкое сияние на фоне страницы — нейтральная тень сверху (не золото — на серо-салатовом фоне
+     золотой подсвет смотрелся мутно), сталь в углу */
+  --bg-glow-1:rgba(19,26,27,.05); --bg-glow-2:rgba(62,92,118,.08);
+  /* обои: едва заметное зерно бумаги + узор исходов тиража 1/X/2 по диагонали — тема тотализатора */
+  --bg-grain:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27140%27%20height%3D%27140%27%3E%3Cfilter%20id%3D%27n%27%3E%3CfeTurbulence%20type%3D%27fractalNoise%27%20baseFrequency%3D%270.85%27%20numOctaves%3D%272%27%20stitchTiles%3D%27stitch%27%2F%3E%3CfeColorMatrix%20type%3D%27matrix%27%20values%3D%270%200%200%200%200%200%200%200%200%200%200%200%200%200%200%200%200%200%200.045%200%27%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%27140%27%20height%3D%27140%27%20filter%3D%27url%28%23n%29%27%2F%3E%3C%2Fsvg%3E");
+  --bg-symbols:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27230%27%20height%3D%27160%27%3E%3Cg%20fill%3D%27rgba%28201%2C162%2C75%2C.07%29%27%20font-family%3D%27Georgia%2Cserif%27%20font-weight%3D%27700%27%20transform%3D%27rotate%28-12%20115%2080%29%27%3E%3Ctext%20x%3D%2710%27%20y%3D%2746%27%20font-size%3D%2736%27%3E1%3C%2Ftext%3E%3Ctext%20x%3D%27100%27%20y%3D%27112%27%20font-size%3D%2736%27%3EX%3C%2Ftext%3E%3Ctext%20x%3D%27176%27%20y%3D%2752%27%20font-size%3D%2736%27%3E2%3C%2Ftext%3E%3C%2Fg%3E%3C%2Fsvg%3E");
 }
 :root:not([data-theme="light"]){}
 @media (prefers-color-scheme: dark){
@@ -53,7 +57,8 @@ img{max-width:100%}
     --warn:#D79B3E; --warn-bg:#2A2114;
     --shadow:0 1px 0 rgba(0,0,0,.4), 0 8px 22px -14px rgba(0,0,0,.8);
 
-    --bg-glow-1:rgba(201,162,75,.15); --bg-glow-2:rgba(142,179,212,.09);
+    --bg-glow-1:rgba(227,235,234,.05); --bg-glow-2:rgba(142,179,212,.09);
+    --bg-grain:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27140%27%20height%3D%27140%27%3E%3Cfilter%20id%3D%27n%27%3E%3CfeTurbulence%20type%3D%27fractalNoise%27%20baseFrequency%3D%270.85%27%20numOctaves%3D%272%27%20stitchTiles%3D%27stitch%27%2F%3E%3CfeColorMatrix%20type%3D%27matrix%27%20values%3D%270%200%200%200%201%200%200%200%200%201%200%200%200%200%201%200%200%200%200.06%200%27%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%27140%27%20height%3D%27140%27%20filter%3D%27url%28%23n%29%27%2F%3E%3C%2Fsvg%3E");
   }
 }
 :root[data-theme="dark"]{
@@ -68,15 +73,23 @@ img{max-width:100%}
   --warn:#D79B3E; --warn-bg:#2A2114;
   --shadow:0 1px 0 rgba(0,0,0,.4), 0 8px 22px -14px rgba(0,0,0,.8);
 
-  --bg-glow-1:rgba(201,162,75,.15); --bg-glow-2:rgba(142,179,212,.09);
+  --bg-glow-1:rgba(227,235,234,.05); --bg-glow-2:rgba(142,179,212,.09);
+  --bg-grain:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27140%27%20height%3D%27140%27%3E%3Cfilter%20id%3D%27n%27%3E%3CfeTurbulence%20type%3D%27fractalNoise%27%20baseFrequency%3D%270.85%27%20numOctaves%3D%272%27%20stitchTiles%3D%27stitch%27%2F%3E%3CfeColorMatrix%20type%3D%27matrix%27%20values%3D%270%200%200%200%201%200%200%200%200%201%200%200%200%200%201%200%200%200%200.06%200%27%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%27140%27%20height%3D%27140%27%20filter%3D%27url%28%23n%29%27%2F%3E%3C%2Fsvg%3E");
 }
 *{box-sizing:border-box}
 body{
   margin:0; color:var(--ink);
-  background:
+  /* обои: тихая нейтральная тень сверху и холодный акцент в углу (не золото — сплошной золотой
+     подсвет на сером фоне смотрелся мутно), поверх — едва заметное бумажное зерно и узор исходов
+     тиража 1/X/2 по диагонали (тема тотализатора); всё без картинок */
+  background-color:var(--bg);
+  background-image:
+    var(--bg-symbols),
+    var(--bg-grain),
     radial-gradient(1100px 620px at 50% -10%, var(--bg-glow-1), transparent 62%),
-    radial-gradient(900px 560px at 100% 100%, var(--bg-glow-2), transparent 58%),
-    var(--bg);
+    radial-gradient(900px 560px at 100% 100%, var(--bg-glow-2), transparent 58%);
+  background-repeat:repeat, repeat, no-repeat, no-repeat;
+  background-size:230px 160px, 140px 140px, auto, auto;
   font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   font-size:14px; line-height:1.5;
   padding-inline:18px; padding-block:22px 48px;
@@ -1125,7 +1138,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. «РАНДОМ» ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; в корзину при этом ничего не уходит — для этого есть «Положить купон в корзину». Строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 22.09 20:22 МСК</span>
+    <span class="build">сборка 22.09 20:37 МСК</span>
   </footer>
 </div>
 
