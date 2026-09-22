@@ -284,11 +284,15 @@ button:disabled{opacity:.45; cursor:not-allowed}
 .spin-group .btn-spin:disabled + .spin-in{border-color:var(--rule-strong); color:var(--muted)}
 /* Цвет кнопки привязан к тому, что она делает: «большинство» — зелёная, как
    стрелка ▲ у самого популярного исхода, «меньшинство» — красная, как ▼. */
-.btn-crowd{border-color:var(--accent); color:var(--accent); padding:7px 14px; font-size:13px}
+.btn-crowd{border-color:var(--accent); color:var(--accent); padding:7px 14px; font-size:15px}
 #btnMost{background:var(--cold); border-color:var(--cold); color:#fff}
 #btnLeast{background:var(--hot); border-color:var(--hot); color:#fff}
 #btnMost:hover:not(:disabled), #btnLeast:hover:not(:disabled){filter:brightness(1.1)}
 #btnMost:disabled, #btnLeast:disabled{border-color:var(--rule-strong); color:var(--muted); background:transparent}
+/* в тёмной теме — без сплошной заливки, только цветной текст/рамка (просьба [stated]) */
+:root[data-theme="dark"] #btnMost{background:transparent; color:var(--cold)}
+:root[data-theme="dark"] #btnLeast{background:transparent; color:var(--hot)}
+:root[data-theme="dark"] #btnMost .ar, :root[data-theme="dark"] #btnLeast .ar{color:currentColor; opacity:.85}
 /* стрелки те же, что в таблице: ▲ у большинства, ▼ у меньшинства */
 .ar{font-size:11px; margin-right:6px; vertical-align:1px; color:rgba(255,255,255,.75)}
 #btnMost:disabled .ar, #btnLeast:disabled .ar{color:var(--muted)}
@@ -325,9 +329,12 @@ button:disabled{opacity:.45; cursor:not-allowed}
 #btnUndo:disabled{border-color:var(--rule-strong); color:var(--muted); background:transparent}
 .roll-group > .roll-secondary{width:100%}
 #btnReset{flex:1 1 100%; width:100%; justify-content:center; font-family:"Chivo",sans-serif; font-weight:600;
-  font-size:14.5px; padding:12px 18px; border-radius:6px; border-color:var(--o1); background:var(--o1); color:#fff}
+  font-size:16.5px; padding:12px 18px; border-radius:6px; border-color:var(--o1); background:var(--o1); color:#fff}
 #btnReset:hover:not(:disabled){filter:brightness(1.1); background:var(--o1)}
 #btnReset:disabled{background:transparent; border-color:var(--rule-strong); color:var(--muted)}
+/* в тёмной теме — без сплошной заливки, только цветной текст/рамка (тот же приём, что и у кнопок «большинство/средние/меньшинство») */
+:root[data-theme="dark"] #btnReset{background:transparent; color:var(--o1)}
+:root[data-theme="dark"] #btnReset:hover:not(:disabled){background:var(--o1-soft)}
 
 .btn-tip{border-color:var(--cold); color:var(--cold); padding-block:13px}
 .btn-tip:hover:not(:disabled){background:var(--o1-soft)}
@@ -918,6 +925,8 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     /* пульт по шагам: служебная строка, затем «Заполнить / Рандом / Проверить» с подписями-разделителями */
     .roll .roll-service{justify-content:space-between}
     #btnMid{background:var(--ox); border-color:var(--ox); color:#fff}
+    :root[data-theme="dark"] #btnMid{background:transparent; color:var(--ox)}
+    :root[data-theme="dark"] #btnMid .ar{color:currentColor; opacity:.85}
     #btnLink.ok{background:var(--cold) !important; border-color:var(--cold) !important; color:#fff !important}
     /* три кнопки «Заполнить» в один ряд: подпись раздела уже говорит «проставить», слово в кнопках лишнее */
     .roll .roll-crowd{display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); grid-auto-rows:1fr; gap:8px}
@@ -1157,7 +1166,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. «РАНДОМ» ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; в корзину при этом ничего не уходит — для этого есть «Положить купон в корзину». Строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 22.09 22:00 МСК</span>
+    <span class="build">сборка 22.09 22:15 МСК</span>
   </footer>
 </div>
 
