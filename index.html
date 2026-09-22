@@ -1106,7 +1106,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. «РАНДОМ» ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; в корзину при этом ничего не уходит — для этого есть «Положить купон в корзину». Строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 22.09 14:40 МСК</span>
+    <span class="build">сборка 22.09 15:05 МСК</span>
   </footer>
 </div>
 
@@ -2585,6 +2585,35 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     if(lat !== name && lat !== (m ? m[2] : name)) out.push(lat);
     return out;
   }
+  /* женский клуб на Flashscore часто хранится под коротким «фирменным» именем без
+     города-уточнения (напр. «Интер Милан» → у них просто «Интер»), поэтому слово с
+     городом никогда не находится. Пробуем запрос без последнего слова, потом ещё короче;
+     на каждом шаге берём кандидата, ТОЛЬКО если он единственный подходящий «(Ж)»-вариант
+     под таким именем (в стране турнира, если она известна) — иначе можно перепутать клуб */
+  function fsWomenFallback(clean, country){
+    var words = clean.split(/\s+/).filter(Boolean), tries = [];
+    for(var n = words.length - 1; n >= 1; n--) tries.push(words.slice(0, n).join(" "));
+    function next(i){
+      if(i >= tries.length) return Promise.resolve(null);
+      return fetch(FS_API + encodeURIComponent(tries[i]))
+        .then(function(r){ return r.ok ? r.json() : null; })
+        .then(function(j){
+          var cands = (j || []).filter(function(x){
+            return x && x.type && x.type.name === "Team" && x.url && x.id &&
+                   String(x.url).indexOf("inactive") < 0 && /\(Ж\)/i.test(x.name || "");
+          });
+          var pick = null;
+          if(country){
+            var byC = cands.filter(function(x){ return x.defaultCountry && x.defaultCountry.name === country; });
+            if(byC.length === 1) pick = byC[0];
+          } else if(cands.length === 1){
+            pick = cands[0];
+          }
+          return pick || next(i + 1);
+        });
+    }
+    return next(0);
+  }
   /* одна команда → {url, id} с кэшем по названию и стране турнира. Похожесть всегда сверяем
      с исходным (очищенным от «(ж)») именем — даже когда сам запрос ушёл латиницей */
   function fsTeam(name, country){
@@ -2594,7 +2623,14 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     var core = fsCoreWords(clean);
     var qs = fsQueries(clean), i = 0;
     function next(){
-      if(i >= qs.length) return Promise.resolve(null);
+      if(i >= qs.length){
+        if(!isWomen) return Promise.resolve(null);
+        return fsWomenFallback(clean, country).then(function(t){
+          if(!t) return null;
+          FS_CACHE[key] = { url: t.url, id: t.id };
+          return FS_CACHE[key];
+        });
+      }
       var q = qs[i++];
       return fetch(FS_API + encodeURIComponent(q))
         .then(function(r){ return r.ok ? r.json() : null; })
