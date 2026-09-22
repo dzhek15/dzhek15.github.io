@@ -35,6 +35,9 @@ img{max-width:100%}
   --warn:#8A5A12; --warn-bg:#F7ECD8;
   --shadow:0 1px 0 rgba(19,26,27,.06), 0 6px 18px -12px rgba(19,26,27,.35);
   --r:4px;
+
+  /* лёгкое сияние на фоне страницы — золото сверху (в цвет логотипа), сталь в углу */
+  --bg-glow-1:rgba(201,162,75,.11); --bg-glow-2:rgba(62,92,118,.08);
 }
 :root:not([data-theme="light"]){}
 @media (prefers-color-scheme: dark){
@@ -49,6 +52,8 @@ img{max-width:100%}
     --hot:#E88374; --hot-soft:#3A2320; --cold:#5FC496;
     --warn:#D79B3E; --warn-bg:#2A2114;
     --shadow:0 1px 0 rgba(0,0,0,.4), 0 8px 22px -14px rgba(0,0,0,.8);
+
+    --bg-glow-1:rgba(201,162,75,.15); --bg-glow-2:rgba(142,179,212,.09);
   }
 }
 :root[data-theme="dark"]{
@@ -62,13 +67,20 @@ img{max-width:100%}
   --hot:#E88374; --hot-soft:#3A2320; --cold:#5FC496;
   --warn:#D79B3E; --warn-bg:#2A2114;
   --shadow:0 1px 0 rgba(0,0,0,.4), 0 8px 22px -14px rgba(0,0,0,.8);
+
+  --bg-glow-1:rgba(201,162,75,.15); --bg-glow-2:rgba(142,179,212,.09);
 }
 *{box-sizing:border-box}
 body{
-  margin:0; background:var(--bg); color:var(--ink);
+  margin:0; color:var(--ink);
+  background:
+    radial-gradient(1100px 620px at 50% -10%, var(--bg-glow-1), transparent 62%),
+    radial-gradient(900px 560px at 100% 100%, var(--bg-glow-2), transparent 58%),
+    var(--bg);
   font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   font-size:14px; line-height:1.5;
   padding-inline:18px; padding-block:22px 48px;
+  cursor:url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='24'%20height='24'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M4%203%20L4%2019%20L8%2015.2%20L11%2021%20L13.3%2019.9%20L10.3%2014%20L16%2013.6%20Z'%20fill='%23161616'%20stroke='white'%20stroke-width='1.4'%20stroke-linejoin='round'/%3E%3C/svg%3E") 4 3, auto;
 }
 .wrap{max-width:1080px; margin:0 auto}
 
@@ -367,7 +379,7 @@ button:disabled{opacity:.45; cursor:not-allowed}
   /* карточка матча плотнее */
   .row{padding:11px 12px}
   .fix{flex-direction:column; gap:2px; align-items:stretch}
-  .teams{font-size:14px}
+  .teams{font-size:16px}
   .pick{height:34px; font-size:15px}
   .mode{font-size:11px; padding:5px 8px}
 
@@ -526,7 +538,7 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 .coupon{margin-top:22px; border:2px solid var(--brand-dark); border-radius:6px; overflow:hidden;
   background:var(--surface); box-shadow:0 0 0 3px var(--brand-gold), var(--shadow)}
 .chead,.row{display:grid; grid-template-columns:26px minmax(0,1fr) repeat(3,54px) 214px; align-items:center; gap:9px; padding:8px 13px}
-.chead{background:var(--brand-dark); border-bottom:2px solid var(--brand-gold); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--brand-gold)}
+.chead{background:var(--brand-dark); border-bottom:2px solid var(--brand-gold); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--brand-gold); font-weight:700}
 .chead .c{text-align:center}
 .row{border-bottom:1px solid var(--rule); transition:background-color .12s linear}
 .row:hover{background:var(--surface-2)}
@@ -541,7 +553,7 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 .row.is-empty .teams{opacity:.72}
 .num{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--muted)}
 .fix{min-width:0}
-.teams{font-weight:600; font-size:17px; line-height:1.3; overflow-wrap:anywhere}
+.teams{font-weight:600; font-size:19px; line-height:1.32; overflow-wrap:anywhere}
 .teams .vs{color:var(--muted); font-weight:400; padding:0 4px}
 .meta{font-family:"IBM Plex Mono",monospace; font-size:13px; color:var(--muted); margin-top:3px; overflow-wrap:anywhere}
 .flag{height:11px; width:auto; margin-right:6px; border-radius:1px; vertical-align:baseline;
@@ -580,9 +592,7 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 .th-sum b{font-family:"IBM Plex Mono",monospace}
 .th-h2{margin:0 0 6px; font-size:13px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted)}
 .th-hr{border:0; border-top:1px dashed var(--rule-strong); margin:16px 0}
-.th-thin{color:var(--muted); font-weight:400}
-/* Аналитика — сетка два на два. Колонки равные, кнопки тянутся по ячейке,
-   поэтому все четыре одного размера, а ряд читается как один блок. */
+/* Аналитика — сетка в две колонки; кнопки тянутся по ячейке. При нечётном числе кнопок последняя занимает всю строку. */
 .roll-ev .btn-ev:last-child:nth-child(odd){grid-column:1 / -1}
 .roll-ev{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); grid-auto-rows:1fr; gap:10px;
   width:100%; max-width:520px; margin:0 auto}
@@ -991,7 +1001,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         <button class="btn-ev" id="btnDiff" type="button" title="Где доля игроков сильнее всего расходится с оценкой конторы"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.5v13"/><path d="M4.5 6.5h11"/><path d="M2.5 12.2 4.9 7l2.4 5.2a2.6 2.6 0 0 1-4.8 0z"/><path d="M12.7 12.2 15.1 7l2.4 5.2a2.6 2.6 0 0 1-4.8 0z"/></svg><span class="lbl">Расхождения</span></button>
                 <button class="btn-ev" id="btnPF" type="button" title="Отобрать из системы строки, которые меньше всего пересекаются с выбором толпы"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 4.5h13l-5 5.8v5.2l-3 1.6v-6.8z"/></svg><span class="lbl">Отобрать строки</span></button>
         <button class="btn-ev" id="btnBrief" type="button" title="Собрать систему с гарантией: часть строк купона вместо всех"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3.5" width="15" height="13" rx="1.5"/><path d="M2.5 8h15"/><path d="M7.5 8v8.5"/><path d="M12.5 8v8.5"/></svg><span class="lbl">Бриф</span></button>
-        <button class="btn-ev" id="btnCalib" type="button" title="Как часто на деле заходит фаворит при разной оценке конторы, и как часто выпадает ничья на плоских матчах — по всей накопленной истории"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16.5V8"/><path d="M8.3 16.5V4.5"/><path d="M13.6 16.5v-9"/><path d="M2.5 16.5h15"/></svg><span class="lbl">Калибровка</span></button>
       </div>
         </div>
     </div>
@@ -1033,7 +1042,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   <div class="prev-bar" id="prevBar" hidden></div>
   <div class="coupon" id="coupon">
     <div class="chead">
-      <div>№</div><div>Событие</div>
+      <div>№</div><div style="text-align:center">Событие</div>
       <div class="c">1</div><div class="c">X</div><div class="c">2</div>
       <div style="text-align:right">Режим</div>
     </div>
@@ -1106,7 +1115,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. «РАНДОМ» ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; в корзину при этом ничего не уходит — для этого есть «Положить купон в корзину». Строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 22.09 14:07 МСК</span>
+    <span class="build">сборка 22.09 19:38 МСК</span>
   </footer>
 </div>
 
@@ -2376,55 +2385,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   }
   /* калибровка линии конторы по всей накопленной истории: бакеты по 5 п.п.
      фаворит = исход с максимальным bk%; разрыв для ничьей = топ-1 минус топ-2 доли конторы */
-  function calibStats(){
-    var fav = {}, drw = {};
-    hist.ev.forEach(function(e){
-      if(!e.bk) return;
-      var p = e.bk, fi = 0;
-      if(p[1] > p[fi]) fi = 1;
-      if(p[2] > p[fi]) fi = 2;
-      var fk = Math.min(75, Math.floor(p[fi] / 5) * 5);
-      fav[fk] = fav[fk] || { n: 0, hit: 0 };
-      fav[fk].n++;
-      if(OUT[fi] === e.res) fav[fk].hit++;
-      var srt = p.slice().sort(function(a, b){ return b - a; });
-      var gk = Math.min(30, Math.floor((srt[0] - srt[1]) / 5) * 5);
-      drw[gk] = drw[gk] || { n: 0, hit: 0 };
-      drw[gk].n++;
-      if(e.res === "X") drw[gk].hit++;
-    });
-    return { fav: fav, drw: drw };
-  }
-  function calibRows(buckets, top){
-    var pc = function(x){ return (x * 100).toFixed(1).replace(".", ",") + "%"; };
-    return Object.keys(buckets).map(Number).sort(function(a, b){ return a - b; }).map(function(k){
-      var b = buckets[k];
-      var label = (k >= top ? (top + "+") : (k + "–" + (k + 5))) + " п.п.";
-      var cls = b.n < 20 ? " class=\"th-thin\"" : "";
-      return "<tr" + cls + "><td>" + label + "</td><td class=\"nw\">" + b.n + "</td><td class=\"nw\">" + pc(b.hit / b.n) + "</td></tr>";
-    }).join("");
-  }
-  function showCalib(){
-    $("evTitle").textContent = "Калибровка линии конторы";
-    var box = $("evBody");
-    if(!hist.ev.length){
-      box.innerHTML = '<p class="ev-warn">История тиражей ещё не загрузилась — попробуй через минуту.</p>';
-      $("evBack").hidden = false; return;
-    }
-    var st = calibStats();
-    var h = '<p class="ev-lead">По всей накопленной истории (' + hist.count + ' тиражей): как часто фаворит ' +
-      'реально заходит при разной оценке конторы, и как часто выпадает ничья, когда два лучших исхода близки ' +
-      'по проценту. Проверяет на месте ли порог «контора даёт ≥42% — бери одиночку».</p>' +
-      '<h3 class="th-h2">Фаворит: оценка конторы → реальный заход</h3>' +
-      '<table class="ev-tab"><thead><tr><th>Оценка конторы</th><th>Матчей</th><th>Заходил</th></tr></thead><tbody>' +
-      calibRows(st.fav, 75) + '</tbody></table>' +
-      '<h3 class="th-h2">Ничья: разрыв 1-го и 2-го исхода → реальная частота X</h3>' +
-      '<table class="ev-tab"><thead><tr><th>Разрыв по конторе</th><th>Матчей</th><th>Заходила</th></tr></thead><tbody>' +
-      calibRows(st.drw, 30) + '</tbody></table>' +
-      '<p class="ev-note">Бледные строки — меньше 20 матчей в бакете, цифра там шумная, доверять осторожно.</p>';
-    box.innerHTML = h;
-    $("evBack").hidden = false;
-  }
   function showTeam(name, opp){
     var key = normTeam(name), rows = [], h2h = [];
     var oppKey = opp ? normTeam(opp) : null;
@@ -2587,7 +2547,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       if(!obj.AA){
         if(obj.ZY || obj.ZA){ cur = { country: obj.ZY || "", league: obj.ZA || "", matches: [] }; groups.push(cur); }
       } else if(cur && obj.AE && obj.AF && obj.WU && obj.WV && obj.PX && obj.PY){
-        cur.matches.push({ id: obj.AA, home: obj.AE, away: obj.AF, hSlug: obj.WU, aSlug: obj.WV, hId: obj.PX, aId: obj.PY });
+        cur.matches.push({ id: obj.AA, home: obj.AE, away: obj.AF, hSlug: obj.WU, aSlug: obj.WV, hId: obj.PX, aId: obj.PY, ts: obj.AD || obj.ADE || null });
       }
     }
     return groups;
@@ -2626,12 +2586,63 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         var mm = g.matches[j];
         if(isWomen && !leagueW && !(/\(ж\)/i.test(mm.home) && /\(ж\)/i.test(mm.away))) continue;
         if(fsNameOk(hClean, hCore, mm.home) && fsNameOk(aClean, aCore, mm.away))
-          return { h: { url: mm.hSlug, id: mm.hId }, a: { url: mm.aSlug, id: mm.aId }, mid: mm.id };
+          return { h: { url: mm.hSlug, id: mm.hId }, a: { url: mm.aSlug, id: mm.aId }, mid: mm.id, ts: mm.ts };
         if(fsNameOk(hClean, hCore, mm.away) && fsNameOk(aClean, aCore, mm.home))
-          return { h: { url: mm.aSlug, id: mm.aId }, a: { url: mm.hSlug, id: mm.hId }, mid: mm.id };
+          return { h: { url: mm.aSlug, id: mm.aId }, a: { url: mm.hSlug, id: mm.hId }, mid: mm.id, ts: mm.ts };
       }
     }
     return null;
+  }
+
+  function fsLookup(m, all){
+    var isWomen = fsIsWomen(m.home) || fsIsWomen(m.away);
+    var country = fsCountry(m.league);
+    var found = null;
+    if(country){
+      found = fsFindMatch(all.filter(function(g){ return g.country === country; }), m.home, m.away, isWomen);
+    }
+    if(!found) found = fsFindMatch(all, m.home, m.away, isWomen);
+    return found;
+  }
+  function fsFmtTime(ts){
+    var n = Number(ts);
+    if(!isFinite(n) || n <= 0) return "";
+    var ms = n < 1e12 ? n * 1000 : n;
+    try{
+      var parts = new Intl.DateTimeFormat("ru-RU", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Europe/Moscow" }).formatToParts(new Date(ms));
+      var hh = "", mi = "";
+      parts.forEach(function(p){ if(p.type === "hour") hh = p.value; if(p.type === "minute") mi = p.value; });
+      return (hh && mi) ? hh + ":" + mi : "";
+    } catch(e){ return ""; }
+  }
+  function attachFsTimes(){
+    if(!state.matches.length || typeof fetch !== "function") return;
+    var need = {};
+    state.matches.forEach(function(m){ if(!m.time) need[fsFeedSport(m.league)] = true; });
+    var sports = Object.keys(need);
+    if(!sports.length) return;
+    var loadKeys = [];
+    sports.forEach(function(sportKey){ loadKeys.push(sportKey + "|0"); loadKeys.push(sportKey + "|1"); });
+    Promise.all(loadKeys.map(function(k){
+      var p = k.split("|");
+      return fsLoadDay(p[0], p[1]);
+    })).then(function(results){
+      var bySport = {};
+      loadKeys.forEach(function(k, i){
+        var sportKey = k.split("|")[0];
+        bySport[sportKey] = (bySport[sportKey] || []).concat(results[i]);
+      });
+      var changed = false;
+      state.matches.forEach(function(m){
+        if(m.time) return;
+        var all = bySport[fsFeedSport(m.league)];
+        if(!all) return;
+        var found = fsLookup(m, all);
+        var tt2 = found ? fsFmtTime(found.ts) : "";
+        if(tt2){ m.time = tt2; changed = true; }
+      });
+      if(changed){ save(); render(); }
+    }).catch(function(){});
   }
   function openFs(m){
     var w = window.open("", "_blank");          /* вкладку открываем сразу — после fetch браузер её заблокирует */
@@ -3998,7 +4009,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   }
 
   $("btnBrief").addEventListener("click", showBrief);
-  $("btnCalib").addEventListener("click", showCalib);
 
 
   /* ---------- Окно «Ценность тиража» ----------
@@ -4899,6 +4909,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     save();
     $("tirazhName").value = state.tirazh;
     render();
+    attachFsTimes();
     return list.length;
   }
 
@@ -5490,6 +5501,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     if(freshStart){ save(); }
     clearOnLoad();                             /* лист вариантов при загрузке пустой */
     render();
+    attachFsTimes(); /* дозаполнить время начала, если тираж пришёл из кэша ещё без него */
     /* если страница размещена в интернете — тихо проверить, не сменился ли тираж */
     if(typeof fetch === "function"){
       /* открыли ссылку на купон — грузим сразу ТОТ тираж, а не текущий */
