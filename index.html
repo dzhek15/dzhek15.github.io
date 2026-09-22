@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru">
+<html lang="ru" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -42,6 +42,9 @@ img{max-width:100%}
   /* обои: едва заметное зерно бумаги + узор исходов тиража 1/X/2 по диагонали — тема тотализатора */
   --bg-grain:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27140%27%20height%3D%27140%27%3E%3Cfilter%20id%3D%27n%27%3E%3CfeTurbulence%20type%3D%27fractalNoise%27%20baseFrequency%3D%270.85%27%20numOctaves%3D%272%27%20stitchTiles%3D%27stitch%27%2F%3E%3CfeColorMatrix%20type%3D%27matrix%27%20values%3D%270%200%200%200%200%200%200%200%200%200%200%200%200%200%200%200%200%200%200.075%200%27%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%27140%27%20height%3D%27140%27%20filter%3D%27url%28%23n%29%27%2F%3E%3C%2Fsvg%3E");
   --bg-symbols:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27260%27%20height%3D%27190%27%3E%3Cg%20fill%3D%27rgba%28201%2C162%2C75%2C.16%29%27%20font-family%3D%27Georgia%2Cserif%27%20font-weight%3D%27700%27%20transform%3D%27rotate%28-12%20130%2095%29%27%3E%3Ctext%20x%3D%278%27%20y%3D%2758%27%20font-size%3D%2746%27%3E1%3C%2Ftext%3E%3Ctext%20x%3D%27112%27%20y%3D%27138%27%20font-size%3D%2746%27%3EX%3C%2Ftext%3E%3Ctext%20x%3D%27198%27%20y%3D%2764%27%20font-size%3D%2746%27%3E2%3C%2Ftext%3E%3C%2Fg%3E%3C%2Fsvg%3E");
+  /* тонкое золотое кольцо-медальон позади шапки — премиальный, тёмный стиль по референсу */
+  --bg-glow-3:rgba(62,92,118,.03);
+  --bg-ring:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27760%27%20height%3D%27760%27%3E%3Ccircle%20cx%3D%27380%27%20cy%3D%27380%27%20r%3D%27340%27%20fill%3D%27none%27%20stroke%3D%27rgba%28201%2C162%2C75%2C.12%29%27%20stroke-width%3D%271.5%27%2F%3E%3Ccircle%20cx%3D%27380%27%20cy%3D%27380%27%20r%3D%27300%27%20fill%3D%27none%27%20stroke%3D%27rgba%28201%2C162%2C75%2C.06%29%27%20stroke-width%3D%271%27%2F%3E%3C%2Fsvg%3E");
 }
 :root:not([data-theme="light"]){}
 @media (prefers-color-scheme: dark){
@@ -58,7 +61,8 @@ img{max-width:100%}
     --shadow:0 1px 0 rgba(0,0,0,.4), 0 8px 22px -14px rgba(0,0,0,.8);
 
     --bg-glow-1:rgba(227,235,234,.05); --bg-glow-2:rgba(142,179,212,.09);
-    --bg-grain:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27140%27%20height%3D%27140%27%3E%3Cfilter%20id%3D%27n%27%3E%3CfeTurbulence%20type%3D%27fractalNoise%27%20baseFrequency%3D%270.85%27%20numOctaves%3D%272%27%20stitchTiles%3D%27stitch%27%2F%3E%3CfeColorMatrix%20type%3D%27matrix%27%20values%3D%270%200%200%200%201%200%200%200%200%201%200%200%200%200%201%200%200%200%200.1%200%27%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%27140%27%20height%3D%27140%27%20filter%3D%27url%28%23n%29%27%2F%3E%3C%2Fsvg%3E");
+    --bg-glow-3:rgba(142,179,212,.05);
+    --bg-grain:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27140%27%20height%3D%27140%27%3E%3Cfilter%20id%3D%27n%27%3E%3CfeTurbulence%20type%3D%27fractalNoise%27%20baseFrequency%3D%270.85%27%20numOctaves%3D%272%27%20stitchTiles%3D%27stitch%27%2F%3E%3CfeColorMatrix%20type%3D%27matrix%27%20values%3D%270%200%200%200%201%200%200%200%200%201%200%200%200%200%201%200%200%200%200.07%200%27%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%27140%27%20height%3D%27140%27%20filter%3D%27url%28%23n%29%27%2F%3E%3C%2Fsvg%3E");
   }
 }
 :root[data-theme="dark"]{
@@ -74,7 +78,8 @@ img{max-width:100%}
   --shadow:0 1px 0 rgba(0,0,0,.4), 0 8px 22px -14px rgba(0,0,0,.8);
 
   --bg-glow-1:rgba(227,235,234,.05); --bg-glow-2:rgba(142,179,212,.09);
-  --bg-grain:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27140%27%20height%3D%27140%27%3E%3Cfilter%20id%3D%27n%27%3E%3CfeTurbulence%20type%3D%27fractalNoise%27%20baseFrequency%3D%270.85%27%20numOctaves%3D%272%27%20stitchTiles%3D%27stitch%27%2F%3E%3CfeColorMatrix%20type%3D%27matrix%27%20values%3D%270%200%200%200%201%200%200%200%200%201%200%200%200%200%201%200%200%200%200.1%200%27%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%27140%27%20height%3D%27140%27%20filter%3D%27url%28%23n%29%27%2F%3E%3C%2Fsvg%3E");
+  --bg-glow-3:rgba(142,179,212,.05);
+  --bg-grain:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27140%27%20height%3D%27140%27%3E%3Cfilter%20id%3D%27n%27%3E%3CfeTurbulence%20type%3D%27fractalNoise%27%20baseFrequency%3D%270.85%27%20numOctaves%3D%272%27%20stitchTiles%3D%27stitch%27%2F%3E%3CfeColorMatrix%20type%3D%27matrix%27%20values%3D%270%200%200%200%201%200%200%200%200%201%200%200%200%200%201%200%200%200%200.07%200%27%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%27140%27%20height%3D%27140%27%20filter%3D%27url%28%23n%29%27%2F%3E%3C%2Fsvg%3E");
 }
 *{box-sizing:border-box}
 body{
@@ -84,12 +89,15 @@ body{
      тиража 1/X/2 по диагонали (тема тотализатора); всё без картинок */
   background-color:var(--bg);
   background-image:
+    var(--bg-ring),
     var(--bg-symbols),
     var(--bg-grain),
     radial-gradient(1100px 620px at 50% -10%, var(--bg-glow-1), transparent 62%),
-    radial-gradient(900px 560px at 100% 100%, var(--bg-glow-2), transparent 58%);
-  background-repeat:repeat, repeat, no-repeat, no-repeat;
-  background-size:260px 190px, 140px 140px, auto, auto;
+    radial-gradient(900px 560px at 100% 100%, var(--bg-glow-2), transparent 58%),
+    radial-gradient(800px 500px at 8% 78%, var(--bg-glow-3), transparent 60%);
+  background-repeat:no-repeat, repeat, repeat, no-repeat, no-repeat, no-repeat;
+  background-size:760px 760px, 260px 190px, 140px 140px, auto, auto, auto;
+  background-position:50% -220px, 0 0, 0 0, 0 0, 0 0, 0 0;
   font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   font-size:14px; line-height:1.5;
   padding-inline:18px; padding-block:22px 48px;
@@ -1138,7 +1146,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. «РАНДОМ» ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; в корзину при этом ничего не уходит — для этого есть «Положить купон в корзину». Строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 22.09 20:50 МСК</span>
+    <span class="build">сборка 22.09 21:02 МСК</span>
   </footer>
 </div>
 
