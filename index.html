@@ -1106,7 +1106,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. «РАНДОМ» ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; в корзину при этом ничего не уходит — для этого есть «Положить купон в корзину». Строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 21.09 09:00 МСК</span>
+    <span class="build">сборка 22.09 12:15 МСК</span>
   </footer>
 </div>
 
@@ -2483,21 +2483,75 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   var rowsEl = $("rows");
 
   /* лупа: страница хозяев на flashscore.ru. Команду ищем тем же API, что и сам Flashscore
-     (project 46 = flashscore.ru, lang 12 = русские названия). Молодёжки, дубли и женские
-     отсеиваем, при нескольких тёзках берём страну турнира. Не нашли — обычный поиск. */
+     (project 46 = flashscore.ru, lang 12 = русские названия). Молодёжки и дубли отсеиваем,
+     женские — только если сам матч не женский (тогда наоборот ищем среди них), при нескольких
+     тёзках берём страну турнира, а среди тёзок той же страны — только похожих по названию.
+     Не нашли похожую команду или страна турнира не совпала ни у кого — обычный поиск, а не
+     первая попавшаяся команда: лучше не найти, чем перепутать (было — уводило не туда). */
   var FS_API = "https://s.livesport.services/api/v2/search/?lang-id=12&type-ids=1,2,3,4&sport-ids=1&project-id=46&project-type-id=1&q=";
-  var fsCache = {};
+  var FS_CACHE = {};
+  /* хоккей и другое не-футбольное в тираже — под этот API не заточено (sport-ids=1 = футбол),
+     он охотно подсовывает случайный футбольный клуб с похожим именем. Честнее сразу на поиск */
+  var FS_NONFOOTBALL = /КХЛ|НХЛ|хокке/i;
   function fsCountry(league){ var m = /^([^.]+)\./.exec(String(league || "")); return m ? m[1].trim() : ""; }
-  function fsPick(list, country){
-    var bad = /U1\d|U2\d|\(Ж\)|\(Б\)|\(Мол\)|\sB$|\sC$|\sII$/;
+  /* «(ж)» в конце названия — это БалтБет помечает женский матч прямо в имени команды; для
+     поиска это лишний шум (Flashscore такую строку не найдёт), а по каким командам смотреть —
+     полезный сигнал (см. isWomen ниже) */
+  function fsClean(name){ return String(name || "").replace(/\s*\((?:ж|б|мол)\)\s*$/i, "").trim(); }
+  function fsIsWomen(name){ return /\(ж\)\s*$/i.test(String(name || "")); }
+  /* слова, которые слишком часто встречаются в чужих названиях, чтобы засчитывать их как
+     совпадение (иначе «Ротерем Юнайтед» пройдёт по слову «Юнайтед» и получит «Манчестер Юнайтед») */
+  var FS_GENERIC = { "фк":1, "ск":1, "сити":1, "таун":1, "юнайтед":1, "атлетик":1, "атлетико":1,
+    "роверс":1, "депортиво":1, "реал":1, "интер":1, "олимпик":1, "спортинг":1, "насьональ":1,
+    "юниор":1, "юнион":1, "динамо":1, "спартак":1, "локомотив":1, "рейнджерс":1 };
+  function fsWords(name){
+    return String(name || "").toLowerCase().replace(/ё/g, "е").split(/[^a-zа-я0-9]+/).filter(function(w){ return w.length >= 3; });
+  }
+  function fsCoreWords(name){
+    var w = fsWords(name).filter(function(x){ return !FS_GENERIC[x]; });
+    return w.length ? w : fsWords(name);
+  }
+  /* редакционное расстояние — короткие строки, точность не критична */
+  function fsDist(a, b){
+    var m = a.length, n = b.length, i, j, d = [];
+    for(i = 0; i <= m; i++) d[i] = [i];
+    for(j = 0; j <= n; j++) d[0][j] = j;
+    for(i = 1; i <= m; i++)
+      for(j = 1; j <= n; j++)
+        d[i][j] = Math.min(d[i-1][j] + 1, d[i][j-1] + 1, d[i-1][j-1] + (a.charAt(i-1) === b.charAt(j-1) ? 0 : 1));
+    return d[m][n];
+  }
+  function fsWordSimilar(a, b){
+    if(a === b) return true;
+    if(a.indexOf(b) >= 0 || b.indexOf(a) >= 0) return true;
+    return fsDist(a, b) <= Math.ceil(Math.max(a.length, b.length) * 0.3);
+  }
+  /* каждое «важное» слово запроса должно найтись (точно или почти) среди слов кандидата —
+     иначе это просто другой клуб с одним общим словом в названии. У части команд (как
+     Эрзурумспор) на Flashscore само название в базе латиницей — сверяем и так, и так */
+  function fsMatches(coreWords, candidateName){
+    var hay = fsWords(candidateName);
+    for(var i = 0; i < coreWords.length; i++){
+      var w = coreWords[i], wLat = translit(w).toLowerCase();
+      var ok = false;
+      for(var j = 0; j < hay.length; j++){
+        if(fsWordSimilar(w, hay[j]) || (wLat !== w && fsWordSimilar(wLat, hay[j]))){ ok = true; break; }
+      }
+      if(!ok) return false;
+    }
+    return true;
+  }
+  function fsPick(list, country, coreWords, isWomen){
+    var bad = isWomen ? /U1\d|U2\d|\sB$|\sC$|\sII$/ : /U1\d|U2\d|\(Ж\)|\(Б\)|\(Мол\)|\sB$|\sC$|\sII$/;
     var teams = (list || []).filter(function(x){
       return x && x.type && x.type.name === "Team" && x.url && x.id && !bad.test(x.name || "") &&
-             String(x.url).indexOf("inactive") < 0;
+             String(x.url).indexOf("inactive") < 0 && fsMatches(coreWords, x.name);
     });
     if(country){
       for(var i = 0; i < teams.length; i++){
         if(teams[i].defaultCountry && teams[i].defaultCountry.name === country) return teams[i];
       }
+      return null;   /* турнир этой страны, а команды такой страны среди похожих нет — не подсовываем чужую */
     }
     return teams[0] || null;
   }
@@ -2520,21 +2574,24 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     if(lat !== name && lat !== (m ? m[2] : name)) out.push(lat);
     return out;
   }
-  /* одна команда → {url, id} с кэшем по названию и стране турнира */
+  /* одна команда → {url, id} с кэшем по названию и стране турнира. Похожесть всегда сверяем
+     с исходным (очищенным от «(ж)») именем — даже когда сам запрос ушёл латиницей */
   function fsTeam(name, country){
-    var key = normTeam(name) + "|" + country;
-    if(fsCache[key]) return Promise.resolve(fsCache[key]);
-    var qs = fsQueries(name), i = 0;
+    var clean = fsClean(name), isWomen = fsIsWomen(name);
+    var key = normTeam(clean) + "|" + country + "|" + (isWomen ? "ж" : "");
+    if(FS_CACHE[key]) return Promise.resolve(FS_CACHE[key]);
+    var core = fsCoreWords(clean);
+    var qs = fsQueries(clean), i = 0;
     function next(){
       if(i >= qs.length) return Promise.resolve(null);
       var q = qs[i++];
       return fetch(FS_API + encodeURIComponent(q))
         .then(function(r){ return r.ok ? r.json() : null; })
         .then(function(j){
-          var t = fsPick(j, country);
+          var t = fsPick(j, country, core, isWomen);
           if(!t) return next();
-          fsCache[key] = { url: t.url, id: t.id };
-          return fsCache[key];
+          FS_CACHE[key] = { url: t.url, id: t.id };
+          return FS_CACHE[key];
         });
     }
     return next();
@@ -2543,7 +2600,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     var w = window.open("", "_blank");          /* вкладку открываем сразу — после fetch браузер её заблокирует */
     var fallback = "https://www.google.com/search?q=" + encodeURIComponent(m.home + " " + m.away + " flashscore");
     function go(url){ if(w) w.location = url; else window.open(url, "_blank", "noopener"); }
-    if(typeof fetch !== "function"){ go(fallback); return; }
+    if(typeof fetch !== "function" || FS_NONFOOTBALL.test(m.league || "")){ go(fallback); return; }
     var country = fsCountry(m.league);
     Promise.all([fsTeam(m.home, country), fsTeam(m.away, country)])
       .then(function(t){
