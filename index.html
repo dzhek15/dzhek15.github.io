@@ -1106,7 +1106,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. «РАНДОМ» ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; в корзину при этом ничего не уходит — для этого есть «Положить купон в корзину». Строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 22.09 12:15 МСК</span>
+    <span class="build">сборка 22.09 14:40 МСК</span>
   </footer>
 </div>
 
@@ -2493,7 +2493,15 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   /* хоккей и другое не-футбольное в тираже — под этот API не заточено (sport-ids=1 = футбол),
      он охотно подсовывает случайный футбольный клуб с похожим именем. Честнее сразу на поиск */
   var FS_NONFOOTBALL = /КХЛ|НХЛ|хокке/i;
-  function fsCountry(league){ var m = /^([^.]+)\./.exec(String(league || "")); return m ? m[1].trim() : ""; }
+  /* континент/регион (еврокубки, «Мир. ЧМ» и т.п.) — это не страна, у клуба такой
+     defaultCountry не бывает; если считать это страной, фильтр по стране отбраковывает
+     даже точное совпадение (так ловился «Интер Милан(ж) — Хеккен(ж)», Лига Чемпионов) */
+  var FS_NOT_COUNTRY = /^(европа|азия|африка|америка|океания|мир|северная америка|южная америка|центральная америка)$/i;
+  function fsCountry(league){
+    var m = /^([^.]+)\./.exec(String(league || ""));
+    var c = m ? m[1].trim() : "";
+    return FS_NOT_COUNTRY.test(c) ? "" : c;
+  }
   /* «(ж)» в конце названия — это БалтБет помечает женский матч прямо в имени команды; для
      поиска это лишний шум (Flashscore такую строку не найдёт), а по каким командам смотреть —
      полезный сигнал (см. isWomen ниже) */
@@ -2542,9 +2550,12 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     return true;
   }
   function fsPick(list, country, coreWords, isWomen){
+    /* в женском матче кандидат ОБЯЗАН быть помечен «(Ж)» — иначе при коротком/общем имени
+       («Интер», «Реал») можно случайно подставить мужской клуб */
     var bad = isWomen ? /U1\d|U2\d|\sB$|\sC$|\sII$/ : /U1\d|U2\d|\(Ж\)|\(Б\)|\(Мол\)|\sB$|\sC$|\sII$/;
     var teams = (list || []).filter(function(x){
       return x && x.type && x.type.name === "Team" && x.url && x.id && !bad.test(x.name || "") &&
+             (!isWomen || /\(Ж\)/i.test(x.name || "")) &&
              String(x.url).indexOf("inactive") < 0 && fsMatches(coreWords, x.name);
     });
     if(country){
@@ -2606,9 +2617,10 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       .then(function(t){
         var h = t[0], a = t[1];
         /* страница матча: Flashscore сам подставляет ближайшую встречу этих двух команд.
-           Нашли только хозяев — открываем их страницу, матч там первой строкой */
+           Нашли только одну из команд — открываем её страницу, матч там первой строкой */
         if(h && a) go("https://www.flashscore.ru/match/football/" + h.url + "-" + h.id + "/" + a.url + "-" + a.id + "/");
         else if(h) go("https://www.flashscore.ru/team/" + h.url + "/" + h.id + "/");
+        else if(a) go("https://www.flashscore.ru/team/" + a.url + "/" + a.id + "/");
         else go(fallback);
       })
       .catch(function(){ go(fallback); });
