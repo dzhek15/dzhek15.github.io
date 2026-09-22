@@ -578,6 +578,9 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 .th-res{font-weight:700} .th-res.w{color:var(--cold)} .th-res.l{color:var(--hot)}
 .th-sum{display:flex; flex-wrap:wrap; gap:6px 18px; margin:4px 0 6px; font-size:13px}
 .th-sum b{font-family:"IBM Plex Mono",monospace}
+.th-h2{margin:0 0 6px; font-size:13px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted)}
+.th-hr{border:0; border-top:1px dashed var(--rule-strong); margin:16px 0}
+.th-thin{color:var(--muted); font-weight:400}
 /* Аналитика — сетка два на два. Колонки равные, кнопки тянутся по ячейке,
    поэтому все четыре одного размера, а ряд читается как один блок. */
 .roll-ev .btn-ev:last-child:nth-child(odd){grid-column:1 / -1}
@@ -988,6 +991,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         <button class="btn-ev" id="btnDiff" type="button" title="Где доля игроков сильнее всего расходится с оценкой конторы"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.5v13"/><path d="M4.5 6.5h11"/><path d="M2.5 12.2 4.9 7l2.4 5.2a2.6 2.6 0 0 1-4.8 0z"/><path d="M12.7 12.2 15.1 7l2.4 5.2a2.6 2.6 0 0 1-4.8 0z"/></svg><span class="lbl">Расхождения</span></button>
                 <button class="btn-ev" id="btnPF" type="button" title="Отобрать из системы строки, которые меньше всего пересекаются с выбором толпы"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 4.5h13l-5 5.8v5.2l-3 1.6v-6.8z"/></svg><span class="lbl">Отобрать строки</span></button>
         <button class="btn-ev" id="btnBrief" type="button" title="Собрать систему с гарантией: часть строк купона вместо всех"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3.5" width="15" height="13" rx="1.5"/><path d="M2.5 8h15"/><path d="M7.5 8v8.5"/><path d="M12.5 8v8.5"/></svg><span class="lbl">Бриф</span></button>
+        <button class="btn-ev" id="btnCalib" type="button" title="Как часто на деле заходит фаворит при разной оценке конторы, и как часто выпадает ничья на плоских матчах — по всей накопленной истории"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16.5V8"/><path d="M8.3 16.5V4.5"/><path d="M13.6 16.5v-9"/><path d="M2.5 16.5h15"/></svg><span class="lbl">Калибровка</span></button>
       </div>
         </div>
     </div>
@@ -1102,7 +1106,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. «РАНДОМ» ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; в корзину при этом ничего не уходит — для этого есть «Положить купон в корзину». Строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 20.09 17:10 МСК</span>
+    <span class="build">сборка 21.09 09:00 МСК</span>
   </footer>
 </div>
 
@@ -2353,11 +2357,82 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     return p(d.getUTCDate()) + "." + p(d.getUTCMonth() + 1);
   }
   /* история команды в Балтсистеме: последние появления, линия, пул, итог */
-  function showTeam(name){
-    var key = normTeam(name), rows = [];
+  /* общий рендер одной таблицы очных/личных встреч — переиспользуется и для H2H, и для истории команды */
+  function h2hTable(rows, meKey, meName){
+    var h = '<table class="ev-tab th-tab"><tr><th>Тираж</th><th>Дата</th><th style="text-align:left">Матч</th><th>Линия БК</th><th>Пул</th><th>Итог</th><th>Счёт</th></tr>';
+    rows.forEach(function(r){
+      var e = r.e, mine = r.home ? "1" : "2";
+      var cls = (e.res === "X") ? "" : (e.res === mine ? " w" : " l");
+      var opp = r.home ? e.away : e.home;
+      h += '<tr><td class="nw">' + e.n + '</td><td class="nw">' + fmtDay(e.at) + '</td>' +
+        '<td class="tm-me" style="text-align:left">' + escHtml(r.home ? meName : opp) + ' — ' + escHtml(r.home ? opp : meName) +
+        '<span class="side">' + (r.home ? "дома" : "в гостях") + '</span></td>' +
+        '<td class="nw">' + (e.bk ? e.bk.join(" / ") : "—") + '</td>' +
+        '<td class="nw">' + (e.pool ? e.pool.join(" / ") : "—") + '</td>' +
+        '<td class="nw th-res' + cls + '">' + escHtml(e.res) + '</td>' +
+        '<td class="nw">' + escHtml(String(e.score || "").replace(/\s+/g, "")) + '</td></tr>';
+    });
+    return h + '</table>';
+  }
+  /* калибровка линии конторы по всей накопленной истории: бакеты по 5 п.п.
+     фаворит = исход с максимальным bk%; разрыв для ничьей = топ-1 минус топ-2 доли конторы */
+  function calibStats(){
+    var fav = {}, drw = {};
+    hist.ev.forEach(function(e){
+      if(!e.bk) return;
+      var p = e.bk, fi = 0;
+      if(p[1] > p[fi]) fi = 1;
+      if(p[2] > p[fi]) fi = 2;
+      var fk = Math.min(75, Math.floor(p[fi] / 5) * 5);
+      fav[fk] = fav[fk] || { n: 0, hit: 0 };
+      fav[fk].n++;
+      if(OUT[fi] === e.res) fav[fk].hit++;
+      var srt = p.slice().sort(function(a, b){ return b - a; });
+      var gk = Math.min(30, Math.floor((srt[0] - srt[1]) / 5) * 5);
+      drw[gk] = drw[gk] || { n: 0, hit: 0 };
+      drw[gk].n++;
+      if(e.res === "X") drw[gk].hit++;
+    });
+    return { fav: fav, drw: drw };
+  }
+  function calibRows(buckets, top){
+    var pc = function(x){ return (x * 100).toFixed(1).replace(".", ",") + "%"; };
+    return Object.keys(buckets).map(Number).sort(function(a, b){ return a - b; }).map(function(k){
+      var b = buckets[k];
+      var label = (k >= top ? (top + "+") : (k + "–" + (k + 5))) + " п.п.";
+      var cls = b.n < 20 ? " class=\"th-thin\"" : "";
+      return "<tr" + cls + "><td>" + label + "</td><td class=\"nw\">" + b.n + "</td><td class=\"nw\">" + pc(b.hit / b.n) + "</td></tr>";
+    }).join("");
+  }
+  function showCalib(){
+    $("evTitle").textContent = "Калибровка линии конторы";
+    var box = $("evBody");
+    if(!hist.ev.length){
+      box.innerHTML = '<p class="ev-warn">История тиражей ещё не загрузилась — попробуй через минуту.</p>';
+      $("evBack").hidden = false; return;
+    }
+    var st = calibStats();
+    var h = '<p class="ev-lead">По всей накопленной истории (' + hist.count + ' тиражей): как часто фаворит ' +
+      'реально заходит при разной оценке конторы, и как часто выпадает ничья, когда два лучших исхода близки ' +
+      'по проценту. Проверяет на месте ли порог «контора даёт ≥42% — бери одиночку».</p>' +
+      '<h3 class="th-h2">Фаворит: оценка конторы → реальный заход</h3>' +
+      '<table class="ev-tab"><thead><tr><th>Оценка конторы</th><th>Матчей</th><th>Заходил</th></tr></thead><tbody>' +
+      calibRows(st.fav, 75) + '</tbody></table>' +
+      '<h3 class="th-h2">Ничья: разрыв 1-го и 2-го исхода → реальная частота X</h3>' +
+      '<table class="ev-tab"><thead><tr><th>Разрыв по конторе</th><th>Матчей</th><th>Заходила</th></tr></thead><tbody>' +
+      calibRows(st.drw, 30) + '</tbody></table>' +
+      '<p class="ev-note">Бледные строки — меньше 20 матчей в бакете, цифра там шумная, доверять осторожно.</p>';
+    box.innerHTML = h;
+    $("evBack").hidden = false;
+  }
+  function showTeam(name, opp){
+    var key = normTeam(name), rows = [], h2h = [];
+    var oppKey = opp ? normTeam(opp) : null;
     hist.ev.forEach(function(e){
       var isH = normTeam(e.home) === key, isA = normTeam(e.away) === key;
       if(isH || isA) rows.push({ e: e, home: isH });
+      if(oppKey && isH && normTeam(e.away) === oppKey) h2h.push({ e: e, home: true });
+      if(oppKey && isA && normTeam(e.home) === oppKey) h2h.push({ e: e, home: false });
     });
     $("evTitle").textContent = name + " в Балтсистеме";
     var box = $("evBody");
@@ -2365,8 +2440,24 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       box.innerHTML = '<p class="ev-warn">История тиражей ещё не загрузилась — попробуй через минуту.</p>';
       $("evBack").hidden = false; return;
     }
+    /* очные встречи — своим блоком сверху, независимо от того, нашлась ли история самой команды */
+    var h2hBlock = "";
+    if(opp){
+      if(h2h.length){
+        var hw = 0, hd = 0, hl = 0;
+        h2h.forEach(function(r){ var mine = r.home ? "1" : "2"; if(r.e.res === "X") hd++; else if(r.e.res === mine) hw++; else hl++; });
+        h2hBlock = '<h3 class="th-h2">Очные встречи с ' + escHtml(opp) + '</h3>' +
+          '<div class="th-sum"><span>всего <b>' + h2h.length + '</b></span>' +
+          '<span>' + escHtml(name) + ': В <b>' + hw + '</b> · Н <b>' + hd + '</b> · П <b>' + hl + '</b></span></div>' +
+          h2hTable(h2h, key, name) +
+          '<p class="ev-note">В личных встречах учтены оба порядка (дома и в гостях).</p><hr class="th-hr">';
+      } else {
+        h2hBlock = '<h3 class="th-h2">Очные встречи с ' + escHtml(opp) + '</h3>' +
+          '<p class="ev-warn">В истории (' + hist.count + ' тиражей) эти команды между собой не встречались.</p><hr class="th-hr">';
+      }
+    }
     if(!rows.length){
-      box.innerHTML = '<p class="ev-warn">В истории (' + hist.count + ' тиражей) эта команда не встречалась.</p>';
+      box.innerHTML = h2hBlock + '<p class="ev-warn">В истории (' + hist.count + ' тиражей) эта команда не встречалась.</p>';
       $("evBack").hidden = false; return;
     }
     var w = 0, d = 0, l = 0, favN = 0, favHit = 0;
@@ -2381,23 +2472,10 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     var h = '<div class="th-sum"><span>появлений <b>' + rows.length + '</b></span>' +
       '<span>В <b>' + w + '</b> · Н <b>' + d + '</b> · П <b>' + l + '</b></span>' +
       (favN ? '<span>фаворитом конторы <b>' + favN + '</b>, прошла <b>' + favHit + '</b></span>' : '') + '</div>';
-    h += '<table class="ev-tab th-tab"><tr><th>Тираж</th><th>Дата</th><th style="text-align:left">Матч</th><th>Линия БК</th><th>Пул</th><th>Итог</th><th>Счёт</th></tr>';
-    rows.slice(0, 12).forEach(function(r){
-      var e = r.e, mine = r.home ? "1" : "2";
-      var cls = (e.res === "X") ? "" : (e.res === mine ? " w" : " l");
-      var opp = r.home ? e.away : e.home;
-      h += '<tr><td class="nw">' + e.n + '</td><td class="nw">' + fmtDay(e.at) + '</td>' +
-        '<td class="tm-me" style="text-align:left">' + escHtml(r.home ? name : opp) + ' — ' + escHtml(r.home ? opp : name) +
-        '<span class="side">' + (r.home ? "дома" : "в гостях") + '</span></td>' +
-        '<td class="nw">' + (e.bk ? e.bk.join(" / ") : "—") + '</td>' +
-        '<td class="nw">' + (e.pool ? e.pool.join(" / ") : "—") + '</td>' +
-        '<td class="nw th-res' + cls + '">' + escHtml(e.res) + '</td>' +
-        '<td class="nw">' + escHtml(String(e.score || "").replace(/\s+/g, "")) + '</td></tr>';
-    });
-    h += '</table>';
+    h += h2hTable(rows.slice(0, 12), key, name);
     if(rows.length > 12) h += '<p class="ev-note">Показаны последние 12 из ' + rows.length + '.</p>';
     h += '<p class="ev-note">Линия и пул — доли в процентах 1 / X / 2 на момент закрытия тиража. История: ' + hist.count + ' тиражей.</p>';
-    box.innerHTML = h;
+    box.innerHTML = h2hBlock + h;
     $("evBack").hidden = false;
   }
 
@@ -2489,11 +2567,11 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     return b;
   }
   /* название команды — ссылка на её историю в тото */
-  function mkTeam(name){
+  function mkTeam(name, opp){
     var t = document.createElement("span");
     t.className = "tm"; t.textContent = name;
-    t.title = "История команды в Балтсистеме";
-    t.addEventListener("click", function(){ showTeam(name); });
+    t.title = "История команды в Балтсистеме" + (opp ? " · очные с " + opp : "");
+    t.addEventListener("click", function(){ showTeam(name, opp); });
     return t;
   }
   function render(){
@@ -2525,11 +2603,11 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
         console.info("ДЖЕК: нет в таблице клубов — " + m.away);
       }
       if(hc) teams.appendChild(mkFlag(hc, "tflag", m.home));
-      teams.appendChild(mkTeam(m.home));
+      teams.appendChild(mkTeam(m.home, m.away));
       var vs = document.createElement("span"); vs.className="vs"; vs.textContent="—";
       teams.appendChild(vs);
       if(ac) teams.appendChild(mkFlag(ac, "tflag", m.away));
-      teams.appendChild(mkTeam(m.away));
+      teams.appendChild(mkTeam(m.away, m.home));
       fix.appendChild(teams);
       var meta = document.createElement("div");
       meta.className="meta";
@@ -3820,6 +3898,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   }
 
   $("btnBrief").addEventListener("click", showBrief);
+  $("btnCalib").addEventListener("click", showCalib);
 
 
   /* ---------- Окно «Ценность тиража» ----------
