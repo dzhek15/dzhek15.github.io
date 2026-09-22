@@ -84,6 +84,11 @@ body{
 }
 .wrap{max-width:1080px; margin:0 auto}
 
+/* ---------- лёгкие штрихи ---------- */
+::selection{background:var(--brand-gold); color:var(--brand-dark)}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto} }
+
 /* элементы вне карточек лежат на сукне — им светлый текст */
 .masthead h1{color:var(--on-bg)}
 .masthead p{color:var(--on-bg-muted)}
@@ -124,7 +129,7 @@ h1,h2,h3{font-family:"Chivo","IBM Plex Sans",system-ui,sans-serif; margin:0; tex
 }
 .feed-note{color:var(--warn); font-weight:600; letter-spacing:.02em; cursor:help}
 .feed-note #tkFeedNote{color:var(--muted); font-weight:400}
-.tk-btn{cursor:pointer}
+.tk-btn{cursor:pointer; transition:background-color .15s ease}
 .tk-btn:hover{background:var(--surface-2)}
 .tk-why{font-style:normal; color:var(--o1); text-decoration:underline dotted; text-underline-offset:2px; white-space:nowrap}
 .ticket .v.good{color:var(--cold)}
@@ -214,7 +219,7 @@ input:focus-visible,button:focus-visible,summary:focus-visible,textarea:focus-vi
 .zoomctl button:hover:not(:disabled){background:var(--surface-3)}
 .zoomctl b{min-width:5ch; text-align:center; padding:0 2px; font-size:12.5px; font-weight:600;
   color:var(--muted); font-variant-numeric:tabular-nums}
-button{font:inherit; cursor:pointer; border-radius:var(--r); border:1px solid var(--rule-strong); background:var(--surface-2); color:var(--ink); padding:8px 13px}
+button{font:inherit; cursor:pointer; border-radius:var(--r); border:1px solid var(--rule-strong); background:var(--surface-2); color:var(--ink); padding:8px 13px; transition:background-color .15s ease, border-color .15s ease, filter .15s ease}
 button:hover:not(:disabled){background:var(--surface-3)}
 button:disabled{opacity:.45; cursor:not-allowed}
 .btn-roll{
@@ -821,7 +826,12 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
   letter-spacing:.04em; color:var(--muted); opacity:.75}
 .hist-sum{margin-left:8px; font-size:14px; letter-spacing:0; text-transform:none;
   color:var(--ink); font-weight:700; font-family:"IBM Plex Mono",monospace}
-.hist{list-style:none; margin:12px 0 0; padding:0; display:flex; flex-direction:column; gap:9px; max-height:340px; overflow-y:auto}
+.hist{list-style:none; margin:12px 0 0; padding:0; display:flex; flex-direction:column; gap:9px; max-height:340px; overflow-y:auto;
+  scrollbar-width:thin; scrollbar-color:var(--rule-strong) transparent}
+.hist::-webkit-scrollbar{width:7px}
+.hist::-webkit-scrollbar-track{background:transparent}
+.hist::-webkit-scrollbar-thumb{background:var(--rule-strong); border-radius:10px}
+.hist::-webkit-scrollbar-thumb:hover{background:var(--brand-gold)}
 .hist li{display:flex; gap:10px; align-items:center; justify-content:space-between; font-size:15px; border-bottom:1px dotted var(--rule); padding-bottom:9px}
 .hist .sig{font-family:"IBM Plex Mono",monospace; font-size:14px; letter-spacing:.08em; overflow-wrap:anywhere; margin-top:2px}
 .hist button{padding:6px 11px; font-size:13px}
@@ -1115,7 +1125,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. «РАНДОМ» ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; в корзину при этом ничего не уходит — для этого есть «Положить купон в корзину». Строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 22.09 19:38 МСК</span>
+    <span class="build">сборка 22.09 20:22 МСК</span>
   </footer>
 </div>
 
