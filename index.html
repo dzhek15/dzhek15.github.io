@@ -1106,7 +1106,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. «РАНДОМ» ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; в корзину при этом ничего не уходит — для этого есть «Положить купон в корзину». Строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 22.09 15:05 МСК</span>
+    <span class="build">сборка 22.09 13:25 МСК</span>
   </footer>
 </div>
 
@@ -2488,10 +2488,8 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
      тёзках берём страну турнира, а среди тёзок той же страны — только похожих по названию.
      Не нашли похожую команду или страна турнира не совпала ни у кого — обычный поиск, а не
      первая попавшаяся команда: лучше не найти, чем перепутать (было — уводило не туда). */
-  var FS_API = "https://s.livesport.services/api/v2/search/?lang-id=12&type-ids=1,2,3,4&sport-ids=1&project-id=46&project-type-id=1&q=";
-  var FS_CACHE = {};
-  /* хоккей и другое не-футбольное в тираже — под этот API не заточено (sport-ids=1 = футбол),
-     он охотно подсовывает случайный футбольный клуб с похожим именем. Честнее сразу на поиск */
+  /* хоккей в тираже определяем по названию лиги — от этого зависит, каким sport-id
+     запрашивать фид Flashscore (см. FS_SPORT_ID ниже) */
   var FS_NONFOOTBALL = /КХЛ|НХЛ|хокке/i;
   /* континент/регион (еврокубки, «Мир. ЧМ» и т.п.) — это не страна, у клуба такой
      defaultCountry не бывает; если считать это страной, фильтр по стране отбраковывает
@@ -2549,23 +2547,6 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     }
     return true;
   }
-  function fsPick(list, country, coreWords, isWomen){
-    /* в женском матче кандидат ОБЯЗАН быть помечен «(Ж)» — иначе при коротком/общем имени
-       («Интер», «Реал») можно случайно подставить мужской клуб */
-    var bad = isWomen ? /U1\d|U2\d|\sB$|\sC$|\sII$/ : /U1\d|U2\d|\(Ж\)|\(Б\)|\(Мол\)|\sB$|\sC$|\sII$/;
-    var teams = (list || []).filter(function(x){
-      return x && x.type && x.type.name === "Team" && x.url && x.id && !bad.test(x.name || "") &&
-             (!isWomen || /\(Ж\)/i.test(x.name || "")) &&
-             String(x.url).indexOf("inactive") < 0 && fsMatches(coreWords, x.name);
-    });
-    if(country){
-      for(var i = 0; i < teams.length; i++){
-        if(teams[i].defaultCountry && teams[i].defaultCountry.name === country) return teams[i];
-      }
-      return null;   /* турнир этой страны, а команды такой страны среди похожих нет — не подсовываем чужую */
-    }
-    return teams[0] || null;
-  }
   /* латиница для второй попытки: totobrief пишет «Элверсберг», Flashscore — «Эльферсберг»,
      а по-английски Elversberg находят оба */
   var TRANSLIT = { "а":"a","б":"b","в":"v","г":"g","д":"d","е":"e","ё":"e","ж":"zh","з":"z","и":"i","й":"y","к":"k",
@@ -2577,86 +2558,98 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
       return (c === lo) ? t : (t.charAt(0).toUpperCase() + t.slice(1));
     });
   }
-  /* варианты запроса: как есть; без короткой приставки вроде «ББ», «ФК»; латиницей */
-  function fsQueries(name){
-    var out = [name], m = /^([А-ЯA-Z]{1,3})\s+(.{3,})$/.exec(name);
-    if(m) out.push(m[2]);
-    var lat = translit(m ? m[2] : name);
-    if(lat !== name && lat !== (m ? m[2] : name)) out.push(lat);
-    return out;
-  }
-  /* женский клуб на Flashscore часто хранится под коротким «фирменным» именем без
-     города-уточнения (напр. «Интер Милан» → у них просто «Интер»), поэтому слово с
-     городом никогда не находится. Пробуем запрос без последнего слова, потом ещё короче;
-     на каждом шаге берём кандидата, ТОЛЬКО если он единственный подходящий «(Ж)»-вариант
-     под таким именем (в стране турнира, если она известна) — иначе можно перепутать клуб */
-  function fsWomenFallback(clean, country){
-    var words = clean.split(/\s+/).filter(Boolean), tries = [];
-    for(var n = words.length - 1; n >= 1; n--) tries.push(words.slice(0, n).join(" "));
-    function next(i){
-      if(i >= tries.length) return Promise.resolve(null);
-      return fetch(FS_API + encodeURIComponent(tries[i]))
-        .then(function(r){ return r.ok ? r.json() : null; })
-        .then(function(j){
-          var cands = (j || []).filter(function(x){
-            return x && x.type && x.type.name === "Team" && x.url && x.id &&
-                   String(x.url).indexOf("inactive") < 0 && /\(Ж\)/i.test(x.name || "");
-          });
-          var pick = null;
-          if(country){
-            var byC = cands.filter(function(x){ return x.defaultCountry && x.defaultCountry.name === country; });
-            if(byC.length === 1) pick = byC[0];
-          } else if(cands.length === 1){
-            pick = cands[0];
-          }
-          return pick || next(i + 1);
-        });
-    }
-    return next(0);
-  }
-  /* одна команда → {url, id} с кэшем по названию и стране турнира. Похожесть всегда сверяем
-     с исходным (очищенным от «(ж)») именем — даже когда сам запрос ушёл латиницей */
-  function fsTeam(name, country){
-    var clean = fsClean(name), isWomen = fsIsWomen(name);
-    var key = normTeam(clean) + "|" + country + "|" + (isWomen ? "ж" : "");
-    if(FS_CACHE[key]) return Promise.resolve(FS_CACHE[key]);
-    var core = fsCoreWords(clean);
-    var qs = fsQueries(clean), i = 0;
-    function next(){
-      if(i >= qs.length){
-        if(!isWomen) return Promise.resolve(null);
-        return fsWomenFallback(clean, country).then(function(t){
-          if(!t) return null;
-          FS_CACHE[key] = { url: t.url, id: t.id };
-          return FS_CACHE[key];
-        });
+  /* --- поиск матча по дате+виду спорта (замена поиску команды по имени) ---
+     Раньше искали КАЖДУЮ команду по названию через поиск Flashscore — это не работало,
+     когда имя в тираже не похоже на имя на Flashscore («Автомобилист» → «yekaterinburg»,
+     «Атлетико Кали» → «atletico-f-c») и не работало для хоккея вовсе (тот поиск заточен
+     под футбол). День тиража всегда сегодня или завтра — поэтому вместо поиска по имени
+     берём ВЕСЬ список матчей нужного спорта на эти два дня одним фидом (~100-200 записей)
+     и ищем среди них пару команд напрямую. Формат фида — родной Flashscore: записи через
+     «¬~», поля внутри через «¬» и «КОД÷значение»; перед каждой группой матчей идёт запись
+     без AA (id матча) — это заголовок страны/турнира (ZY — страна, ZA — «страна: турнир») */
+  var FS_FEED_HOST = "https://46.flashscore.ninja/46/x/feed/f_";
+  var FS_FSIGN = "SW9D1eZo";
+  var FS_SPORT_ID = { football: 1, hockey: 4 };
+  var FS_DAY_CACHE = {};
+  function fsFeedSport(league){ return FS_NONFOOTBALL.test(league || "") ? "hockey" : "football"; }
+  function fsParseFeed(text){
+    var groups = [], cur = null;
+    if(!text) return groups;
+    var recs = text.split("¬~");
+    for(var i = 0; i < recs.length; i++){
+      var parts = recs[i].split("¬"), obj = {};
+      for(var j = 0; j < parts.length; j++){
+        var kv = parts[j].split("÷");
+        if(kv.length === 2) obj[kv[0]] = kv[1];
       }
-      var q = qs[i++];
-      return fetch(FS_API + encodeURIComponent(q))
-        .then(function(r){ return r.ok ? r.json() : null; })
-        .then(function(j){
-          var t = fsPick(j, country, core, isWomen);
-          if(!t) return next();
-          FS_CACHE[key] = { url: t.url, id: t.id };
-          return FS_CACHE[key];
-        });
+      if(!obj.AA){
+        if(obj.ZY || obj.ZA){ cur = { country: obj.ZY || "", league: obj.ZA || "", matches: [] }; groups.push(cur); }
+      } else if(cur && obj.AE && obj.AF && obj.WU && obj.WV && obj.PX && obj.PY){
+        cur.matches.push({ id: obj.AA, home: obj.AE, away: obj.AF, hSlug: obj.WU, aSlug: obj.WV, hId: obj.PX, aId: obj.PY });
+      }
     }
-    return next();
+    return groups;
+  }
+  /* фид на день+спорт кэшируем — за один тираж кнопку FS жмут по многу раз подряд для
+     одного и того же спорта, незачем качать заново */
+  function fsLoadDay(sportKey, day){
+    var key = sportKey + "|" + day;
+    if(FS_DAY_CACHE[key]) return FS_DAY_CACHE[key];
+    var url = FS_FEED_HOST + FS_SPORT_ID[sportKey] + "_" + day + "_3_ru-kz_1";
+    FS_DAY_CACHE[key] = fetch(url, { headers: { "x-fsign": FS_FSIGN } })
+      .then(function(r){ return r.ok ? r.text() : null; })
+      .then(fsParseFeed)
+      .catch(function(){ return []; });
+    return FS_DAY_CACHE[key];
+  }
+  /* дневной фид хранит команду часто под коротким «фирменным» именем без города-уточнения
+     («Торпедо Нижний Новгород» в тираже — просто «Торпедо» на Flashscore), поэтому сверяем
+     обе стороны: и что все слова запроса нашлись у кандидата, и наоборот — что все слова
+     (более короткого) кандидата нашлись в запросе */
+  function fsNameOk(queryClean, queryCore, candidateName){
+    if(fsMatches(queryCore, candidateName)) return true;
+    var candCore = fsCoreWords(candidateName);
+    return !!(candCore.length && fsMatches(candCore, queryClean));
+  }
+  /* пара «дом/гости» у источника иногда переставлена относительно тиража — проверяем
+     совпадение обеих команд и в прямом, и в обратном порядке. Женский матч — кандидат
+     должен быть помечен «(Ж)» в имени или сама лига содержать «жен» (иначе можно
+     случайно подставить мужской клуб с тем же именем) */
+  function fsFindMatch(groups, homeName, awayName, isWomen){
+    var hClean = fsClean(homeName), aClean = fsClean(awayName);
+    var hCore = fsCoreWords(hClean), aCore = fsCoreWords(aClean);
+    for(var i = 0; i < groups.length; i++){
+      var g = groups[i], leagueW = /жен/i.test(g.league || "");
+      for(var j = 0; j < g.matches.length; j++){
+        var mm = g.matches[j];
+        if(isWomen && !leagueW && !(/\(ж\)/i.test(mm.home) && /\(ж\)/i.test(mm.away))) continue;
+        if(fsNameOk(hClean, hCore, mm.home) && fsNameOk(aClean, aCore, mm.away))
+          return { h: { url: mm.hSlug, id: mm.hId }, a: { url: mm.aSlug, id: mm.aId }, mid: mm.id };
+        if(fsNameOk(hClean, hCore, mm.away) && fsNameOk(aClean, aCore, mm.home))
+          return { h: { url: mm.aSlug, id: mm.aId }, a: { url: mm.hSlug, id: mm.hId }, mid: mm.id };
+      }
+    }
+    return null;
   }
   function openFs(m){
     var w = window.open("", "_blank");          /* вкладку открываем сразу — после fetch браузер её заблокирует */
     var fallback = "https://www.google.com/search?q=" + encodeURIComponent(m.home + " " + m.away + " flashscore");
     function go(url){ if(w) w.location = url; else window.open(url, "_blank", "noopener"); }
-    if(typeof fetch !== "function" || FS_NONFOOTBALL.test(m.league || "")){ go(fallback); return; }
+    if(typeof fetch !== "function"){ go(fallback); return; }
+    var sportKey = fsFeedSport(m.league);
+    var isWomen = fsIsWomen(m.home) || fsIsWomen(m.away);
     var country = fsCountry(m.league);
-    Promise.all([fsTeam(m.home, country), fsTeam(m.away, country)])
-      .then(function(t){
-        var h = t[0], a = t[1];
-        /* страница матча: Flashscore сам подставляет ближайшую встречу этих двух команд.
-           Нашли только одну из команд — открываем её страницу, матч там первой строкой */
-        if(h && a) go("https://www.flashscore.ru/match/football/" + h.url + "-" + h.id + "/" + a.url + "-" + a.id + "/");
-        else if(h) go("https://www.flashscore.ru/team/" + h.url + "/" + h.id + "/");
-        else if(a) go("https://www.flashscore.ru/team/" + a.url + "/" + a.id + "/");
+    Promise.all([fsLoadDay(sportKey, 0), fsLoadDay(sportKey, 1)])
+      .then(function(days){
+        var all = days[0].concat(days[1]);
+        var found = null;
+        /* сначала — только турнир нужной страны (если она известна и не континент), это
+           страхует от тёзок в других странах; не нашли — ищем по всем группам */
+        if(country){
+          found = fsFindMatch(all.filter(function(g){ return g.country === country; }), m.home, m.away, isWomen);
+        }
+        if(!found) found = fsFindMatch(all, m.home, m.away, isWomen);
+        if(found) go("https://www.flashscore.ru/match/" + sportKey + "/" + found.h.url + "-" + found.h.id + "/" + found.a.url + "-" + found.a.id + "/?mid=" + found.mid);
         else go(fallback);
       })
       .catch(function(){ go(fallback); });
