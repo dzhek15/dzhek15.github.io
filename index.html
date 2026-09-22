@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="ru" data-theme="dark">
 <head>
+<script>try{var __t=localStorage.getItem("theme"); if(__t==="light"||__t==="dark"){document.documentElement.setAttribute("data-theme",__t);}}catch(e){}</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ДЖЕК</title>
@@ -240,6 +241,11 @@ input:focus-visible,button:focus-visible,summary:focus-visible,textarea:focus-vi
 .zoomctl button:hover:not(:disabled){background:var(--surface-3)}
 .zoomctl b{min-width:5ch; text-align:center; padding:0 2px; font-size:12.5px; font-weight:600;
   color:var(--muted); font-variant-numeric:tabular-nums}
+#btnTheme{display:inline-flex; align-items:center; gap:5px; padding:5px 9px}
+#btnTheme svg{display:block}
+#btnTheme .ic-sun{display:none}
+:root[data-theme="light"] #btnTheme .ic-sun{display:block}
+:root[data-theme="light"] #btnTheme .ic-moon{display:none}
 button{font:inherit; cursor:pointer; border-radius:var(--r); border:1px solid var(--rule-strong); background:var(--surface-2); color:var(--ink); padding:8px 13px; transition:background-color .15s ease, border-color .15s ease, filter .15s ease; -webkit-tap-highlight-color:transparent; touch-action:manipulation}
 button:hover:not(:disabled){background:var(--surface-3)}
 button:disabled{opacity:.45; cursor:not-allowed}
@@ -703,11 +709,13 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 }
 .pick{border-radius:3px}
 .pick[aria-pressed="true"]{color:var(--accent-ink); box-shadow:inset 0 -2px 0 rgba(0,0,0,.18)}
-/* Выбранный исход всегда золотой (фирменный цвет): цвет означает «отмечено», а не какой это исход —
-   какой именно, и так написано на самой кнопке. */
-.pick[aria-pressed="true"]{background:var(--brand-gold); border-color:var(--brand-gold); color:var(--brand-dark)}
+/* Выбранный исход: в тёмной теме — фирменный золотой, в светлой — синий (акцент сайта).
+   Цвет означает «отмечено», а не какой это исход — какой именно, и так написано на самой кнопке. */
+.pick[aria-pressed="true"]{background:var(--o1); border-color:var(--o1); color:#fff}
 .pick.in-pool{border-style:dashed; border-width:2px; background:transparent; font-weight:600;
-  border-color:var(--brand-gold); color:var(--brand-gold)}
+  border-color:var(--o1); color:var(--o1)}
+:root[data-theme="dark"] .pick[aria-pressed="true"]{background:var(--brand-gold); border-color:var(--brand-gold); color:var(--brand-dark)}
+:root[data-theme="dark"] .pick.in-pool{border-color:var(--brand-gold); color:var(--brand-gold)}
 .pick.off-pool{opacity:.3; border-style:dotted}
 .pick{transition:background-color .13s linear, border-color .13s linear, color .13s linear}
 @keyframes pickPop{0%{transform:scale(.7); opacity:.3} 55%{transform:scale(1.07)} 100%{transform:scale(1); opacity:1}}
@@ -768,9 +776,6 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 .coupon.spinning{box-shadow:0 0 0 2px var(--accent), var(--shadow)}
 .coupon.spinning .row{background:transparent}
 @media (prefers-reduced-motion: reduce){ .pick{transition:none} .pick.pop{animation:none} }
-.pick.p1[aria-pressed="false"]:hover{background:var(--o1-soft)}
-.pick.px[aria-pressed="false"]:hover{background:var(--ox-soft)}
-.pick.p2[aria-pressed="false"]:hover{background:var(--o2-soft)}
 .picks-m{display:contents}
 .modes{display:flex; gap:5px; justify-content:flex-end}
 .mode{font-size:11.5px; padding:6px 9px; letter-spacing:.03em; white-space:nowrap; display:flex; gap:5px; align-items:center}
@@ -978,6 +983,11 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
           <b id="zoomVal">100%</b>
           <button id="btnZoomIn" type="button" aria-label="Крупнее" title="Крупнее на 5%">+</button>
         </span>
+        <button id="btnTheme" type="button" aria-pressed="false" title="Переключить тему">
+          <svg class="ic-sun" width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="10" cy="10" r="4"/><path d="M10 2v2M10 16v2M18 10h-2M4 10H2M15.5 4.5l-1.4 1.4M5.9 14.1l-1.4 1.4M15.5 15.5l-1.4-1.4M5.9 5.9 4.5 4.5"/></svg>
+          <svg class="ic-moon" width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 12.5A7 7 0 0 1 7.5 3a7 7 0 1 0 9.5 9.5z"/></svg>
+          <span class="lbl">Тема</span>
+        </button>
       </div>
   </div>
 
@@ -1147,7 +1157,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   <footer>
     Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. «РАНДОМ» ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; в корзину при этом ничего не уходит — для этого есть «Положить купон в корзину». Строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
-    <span class="build">сборка 22.09 21:46 МСК</span>
+    <span class="build">сборка 22.09 22:00 МСК</span>
   </footer>
 </div>
 
@@ -5261,6 +5271,21 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 
   $("btnZoomIn").addEventListener("click", function(){ setZoom((Number(state.zoom) || 1) + ZSTEP); });
   $("btnZoomOut").addEventListener("click", function(){ setZoom((Number(state.zoom) || 1) - ZSTEP); });
+
+  function applyThemeBtn(){
+    var isLight = document.documentElement.getAttribute("data-theme") === "light";
+    var b = $("btnTheme");
+    b.setAttribute("aria-pressed", isLight ? "true" : "false");
+    b.title = isLight ? "Сейчас светлая тема — нажми, чтобы включить тёмную" : "Сейчас тёмная тема — нажми, чтобы включить светлую";
+  }
+  $("btnTheme").addEventListener("click", function(){
+    var isLight = document.documentElement.getAttribute("data-theme") === "light";
+    var next = isLight ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", next);
+    try{ localStorage.setItem("theme", next); }catch(e){}
+    applyThemeBtn();
+  });
+  applyThemeBtn();
 
 
   /* ---------- csv ---------- */
