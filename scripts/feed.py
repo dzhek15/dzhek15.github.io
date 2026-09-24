@@ -431,6 +431,61 @@ def build_history(pages, infos):
     return hist, added
 
 
+# ---------------------------------------------------------------- Elo-рейтинг команд
+ELO_K = 32            # коэффициент изменчивости
+ELO_INIT = 1500       # стартовый рейтинг
+ELO_PROVISIONAL = 30  # меньше матчей — рейтинг «предварительный»
+
+def norm_name(s):
+    """Тот же ключ, что в JS: lower, ё→е, только буквы/цифры."""
+    return re.sub(r"[^a-zа-я0-9]+", "", (s or "").lower().replace("ё", "е"))
+
+def build_elo(hist):
+    """Считает Elo-рейтинг команд по истории тиражей.
+    Результат — {имя: {rating, played, w, d, l}}, сохраняется в elo.json."""
+    if not hist or not hist.get("draws"):
+        return None
+    # сортируем тиражи от старых к новым
+    nums = sorted(hist["draws"].keys(), key=lambda x: int(x) if x.isdigit() else 0)
+    ratings = {}
+    for n in nums:
+        d = hist["draws"][n]
+        for row in d.get("ev", []):
+            if len(row) < 11 or not row[9]:
+                continue
+            home, away = norm_name(row[0]), norm_name(row[1])
+            res = row[9]
+            if res not in ("1", "X", "2"):
+                continue
+            for t in (home, away):
+                if t not in ratings:
+                    ratings[t] = {"rating": ELO_INIT, "played": 0, "w": 0, "d": 0, "l": 0}
+            ra, rb = ratings[home]["rating"], ratings[away]["rating"]
+            ea = 1.0 / (1.0 + 10 ** ((rb - ra) / 400.0))
+            if res == "1":
+                sa, sb = 1.0, 0.0
+                ratings[home]["w"] += 1; ratings[away]["l"] += 1
+            elif res == "X":
+                sa, sb = 0.5, 0.5
+                ratings[home]["d"] += 1; ratings[away]["d"] += 1
+            else:
+                sa, sb = 0.0, 1.0
+                ratings[home]["l"] += 1; ratings[away]["w"] += 1
+            ratings[home]["rating"] = ra + ELO_K * (sa - ea)
+            ratings[away]["rating"] = rb + ELO_K * (sb - (1 - ea))
+            ratings[home]["played"] += 1
+            ratings[away]["played"] += 1
+    # сортируем по рейтингу убыванию
+    out = []
+    for name, r in sorted(ratings.items(), key=lambda x: -x[1]["rating"]):
+        out.append({"name": name, "rating": round(r["rating"]), "played": r["played"],
+                    "w": r["w"], "d": r["d"], "l": r["l"],
+                    "provisional": r["played"] < ELO_PROVISIONAL})
+    log("elo: %d команд, топ-3: %s" % (len(out), ", ".join(
+        "%s %d" % (o["name"][:12], o["rating"]) for o in out[:3])))
+    return {"teams": out, "updated_at": now_iso(), "count": len(out)}
+
+
 def main():
     status = rd("status.json", {})
     pages = [rd("drawings-%d.json" % p, None) for p in range(1, PAGES + 1)]
@@ -459,6 +514,14 @@ def main():
             if hist_added:
                 hist_changed = wr("history.json", hist)
                 status["history_count"] = hist["count"]
+            # Elo-рейтинг пересчитываем по истории раз в запуск (быстро)
+            try:
+                elo = build_elo(hist)
+                if elo:
+                    changed_elo = wr("elo.json", elo)
+                    hist_changed = hist_changed or changed_elo
+            except Exception as e:
+                log("elo не собрался:", repr(e))
         except Exception as e:
             log("история не собралась:", repr(e))
     except Exception as e:

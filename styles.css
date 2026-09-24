@@ -1,0 +1,945 @@
+:root{
+  /* исходная: шалфейно-серый фон, охристый акцент */
+  --bg:#E6EAE8; --on-bg:#131A1B; --on-bg-muted:#5C6A6B;
+  --surface:#F8FAF9; --surface-2:#EFF2F1; --surface-3:#E0E6E4;
+  --ink:#131A1B; --muted:#5C6A6B; --rule:#C7D0CE; --rule-strong:#A9B5B3;
+  --accent:#3E5C76; --accent-ink:#FFFFFF;   /* стальной синий: раньше тут была охра */
+  --brand-dark:#1a1410; --brand-gold:#c9a24b;   /* палитра логотипа «Джек» */
+  --o1:#1D5FA6; --ox:#5E6D6E; --o2:#A63A30;
+  --o1-soft:#DCE8F5; --ox-soft:#E3E8E8; --o2-soft:#F6E0DD;
+  --hot:#A63A30; --hot-soft:#F6E0DD; --cold:#1C6B4B;
+  --warn:#8A5A12; --warn-bg:#F7ECD8;
+  --shadow:0 1px 0 rgba(19,26,27,.06), 0 6px 18px -12px rgba(19,26,27,.35);
+  --r:4px;
+
+  /* лёгкое сияние на фоне страницы — нейтральная тень сверху (не золото — на серо-салатовом фоне
+     золотой подсвет смотрелся мутно), сталь в углу */
+  --bg-glow-1:rgba(19,26,27,.05); --bg-glow-2:rgba(62,92,118,.08);
+  /* обои: едва заметное зерно бумаги + узор исходов тиража 1/X/2 по диагонали — тема тотализатора */
+  --bg-grain:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27140%27%20height%3D%27140%27%3E%3Cfilter%20id%3D%27n%27%3E%3CfeTurbulence%20type%3D%27fractalNoise%27%20baseFrequency%3D%270.85%27%20numOctaves%3D%272%27%20stitchTiles%3D%27stitch%27%2F%3E%3CfeColorMatrix%20type%3D%27matrix%27%20values%3D%270%200%200%200%200%200%200%200%200%200%200%200%200%200%200%200%200%200%200.075%200%27%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%27140%27%20height%3D%27140%27%20filter%3D%27url%28%23n%29%27%2F%3E%3C%2Fsvg%3E");
+  --bg-symbols:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27260%27%20height%3D%27190%27%3E%3Cg%20fill%3D%27rgba%28201%2C162%2C75%2C.16%29%27%20font-family%3D%27Georgia%2Cserif%27%20font-weight%3D%27700%27%20transform%3D%27rotate%28-12%20130%2095%29%27%3E%3Ctext%20x%3D%278%27%20y%3D%2758%27%20font-size%3D%2746%27%3E1%3C%2Ftext%3E%3Ctext%20x%3D%27112%27%20y%3D%27138%27%20font-size%3D%2746%27%3EX%3C%2Ftext%3E%3Ctext%20x%3D%27198%27%20y%3D%2764%27%20font-size%3D%2746%27%3E2%3C%2Ftext%3E%3C%2Fg%3E%3C%2Fsvg%3E");
+  /* тонкое золотое кольцо-медальон позади шапки — премиальный, тёмный стиль по референсу */
+  --bg-glow-3:rgba(62,92,118,.03);
+  --bg-ring:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27760%27%20height%3D%27760%27%3E%3Ccircle%20cx%3D%27380%27%20cy%3D%27380%27%20r%3D%27340%27%20fill%3D%27none%27%20stroke%3D%27rgba%28201%2C162%2C75%2C.12%29%27%20stroke-width%3D%271.5%27%2F%3E%3Ccircle%20cx%3D%27380%27%20cy%3D%27380%27%20r%3D%27300%27%20fill%3D%27none%27%20stroke%3D%27rgba%28201%2C162%2C75%2C.06%29%27%20stroke-width%3D%271%27%2F%3E%3C%2Fsvg%3E");
+}
+:root:not([data-theme="light"]){}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1518; --on-bg:#E3EBEA; --on-bg-muted:#8FA1A2;
+    --surface:#182126; --surface-2:#1E282E; --surface-3:#26333A;
+    --ink:#E3EBEA; --muted:#8FA1A2; --rule:#2A363C; --rule-strong:#3B4A51;
+    --accent:#8EB3D4; --accent-ink:#0F1518;
+    --brand-dark:#120d0a; --brand-gold:#c9a24b;
+    --o1:#69A8E4; --ox:#9BADAD; --o2:#E88374;
+    --o1-soft:#15293C; --ox-soft:#222D31; --o2-soft:#3A2320;
+    --hot:#E88374; --hot-soft:#3A2320; --cold:#5FC496;
+    --warn:#D79B3E; --warn-bg:#2A2114;
+    --shadow:0 1px 0 rgba(0,0,0,.4), 0 8px 22px -14px rgba(0,0,0,.8);
+
+    --bg-glow-1:rgba(227,235,234,.05); --bg-glow-2:rgba(142,179,212,.09);
+    --bg-glow-3:rgba(142,179,212,.05);
+    --bg-grain:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27140%27%20height%3D%27140%27%3E%3Cfilter%20id%3D%27n%27%3E%3CfeTurbulence%20type%3D%27fractalNoise%27%20baseFrequency%3D%270.85%27%20numOctaves%3D%272%27%20stitchTiles%3D%27stitch%27%2F%3E%3CfeColorMatrix%20type%3D%27matrix%27%20values%3D%270%200%200%200%201%200%200%200%200%201%200%200%200%200%201%200%200%200%200.07%200%27%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%27140%27%20height%3D%27140%27%20filter%3D%27url%28%23n%29%27%2F%3E%3C%2Fsvg%3E");
+  }
+}
+:root[data-theme="dark"]{
+  --brand-dark:#120d0a; --brand-gold:#c9a24b;
+  --bg:#0F1518; --on-bg:#E3EBEA; --on-bg-muted:#8FA1A2;
+  --surface:#182126; --surface-2:#1E282E; --surface-3:#26333A;
+  --ink:#E3EBEA; --muted:#8FA1A2; --rule:#2A363C; --rule-strong:#3B4A51;
+  --accent:#8EB3D4; --accent-ink:#0F1518;
+  --o1:#69A8E4; --ox:#9BADAD; --o2:#E88374;
+  --o1-soft:#15293C; --ox-soft:#222D31; --o2-soft:#3A2320;
+  --hot:#E88374; --hot-soft:#3A2320; --cold:#5FC496;
+  --warn:#D79B3E; --warn-bg:#2A2114;
+  --shadow:0 1px 0 rgba(0,0,0,.4), 0 8px 22px -14px rgba(0,0,0,.8);
+
+  --bg-glow-1:rgba(227,235,234,.05); --bg-glow-2:rgba(142,179,212,.09);
+  --bg-glow-3:rgba(142,179,212,.05);
+  --bg-grain:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27140%27%20height%3D%27140%27%3E%3Cfilter%20id%3D%27n%27%3E%3CfeTurbulence%20type%3D%27fractalNoise%27%20baseFrequency%3D%270.85%27%20numOctaves%3D%272%27%20stitchTiles%3D%27stitch%27%2F%3E%3CfeColorMatrix%20type%3D%27matrix%27%20values%3D%270%200%200%200%201%200%200%200%200%201%200%200%200%200%201%200%200%200%200.07%200%27%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%27140%27%20height%3D%27140%27%20filter%3D%27url%28%23n%29%27%2F%3E%3C%2Fsvg%3E");
+}
+*{box-sizing:border-box}
+body{
+  margin:0; color:var(--ink);
+  /* обои: тихая нейтральная тень сверху и холодный акцент в углу (не золото — сплошной золотой
+     подсвет на сером фоне смотрелся мутно), поверх — едва заметное бумажное зерно и узор исходов
+     тиража 1/X/2 по диагонали (тема тотализатора); всё без картинок */
+  background-color:var(--bg);
+  background-image:
+    var(--bg-ring),
+    var(--bg-symbols),
+    var(--bg-grain),
+    radial-gradient(1100px 620px at 50% -10%, var(--bg-glow-1), transparent 62%),
+    radial-gradient(900px 560px at 100% 100%, var(--bg-glow-2), transparent 58%),
+    radial-gradient(800px 500px at 8% 78%, var(--bg-glow-3), transparent 60%);
+  background-repeat:no-repeat, repeat, repeat, no-repeat, no-repeat, no-repeat;
+  background-size:760px 760px, 260px 190px, 140px 140px, auto, auto, auto;
+  background-position:50% -220px, 0 0, 0 0, 0 0, 0 0, 0 0;
+  font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:14px; line-height:1.5;
+  padding-inline:18px; padding-block:22px 48px;
+  cursor:url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='24'%20height='24'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M4%203%20L4%2019%20L8%2015.2%20L11%2021%20L13.3%2019.9%20L10.3%2014%20L16%2013.6%20Z'%20fill='%23161616'%20stroke='white'%20stroke-width='1.4'%20stroke-linejoin='round'/%3E%3C/svg%3E") 4 3, auto;
+}
+.wrap{max-width:1080px; margin:0 auto}
+
+/* ---------- лёгкие штрихи ---------- */
+::selection{background:var(--brand-gold); color:var(--brand-dark)}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto} }
+
+/* элементы вне карточек лежат на сукне — им светлый текст */
+.masthead h1{color:var(--on-bg)}
+.masthead p{color:var(--on-bg-muted)}
+.roll-note{color:var(--on-bg-muted)}
+.roll-note b{color:var(--on-bg)}
+.roll-note.done{color:var(--on-bg)}
+.pct-legend{color:var(--on-bg-muted)}
+.pct-legend .sw{color:var(--on-bg)}
+.pct-legend .sw.m{color:var(--on-bg-muted)}
+footer{color:var(--on-bg-muted); border-top-color:var(--rule)}
+h1,h2,h3{font-family:"Chivo","IBM Plex Sans",system-ui,sans-serif; margin:0; text-wrap:balance}
+.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace; font-variant-numeric:tabular-nums}
+
+/* ---------- header ---------- */
+.masthead{display:flex; flex-direction:column; align-items:center; text-align:center; gap:0}
+.logo{display:block; height:150px; width:auto; margin:0 auto 4px}
+.masthead h1{font-size:29px; font-weight:800; letter-spacing:-.02em}
+.masthead p{margin:6px auto 0; color:var(--muted); font-size:13.5px; max-width:56ch}
+.ticket{
+  margin-top:16px; width:100%;
+  display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:0;
+  border:1px solid var(--rule-strong); border-radius:8px; background:var(--surface);
+  box-shadow:var(--shadow); overflow:hidden;
+}
+.ticket .tk{
+  flex:1 1 auto; min-width:120px; padding:10px 18px;
+  display:flex; flex-direction:column; align-items:center; gap:3px;
+  border-right:1px dashed var(--rule-strong);
+}
+.ticket .tk:last-child{border-right:0}
+.ticket .k, .ticket label{font-size:11.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
+.tk-note{font-size:11px; color:var(--muted); margin-top:2px; text-align:center; line-height:1.25}
+/* шесть плиток держим одним рядом: подписи переносятся внутри плитки, а не выталкивают её вниз */
+@media (min-width:821px){
+  .ticket{flex-wrap:nowrap; align-items:stretch}
+  .ticket .tk{flex:1 1 0; min-width:0; padding:10px 12px; justify-content:center}
+  .ticket .tk .tk-note{max-width:210px}
+}
+.feed-note{color:var(--warn); font-weight:600; letter-spacing:.02em; cursor:help}
+.feed-note #tkFeedNote{color:var(--muted); font-weight:400}
+.tk-btn{cursor:pointer; transition:background-color .15s ease}
+.tk-btn:hover{background:var(--surface-2)}
+.tk-why{font-style:normal; color:var(--o1); text-decoration:underline dotted; text-underline-offset:2px; white-space:nowrap}
+.ticket .v.good{color:var(--cold)}
+.ticket .v.bad{color:var(--hot)}
+.ticket .v{font-family:"Chivo",sans-serif; font-weight:800; font-size:17px; line-height:1.1; font-variant-numeric:tabular-nums}
+.ticket .v.soon{color:var(--warn)}
+.ticket .v.shut{color:var(--hot)}
+#tirazhName{width:7ch; text-align:center; font-family:"Chivo",sans-serif; font-weight:800;
+  font-size:17px; padding:1px 4px; border:0; border-bottom:1px dashed var(--rule-strong);
+  border-radius:0; background:transparent}
+#tirazhName:focus{outline:none; border-bottom-color:var(--accent)}
+.tir-nav{display:inline-flex; align-items:center; gap:3px}
+.tir-nav button{width:24px; height:24px; padding:0; border:1px solid var(--rule-strong); border-radius:50%;
+  background:transparent; color:var(--ink); font:700 17px/1 "IBM Plex Mono",monospace; cursor:pointer;
+  display:inline-flex; align-items:center; justify-content:center}
+.tir-nav button:hover:not(:disabled){background:var(--surface-2); border-color:var(--accent); color:var(--accent)}
+.tir-nav button:disabled{opacity:.28; cursor:default}
+body.is-prev #tirazhName{color:var(--brand-gold)}
+.prev-bar{margin:0 0 10px; padding:9px 13px; border:1px solid var(--brand-gold); border-radius:var(--r);
+  background:var(--surface); box-shadow:var(--shadow); display:flex; flex-wrap:wrap; gap:6px 14px; align-items:center;
+  font-size:13px; color:var(--muted)}
+.prev-bar b{color:var(--ink); font-family:"IBM Plex Mono",monospace; font-weight:600}
+.prev-bar .pb-t{color:var(--brand-gold); font-family:"Chivo",sans-serif; font-weight:800; font-size:14px; letter-spacing:.02em}
+.prev-bar .pb-back{margin-left:auto; border:1px solid var(--brand-gold); color:var(--brand-gold); background:transparent;
+  border-radius:var(--r); padding:5px 11px; font:600 12px "IBM Plex Sans",sans-serif; cursor:pointer}
+.prev-bar .pb-back:hover{background:var(--surface-2)}
+body.is-prev .console-top, body.is-prev .roll, body.is-prev .keep-bar, body.is-prev .book-bar, body.is-prev #rollNote,
+body.is-prev #hint, body.is-prev .grid2, body.is-prev .pct-legend{display:none !important}
+body.is-prev .row .pick{cursor:default; opacity:.45}
+body.is-prev .row .pick.won{opacity:1; border-width:2px}
+body.is-prev .row .modes .mode:not(.srch){display:none}
+input[type=text],input[type=number]{
+  font:inherit; color:var(--ink); background:var(--surface); border:1px solid var(--rule-strong);
+  border-radius:var(--r); padding:6px 9px;
+}
+input:focus-visible,button:focus-visible,summary:focus-visible,textarea:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+#tirazhName{width:9ch; font-family:"IBM Plex Mono",monospace}
+
+/* ---------- control bar ---------- */
+.console{
+  margin-top:18px; background:var(--surface); border:1px solid var(--rule); border-radius:8px;
+  box-shadow:var(--shadow); padding:18px 18px 16px;
+  display:flex; flex-direction:column; align-items:stretch; gap:0;
+}
+.roll{display:flex; flex-direction:column; align-items:stretch; gap:12px; width:fit-content; max-width:100%; margin-left:auto;
+}
+/* две равные половины: слева сыгранные, справа кнопки */
+.console-top{display:grid; grid-template-columns:1fr 1fr; gap:20px; align-items:start; width:100%}
+.hist-panel{min-width:0; background:transparent; border:none; padding:0}
+.hist-panel .hist{max-height:430px}
+.console-top .roll{width:100%; max-width:100%; margin:0; min-width:0}
+.roll-primary{display:flex; gap:12px; align-items:stretch; flex-wrap:wrap; justify-content:center}
+/* Группы пульта в общей рамке: тот же пунктир и та же подложка, что у группы
+   «Вид», чтобы пульт читался как несколько блоков, а не одна длинная лента.
+   Подпись живёт внутри рамки, поэтому линии по бокам от неё убраны — в коробке
+   они спорят с самой рамкой. */
+/* Две группы пульта в сплошной чёрной рамке — как крупные блоки страницы.
+   Первая без подписи: «заполнить» и «рандом» слиты, названия сняты. */
+.roll-group{display:flex; flex-direction:column; gap:10px; width:100%; min-width:0;
+  container-type:inline-size; container-name:rollgrp;
+  padding:12px; border:1px solid var(--brand-dark); border-radius:6px;
+  background:var(--surface-2)}
+.roll .roll-group .roll-cap{margin:0; justify-content:center; color:var(--muted)}
+.roll .roll-group .roll-cap::before, .roll .roll-group .roll-cap::after{display:none}
+/* Три кнопки равными долями. Ширина решается по САМОМУ ПУЛЬТУ, а не по окну:
+   на планшете пульт занимает половину экрана и «большинство» там обрезалось,
+   хотя окно широкое. Контейнерный запрос это ловит, медиазапрос — нет. */
+.roll-crowd{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); grid-auto-rows:1fr; gap:10px}
+.btn-crowd{width:100%; height:100%; justify-content:center; text-align:center}
+.roll-secondary, .roll-modes{display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:center}
+.roll-secondary button, .roll-modes button{font-size:13.5px; padding:7px 12px}
+.roll-secondary button[aria-pressed="true"]{background:var(--ink); color:var(--surface); border-color:var(--ink)}
+.view-strip{display:flex; justify-content:center; margin-top:14px}
+.roll-view{display:flex; gap:7px; align-items:center; flex-wrap:wrap; justify-content:center;
+  padding:6px 10px 6px 6px; border:1px dashed var(--rule-strong); border-radius:6px;
+  background:var(--surface-2)}
+.view-lbl{font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); padding-left:5px}
+.roll-view button{font-size:12.5px; padding:5px 10px; background:var(--surface); color:var(--muted)}
+.roll-view button:hover:not(:disabled){background:var(--surface-3); color:var(--ink)}
+.roll-view button[aria-pressed="true"]{background:var(--ink); color:var(--surface); border-color:var(--ink)}
+.roll-view .zoomctl{background:var(--surface)}
+.roll-view .zoomctl button{padding:5px 9px; font-size:13px; background:transparent}
+.zoomctl{display:inline-flex; align-items:center; gap:0; overflow:hidden;
+  border:1px solid var(--rule-strong); border-radius:var(--r); background:var(--surface-2)}
+.zoomctl button{border:0; border-radius:0; background:transparent; padding:7px 12px;
+  font-family:"Chivo",sans-serif; font-weight:700; font-size:15px; line-height:1}
+.zoomctl button:hover:not(:disabled){background:var(--surface-3)}
+.zoomctl b{min-width:5ch; text-align:center; padding:0 2px; font-size:12.5px; font-weight:600;
+  color:var(--muted); font-variant-numeric:tabular-nums}
+#btnTheme{display:inline-flex; align-items:center; gap:5px; padding:5px 9px}
+#btnTheme svg{display:block}
+#btnTheme .ic-sun{display:none}
+:root[data-theme="light"] #btnTheme .ic-sun{display:block}
+:root[data-theme="light"] #btnTheme .ic-moon{display:none}
+button{font:inherit; cursor:pointer; border-radius:var(--r); border:1px solid var(--rule-strong); background:var(--surface-2); color:var(--ink); padding:8px 13px; transition:background-color .15s ease, border-color .15s ease, filter .15s ease; -webkit-tap-highlight-color:transparent; touch-action:manipulation}
+button:hover:not(:disabled){background:var(--surface-3)}
+button:disabled{opacity:.45; cursor:not-allowed}
+.btn-roll{
+  background:var(--o1); color:#fff; border-color:var(--o1);
+  font-family:"Chivo",sans-serif; font-weight:800; font-size:17px; letter-spacing:.01em;
+  padding:11px 24px; display:flex; gap:10px; align-items:center; border-radius:6px;
+}
+.btn-roll:hover:not(:disabled){filter:brightness(1.08)}
+.btn-roll:active:not(:disabled){transform:translateY(1px)}
+.btn-roll svg{display:block; transition:transform .25s ease}
+.btn-roll:hover:not(:disabled) svg{transform:rotate(-18deg)}
+@media (prefers-reduced-motion: reduce){ .btn-roll svg{transition:none} .row{transition:none} }
+/* Кнопка, число и скорость — три отдельных элемента рядом, каждый в своей
+   рамке: слипшийся блок читался как одна большая плашка и мешал. */
+.btn-spin{
+  font-family:"Chivo",sans-serif; font-weight:600; font-size:14.5px;
+  padding:12px 18px; border-radius:6px;
+  border:1px solid var(--accent); background:var(--accent); color:var(--accent-ink);
+}
+.btn-spin:hover:not(:disabled){filter:brightness(1.1)}
+/* «РАНДОМ», число кликов и скорость — три отдельных элемента рядом */
+.spin-in{width:5.5ch; text-align:center; font-family:"IBM Plex Mono",monospace; font-weight:600;
+  font-size:14.5px; padding:12px 4px; border:1px solid var(--ink); border-radius:6px;
+  background:var(--surface); color:var(--ink); -moz-appearance:textfield}
+.spin-in::-webkit-outer-spin-button, .spin-in::-webkit-inner-spin-button{-webkit-appearance:none; margin:0}
+.spin-in:focus{outline:2px solid var(--accent); outline-offset:-2px}
+/* три элемента жеребьёвки: кнопка тянется, число и скорость держат свою ширину.
+   На узком пульте переносятся, а не вылезают за рамку группы. */
+.spin-group{display:flex; align-items:stretch; gap:8px; flex-wrap:wrap; justify-content:center; max-width:100%}
+.spin-group .btn-spin{flex:1 1 auto; min-width:0; justify-content:center}
+.spin-group .spin-in, .spin-group .spin-speed{flex:0 0 auto}
+.spin-group .spin-in{border-radius:6px; border-color:var(--accent);
+  background:var(--surface); color:var(--accent); font-weight:700}
+.btn-spin:disabled{background:var(--surface-3); border-color:var(--rule-strong); color:var(--muted)}
+.spin-group .btn-spin:disabled + .spin-in{border-color:var(--rule-strong); color:var(--muted)}
+/* Цвет кнопки привязан к тому, что она делает: «большинство» — зелёная, как
+   стрелка ▲ у самого популярного исхода, «меньшинство» — красная, как ▼. */
+.btn-crowd{border-color:var(--accent); color:var(--accent); padding:7px 14px; font-size:15px}
+#btnMost{background:var(--cold); border-color:var(--cold); color:#fff}
+#btnLeast{background:var(--hot); border-color:var(--hot); color:#fff}
+#btnMost:hover:not(:disabled), #btnLeast:hover:not(:disabled){filter:brightness(1.1)}
+#btnMost:disabled, #btnLeast:disabled{border-color:var(--rule-strong); color:var(--muted); background:transparent}
+/* в тёмной теме — без сплошной заливки, только цветной текст/рамка (просьба [stated]) */
+:root[data-theme="dark"] #btnMost{background:transparent; color:var(--cold)}
+:root[data-theme="dark"] #btnLeast{background:transparent; color:var(--hot)}
+:root[data-theme="dark"] #btnMost .ar, :root[data-theme="dark"] #btnLeast .ar{color:currentColor; opacity:.85}
+/* стрелки те же, что в таблице: ▲ у большинства, ▼ у меньшинства */
+.ar{font-size:11px; margin-right:6px; vertical-align:1px; color:rgba(255,255,255,.75)}
+#btnMost:disabled .ar, #btnLeast:disabled .ar{color:var(--muted)}
+/* аналитика — золотой контур из палитры логотипа, одинаковый у всех четырёх */
+.btn-ev{border-color:var(--brand-gold); color:var(--ink)}
+.btn-ev:hover:not(:disabled){background:rgba(201,162,75,.12)}
+/* служебные и режимы — нейтральные, чтобы не спорили с действующими */
+.roll-secondary button{border-color:var(--rule-strong); color:var(--muted)}
+.roll-secondary button:hover:not(:disabled){color:var(--ink); border-color:var(--ink)}
+/* служебные кнопки — такой же сплошной контур, как у остальных, без пунктира */
+.roll-modes button{border-style:solid; border-width:1px;
+  border-color:var(--ink); color:var(--ink); background:transparent}
+.roll-modes button:hover:not(:disabled){background:var(--surface-3)}
+/* «Обновить тираж» — единственная кнопка, которая ходит наружу за данными,
+   поэтому у неё фирменный охристый цвет и значок обновления */
+#btnFetch{background:var(--accent); border:1px solid var(--accent); color:var(--accent-ink);
+  display:inline-flex; align-items:center; gap:7px}
+#btnFetch svg{display:block}
+#btnFetch:hover:not(:disabled){background:var(--accent); border-color:var(--accent); filter:brightness(1.1)}
+#btnFetch:active:not(:disabled){transform:translateY(1px)}
+#btnFetch:disabled{opacity:.6}
+#btnFetch.is-loading svg{animation:fetchSpin .9s linear infinite; transform-origin:50% 50%}
+@keyframes fetchSpin{to{transform:rotate(360deg)}}
+/* значок + подпись: во всех кнопках пульта одинаково */
+.roll button:not(.btn-crowd), .keep-bar button, .hist-head-acts button, .acts button{
+  display:inline-flex; align-items:center; justify-content:center; gap:7px}
+.roll-crowd button{min-width:0}
+.roll button svg, .keep-bar button svg, .hist-head-acts button svg, .acts button svg{
+  display:block; flex:0 0 auto; opacity:.9}
+.roll button .lbl, .keep-bar button .lbl, .hist-head-acts button .lbl, .acts button .lbl{min-width:0; text-align:center}
+#btnUndo{border-color:var(--o1); color:var(--o1); display:inline-flex; align-items:center; gap:6px}
+#btnUndo svg{display:block}
+#btnUndo:hover:not(:disabled){background:var(--o1-soft); border-color:var(--o1)}
+#btnUndo:disabled{border-color:var(--rule-strong); color:var(--muted); background:transparent}
+.roll-group > .roll-secondary{width:100%}
+#btnReset{flex:1 1 100%; width:100%; justify-content:center; font-family:"Chivo",sans-serif; font-weight:600;
+  font-size:16.5px; padding:12px 18px; border-radius:6px; border-color:var(--o1); background:var(--o1); color:#fff}
+#btnReset:hover:not(:disabled){filter:brightness(1.1); background:var(--o1)}
+#btnReset:disabled{background:transparent; border-color:var(--rule-strong); color:var(--muted)}
+/* в тёмной теме — без сплошной заливки, только цветной текст/рамка (тот же приём, что и у кнопок «большинство/средние/меньшинство») */
+:root[data-theme="dark"] #btnReset{background:transparent; color:var(--o1)}
+:root[data-theme="dark"] #btnReset:hover:not(:disabled){background:var(--o1-soft)}
+
+.btn-tip{border-color:var(--cold); color:var(--cold); padding-block:13px}
+.btn-tip:hover:not(:disabled){background:var(--o1-soft)}
+.btn-tip:disabled{border-color:var(--rule-strong); color:var(--muted)}
+.tip{font-size:11.5px; color:var(--cold); margin-top:2px; overflow-wrap:anywhere}
+.tip b{font-weight:600}
+[data-compact="1"] .tip{font-size:10px}
+.btn-crowd:hover:not(:disabled){background:var(--warn-bg)}
+.btn-crowd:disabled{border-color:var(--rule-strong); color:var(--muted)}
+.knob-sep{width:100%; height:1px; background:var(--rule); margin:14px 0 12px}
+.roll-note{margin:10px 2px 0; font-size:13px; color:var(--on-bg-muted)}
+.roll-note b{color:var(--on-bg); font-weight:600}
+.roll-note.done{color:var(--on-bg)}
+.sum-now{display:flex; flex-wrap:wrap; align-items:baseline; gap:8px 14px; margin:14px 0 0;
+  padding:13px 16px; border:1px solid var(--rule-strong); border-radius:8px 8px 0 0; border-bottom:0;
+  background:var(--surface)}
+.sum-now .big{font-family:"Chivo",sans-serif; font-weight:800; font-size:21px; line-height:1;
+  font-variant-numeric:tabular-nums; color:var(--ink)}
+.sum-now .sub{font-size:13px; color:var(--muted)}
+.sum-now .delta{font-size:13px; font-weight:600; margin-left:auto; font-variant-numeric:tabular-nums}
+.sum-now.over .big, .sum-now.over .delta{color:var(--hot)}
+.sum-now.exact .big, .sum-now.exact .delta{color:var(--accent)}
+.sum-now .sig-now{flex-basis:100%; font-size:12.5px; letter-spacing:.08em; color:var(--muted);
+  border-top:1px dotted var(--rule); padding-top:8px; margin-top:2px; overflow-wrap:anywhere}
+.sum-now .sig-now b{color:var(--ink); font-weight:600; letter-spacing:0}
+@media (max-width:560px){
+  /* общий масштаб мельче: экран узкий, данных много */
+  body{font-size:13.5px; padding-inline:14px; padding-block:16px 36px}
+
+  /* шапка по центру */
+  .logo{height:112px}
+  .masthead p{font-size:12.5px}
+  /* на узком экране ячейки раскладываем сеткой 2×2: пунктирные границы
+     при переносе оставляли висящие обрывки линий */
+  .ticket{margin-top:13px; display:grid; grid-template-columns:1fr 1fr; gap:1px;
+    background:var(--rule-strong); align-items:stretch; justify-content:stretch}
+  .ticket .tk{border:0; background:var(--surface); padding:10px 10px; min-width:0; justify-content:center}
+  .ticket .tk:last-child{border:0}
+  .ticket .v, #tirazhName{font-size:16.5px}
+  .ticket .k, .ticket label{font-size:11px}
+
+  .console{padding:14px 12px 13px; border-radius:7px}
+  .sum-now .delta{margin-left:0; width:100%}
+  .roll-primary{width:100%; flex-direction:column; gap:9px}
+  .roll-primary button{width:100%; justify-content:center}
+  .roll{width:100%; margin-left:0}
+  .console-top{grid-template-columns:1fr; gap:16px}
+  .console-top .roll{order:-1; width:100%}
+  .hist-panel{width:100%}
+  .hist-panel .hist{max-height:260px}
+  .roll-crowd{width:100%; display:grid; grid-template-columns:1fr 1fr; gap:9px}
+  .roll-crowd button{width:100%; justify-content:center}
+  .btn-roll{font-size:16px; padding:11px 18px}
+  .btn-spin{font-size:13.5px; padding:10px 14px}
+  .spin-in{font-size:13.5px; padding:10px 4px}
+  .roll-secondary, .roll-modes{display:grid; grid-template-columns:1fr 1fr; width:100%; gap:8px}
+  .roll-secondary button:last-child:nth-child(odd){grid-column:1 / -1}
+  /* ряд из одной кнопки не должен прижиматься к левому краю группы */
+  .roll-group .roll-secondary:has(> button:only-child){grid-template-columns:1fr; justify-items:center}
+  /* на телефоне меняем местами: «Очистить исходы» встаёт рядом с «Вернуть»,
+     а «Обновить тираж» уходит вниз на всю ширину */
+  #btnReset{order:2; grid-column:auto}
+  #btnFetch{order:3; grid-column:1 / -1}
+  /* со значком подпись «Очистить исходы» перестала влезать в половину строки */
+  .roll-secondary button, .roll-modes button{font-size:12.5px; padding:7px 8px; gap:5px; white-space:nowrap}
+  .roll-view{width:100%; justify-content:center; gap:6px}
+  .knobs{gap:11px 14px}
+  .knob input, select{padding:5px 7px}
+
+  /* табло и статистика компактнее */
+  .sum-now{padding:11px 12px}
+  .sum-now .big{font-size:21px}
+  .sum-now .sub, .sum-now .delta{font-size:12px}
+  .bank-cell{padding:9px 12px}
+  .bank-cell .v{font-size:18px}
+  .stat{flex:1 1 45%; padding:9px 12px}
+  .stat .v{font-size:20px}
+  .kickoff{padding:9px 12px}
+  .kickoff .v{font-size:16px}
+
+  /* карточка матча плотнее */
+  .row{padding:11px 12px}
+  .fix{flex-direction:column; gap:2px; align-items:stretch}
+  .teams{font-size:16px}
+  .pick{height:34px; font-size:15px}
+  .mode{font-size:11px; padding:5px 8px}
+
+  /* нижние панели по центру */
+  .panel{padding:14px 14px; text-align:center}
+  .panel-head{justify-content:center}
+  .panel .acts{justify-content:center}
+  .hist li{text-align:left}
+  .paste-tir{justify-content:center}
+  details.panel summary{text-align:center}
+  footer{text-align:center}
+}
+.bank{display:flex; flex-wrap:wrap; gap:0; margin-top:0; border:1px solid var(--rule-strong);
+  border-radius:0 0 8px 8px; overflow:hidden; background:var(--surface-2)}
+.bank-cell{flex:1 1 120px; padding:10px 16px; border-right:1px solid var(--rule); border-top:1px solid var(--rule)}
+.bank-cell:last-child{border-right:0}
+.bank-cell.lead{background:var(--surface-2)}
+.bank-cell.wide{flex:1 1 260px; display:flex; flex-direction:column; gap:7px; justify-content:center}
+.bank-cell .k{font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
+.bank-cell .v{font-family:"Chivo",sans-serif; font-weight:800; font-size:19px; line-height:1.2; margin-top:2px; font-variant-numeric:tabular-nums}
+.bank-note{font-size:12.5px; color:var(--muted)}
+.bank-cell.wide button{padding:5px 10px; font-size:12.5px; align-self:flex-start}
+.paste-tir{display:flex; align-items:center; gap:7px; font-size:12.5px; color:var(--muted)}
+.paste-tir input{width:7ch; font-family:"IBM Plex Mono",monospace; text-align:right; padding:6px 8px}
+.knobs{display:flex; flex-wrap:wrap; gap:14px 22px; justify-content:center; width:100%}
+.knob{display:flex; flex-direction:column; gap:5px; align-items:center}
+.knob label{font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
+.knob input{width:8ch; text-align:center; font-family:"IBM Plex Mono",monospace}
+.knob-hint{font-size:11px; font-family:"IBM Plex Mono",monospace; color:var(--muted); letter-spacing:.02em; min-height:13px}
+.knob-hint.warn{color:var(--hot); font-weight:600}
+.knob-edge .knob-hint.warn{white-space:normal; max-width:160px; text-align:center; line-height:1.25}
+#priceLine.warn{border-color:var(--hot); color:var(--hot); background:var(--hot-soft)}
+/* цена строки переехала в полосу под купоном — см. .knob-edge */
+/* скорость прокрутки стоит вплотную к числу кликов, одной группой */
+.spin-speed{border:1px solid var(--accent); border-radius:6px; padding:6px 10px;
+  font-size:13.5px; background:var(--surface); color:var(--accent); font-weight:600}
+.spin-speed option{background:var(--surface); color:var(--ink)}
+.btn-spin:disabled ~ .spin-speed{border-color:var(--rule-strong); color:var(--muted)}
+
+.roll-note{text-align:center}
+select{font:inherit; color:var(--ink); background:var(--surface); border:1px solid var(--rule-strong); border-radius:var(--r); padding:6px 9px}
+
+/* ---------- stats ---------- */
+.stats{display:flex; flex-wrap:wrap; gap:0; margin-top:14px; border:1px solid var(--rule); border-radius:6px; overflow:hidden; background:var(--surface)}
+.stat{flex:1 1 130px; padding:12px 16px; border-right:1px solid var(--rule)}
+.stat:last-child{border-right:0}
+.stat .k{font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
+.stat .v{font-family:"Chivo",sans-serif; font-weight:800; font-size:21px; line-height:1.15; margin-top:2px; font-variant-numeric:tabular-nums}
+.stat.lead{background:var(--surface-2)}
+.stat.alarm .v{color:var(--hot)}
+.stat .v.zero{color:var(--rule-strong)}
+.hint{margin-top:10px; font-size:13px; text-align:center; color:var(--ink); background:var(--surface); border:1px solid var(--rule); box-shadow:inset 0 -2px 0 var(--brand-gold, #c9a24b); border-radius:var(--r); padding:8px 11px}
+.hint[hidden]{display:none}
+
+.coupon{position:relative}
+/* «перфорацию» по верхнему краю таблицы убрал: на телефоне, где шапка таблицы
+   скрыта, она читалась как обрезанный край, а не как отрывной билет */
+
+/* ---------- компактный вид: 15 матчей на один экран ---------- */
+[data-compact="1"] body{font-size:13px; padding-block:12px 20px}
+[data-compact="1"] .logo{height:86px}
+[data-compact="1"] .masthead p{display:none}
+[data-compact="1"] .ticket{margin-top:10px}
+[data-compact="1"] .ticket .tk{padding:6px 14px; gap:1px}
+[data-compact="1"] .ticket .v, [data-compact="1"] #tirazhName{font-size:14px}
+[data-compact="1"] .console{margin-top:10px; padding:11px 12px 10px}
+[data-compact="1"] .btn-roll{font-size:14px; padding:8px 18px}
+[data-compact="1"] .btn-spin{font-size:12.5px; padding:8px 13px}
+[data-compact="1"] .spin-in{font-size:12.5px; padding:8px 3px}
+[data-compact="1"] .roll{gap:8px}
+[data-compact="1"] .knob-sep{margin:9px 0 8px}
+[data-compact="1"] .knobs{gap:8px 18px}
+[data-compact="1"] .knob label{font-size:9px}
+[data-compact="1"] .knob input, [data-compact="1"] select{padding:3px 6px; font-size:12.5px}
+[data-compact="1"] .roll-note{display:none}
+[data-compact="1"] .zoomctl button{padding:5px 9px; font-size:13px}
+[data-compact="1"] .zoomctl b{min-width:4ch; font-size:11px}
+[data-compact="1"] .sum-now{margin-top:8px; padding:7px 12px; border-radius:7px; border-bottom:1px solid var(--rule-strong)}
+[data-compact="1"] .sum-now .big{font-size:17px}
+[data-compact="1"] .sum-now .sig-now{display:none}
+[data-compact="1"] .bank, [data-compact="1"] .stats, [data-compact="1"] footer{display:none}
+[data-compact="1"] .hint{margin-top:7px; padding:6px 9px; font-size:12px}
+[data-compact="1"] .coupon{margin-top:9px}
+[data-compact="1"] .chead, [data-compact="1"] .row{
+  grid-template-columns:22px minmax(0,1fr) repeat(3,46px) 74px; gap:7px; padding:2px 10px;
+}
+[data-compact="1"] .chead{padding:5px 10px; font-size:9.5px}
+[data-compact="1"] .meta{display:none}
+[data-compact="1"] .teams{font-size:12.5px; line-height:1.25}
+[data-compact="1"] .pick{height:24px; font-size:12.5px}
+[data-compact="1"] .pick-cell{gap:2px}
+[data-compact="1"] .pct-col{font-size:11px; gap:5px}
+[data-compact="1"] .kf-col{font-size:11px; margin-top:3px}
+[data-compact="1"] .mode{font-size:0; gap:0; padding:4px 6px}
+[data-compact="1"] .modes{gap:4px}
+[data-compact="1"] .pct-legend{margin-top:6px; font-size:11px}
+[data-compact="1"] .grid2{margin-top:12px; gap:12px}
+[data-compact="1"] .panel{padding:11px 12px}
+@media (max-width:820px){
+  /* телефон в компактном виде: одна строка на матч, ничего не переносится */
+  [data-compact="1"] body{padding-inline:8px; padding-block:8px 14px}
+  [data-compact="1"] .logo{height:70px}
+  [data-compact="1"] .ticket{margin-top:8px}
+  [data-compact="1"] .ticket .tk{flex:1 1 33%; min-width:0; padding:5px 4px;
+    border-bottom:0; border-right:1px dashed var(--rule-strong)}
+  [data-compact="1"] .ticket .tk:last-child{flex-basis:33%; border-right:0}
+  [data-compact="1"] .ticket .k, [data-compact="1"] .ticket label{font-size:8px; letter-spacing:.06em}
+  [data-compact="1"] .ticket .v, [data-compact="1"] #tirazhName{font-size:13px}
+  [data-compact="1"] #tkJackWrap, [data-compact="1"] #tkFundWrap{display:none}
+
+  [data-compact="1"] .console{margin-top:8px; padding:9px 8px}
+  [data-compact="1"] .roll-primary{flex-direction:row; gap:6px}
+  [data-compact="1"] .roll-primary{flex-direction:row; gap:6px}
+  [data-compact="1"] .roll-primary button{width:auto; flex:1 1 0; padding:7px 6px; font-size:12.5px}
+  [data-compact="1"] .roll-crowd{display:grid; grid-template-columns:1fr 1fr; gap:6px; width:100%}
+  [data-compact="1"] .roll-crowd button{width:100%; padding:7px 6px; font-size:12.5px}
+  [data-compact="1"] .lbl-long{display:none}
+  [data-compact="1"] .roll-secondary, [data-compact="1"] .roll-modes{display:flex; gap:5px}
+  [data-compact="1"] .roll-secondary button, [data-compact="1"] .roll-modes button{flex:1 1 auto; font-size:11px; padding:5px 6px}
+  [data-compact="1"] .roll-secondary button:last-child{grid-column:auto}
+  [data-compact="1"] .view-strip{margin-top:9px}
+  [data-compact="1"] .roll-view{width:100%; gap:4px; padding:4px 7px 4px 4px}
+  [data-compact="1"] .roll-view button{font-size:11px; padding:4px 7px}
+  [data-compact="1"] .view-lbl{font-size:8px; padding-left:3px}
+  [data-compact="1"] .knobs, [data-compact="1"] .knob-sep{display:none}
+
+  [data-compact="1"] .sum-now{margin-top:7px; padding:6px 9px; gap:4px 8px}
+  [data-compact="1"] .sum-now .big{font-size:15px}
+  [data-compact="1"] .sum-now .sub{font-size:11px}
+  [data-compact="1"] .sum-now .delta{display:none}
+  [data-compact="1"] .coupon{margin-top:7px}
+
+  [data-compact="1"] .chead{display:none}
+  [data-compact="1"] .row{
+    display:grid; grid-template-columns:16px minmax(0,1fr) repeat(3,31px) 42px;
+    gap:4px; padding:3px 7px; align-items:center;
+  }
+  [data-compact="1"] .fix{flex-direction:row; min-width:0}
+  [data-compact="1"] .teams{font-size:11px; line-height:1.2; white-space:nowrap;
+    overflow:hidden; text-overflow:ellipsis}
+  [data-compact="1"] .teams .vs{padding:0 2px}
+  [data-compact="1"] .mscore{font-size:15px; margin-left:6px} [data-compact="1"] .mres{font-size:13px}
+  [data-compact="1"] .num{font-size:10px}
+  [data-compact="1"] .picks-m{display:contents}
+  [data-compact="1"] .pick{height:23px; font-size:11.5px}
+  [data-compact="1"] .modes{gap:3px; justify-content:flex-end}
+  [data-compact="1"] .mode{font-size:0; padding:4px 5px}
+  [data-compact="1"] .mode svg{width:11px; height:11px}
+  [data-compact="1"] .pool-tag{display:none}
+  [data-compact="1"] .pct-col{font-size:10px; gap:4px}
+  [data-compact="1"] .kf-col{font-size:10px; margin-top:2px}
+}
+
+/* ---------- coupon ---------- */
+/* чуть-чуть палитры логотипа: чёрная рамка с золотой окантовкой */
+.coupon{margin-top:22px; border:2px solid var(--brand-dark); border-radius:6px; overflow:hidden;
+  background:var(--surface); box-shadow:0 0 0 3px var(--brand-gold), var(--shadow)}
+.chead,.row{display:grid; grid-template-columns:26px minmax(0,1fr) repeat(3,54px) 214px; align-items:center; gap:9px; padding:8px 13px}
+.chead{background:var(--brand-dark); border-bottom:2px solid var(--brand-gold); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--brand-gold); font-weight:700}
+.chead .c{text-align:center}
+.row{border-bottom:1px solid var(--rule); transition:background-color .12s linear}
+.row:hover{background:var(--surface-2)}
+.row:last-child{border-bottom:0}
+.row.is-lock{background:var(--surface-2)}
+/* Строка без выбранного исхода помечается полоской слева и бледным номером,
+   без заливки: красный фон на половине таблицы читался как ошибка. */
+.row.is-empty{position:relative; padding-left:19px}
+.row.is-empty::before{content:""; position:absolute; left:0; top:4px; bottom:4px; width:3px;
+  border-radius:0 2px 2px 0; background:var(--accent)}
+.row.is-empty .num{color:var(--accent); font-weight:600}
+.row.is-empty .teams{opacity:.72}
+.num{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink)}
+.fix{min-width:0}
+.teams{font-weight:600; font-size:19px; line-height:1.32; overflow-wrap:anywhere}
+.teams .vs{color:var(--ink); font-weight:400; padding:0 4px}
+.meta{font-family:"IBM Plex Mono",monospace; font-size:15px; color:var(--ink); margin-top:3px; overflow-wrap:anywhere}
+.flag{height:11px; width:auto; margin-right:6px; border-radius:1px; vertical-align:baseline;
+  box-shadow:0 0 0 1px rgba(19,26,27,.15)}
+/* флаг рядом с названием команды — для еврокубков и прочих межстрановых турниров */
+.tflag{height:12px; width:auto; margin-right:5px; border-radius:1px; vertical-align:-1px;
+  box-shadow:0 0 0 1px rgba(19,26,27,.15)}
+[data-compact="1"] .tflag{height:10px; margin-right:4px}
+.pick-cell{display:flex; flex-direction:column; gap:4px; min-width:0}
+.pick-cell .pick{width:100%}
+.pct-col{display:flex; justify-content:center; gap:6px; font-family:"IBM Plex Mono",monospace;
+  font-size:13px; line-height:1; font-variant-numeric:tabular-nums}
+.pct-col b{font-weight:600; color:var(--ink)}
+.pct-col i{font-style:normal; color:var(--ink); opacity:.8}
+.pct-col.lead b{color:var(--cold)}
+.pct-col.rare b{color:var(--hot)}
+.pct-col.lead b::after{content:"▲"; font-size:8.5px; vertical-align:2px; margin-left:2px}
+.pct-col.rare b::after{content:"▼"; font-size:8.5px; vertical-align:2px; margin-left:2px}
+.kf-col{margin-top:4px; text-align:center; font-family:"IBM Plex Mono",monospace;
+  font-size:13px; line-height:1; font-variant-numeric:tabular-nums; color:var(--ink)}
+.kf-col.fav{color:var(--cold); font-weight:600}
+.kf-col.dog{color:var(--hot); font-weight:600}
+/* название команды кликабельно — история её матчей в тото */
+.tm{cursor:pointer; border-bottom:1px dotted transparent; transition:color .12s linear}
+.tm:hover{color:var(--accent); border-bottom-color:var(--accent)}
+.mode.srch{padding-left:8px; padding-right:8px; background:var(--brand-dark); border-color:var(--brand-gold)}
+.mode.srch .fs-mark{font:800 11px/1 "Chivo",sans-serif; letter-spacing:.06em; color:var(--brand-gold)}
+.mode.srch .fs-mark i{font-style:normal; color:#E8453C}
+.mode.srch:hover{background:#2a221c; border-color:var(--brand-gold); box-shadow:0 0 0 1px var(--brand-gold) inset}
+/* на телефоне «Вернуть» и «Обновить тираж» — в один ряд, а не полкнопки над целой */
+@media (max-width:600px){ .roll-service{grid-template-columns:1fr 1fr} .roll-service #btnFetch{order:0; grid-column:auto} }
+.th-tab td.tm-me{font-weight:600; color:var(--ink)}
+.th-tab td.tm-me span.side{color:var(--muted); font-weight:400; font-size:11px; margin-left:4px}
+.th-res{font-weight:700} .th-res.w{color:var(--cold)} .th-res.l{color:var(--hot)}
+.th-sum{display:flex; flex-wrap:wrap; gap:6px 18px; margin:4px 0 6px; font-size:13px}
+.th-sum b{font-family:"IBM Plex Mono",monospace}
+.th-h2{margin:0 0 6px; font-size:13px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted)}
+.th-hr{border:0; border-top:1px dashed var(--rule-strong); margin:16px 0}
+/* Аналитика — сетка в две колонки; кнопки тянутся по ячейке. При нечётном числе кнопок последняя занимает всю строку. */
+.roll-ev .btn-ev:last-child:nth-child(odd){grid-column:1 / -1}
+.roll-ev{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); grid-auto-rows:1fr; gap:10px;
+  width:100%; max-width:520px; margin:0 auto}
+.pf-line{letter-spacing:.06em}
+.pf-tab th:first-child, .pf-tab td:first-child{text-align:center; width:26px; padding-left:2px}
+.pf-tab td:nth-child(2){text-align:right; color:var(--muted)}
+.pf-tab input[type="checkbox"]{width:15px; height:15px; accent-color:var(--accent); cursor:pointer}
+.pf-tab tbody tr:hover{background:var(--surface-2)}
+.pf-foot{display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-top:12px;
+  padding-top:11px; border-top:1px solid var(--rule)}
+.pf-foot .btn-keep:disabled{opacity:.5; cursor:default}
+.pf-note{font-size:12.5px; color:var(--muted)}
+
+.btn-ev{padding:10px 14px; font-size:14px; background:var(--surface); color:var(--ink);
+  border:1px solid var(--brand-gold); border-radius:var(--r); cursor:pointer;
+  justify-content:center; width:100%; height:100%; min-width:0}
+.btn-ev:hover{background:rgba(201,162,75,.12)}
+@media (max-width:820px){ .roll-ev{gap:9px} .roll-ev .btn-ev{padding:10px 8px} }
+@media (max-width:520px){ .roll-ev{gap:7px} .roll-ev .btn-ev{padding:8px 5px; font-size:12px} }
+[data-compact="1"] .roll-ev{gap:6px}
+[data-compact="1"] .btn-ev{padding:7px 10px; font-size:12.5px}
+[data-compact="1"] .ev-box{max-width:94vw; max-height:94vh}
+[data-compact="1"] .ev-tab{font-size:11px}
+[data-compact="1"] .ev-tab th, [data-compact="1"] .ev-tab td{padding:3px 4px}
+[data-compact="1"] .ev-top b{font-size:19px}
+[data-compact="1"] .ev-kelly-bank{gap:8px}
+[data-compact="1"] .ev-kelly-bank label{font-size:11.5px}
+[data-compact="1"] .ev-kelly-bank input{padding:4px 6px; font-size:12px}
+[data-compact="1"] .calib-chart{max-width:100%}
+.ev-back{position:fixed; inset:0; background:rgba(19,26,27,.45); z-index:60;
+  display:flex; align-items:center; justify-content:center; padding:16px}
+.ev-box{background:var(--surface); border:1px solid var(--rule); border-radius:var(--r);
+  box-shadow:var(--shadow); width:100%; max-width:660px; max-height:88vh; display:flex; flex-direction:column}
+.ev-head{display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:12px 16px; border-bottom:1px solid var(--rule)}
+.ev-head h2{margin:0; font-size:16px}
+.ev-head button{font-size:20px; line-height:1; padding:2px 9px; background:transparent;
+  border:1px solid var(--rule); border-radius:var(--r); cursor:pointer; color:var(--muted)}
+.ev-body{padding:14px 16px 18px; overflow:auto}
+.ev-body h3{margin:18px 0 7px; font-size:14px}
+.ev-top{display:flex; flex-direction:column; gap:3px; padding:11px 13px; border-radius:var(--r);
+  border:1px solid var(--rule)}
+.ev-top b{font-size:22px; font-family:"IBM Plex Mono",monospace}
+.ev-top span{font-size:12.5px; color:var(--muted)}
+.ev-top .ev-fine{font-size:11.5px; opacity:.85; margin-top:2px}
+.ev-top.ev-good{background:#E7F1EC; border-color:var(--cold)}
+.ev-top.ev-good b{color:var(--cold)}
+.ev-top.ev-bad{background:var(--hot-soft); border-color:var(--hot)}
+.ev-top.ev-bad b{color:var(--hot)}
+.ev-sub{margin:10px 0 4px; font-size:12.5px; color:var(--muted)}
+.ev-tab{width:100%; border-collapse:collapse; margin-top:8px; font-size:12.5px}
+.ev-tab th, .ev-tab td{padding:5px 7px; border-bottom:1px solid var(--rule); text-align:right}
+.ev-tab th:first-child, .ev-tab td:first-child{text-align:left}
+.ev-tab th{font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); font-weight:600}
+.ev-tab td{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums}
+.ev-tab td.nw{white-space:nowrap}
+.ev-tab tr.rec td{background:var(--o1-soft)}
+.ev-tab .gap-set{padding:3px 9px; font-size:12px}
+.vrd{font-family:"Inter",system-ui,sans-serif; font-size:11px; font-weight:600;
+  text-transform:uppercase; letter-spacing:.03em; padding:2px 7px; border-radius:var(--r); white-space:nowrap}
+.vrd.trap{background:var(--hot-soft); color:var(--hot)}
+.vrd.val{background:var(--o1-soft); color:var(--o1)}
+.vrd.neut{color:var(--muted)}
+.ev-tab td.brief-no{color:var(--muted); font-family:"Inter",system-ui,sans-serif; font-size:12px; text-align:right}
+.brief-pre{font-family:"IBM Plex Mono",monospace; font-size:12px; line-height:1.55; white-space:pre;
+  overflow-x:auto; background:var(--ox-soft); padding:10px 12px; border-radius:var(--r); margin-top:6px}
+.ev-cmp td:first-child{font-family:inherit}
+.ev-note, .ev-warn{margin:8px 0 0; font-size:12px; color:var(--muted)}
+.ev-lead{margin:8px 0 0; font-size:13.5px; line-height:1.5}
+.ev-alarm{margin:10px 0 0; padding:9px 11px; font-size:12.5px; line-height:1.45;
+  background:var(--warn-bg); border:1px solid var(--warn); border-radius:var(--r); color:var(--warn)}
+.ev-inline{font-family:"IBM Plex Mono",monospace}
+.ev-ass{margin:6px 0 0 18px; padding:0; font-size:12.5px; color:var(--muted)}
+.ev-ass li{margin-bottom:6px}
+/* новая аналитика: график калибровки и поле Келли */
+.calib-chart{display:block; margin:12px auto; max-width:100%; height:auto}
+.ev-calib-chart{text-align:center}
+.ev-kelly-bank{display:flex; align-items:center; justify-content:center; gap:10px; margin:12px 0}
+.ev-kelly-bank label{font-size:13px; font-weight:600}
+.ev-kelly-bank input{width:10ch; font-family:"IBM Plex Mono",monospace; text-align:right; padding:6px 8px;
+  border:1px solid var(--rule-strong); border-radius:var(--r); background:var(--surface); color:var(--ink)}
+.ev-calib-chart svg{width:100%; max-width:560px; height:auto}
+@media (max-width:520px){
+  .ev-box{max-height:92vh}
+  .ev-tab{font-size:11.5px}
+  .ev-tab th, .ev-tab td{padding:4px 4px}
+  .ev-kelly-bank{flex-wrap:wrap; justify-content:center; gap:8px}
+  .ev-kelly-bank label{font-size:12px}
+  .ev-kelly-bank input{width:9ch; padding:5px 7px}
+  .ev-calib-chart svg{max-width:100%}
+  .ev-top b{font-size:19px}
+  .ev-top span{font-size:11.5px}
+}
+.pct-legend{margin:9px 2px 0; font-size:12px; color:var(--muted); display:flex; flex-wrap:wrap; gap:4px 14px; align-items:baseline}
+.pct-legend .sw{font-family:"IBM Plex Mono",monospace; font-weight:600; color:var(--ink)}
+.pct-legend .sw.m{font-weight:400; color:var(--muted)}
+.pct-legend .sw.h{color:var(--hot)}
+.pct-legend .sw.c{color:var(--cold)}
+.pct-col.x-over b{color:var(--hot)}
+.pct-col u{text-decoration:none; color:var(--hot); font-weight:700; margin-left:2px}
+.pick{
+  height:34px; width:100%; padding:0; display:flex; align-items:center; justify-content:center;
+  font-family:"Chivo",sans-serif; font-weight:700; font-size:16px;
+  background:transparent; border:1px solid var(--rule-strong); color:var(--ink);
+  -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+}
+.pick{border-radius:3px}
+.pick[aria-pressed="true"]{color:var(--accent-ink); box-shadow:inset 0 -2px 0 rgba(0,0,0,.18)}
+/* Выбранный исход: в тёмной теме — фирменный золотой, в светлой — синий (акцент сайта).
+   Цвет означает «отмечено», а не какой это исход — какой именно, и так написано на самой кнопке. */
+.pick[aria-pressed="true"]{background:var(--o1); border-color:var(--o1); color:#fff}
+.pick.in-pool{border-style:dashed; border-width:2px; background:transparent; font-weight:600;
+  border-color:var(--o1); color:var(--o1)}
+:root[data-theme="dark"] .pick[aria-pressed="true"]{background:var(--brand-gold); border-color:var(--brand-gold); color:var(--brand-dark)}
+:root[data-theme="dark"] .pick.in-pool{border-color:var(--brand-gold); color:var(--brand-gold)}
+.pick.off-pool{opacity:.3; border-style:dotted}
+.pick{transition:background-color .13s linear, border-color .13s linear, color .13s linear}
+@keyframes pickPop{0%{transform:scale(.7); opacity:.3} 55%{transform:scale(1.07)} 100%{transform:scale(1); opacity:1}}
+.pick.pop{animation:pickPop .24s cubic-bezier(.2,.9,.3,1)}
+/* --- просмотр CSV: листаем варианты, как книгу --- */
+.book-bar{margin-top:13px; display:flex; flex-wrap:wrap; gap:9px 14px; align-items:center;
+  justify-content:space-between; background:var(--surface); border:1px solid var(--rule); box-shadow:inset 0 -2px 0 var(--brand-gold, #c9a24b); border-radius:var(--r); padding:9px 12px}
+.bk-name{font-family:"IBM Plex Mono",monospace; font-size:12px; font-weight:600; color:var(--ink); word-break:break-all}
+.bk-hit{display:block; font-size:11px; color:var(--muted); margin-top:2px}
+.bk-nav{display:flex; align-items:center; gap:6px}
+.bk-nav button{padding:5px 10px; font-size:13px; line-height:1.15}
+.bk-pos{display:flex; align-items:center; gap:5px; font-family:"IBM Plex Mono",monospace; font-size:12.5px}
+.bk-pos input{width:7ch; text-align:center; font-family:"IBM Plex Mono",monospace; padding:4px 5px}
+.bk-pos i{font-style:normal; color:var(--muted); white-space:nowrap}
+.bk-r{display:flex; gap:6px; flex-wrap:wrap}
+.csv-fmt{margin-top:11px; display:flex; flex-wrap:wrap; gap:6px 12px; align-items:center;
+  font-size:12px; color:var(--muted)}
+.csv-fmt select{padding:3px 6px; font-size:12px}
+#csvPrev{width:100%; font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--ink);
+  word-break:break-all; background:var(--surface-2); border:1px solid var(--rule); border-radius:var(--r);
+  padding:6px 8px; display:block}
+.bk-msg{display:block; font-size:12px; line-height:1.35; color:#1a1410; background:#fff3c4; border:1px solid #c9a24b; border-radius:4px; padding:3px 7px; margin-top:4px; font-weight:600}
+    .bk-r button.ok{background:#2e7d32 !important; color:#fff !important; border-color:#2e7d32 !important}
+    .bk-stat{display:block; font-size:11px; color:var(--cold); font-weight:600; margin-top:2px}
+/* фактический исход матча: зелёная обводка кнопки — точка под кнопкой
+   налезала на проценты и читалась как часть стрелки ▲▼ */
+.pick.won{outline:2px solid var(--cold); outline-offset:1px}
+/* Счёт крупный и стоит у названия матча: по нему следят по ходу тура, а подпись
+   с лигой в компактном виде вообще скрыта, и раньше счёт исчезал вместе с ней.
+   Подведённый — зелёный, живой — синий и слегка пульсирует, чтобы отличать с одного взгляда. */
+.mscore{margin-left:10px; font-family:"IBM Plex Mono",monospace; font-weight:700; font-size:20px;
+  color:var(--cold); letter-spacing:.02em; white-space:nowrap; vertical-align:-1px}
+.mscore.live{color:var(--o1); animation:scoreLive 2.4s ease-in-out infinite}
+@keyframes scoreLive{0%,100%{opacity:1} 50%{opacity:.55}}
+@media (prefers-reduced-motion:reduce){ .mscore.live{animation:none} }
+.mres{color:var(--o1); font-size:17px}
+@media (max-width:620px){ .mscore{font-size:18px; margin-left:8px} .mres{font-size:15px} }
+[data-compact="1"] .mscore{font-size:17px; margin-left:8px}
+[data-compact="1"] .mres{font-size:14px}
+[data-book="1"] .pick[aria-pressed="true"]{background:transparent; border-color:var(--rule-strong);
+  color:var(--muted); box-shadow:none}
+[data-book="1"] .pick.bk-on{background:var(--brand-dark, #1a1410); border-color:var(--brand-gold, #c9a24b); color:var(--brand-gold, #c9a24b); box-shadow:inset 0 -2px 0 var(--brand-gold, #c9a24b)}
+[data-book="1"] .row .pick{pointer-events:none}
+[data-book="1"] .row .modes{opacity:.3; pointer-events:none}
+[data-book="1"] .roll, [data-book="1"] .keep-bar{opacity:.4; pointer-events:none}
+[data-book="1"] .sticky-bar{display:none}   /* на телефоне нижняя панель закрывала строки */
+/* рамка режима просмотра рисуется ВНУТРИ таблицы: наружное кольцо на узком
+   экране упиралось в край и выглядело обрезанным */
+[data-book="1"] .coupon::after{content:""; position:absolute; inset:0; z-index:2; pointer-events:none;
+  border:2px solid var(--warn); border-radius:6px}
+[data-book="1"] .coupon{padding-top:5px}
+/* пока листаем файл, купон под ним пустой — метки пустых строк только мешают */
+[data-book="1"] .row.is-empty::before{display:none}
+[data-book="1"] .row.is-empty .teams{opacity:1}
+[data-book="1"] .row.is-empty .num{color:var(--muted); font-weight:400}
+[data-book="1"] #hint{display:none}
+@media(max-width:560px){ .book-bar{justify-content:center} .bk-l{width:100%; text-align:center} }
+.coupon.spinning{box-shadow:0 0 0 2px var(--accent), var(--shadow)}
+.coupon.spinning .row{background:transparent}
+@media (prefers-reduced-motion: reduce){ .pick{transition:none} .pick.pop{animation:none} }
+.picks-m{display:contents}
+.modes{display:flex; gap:5px; justify-content:flex-end}
+.mode{font-size:11.5px; padding:6px 9px; letter-spacing:.03em; white-space:nowrap; display:flex; gap:5px; align-items:center}
+.mode[aria-pressed="true"]{background:var(--ink); color:var(--surface); border-color:var(--ink)}
+.mode svg{display:block; opacity:.85}
+.pool-tag{font-family:"IBM Plex Mono",monospace; font-size:11px; font-weight:600; color:var(--accent);
+  border:1px dashed var(--accent); border-radius:3px; padding:2px 5px; align-self:center; white-space:nowrap}
+[data-compact="1"] .pool-tag{font-size:9px; padding:1px 3px}
+
+/* ---------- запись купона руками ---------- */
+/* Полоса под купоном: действие по центру, цена строки прижата к правому краю
+   отдельной колонкой. Раньше цена жила на пульте крупной ручкой и в компактном
+   виде пропадала вовсе — здесь она видна всегда и не спорит с кнопкой. */
+/* Полоса под купоном. Сетка из трёх колонок с одинаковыми боками: кнопка стоит
+   ровно по центру ПОЛОСЫ, а не по центру остатка после цены — иначе цена справа
+   утягивает её влево и композиция едет. Подпись идёт третьей строкой во всю ширину. */
+.keep-bar{display:grid; grid-template-columns:1fr auto 1fr; align-items:center;
+  text-align:center; gap:9px 14px; margin-top:14px;
+  padding:13px 16px; border:1px solid var(--rule-strong); border-radius:6px;
+  background:var(--surface); box-shadow:var(--shadow)}
+.keep-main{grid-column:2; display:flex; align-items:center; justify-content:center; min-width:0}
+.knob-edge{grid-column:3; justify-self:end; align-items:center; gap:3px;
+  padding-left:14px; border-left:1px solid var(--rule)}
+.knob-edge label{font-size:9.5px; letter-spacing:.09em; white-space:nowrap}
+.knob-edge input{width:7ch; font-family:"Chivo",sans-serif; font-weight:700; font-size:16px;
+  padding:4px 6px; text-align:center; font-variant-numeric:tabular-nums}
+.knob-edge .knob-hint{font-size:11px; color:var(--muted); white-space:nowrap}
+.btn-keep{font-family:"Chivo",sans-serif; font-weight:700; font-size:14.5px;
+  padding:9px 17px; border-radius:6px; border-color:var(--ink); background:var(--surface-2)}
+.btn-keep:hover:not(:disabled){background:var(--surface-3)}
+.keep-note{grid-column:1 / -1; font-size:12.5px; color:var(--muted); text-align:center}
+@media (max-width:560px){
+  /* на телефоне места на два столбца нет: кнопка во всю ширину, цена под ней у правого края */
+  .keep-bar{grid-template-columns:1fr; align-items:center; padding:11px 12px; gap:8px 10px}
+  .btn-keep{width:100%; justify-content:center; font-size:12.5px; padding:8px 10px}
+  .keep-bar .keep-main{grid-column:1; width:100%}
+  .keep-bar .knob-edge{grid-column:1; justify-self:end; padding-left:0; border-left:none; gap:2px}
+  .keep-bar .knob-edge label{font-size:8.5px; letter-spacing:.06em}
+  .keep-bar .knob-edge input{font-size:15px; width:7ch}
+  .keep-bar .knob-edge .knob-hint{font-size:10px}
+}
+[data-compact="1"] .keep-bar{margin-top:8px; padding:8px 11px; gap:6px 10px}
+[data-compact="1"] .knob-edge input{font-size:14px; padding:3px 5px}
+[data-compact="1"] .knob-edge .knob-hint{font-size:10px}
+[data-compact="1"] .btn-keep{font-size:13px; padding:6px 13px}
+[data-compact="1"] .keep-note{font-size:11px}
+
+/* ---------- липкая полоса на телефоне ---------- */
+.sticky-bar{display:none; position:fixed; left:0; right:0; bottom:0; z-index:20;
+  gap:8px; align-items:center; justify-content:space-between;
+  padding:7px 10px; background:var(--surface); border-top:1px solid var(--rule-strong);
+  box-shadow:0 -8px 20px -14px rgba(0,0,0,.55)}
+.sticky-bar button{font-family:"Chivo",sans-serif; font-weight:700; font-size:13.5px; padding:8px 14px}
+.sticky-bar #sbRoll{background:var(--accent); border-color:var(--accent); color:var(--accent-ink)}
+.sticky-bar #sbRoll:disabled{background:var(--surface-2); border-color:var(--rule-strong); color:var(--muted)}
+.sb-sum{font-size:12.5px; color:var(--muted); text-align:center; flex:1 1 auto; overflow:hidden;
+  white-space:nowrap; text-overflow:ellipsis}
+@media (max-width:820px){
+  .sticky-bar{display:flex}
+  body{padding-block-end:62px}
+}
+
+/* ---------- bottom ---------- */
+.grid2{display:grid; grid-template-columns:1fr; gap:18px; margin-top:22px}
+.grid2 .panel{text-align:center}
+.grid2 .panel .acts{justify-content:center}
+.grid2 .panel h2{text-align:center}
+.panel{background:var(--surface); border:1px solid var(--rule); border-radius:6px; padding:16px 18px}
+.panel h2{font-size:13px; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); font-weight:600; font-family:"IBM Plex Sans",sans-serif}
+.panel-head{display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap}
+.panel-head button{padding:5px 10px; font-size:12.5px}
+.bank-cell.wide button.danger, .panel-head button.danger{background:var(--hot); border-color:var(--hot); color:#fff; font-weight:600}
+.bank-cell.wide button.danger:hover:not(:disabled), .panel-head button.danger:hover:not(:disabled){background:var(--hot); filter:brightness(1.08)}
+.build{display:block; margin-top:8px; font-family:"IBM Plex Mono",monospace; font-size:11px;
+  letter-spacing:.04em; color:var(--muted); opacity:.75}
+.hist-sum{margin-left:8px; font-size:14px; letter-spacing:0; text-transform:none;
+  color:var(--ink); font-weight:700; font-family:"IBM Plex Mono",monospace}
+.hist{list-style:none; margin:12px 0 0; padding:0; display:flex; flex-direction:column; gap:9px; max-height:340px; overflow-y:auto;
+  scrollbar-width:thin; scrollbar-color:var(--rule-strong) transparent}
+.hist::-webkit-scrollbar{width:7px}
+.hist::-webkit-scrollbar-track{background:transparent}
+.hist::-webkit-scrollbar-thumb{background:var(--rule-strong); border-radius:10px}
+.hist::-webkit-scrollbar-thumb:hover{background:var(--brand-gold)}
+.hist li{display:flex; gap:10px; align-items:center; justify-content:space-between; font-size:15px; border-bottom:1px dotted var(--rule); padding-bottom:9px}
+.hist .sig{font-family:"IBM Plex Mono",monospace; font-size:14px; letter-spacing:.08em; overflow-wrap:anywhere; margin-top:2px}
+.hist button{padding:6px 11px; font-size:13px}
+.hist-acts{display:flex; gap:6px; align-items:center; flex:0 0 auto}
+.hist-head-acts{display:flex; gap:6px; align-items:center; flex-wrap:wrap; justify-content:flex-end}
+.hist-cb{display:flex; align-items:center; flex:0 0 auto; cursor:pointer; padding:2px}
+.hist-cb input{width:17px; height:17px; accent-color:var(--o1); cursor:pointer; margin:0}
+.hist li.is-off{opacity:.45}
+.hist li.is-off .sig{text-decoration:line-through}
+.hist-del{display:flex; align-items:center; justify-content:center; padding:4px 7px; color:var(--muted)}
+.hist-del svg{display:block}
+.hist-del:hover:not(:disabled){color:var(--hot); border-color:var(--hot)}
+.hist-del.danger{background:var(--hot); border-color:var(--hot); color:#fff; font-weight:600; padding:4px 9px}
+.hist-del.danger:hover{background:var(--hot); filter:brightness(1.08)}
+.empty{color:var(--muted); font-size:13px; margin-top:10px}
+textarea{width:100%; min-height:120px; font:13px/1.45 "IBM Plex Mono",monospace; color:var(--ink); background:var(--surface-2); border:1px solid var(--rule-strong); border-radius:var(--r); padding:9px; resize:vertical}
+.panel .acts{display:flex; gap:8px; flex-wrap:wrap; margin-top:11px}
+    /* панель «Выгрузка»: три ряда по две кнопки одинаковой ширины */
+    .acts.exp-pair{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+    .acts.exp-pair + .acts.exp-pair{margin-top:8px}
+    .acts.exp-pair button{width:100%; min-width:0; white-space:normal; line-height:1.25}
+
+/* единый фирменный контур: чёрная рамка с золотой окантовкой на всех крупных блоках */
+.ticket, .console, .keep-bar, .grid2 > .panel{
+  border:2px solid var(--brand-dark);
+  box-shadow:0 0 0 3px var(--brand-gold), var(--shadow);
+}
+details summary{cursor:pointer; font-size:13px; color:var(--muted); font-weight:500}
+footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px solid var(--rule); padding-top:12px}
+
+@media (max-width:820px){
+  .grid2{grid-template-columns:1fr}
+  .chead{display:none}
+  .row{grid-template-columns:1fr; gap:10px; padding:13px 14px}
+  .fix{display:flex; gap:9px; align-items:baseline}
+  .picks-m{display:grid; grid-template-columns:repeat(3,1fr); gap:8px}
+  .modes{justify-content:flex-start}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important}}
+
+    /* легенда под таблицей: три карточки по центру, в каждой «образец — что значит» */
+    .pct-legend{display:grid !important; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:12px; width:100%; box-sizing:border-box; margin:14px auto 0; padding:0; font-size:12.5px; line-height:1.35; align-items:stretch}
+    .pct-legend[hidden]{display:none !important}
+    .pct-legend .lg-blk{background:var(--surface); border:1px solid var(--rule); border-radius:8px; padding:10px 14px 12px; color:var(--muted); box-shadow:var(--shadow)}
+    .pct-legend .lg-blk .sw{color:var(--ink)}
+    .pct-legend .lg-blk .sw.m{color:var(--muted)}
+    .pct-legend .lg-blk .sw.c, .pct-legend .lg-blk .lg-s.c{color:var(--cold)}
+    .pct-legend .lg-blk .sw.h, .pct-legend .lg-blk .lg-s.h{color:var(--hot)}
+    .pct-legend .lg-h{display:block; text-align:center; font-size:10.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; padding-bottom:7px; margin-bottom:8px; border-bottom:1px solid var(--rule)}
+    .pct-legend .lg-sub{display:block; margin-top:2px; font-weight:400; letter-spacing:0; text-transform:none; color:var(--muted)}
+    .pct-legend .lg-row{display:grid; grid-template-columns:62px 1fr; gap:10px; align-items:center; padding:3px 0}
+    .pct-legend .lg-s{display:inline-flex; align-items:center; justify-content:center; gap:4px; min-height:22px; padding:0 6px; border:1px solid var(--rule); border-radius:4px; font-family:"IBM Plex Mono",monospace; font-weight:600; white-space:nowrap}
+    .pct-legend .lg-box{display:inline-block; min-width:18px; text-align:center; border:2px solid var(--cold); border-radius:4px; padding:0 4px; line-height:1.3}
+    .pct-legend .lg-s:has(.lg-box){border-color:transparent}
+    .bk-msg{background:transparent !important; color:var(--ink) !important; border:1px dashed var(--brand-gold, #c9a24b) !important}
+    #tirazhName{border-bottom:0 !important; cursor:default; pointer-events:none}
+    /* пульт по шагам: служебная строка, затем «Заполнить / Рандом / Проверить» с подписями-разделителями */
+    .roll .roll-service{justify-content:space-between}
+    #btnMid{background:var(--ox); border-color:var(--ox); color:#fff}
+    :root[data-theme="dark"] #btnMid{background:transparent; color:var(--ox)}
+    :root[data-theme="dark"] #btnMid .ar{color:currentColor; opacity:.85}
+    #btnLink.ok{background:var(--cold) !important; border-color:var(--cold) !important; color:#fff !important}
+    /* три кнопки «Заполнить» в один ряд: подпись раздела уже говорит «проставить», слово в кнопках лишнее */
+    .roll .roll-crowd{display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); grid-auto-rows:1fr; gap:8px}
+    .roll .roll-crowd .lbl-long{display:none}
+    .roll .roll-crowd button{width:100%; height:100%; min-width:0; padding-left:8px; padding-right:8px; white-space:nowrap}
+    /* Ширину решает САМ ПУЛЬТ, а не окно: на планшете он занимает половину экрана,
+       и «большинство» обрезалось при широком окне. Медиазапрос такого не ловит. */
+    @container rollgrp (max-width:430px){
+      .roll .roll-crowd{grid-template-columns:1fr}
+    }
+    #btnMid:hover:not(:disabled){filter:brightness(1.1)}
+    #btnMid:disabled{border-color:var(--rule-strong); color:var(--muted); background:transparent}
+    #btnMid:disabled .ar{color:var(--muted)}
+    .roll .roll-cap{display:flex; align-items:center; gap:10px; margin:6px 0 -4px; font-size:10px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--muted)}
+    .roll .roll-cap::before, .roll .roll-cap::after{content:""; flex:1; height:1px; background:var(--rule)}
+    .pct-legend .lg-tip{margin-top:8px; padding-top:7px; border-top:1px dashed var(--rule); text-align:center; font-size:11.5px}
+    @media (max-width:520px){ .pct-legend{font-size:12px; gap:10px} .pct-legend .lg-row{grid-template-columns:56px 1fr} }
