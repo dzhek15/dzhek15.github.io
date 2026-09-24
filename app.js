@@ -4476,259 +4476,360 @@
   }
 
   /* ====================================================================
-     НОВАЯ АНАЛИТИКА: калибровка БК, Монте-Карло, Келли
+     НОВАЯ АНАЛИТИКА: подстановка исходов по данным
      ==================================================================== */
 
-  /* ---------- 1. Калибровка линии БК ----------
-     По history.json: для каждого матча берём долю конторы (bk%) на исход,
-     который реально выпал, и накапливаем по бакетам вероятности (5%, 10%, ...).
-     Идеально откалиброванная БК: фактическая частота = предсказанная доля. */
-  function showCalibration(){
-    $("evTitle").textContent = "Калибровка линии конторы";
-    var box = $("evBody");
-    if(!hist.ev.length){
-      box.innerHTML = '<p class="ev-warn">История тиражей ещё не загрузилась — попробуй через минуту.</p>';
-      $("evBack").hidden = false; return;
-    }
-    var BUCK = 20, SIZE = 5;
-    var buckets = [];
-    for(var i = 0; i < BUCK; i++) buckets[i] = { sum: 0, n: 0 };
-    hist.ev.forEach(function(e){
-      if(!e.bk || !e.res) return;
-      var bkPct = e.bk[0] + e.bk[1] + e.bk[2];
-      if(!bkPct) return;
-      for(var k = 0; k < 3; k++){
-        var p = e.bk[k] / bkPct * 100;
-        var bi = Math.min(BUCK - 1, Math.floor(p / SIZE));
-        if(bi < 0) bi = 0;
-        var hit = (OUT[k] === e.res) ? 1 : 0;
-        buckets[bi].sum += hit;
-        buckets[bi].n++;
-      }
-    });
-    var total = 0; buckets.forEach(function(b){ total += b.n; });
-    if(!total){
-      box.innerHTML = '<p class="ev-warn">В истории нет матчей с линией конторы и итогом.</p>';
-      $("evBack").hidden = false; return;
-    }
-    var W = 600, H = 360, M = 50;
-    var sx = function(p){ return M + p / 100 * (W - 2 * M); };
-    var sy = function(p){ return H - M - p / 100 * (H - 2 * M); };
-    var pts = [];
-    buckets.forEach(function(b, i){
-      var mid = i * SIZE + SIZE / 2;
-      var freq = b.n ? b.sum / b.n * 100 : 0;
-      if(b.n >= 5) pts.push({ x: mid, y: freq, n: b.n });
-    });
-    var svg = '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" class="calib-chart">';
-    for(var g = 0; g <= 4; g++){
-      var p = g * 25;
-      svg += '<line x1="' + M + '" y1="' + sy(p) + '" x2="' + (W - M) + '" y2="' + sy(p) + '" stroke="var(--rule)" stroke-width="1"/>';
-      svg += '<text x="' + (M - 6) + '" y="' + (sy(p) + 4) + '" text-anchor="end" fill="var(--muted)" font-size="11">' + p + '%</text>';
-      svg += '<line x1="' + sx(p) + '" y1="' + M + '" x2="' + sx(p) + '" y2="' + (H - M) + '" stroke="var(--rule)" stroke-width="1"/>';
-      svg += '<text x="' + sx(p) + '" y="' + (H - M + 16) + '" text-anchor="middle" fill="var(--muted)" font-size="11">' + p + '%</text>';
-    }
-    svg += '<line x1="' + M + '" y1="' + sy(0) + '" x2="' + (W - M) + '" y2="' + sy(100) + '" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="4 3"/>';
-    pts.forEach(function(pt){
-      var bx = sx(pt.x), by = sy(pt.y);
-      svg += '<line x1="' + bx + '" y1="' + (H - M) + '" x2="' + bx + '" y2="' + by + '" stroke="var(--o1)" stroke-width="3" opacity="0.5"/>';
-      svg += '<circle cx="' + bx + '" cy="' + by + '" r="4" fill="var(--o1)"/>';
-      svg += '<title>' + pt.x.toFixed(0) + '% предсказано → ' + pt.y.toFixed(1) + '% фактически (' + pt.n + ' матчей)</title>';
-    });
-    svg += '<line x1="' + M + '" y1="' + (H - M) + '" x2="' + (W - M) + '" y2="' + (H - M) + '" stroke="var(--ink)" stroke-width="1.5"/>';
-    svg += '<line x1="' + M + '" y1="' + M + '" x2="' + M + '" y2="' + (H - M) + '" stroke="var(--ink)" stroke-width="1.5"/>';
-    svg += '<text x="' + (W / 2) + '" y="' + (H - 8) + '" text-anchor="middle" fill="var(--ink)" font-size="12">Доля конторы, %</text>';
-    svg += '<text x="14" y="' + (H / 2) + '" text-anchor="middle" fill="var(--ink)" font-size="12" transform="rotate(-90 14 ' + (H / 2) + ')">Фактическая частота, %</text>';
-    svg += '</svg>';
-    var brier = 0, bn = 0;
+  /* ---------- «По данным»: расстановка исходов по истории ----------
+     Вероятность конторы поправляется по фактической частоте похожих исходов
+     в истории (отдельно для 1, X и 2, со сглаживанием к самой линии).
+     Затем каждому матчу даётся один исход — с лучшим сочетанием вероятности
+     и недооценённости толпой, — и купон расширяется двойниками/тройниками
+     там, где прирост шанса на рубль максимален, пока не упрётся в бюджет. */
+  var DATA_BUDGETS = [1, 8, 32, 128, 512];
+  var dataCal = null;
+  function buildDataCal(){
+    if(dataCal && dataCal.n === hist.ev.length) return dataCal;
+    var SIZE = 5, B = 20, cal = [[], [], []];
+    for(var k = 0; k < 3; k++) for(var i = 0; i < B; i++) cal[k][i] = { hit: 0, n: 0, sp: 0 };
     hist.ev.forEach(function(e){
       if(!e.bk || !e.res) return;
       var s = e.bk[0] + e.bk[1] + e.bk[2]; if(!s) return;
       for(var k = 0; k < 3; k++){
-        var p = e.bk[k] / s, hit = (OUT[k] === e.res) ? 1 : 0;
-        brier += (p - hit) * (p - hit); bn++;
+        var p = e.bk[k] / s, bi = Math.max(0, Math.min(B - 1, Math.floor(p * 100 / SIZE)));
+        var c = cal[k][bi]; c.n++; c.sp += p; if(OUT[k] === e.res) c.hit++;
       }
     });
-    brier = bn ? brier / bn : 0;
-    var h = '<p class="ev-lead">График показывает, насколько точно линия конторы предсказывает исходы. '
-      + 'Точки — фактическая частота исхода в бакете предсказанной вероятности. '
-      + 'Пунктир — идеальная калибровка. Если точка выше диагонали — контора недооценивает исход, ниже — переоценивает.</p>';
-    h += '<div class="ev-calib-chart">' + svg + '</div>';
-    h += '<p class="ev-sub">Матчей с линией и итогом: ' + fmt(total) + '. Brier score: ' + brier.toFixed(4)
-      + ' (0 — идеально, 0.222 — случайный выбор из трёх). Чем ниже, тем точнее контора.</p>';
-    h += '<table class="ev-tab"><thead><tr><th>Бакет, %</th><th>Матчей</th><th>Фактически, %</th><th>Отклонение, п.п.</th></tr></thead><tbody>';
-    buckets.forEach(function(b, i){
-      if(b.n < 5) return;
-      var mid = i * SIZE + SIZE / 2;
-      var freq = b.sum / b.n * 100;
-      h += '<tr><td>' + (i * SIZE) + '–' + (i * SIZE + SIZE) + '</td><td>' + fmt(b.n)
-        + '</td><td>' + freq.toFixed(1) + '%</td><td class="' + (Math.abs(freq - mid) > SIZE ? "ev-bad" : "ev-good") + '">'
-        + (freq - mid > 0 ? "+" : "") + (freq - mid).toFixed(1) + '</td></tr>';
-    });
-    h += '</tbody></table>';
-    h += '<p class="ev-note">Отклонение больше ширины бакета (' + SIZE + ' п.п.) — системная ошибка конторы в этом диапазоне.</p>';
-    box.innerHTML = h;
-    $("evBack").hidden = false;
+    dataCal = { n: hist.ev.length, cal: cal, SIZE: SIZE, B: B };
+    return dataCal;
   }
-
-  /* ---------- 2. Монте-Карло: симуляция тиража ----------
-     10000 прогонов: для каждого матча бросаем кости по вероятностям БК,
-     считаем сколько угадано и какой приз. */
-  function showMonteCarlo(){
-    $("evTitle").textContent = "Симуляция тиража (Монте-Карло)";
-    var box = $("evBody");
-    var c = evCoupon();
-    if(c.error){
-      box.innerHTML = '<p class="ev-warn">Посчитать не получилось: ' + c.error + '.</p>';
-      $("evBack").hidden = false; return;
+  function calProb(bk){
+    var s = Number(bk[0]) + Number(bk[1]) + Number(bk[2]);
+    if(!(s > 0)) return null;
+    var D = buildDataCal(), SHRINK = 300, out = [];
+    for(var k = 0; k < 3; k++){
+      var p = Number(bk[k]) / s;
+      var c = D.cal[k][Math.max(0, Math.min(D.B - 1, Math.floor(p * 100 / D.SIZE)))];
+      /* поправка = (факт − прогноз) в бакете, сглаженная к нулю при малой выборке */
+      var shift = c.n ? (c.hit - c.sp) / (c.n + SHRINK) : 0;
+      out.push(Math.max(0.01, p + shift));
     }
-    var price = Number(state.price) || 30;
-    var poolNow = Number(state.poolSum) || 0;
-    var typical = Number(state.poolTypical) || 0;
-    var projected = (typical && poolNow < typical * 0.6);
-    var fund = projected ? typical : poolNow;
-    var jack = Number(state.jackpot) || 0;
-    if(!fund){
-      box.innerHTML = '<p class="ev-warn">Не знаю размер призового фонда — нажми «Обновить тираж».</p>';
-      $("evBack").hidden = false; return;
-    }
-    var lines = (fund / 0.9) / price;
-    var combos = c.combos;
-    var cost = combos * price;
-    var probs = c.probs, sets = c.sets;
-    var RUNS = 10000;
-    var dist = {}, totalPay = 0, totalAny = 0;
-    var fx = fixFactors();
-    var A = fund / 90;
-    var alloc = {
-      9: A * EV_SHARE.g9, 10: A * EV_SHARE.g10, 11: A * EV_SHARE.g11,
-      12: A * EV_SHARE.e12, 13: A * EV_SHARE.e13,
-      14: A * EV_SHARE.e14 + jack * EV_JACK14,
-      15: A * EV_SHARE.e15 + jack * EV_JACK15
-    };
-    for(var r = 0; r < RUNS; r++){
-      var actual = [];
-      for(var i = 0; i < probs.length; i++){
-        var u = Math.random(), acc = 0;
+    var t = out[0] + out[1] + out[2];
+    return out.map(function(x){ return x / t; });
+  }
+  function crowdShare(pool){
+    if(!pool) return null;
+    var v = pool.map(Number);
+    if(v.some(function(x){ return !isFinite(x) || x < 1; })) return null;   /* пропуски в долях — не доверяем */
+    var s = v[0] + v[1] + v[2];
+    return v.map(function(x){ return x / s; });
+  }
+  function planByData(budget){
+    var rows = [];
+    state.matches.forEach(function(m, idx){
+      var r = { idx: idx, m: m, locked: m.mode === "lock", p: null, q: null, set: [] };
+      if(m.pct && m.pct.bk) r.p = calProb(m.pct.bk);
+      if(m.pct) r.q = crowdShare(m.pct.pool);
+      if(r.locked){ r.set = OUT.filter(function(o){ return m.picks[o]; }).map(function(o){ return OUT.indexOf(o); }); }
+      else if(r.p){
+        var best = 0, bs = -1;
         for(var k = 0; k < 3; k++){
-          acc += probs[i][k];
-          if(u <= acc){ actual[i] = k; break; }
+          var v = r.q ? r.p[k] / r.q[k] : 1;
+          var sc = r.p[k] * Math.pow(Math.min(v, 2), 0.35);
+          if(sc > bs){ bs = sc; best = k; }
         }
-        if(actual[i] == null) actual[i] = 2;
+        r.set = [best];
       }
-      var hit = 0;
-      for(var i = 0; i < sets.length; i++){
-        if(sets[i].indexOf(actual[i]) >= 0) hit++;
-      }
-      dist[hit] = (dist[hit] || 0) + 1;
-      if(hit >= 9){
-        totalAny++;
-        var pay = 0;
-        for(var cat = 9; cat <= hit; cat++){
-          var n = lines * evTail(poissonBinomial(probs.map(function(p, j){
-            return sets[j].indexOf(actual[j]) >= 0 ? p[actual[j]] : 0;
-          })), cat) * fx[cat] + 1;
-          pay += alloc[cat] / n;
+      rows.push(r);
+    });
+    var free = rows.filter(function(r){ return !r.locked && r.p; });
+    var combos = 1;
+    rows.forEach(function(r){ combos *= Math.max(1, r.set.length); });
+    for(;;){
+      var bestR = null, bestK = -1, bestG = 0;
+      free.forEach(function(r){
+        var n = r.set.length; if(n >= 3) return;
+        if(combos / n * (n + 1) > budget) return;
+        var S = 0; r.set.forEach(function(k){ S += r.p[k]; });
+        for(var k = 0; k < 3; k++){
+          if(r.set.indexOf(k) >= 0) continue;
+          var g = Math.log((S + r.p[k]) / S) / Math.log((n + 1) / n);
+          if(g > bestG){ bestG = g; bestR = r; bestK = k; }
         }
-        totalPay += pay;
-      }
-    }
-    var evPerRun = totalPay / RUNS;
-    var pAny = totalAny / RUNS * 100;
-    var roi = evPerRun > 0 ? ((evPerRun * combos - cost) / cost * 100) : -100;
-    var h = '<div class="ev-top ' + (evPerRun * combos >= cost ? "ev-good" : "ev-bad") + '">'
-      + '<b>' + evMoney(evPerRun * combos) + '</b>'
-      + '<span>ожидаемый выигрыш всего купона из ' + fmt(combos) + ' строк при цене ' + evMoney(cost)
-      + ' — ROI ' + (roi >= 0 ? "+" : "") + roi.toFixed(1) + '%</span>'
-      + '<span>шанс 9+ угаданных: <b>' + pAny.toFixed(2) + '%</b></span></div>';
-    h += '<p class="ev-sub">Симуляция: ' + fmt(RUNS) + ' прогонов. Для каждого матча исход разыгрывается по вероятностям конторы. '
-      + 'Приз считается от фонда ' + evMoney(fund) + (projected ? " (проекция)" : "") + ', суперприз ' + evMoney(jack) + '.</p>';
-    h += '<table class="ev-tab"><thead><tr><th>Угадано</th><th>Случаев</th><th>Шанс</th></tr></thead><tbody>';
-    for(var k = 15; k >= 9; k--){
-      if(!dist[k]) continue;
-      h += '<tr><td>' + k + '</td><td>' + fmt(dist[k]) + '</td><td>' + evPct(dist[k] / RUNS) + '</td></tr>';
-    }
-    h += '</tbody></table>';
-    h += '<p class="ev-note">Монте-Карло даёт распределение, а не одно число: видно хвост, а не только среднее.</p>';
-    box.innerHTML = h;
-    $("evBack").hidden = false;
-  }
-
-  /* ---------- 3. Критерий Келли ----------
-     Оптимальная доля банка для ставки на текущий купон.
-     f* = (bp − q) / b */
-  function showKelly(){
-    $("evTitle").textContent = "Критерий Келли";
-    var box = $("evBody");
-    var c = evCoupon();
-    if(c.error){
-      box.innerHTML = '<p class="ev-warn">Посчитать не получилось: ' + c.error + '.</p>';
-      $("evBack").hidden = false; return;
-    }
-    var price = Number(state.price) || 30;
-    var poolNow = Number(state.poolSum) || 0;
-    var typical = Number(state.poolTypical) || 0;
-    var projected = (typical && poolNow < typical * 0.6);
-    var fund = projected ? typical : poolNow;
-    var jack = Number(state.jackpot) || 0;
-    if(!fund){
-      box.innerHTML = '<p class="ev-warn">Не знаю размер призового фонда — нажми «Обновить тираж».</p>';
-      $("evBack").hidden = false; return;
-    }
-    var lines = (fund / 0.9) / price;
-    var combos = c.combos;
-    var cost = combos * price;
-    var mine = evAverage(c.sets, c.probs, c.pools, lines, fund, jack, 600);
-    var evPerLine = mine.avg;
-    var pAny = mine.any;
-    var q = 1 - pAny;
-    var b = evPerLine / price;
-    var kelly = b > 0 ? (b * pAny - q) / b : 0;
-    var kellyClamped = Math.max(0, Math.min(1, kelly));
-    var halfKelly = kellyClamped / 2;
-    var quarterKelly = kellyClamped / 4;
-    var bankroll = state.bankroll || 10000;
-    var betFull = Math.round(kellyClamped * bankroll);
-    var betHalf = Math.round(halfKelly * bankroll);
-    var betQuarter = Math.round(quarterKelly * bankroll);
-    var h = '<div class="ev-top ' + (kelly > 0 ? "ev-good" : "ev-bad") + '">'
-      + '<b>' + (kellyClamped * 100).toFixed(2) + '%</b>'
-      + '<span>полный Келли — оптимальная доля банка для ставки на этот купон</span></div>';
-    h += '<p class="ev-sub">Купон из ' + fmt(combos) + ' строк, цена ' + evMoney(cost) + '. '
-      + 'Средний EV одной строки: ' + evMoney(evPerLine) + ' (шанс 9+: ' + evPct(pAny) + '). '
-      + 'Выплата на рубль: ' + b.toFixed(3) + '.</p>';
-    h += '<table class="ev-tab"><thead><tr><th>Стратегия</th><th>Доля банка</th><th>Ставка при банке ' + fmt(bankroll) + ' ₽</th></tr></thead><tbody>';
-    h += '<tr><td>Полный Келли</td><td><b>' + (kellyClamped * 100).toFixed(2) + '%</b></td><td>' + evMoney(betFull) + '</td></tr>';
-    h += '<tr><td>Пол-Келли (рекомендуется)</td><td>' + (halfKelly * 100).toFixed(2) + '%</td><td>' + evMoney(betHalf) + '</td></tr>';
-    h += '<tr><td>Четверть-Келли (консервативно)</td><td>' + (quarterKelly * 100).toFixed(2) + '%</td><td>' + evMoney(betQuarter) + '</td></tr>';
-    h += '</tbody></table>';
-    h += '<div class="ev-kelly-bank"><label for="kellyBank">Размер банка, ₽</label>'
-      + '<input type="number" id="kellyBank" value="' + bankroll + '" min="100" step="100"></div>';
-    h += '<h3>Как это работает</h3><ul class="ev-ass">'
-      + '<li><b>Формула Келли:</b> f* = (bp − q) / b, где b — отношение чистого выигрыша к ставке, p — вероятность выигрыша, q = 1 − p.</li>'
-      + '<li>Здесь «выигрыш» — это угадать 9 и больше (любой приз). EV на строку делится на цену строки — это b.</li>'
-      + '<li>Полный Келли максимизирует долгосрочный рост банка, но дисперсия огромная. Пол-Келли снижает просадки в 2 раза.</li>'
-      + '<li>Келли < 0 — ставка невыгодна, формула говорит «не ставить».</li>'
-      + '<li>Модель EV наследует все её оговорки: переоценивает редкие комбинации, число соперников — приближение.</li>'
-      + '</ul>';
-    box.innerHTML = h;
-    $("evBack").hidden = false;
-    var kb = $("kellyBank");
-    if(kb){
-      kb.addEventListener("input", function(){
-        var v = Number(kb.value);
-        if(!isFinite(v) || v < 100) return;
-        state.bankroll = v;
-        save();
-        showKelly();
       });
+      if(!bestR) break;
+      combos = combos / bestR.set.length * (bestR.set.length + 1);
+      bestR.set.push(bestK);
     }
+    var hit = 1;
+    rows.forEach(function(r){
+      if(!r.p){ return; }
+      var S = 0; r.set.forEach(function(k){ S += r.p[k]; }); hit *= S;
+      r.set.sort();
+      var top = r.set.map(function(k){ return OUT[k] + " " + Math.round(r.p[k] * 100) + "%"; }).join(", ");
+      if(r.locked) r.why = "фикс, не трогаю";
+      else if(r.set.length === 3) r.why = "перекоса нет — все три";
+      else if(r.set.length === 2) r.why = "исходы близки: " + top;
+      else {
+        var k0 = r.set[0], v0 = r.q ? r.p[k0] / r.q[k0] : 1;
+        r.why = (v0 >= 1.15 ? "толпа недооценивает (" + Math.round(r.q[k0] * 100) + "%)"
+               : (r.p[k0] >= 0.45 ? "явный фаворит" : "лучший из трёх")) + ": " + top;
+      }
+    });
+    return { rows: rows, combos: combos, hit: rows.some(function(r){ return r.p; }) ? hit : 0 };
+  }
+  /* ---------- «Симуляция»: максимум шанса на приз (9+) ----------
+     Купон берёт k угаданных, если верный исход попал в отмеченные в k матчах.
+     Начинаем с самого вероятного исхода в каждом матче и добавляем исходы там,
+     где они сильнее всего поднимают шанс 9+ на каждое удвоение цены. */
+  function planBySim(budget){
+    var rows = [];
+    state.matches.forEach(function(m, idx){
+      var r = { idx: idx, m: m, locked: m.mode === "lock", p: null, q: null, set: [], gain: 0 };
+      if(m.pct && m.pct.bk) r.p = calProb(m.pct.bk);
+      if(m.pct) r.q = crowdShare(m.pct.pool);
+      if(r.locked) r.set = OUT.filter(function(o){ return m.picks[o]; }).map(function(o){ return OUT.indexOf(o); });
+      else if(r.p){ var b = 0; for(var k = 1; k < 3; k++) if(r.p[k] > r.p[b]) b = k; r.set = [b]; }
+      rows.push(r);
+    });
+    function cover(r){
+      if(!r.p) return r.locked ? 0.4 : 0;
+      var s = 0; r.set.forEach(function(k){ s += r.p[k]; }); return Math.min(1, s);
+    }
+    function tail9(){ return evTail(poissonBinomial(rows.map(cover)), 9); }
+    var combos = 1; rows.forEach(function(r){ combos *= Math.max(1, r.set.length); });
+    var cur = tail9();
+    for(;;){
+      var bestR = null, bestK = -1, bestG = 0, bestT = cur;
+      rows.forEach(function(r){
+        if(r.locked || !r.p) return;
+        var n = r.set.length; if(n >= 3 || combos / n * (n + 1) > budget) return;
+        for(var k = 0; k < 3; k++){
+          if(r.set.indexOf(k) >= 0) continue;
+          r.set.push(k); var t = tail9(); r.set.pop();
+          var g = Math.log(t / Math.max(cur, 1e-12)) / Math.log((n + 1) / n);
+          if(g > bestG){ bestG = g; bestR = r; bestK = k; bestT = t; }
+        }
+      });
+      if(!bestR) break;
+      combos = combos / bestR.set.length * (bestR.set.length + 1);
+      bestR.set.push(bestK); bestR.gain += bestT - cur; cur = bestT;
+    }
+    /* проверка розыгрышем: 10 000 тиражей по поправленным вероятностям */
+    var RUNS = 10000, h9 = 0, h12 = 0, h15 = 0;
+    for(var s = 0; s < RUNS; s++){
+      var hits = 0;
+      for(var i = 0; i < rows.length; i++){
+        var r = rows[i]; if(!r.p) continue;
+        var u = Math.random(), res = u < r.p[0] ? 0 : (u < r.p[0] + r.p[1] ? 1 : 2);
+        if(r.set.indexOf(res) >= 0) hits++;
+      }
+      if(hits >= 9) h9++; if(hits >= 12) h12++; if(hits >= 15) h15++;
+    }
+    rows.forEach(function(r){
+      if(!r.p) return;
+      r.set.sort();
+      var top = r.set.map(function(k){ return OUT[k] + " " + Math.round(r.p[k] * 100) + "%"; }).join(", ");
+      if(r.locked) r.why = "фикс, не трогаю";
+      else if(r.set.length === 1) r.why = "самый вероятный: " + top;
+      else r.why = "+" + (r.gain * 100).toFixed(1) + " п.п. к шансу 9+: " + top;
+    });
+    return { rows: rows, combos: combos, sim: { p9: h9 / RUNS, p12: h12 / RUNS, p15: h15 / RUNS, runs: RUNS } };
   }
 
-  /* ---------- обработчики новых кнопок ---------- */
-  $("btnCalib").addEventListener("click", showCalibration);
-  $("btnMonte").addEventListener("click", showMonteCarlo);
-  $("btnKelly").addEventListener("click", showKelly);
+  /* ---------- «Келли»: какой купон сильнее всего растит банк ----------
+     Кандидаты — купоны «По данным» и «Симуляции» на 1…512 вариантов.
+     Для каждого: шанс хоть какого-то приза p (купон угадал 9+), средняя выплата
+     при призе и цена купона как доля банка f. Рост банка за тираж —
+     p·ln(1 + f·b) + (1 − p)·ln(1 − f), где b — чистый выигрыш на рубль при призе.
+     Подставляется купон с наибольшим ростом; если у всех рост ≤ 0 — не ставить. */
+  function planByKelly(){
+    var price = Number(state.price) || 30;
+    var poolNow = Number(state.poolSum) || 0, typical = Number(state.poolTypical) || 0;
+    var fund = (typical && poolNow < typical * 0.6) ? typical : poolNow;
+    var jack = Number(state.jackpot) || 0;
+    var bank = Number(state.bankroll) || 10000;
+    if(!fund) return { error: "не знаю размер призового фонда — нажми «Обновить тираж»" };
+    var probs = [], pools = [], bad = null;
+    state.matches.forEach(function(m){
+      var pr = evProbs(m), pl = evPool(m);
+      if(!pr || !pl) bad = bad || ("нет данных по матчу «" + m.home + " — " + m.away + "»");
+      probs.push(pr); pools.push(pl);
+    });
+    if(bad) return { error: bad };
+    if(probs.length !== 15) return { error: "в тираже не 15 матчей с данными" };
+    var lines = (fund / 0.9) / price, cands = [];
+    DATA_BUDGETS.forEach(function(B){
+      [["max15", planByData(B)], ["Симуляция", planBySim(B)]].forEach(function(pair){
+        var plan = pair[1];
+        if(plan.rows.some(function(r){ return !r.set.length; })) return;
+        var sets = plan.rows.map(function(r){ return r.set; });
+        var key = sets.map(function(s){ return s.join(""); }).join("|");
+        if(cands.some(function(c){ return c.key === key; })) return;
+        var cost = plan.combos * price;
+        var ev = evAverage(sets, probs, pools, lines, fund, jack, 400);
+        var pWin = evTail(evCouponDist(sets, probs), 9);
+        var W = ev.avg * plan.combos;                 /* средняя выплата купона */
+        var f = cost / bank, b = pWin > 0 ? (W / pWin) / cost - 1 : -1;
+        var g = (f < 1 && pWin > 0 && b > -1) ? pWin * Math.log(1 + f * b) + (1 - pWin) * Math.log(1 - f) : -Infinity;
+        cands.push({ key: key, src: pair[0], plan: plan, cost: cost, pWin: pWin, ret: W / cost, g: g });
+      });
+    });
+    cands.sort(function(a, b){ return b.g - a.g; });
+    return { cands: cands, best: cands[0] && cands[0].g > 0 ? cands[0] : null, bank: bank };
+  }
+
+  /* ---------- общее окно стратегии ---------- */
+  /* описание стратегии — свёрнуто, раскрывается по клику и не занимает место */
+  function stratHow(html){
+    return '<details class="ev-how"><summary>Как работает стратегия</summary><p>' + html + '</p></details>';
+  }
+  var STRAT_GUIDE = [
+    ["Расхождения", "Ищет матчи, где доля игроков сильнее всего расходится с оценкой конторы, и ставит исходы, которые толпа недоигрывает. Выигрыш в тотализаторе делится между угадавшими, поэтому такие исходы выгоднее."],
+    ["Отобрать строки", "Из большой системы оставляет строки, которые меньше всего совпадают с выбором толпы, — при угадывании делить приз придётся с меньшим числом соперников."],
+    ["Бриф", "Собирает систему с гарантией: вместо всех строк купона берётся их часть, которая всё равно гарантирует заданное число угаданных при попадании в отмеченные исходы."],
+    ["max15", "Цель — максимум шанса угадать все 15. Вероятности конторы поправляются по истории тиражей, одиночный исход выбирается по шансу и недооценённости толпой, двойники и тройники — там, где сильнее всего поднимают шанс на каждый рубль. Размер купона задаётся пределом вариантов."],
+    ["Симуляция", "Цель — чаще попадать в призы (9 и больше). Двойники и тройники ставятся там, где сильнее всего растёт шанс 9+, итог проверяется розыгрышем 10 000 тиражей."],
+    ["Келли", "Цель — быстрее всего растить банк. Сравнивает купоны «max15» и «Симуляции» на 1–512 вариантов и подставляет тот, у которого ожидаемый рост банка больше. Если выгодного нет, честно говорит «не ставить» и предлагает наименее убыточный."]
+  ];
+  function showStratGuide(){
+    $("evTitle").textContent = "Как работают стратегии";
+    var h = '<dl class="ev-guide">';
+    STRAT_GUIDE.forEach(function(g){ h += '<dt>' + g[0] + '</dt><dd>' + g[1] + '</dd>'; });
+    h += '</dl><p class="ev-note">Каждая кнопка ставит исходы в купон; «Вернуть» откатывает последнюю расстановку. Это модели, а не гарантия выигрыша.</p>';
+    $("evBody").innerHTML = h;
+    $("evBack").hidden = false;
+  }
+  function stratCards(list){
+    return '<div class="ev-sum ev-data-sum">' + list.map(function(c){
+      return '<div class="ev-top"><span>' + c[0] + '</span><b>' + c[1] + '</b></div>';
+    }).join("") + '</div>';
+  }
+  function stratChance(p){
+    return p >= 0.001 ? (p * 100).toFixed(p >= 0.1 ? 1 : 2) + '%' : '1 к ' + fmt(Math.round(1 / Math.max(p, 1e-12)));
+  }
+  function stratBudget(budget){
+    return '<div class="ev-data-bar"><label for="dataBudget">Вариантов не больше</label><select id="dataBudget">'
+      + DATA_BUDGETS.map(function(b){ return '<option value="' + b + '"' + (b === budget ? ' selected' : '') + '>' + fmt(b) + '</option>'; }).join("")
+      + '</select></div>';
+  }
+  function stratTable(rows){
+    var h = '<table class="ev-tab ev-data-tab"><thead><tr><th>№</th><th>Матч</th><th>1 · X · 2</th><th>Выбор</th></tr></thead><tbody>';
+    rows.forEach(function(r){
+      var pr = r.p ? r.p.map(function(x){ return Math.round(x * 100); }).join(" · ") : "—";
+      var cr = r.q ? r.q.map(function(x){ return Math.round(x * 100); }).join(" · ") : "нет данных";
+      var pick = r.set.length ? r.set.map(function(k){ return OUT[k]; }).join("") : "—";
+      h += '<tr><td class="nw">' + (r.idx + 1) + '</td>'
+        + '<td><div class="dt-m">' + escHtml(r.m.home) + ' — ' + escHtml(r.m.away) + '</div>'
+        + '<div class="dt-why">' + escHtml(r.p ? r.why : "нет линии конторы, строку не трогаю") + '</div></td>'
+        + '<td class="nw mono"><div>' + pr + '</div><div class="dt-why">толпа ' + cr + '</div></td>'
+        + '<td class="nw"><span class="dt-pick' + (r.locked ? ' dt-lock' : '') + '">' + pick + '</span></td></tr>';
+    });
+    return h + '</tbody></table>';
+  }
+  function stratApply(plan, name){
+    pushHistory("до стратегии «" + name + "»");
+    var set = 0;
+    plan.rows.forEach(function(r){
+      if(r.locked || !r.p || !r.set.length) return;
+      r.m.picks = {"1": false, "X": false, "2": false};
+      r.set.forEach(function(k){ r.m.picks[OUT[k]] = true; });
+      r.m.mode = "free"; set++;
+    });
+    save(); render();
+    $("evBack").hidden = true;
+    var t0 = tally();
+    say("«" + name + "»: проставлено " + set + " матч(ей), " + fmt(t0.combos) + " вариант(ов) на "
+        + fmt(t0.combos * (Number(state.price) || 0)) + " ₽. «Вернуть» откатит изменения.");
+  }
+  function stratGuard(title){
+    $("evTitle").textContent = title;
+    var box = $("evBody");
+    if(!hist.ev.length){
+      box.innerHTML = '<p class="ev-warn">История тиражей ещё не загрузилась — попробуй через минуту.</p>';
+      $("evBack").hidden = false; return null;
+    }
+    if(!state.matches.some(function(m){ return m.pct && m.pct.bk; })){
+      box.innerHTML = '<p class="ev-warn">В строках нет линии конторы — сначала нажми «Обновить тираж».</p>';
+      $("evBack").hidden = false; return null;
+    }
+    return box;
+  }
+  function stratBudgetValue(){
+    var b = Number(state.dataBudget) || 32;
+    return DATA_BUDGETS.indexOf(b) < 0 ? 32 : b;
+  }
+  function stratFinish(box, h, plan, name, rerender){
+    box.innerHTML = h;
+    $("evBack").hidden = false;
+    var sel = $("dataBudget");
+    if(sel) sel.addEventListener("change", function(){ state.dataBudget = Number(this.value) || 32; save(); rerender(); });
+    var go = $("dataApply");
+    if(go && plan) go.addEventListener("click", function(){ stratApply(plan, name); });
+  }
+  var STRAT_NOTE = '<p class="ev-note">Строки с фиксом не меняются. «Вернуть» откатит купон к прежнему виду. Это модель, а не гарантия.</p>';
+
+  function showByData(){
+    var box = stratGuard("Стратегия «max15»"); if(!box) return;
+    var budget = stratBudgetValue(), plan = planByData(budget), price = Number(state.price) || 0;
+    var h = stratHow('Цель — максимум шанса на 15 из 15. Вероятности конторы поправлены по '
+      + fmt(hist.ev.length) + ' матчам истории; одиночный исход выбирается по шансу и недооценённости толпой, двойники и тройники — там, где сильнее всего поднимают шанс на каждый рубль.');
+    h += stratBudget(budget);
+    h += stratCards([["Вариантов", fmt(plan.combos)], ["Стоимость", fmt(plan.combos * price) + " ₽"], ["Шанс 15 из 15", stratChance(plan.hit)]]);
+    h += stratTable(plan.rows);
+    h += '<div class="ev-data-go"><button type="button" id="dataApply" class="btn-ev">Подставить в купон</button></div>' + STRAT_NOTE;
+    stratFinish(box, h, plan, "max15", showByData);
+  }
+  function showSim(){
+    var box = stratGuard("Стратегия «Симуляция»"); if(!box) return;
+    var budget = stratBudgetValue(), plan = planBySim(budget), price = Number(state.price) || 0;
+    var h = stratHow('Цель — чаще попадать в призы (9 и больше угаданных). Двойники и тройники ставятся там, где сильнее всего поднимают этот шанс; итог проверен розыгрышем '
+      + fmt(plan.sim.runs) + ' тиражей.');
+    h += stratBudget(budget);
+    h += stratCards([["Вариантов", fmt(plan.combos) + " · " + fmt(plan.combos * price) + " ₽"], ["Шанс 9+", stratChance(plan.sim.p9)], ["Шанс 12+", stratChance(plan.sim.p12)]]);
+    h += stratTable(plan.rows);
+    h += '<div class="ev-data-go"><button type="button" id="dataApply" class="btn-ev">Подставить в купон</button></div>' + STRAT_NOTE;
+    stratFinish(box, h, plan, "Симуляция", showSim);
+  }
+  function showKellyStrat(){
+    var box = stratGuard("Стратегия «Келли»"); if(!box) return;
+    var K = planByKelly();
+    if(K.error){
+      box.innerHTML = '<p class="ev-warn">Посчитать не получилось: ' + K.error + '.</p>';
+      $("evBack").hidden = false; return;
+    }
+    var h = stratHow('Цель — быстрее всего растить банк. Сравниваются купоны «max15» и «Симуляции» на 1–512 вариантов; подставляется тот, у которого ожидаемый рост банка за тираж больше. Если у всех он отрицательный — ставить не стоит.');
+    h += '<div class="ev-data-bar"><label for="kellyBank">Размер банка, ₽</label><input type="number" id="kellyBank" value="' + K.bank + '" min="100" step="100"></div>';
+    var b = K.best;
+    if(b){
+      h += stratCards([["Купон", fmt(b.plan.combos) + " · " + fmt(b.cost) + " ₽"], ["Шанс приза", stratChance(b.pWin)], ["Рост банка", (b.g >= 0 ? "+" : "") + (b.g * 100).toFixed(2) + "%"]]);
+    } else {
+      h += '<div class="ev-top ev-bad ev-data-verdict"><b>Не ставить</b><span>ни один купон не растит банк: средняя выплата меньше цены</span></div>';
+    }
+    h += '<table class="ev-tab ev-data-cands"><thead><tr><th>Купон</th><th>Цена</th><th>Приз</th><th>Отдача</th><th>Рост</th></tr></thead><tbody>';
+    K.cands.slice(0, 6).forEach(function(c, i){
+      h += '<tr' + (i === 0 ? ' class="dt-best"' : '') + '><td>' + c.src + ', ' + fmt(c.plan.combos) + '</td><td>' + fmt(c.cost) + ' ₽</td><td>' + stratChance(c.pWin)
+        + '</td><td>' + c.ret.toFixed(2) + '</td><td class="' + (c.g > 0 ? "ev-good" : "ev-bad") + '">' + (isFinite(c.g) ? (c.g * 100).toFixed(2) + '%' : '—') + '</td></tr>';
+    });
+    h += '</tbody></table><p class="ev-note">«Отдача» — средняя выплата на рубль цены купона; меньше 1 — в среднем в минус.</p>';
+    /* выгодного нет — всё равно даём подставить наименее убыточный купон */
+    var pick = b || K.cands[0];
+    if(pick){
+      if(!b) h += '<p class="ev-sub">Если всё же играть — наименьшие потери у купона «' + pick.src + ', ' + fmt(pick.plan.combos) + '»:</p>';
+      h += stratTable(pick.plan.rows);
+      h += '<div class="ev-data-go"><button type="button" id="dataApply" class="btn-ev">'
+        + (b ? 'Подставить в купон' : 'Подставить наименее убыточный') + '</button></div>' + STRAT_NOTE;
+    }
+    stratFinish(box, h, pick ? pick.plan : null, "Келли", showKellyStrat);
+    var kb = $("kellyBank");
+    if(kb) kb.addEventListener("change", function(){
+      var v = Number(kb.value); if(!isFinite(v) || v < 100) return;
+      state.bankroll = v; save(); showKellyStrat();
+    });
+  }
+  $("btnData").addEventListener("click", showByData);
+  $("stratHelp").addEventListener("click", function(e){ e.preventDefault(); showStratGuide(); });
+  $("btnSim").addEventListener("click", showSim);
+  $("btnKelly").addEventListener("click", showKellyStrat);
 
   /* ====================================================================
      конец новой аналитики
