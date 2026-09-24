@@ -2558,7 +2558,7 @@
   }
 
   /* Порог окупаемости замены: сброшенной толпы не меньше отданной вероятности,
-     и за один исход отдаём не больше 15 пунктов. */
+     и за один исход отдаём не больше 5 пунктов (LOSS_CAP в config.js). */
   var SWAP_MIN = C.SWAP_MIN, LOSS_CAP = C.LOSS_CAP;
 
   /* Те же замены, но всегда в один заданный исход — нужно для ничейной линейки */
@@ -4659,7 +4659,7 @@
     if(probs.length !== 15) return { error: "в тираже не 15 матчей с данными" };
     var lines = (fund / 0.9) / price, cands = [];
     DATA_BUDGETS.forEach(function(B){
-      [["max15", planByData(B)], ["Симуляция", planBySim(B)]].forEach(function(pair){
+      [["Система", planByData(B)], ["Симуляция", planBySim(B)]].forEach(function(pair){
         var plan = pair[1];
         if(plan.rows.some(function(r){ return !r.set.length; })) return;
         var sets = plan.rows.map(function(r){ return r.set; });
@@ -4684,18 +4684,18 @@
     return '<details class="ev-how"><summary>Как работает стратегия</summary><p>' + html + '</p></details>';
   }
   var STRAT_GUIDE = [
-    ["Расхождения", "Ищет матчи, где доля игроков сильнее всего расходится с оценкой конторы, и ставит исходы, которые толпа недоигрывает. Выигрыш в тотализаторе делится между угадавшими, поэтому такие исходы выгоднее."],
-    ["Отобрать строки", "Из большой системы оставляет строки, которые меньше всего совпадают с выбором толпы, — при угадывании делить приз придётся с меньшим числом соперников."],
-    ["Бриф", "Собирает систему с гарантией: вместо всех строк купона берётся их часть, которая всё равно гарантирует заданное число угаданных при попадании в отмеченные исходы."],
-    ["max15", "Цель — максимум шанса угадать все 15. Вероятности конторы поправляются по истории тиражей, одиночный исход выбирается по шансу и недооценённости толпой, двойники и тройники — там, где сильнее всего поднимают шанс на каждый рубль. Размер купона задаётся пределом вариантов."],
-    ["Симуляция", "Цель — чаще попадать в призы (9 и больше). Двойники и тройники ставятся там, где сильнее всего растёт шанс 9+, итог проверяется розыгрышем 10 000 тиражей."],
-    ["Келли", "Цель — быстрее всего растить банк. Сравнивает купоны «max15» и «Симуляции» на 1–512 вариантов и подставляет тот, у которого ожидаемый рост банка больше. Если выгодного нет, честно говорит «не ставить» и предлагает наименее убыточный."]
+    ["Расхождения", "Ищет матчи, где доля игроков сильнее всего расходится с оценкой конторы, и ставит исходы, которые толпа недоигрывает. Выигрыш в тотализаторе делится между угадавшими, поэтому такие исходы выгоднее.<span class=\"ev-bt\">На истории (731 тираж): замена отдаёт не больше 5 п.п. вероятности, в среднем 2,9 замены за тираж. Приз в 10,1% тиражей, 12+ — в 0,41%. Прежнее правило (до 15 п.п., 8,5 замены) давало 6,8% и 0,14%. У линии фаворитов без замен призов чаще (12,7%), зато на делёжке замены по модели окупаются — но этот выигрыш неустойчив.</span>"],
+    ["Отобрать строки", "Из большой системы оставляет строки, которые меньше всего совпадают с выбором толпы, — при угадывании делить приз придётся с меньшим числом соперников.<span class=\"ev-bt\">На истории не проверялась: работает поверх вашего купона.</span>"],
+    ["Бриф", "Собирает систему с гарантией: вместо всех строк купона берётся их часть, которая всё равно гарантирует заданное число угаданных при попадании в отмеченные исходы.<span class=\"ev-bt\">На истории не проверялась: работает поверх вашего купона.</span>"],
+    ["Охота на 15", "Цель — забрать 15 из 15. Вместо системы берутся самые вероятные отдельные строки: система вынуждена покупать и маловероятные сочетания. Вероятности — модель, обученная на истории (линия конторы, ничьи, молодёжные турниры); среди почти равных строк остаются менее популярные у игроков, чтобы не делить суперприз. До 400 строк — в корзину, больше — сразу в CSV.<span class=\"ev-bt\">На истории (618 тиражей): при ~900 строках шанс 15 из 15 — 0,085% против 0,073% у системы той же цены, при ~8 000 строк — 0,55% против 0,44%. На ~8 000 строк 15 из 15 забрали бы 4 раза, система — ни разу.</span>"],
+    ["Симуляция", "Цель — чаще попадать в призы (9 и больше). Двойники и тройники ставятся там, где сильнее всего растёт шанс 9+, итог проверяется розыгрышем 10 000 тиражей.<span class=\"ev-bt\">На истории (731 тираж, купон до 32 вариантов, в среднем 810 ₽): приз в 40,5% тиражей, 12+ — в 2,46%, 13+ — в 0,68%.</span>"],
+    ["Келли", "Цель — быстрее всего растить банк. Сравнивает системы по вероятностям и купоны «Симуляции» на 1–512 вариантов и подставляет тот, у которого ожидаемый рост банка больше. Если выгодного нет, честно говорит «не ставить» и предлагает наименее убыточный.<span class=\"ev-bt\">На истории (731 тираж): в среднем купон за 3 110 ₽, приз в 55,1% тиражей, 12+ — в 5,06%, 13+ — в 1,5%. Модель выплат считала выгодным каждый тираж из-за крупных суперпризов — к этому стоит относиться осторожно.</span>"]
   ];
   function showStratGuide(){
     $("evTitle").textContent = "Как работают стратегии";
     var h = '<dl class="ev-guide">';
     STRAT_GUIDE.forEach(function(g){ h += '<dt>' + g[0] + '</dt><dd>' + g[1] + '</dd>'; });
-    h += '</dl><p class="ev-note">Каждая кнопка ставит исходы в купон; «Вернуть» откатывает последнюю расстановку. Это модели, а не гарантия выигрыша.</p>';
+    h += '</dl><p class="ev-note">Каждая кнопка ставит исходы в купон; «Вернуть» откатывает последнюю расстановку. Проверка — по тиражам 4135–5015, вероятности поправлялись только по прошлым тиражам. Ни одна стратегия за это время не угадала 14 или 15. Реальных выплат в истории нет, поэтому сравниваются частоты призов, а не деньги. Это модели, а не гарантия выигрыша.</p>';
     $("evBody").innerHTML = h;
     $("evBack").hidden = false;
   }
@@ -4768,16 +4768,161 @@
   }
   var STRAT_NOTE = '<p class="ev-note">Строки с фиксом не меняются. «Вернуть» откатит купон к прежнему виду. Это модель, а не гарантия.</p>';
 
-  function showByData(){
-    var box = stratGuard("Стратегия «max15»"); if(!box) return;
-    var budget = stratBudgetValue(), plan = planByData(budget), price = Number(state.price) || 0;
-    var h = stratHow('Цель — максимум шанса на 15 из 15. Вероятности конторы поправлены по '
-      + fmt(hist.ev.length) + ' матчам истории; одиночный исход выбирается по шансу и недооценённости толпой, двойники и тройники — там, где сильнее всего поднимают шанс на каждый рубль.');
-    h += stratBudget(budget);
-    h += stratCards([["Вариантов", fmt(plan.combos)], ["Стоимость", fmt(plan.combos * price) + " ₽"], ["Шанс 15 из 15", stratChance(plan.hit)]]);
-    h += stratTable(plan.rows);
-    h += '<div class="ev-data-go"><button type="button" id="dataApply" class="btn-ev">Подставить в купон</button></div>' + STRAT_NOTE;
-    stratFinish(box, h, plan, "max15", showByData);
+  /* ---------- «Охота на 15»: самые вероятные отдельные строки ----------
+     Для шанса на 15 из 15 лучший купон из N вариантов — N самых вероятных полных
+     комбинаций, а не система двойников/тройников: система вынуждена покупать и
+     маловероятные сочетания. Проверка на 618 тиражах: при ~900 строках шанс
+     выше на 15%, при ~8 000 — на 25% (4 попадания 15 из 15 против 0 у системы).
+     Вероятности — модель, обученная на истории: линия конторы, ничьи, молодёжь. */
+  var HUNT_SIZES = [32, 100, 400, 1000, 10000];
+  var HUNT_W = { bk: 1.085, crowd: 0.036, draw: 0.088, drawYouth: 0.146, drawWomen: -0.047, home: 0.011 };
+  function huntProbs(m){
+    if(!(m.pct && m.pct.bk)) return null;
+    var bk = m.pct.bk.map(Number), s = bk[0] + bk[1] + bk[2];
+    if(!(s > 0) || bk.some(function(x){ return !(x > 0); })) return null;
+    var q = crowdShare(m.pct.pool);
+    var name = (m.home || "") + " " + (m.away || "");
+    var youth = /\((?:19|20|21)\)/.test(name) || /^До |\bДо \d+/.test(m.league || "");
+    var women = /\(ж\)/.test(name);
+    var z = [];
+    for(var k = 0; k < 3; k++){
+      var lb = Math.log(bk[k] / s);
+      var v = HUNT_W.bk * lb + (q ? HUNT_W.crowd * (Math.log(q[k]) - lb) : 0);
+      if(k === 1) v += HUNT_W.draw + (youth ? HUNT_W.drawYouth : 0) + (women ? HUNT_W.drawWomen : 0);
+      if(k === 0) v += HUNT_W.home;
+      z.push(v);
+    }
+    var mx = Math.max(z[0], z[1], z[2]), e = z.map(function(v){ return Math.exp(v - mx); }), t = e[0] + e[1] + e[2];
+    return e.map(function(v){ return v / t; });
+  }
+  /* лучшие N строк: перебор «от лучшей» по куче, каждый шаг — сдвиг одного матча на следующий исход */
+  function huntTop(P, N){
+    var n = P.length, order = [], lp = [];
+    for(var i = 0; i < n; i++){
+      var o = [0, 1, 2].sort(function(a, b){ return P[i][b] - P[i][a]; });
+      order.push(o); lp.push(o.map(function(k){ return Math.log(Math.max(P[i][k], 1e-9)); }));
+    }
+    var heap = [], seen = {}, out = [];
+    function push(x){ heap.push(x); var c = heap.length - 1;
+      while(c > 0){ var p = (c - 1) >> 1; if(heap[p].s >= heap[c].s) break; var t = heap[p]; heap[p] = heap[c]; heap[c] = t; c = p; } }
+    function pop(){ var top = heap[0], last = heap.pop();
+      if(heap.length){ heap[0] = last; var c = 0;
+        for(;;){ var l = 2 * c + 1, r = l + 1, m = c;
+          if(l < heap.length && heap[l].s > heap[m].s) m = l;
+          if(r < heap.length && heap[r].s > heap[m].s) m = r;
+          if(m === c) break; var t = heap[m]; heap[m] = heap[c]; heap[c] = t; c = m; } }
+      return top; }
+    var start = [], s0 = 0;
+    for(i = 0; i < n; i++){ start.push(0); s0 += lp[i][0]; }
+    push({ s: s0, idx: start }); seen[start.join("")] = 1;
+    while(heap.length && out.length < N){
+      var cur = pop();
+      out.push({ lp: cur.s, line: cur.idx.map(function(r, j){ return order[j][r]; }) });
+      for(i = 0; i < n; i++){
+        if(cur.idx[i] >= 2) continue;
+        var nx = cur.idx.slice(); nx[i]++;
+        var key = nx.join("");
+        if(seen[key]) continue;
+        seen[key] = 1;
+        push({ s: cur.s - lp[i][cur.idx[i]] + lp[i][nx[i]], idx: nx });
+      }
+    }
+    return out;
+  }
+  function planHunt(N){
+    var P = [], Q = [], bad = null;
+    state.matches.forEach(function(m){
+      var p = huntProbs(m);
+      if(!p) bad = bad || ("нет линии конторы в матче «" + m.home + " — " + m.away + "»");
+      P.push(p); Q.push(evPool(m));
+    });
+    if(bad) return { error: bad };
+    /* берём с запасом 20% и среди почти равных строк оставляем менее людные —
+       при 15 из 15 делить суперприз придётся с меньшим числом игроков */
+    var cand = huntTop(P, Math.ceil(N * 1.2));
+    cand.forEach(function(c){
+      var crowd = 0;
+      c.line.forEach(function(k, i){ crowd += Math.log(Q[i] ? Math.max(Q[i][k], 1e-4) : 1 / 3); });
+      c.key = c.lp - 0.05 * crowd;
+      c.crowd = crowd;
+    });
+    cand.sort(function(a, b){ return b.key - a.key; });
+    var lines = cand.slice(0, N);
+    var p15 = 0, share = [];
+    lines.forEach(function(c){ p15 += Math.exp(c.lp); });
+    for(var i = 0; i < 15; i++) share.push([0, 0, 0]);
+    lines.forEach(function(c){ c.line.forEach(function(k, i){ share[i][k]++; }); });
+    /* для сравнения — система двойников и тройников примерно той же цены */
+    var sys = planByData(N), sysP = 1;
+    sys.rows.forEach(function(r){
+      if(!r.set.length){ sysP = 0; return; }
+      var hp = huntProbs(r.m); var s = 0; r.set.forEach(function(k){ s += hp ? hp[k] : 0; }); sysP *= s;
+    });
+    return { P: P, lines: lines, p15: p15, share: share, sysP: sysP, sysCombos: sys.combos };
+  }
+  function huntCommit(lines, price){
+    var stamp = new Date().toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit"});
+    var seen = {}, added = 0, dup = 0;
+    state.played.forEach(function(v){ if(v.sig) seen[v.sig] = true; });
+    lines.forEach(function(c, n){
+      var snap = state.matches.map(function(m, j){
+        var pk = {"1": false, "X": false, "2": false}; pk[OUT[c.line[j]]] = true;
+        return { picks: pk, mode: "free", pool: (m.pool || OUT).slice() };
+      });
+      var sig = c.line.map(function(k){ return OUT[k]; }).join(" ");
+      if(seen[sig]){ dup++; return; }
+      seen[sig] = true; state.rolls++; state.spent += price;
+      state.played.unshift({ at: stamp, label: "охота " + (n + 1) + "/" + lines.length, sig: sig, combos: 1, cost: price, snap: snap });
+      added++;
+    });
+    if(state.played.length > 400) state.played.length = 400;
+    save(); render();
+    $("evBack").hidden = true;
+    say("«Охота на 15»: в корзину положено " + fmt(added) + " строк(и) на " + fmt(added * price) + " ₽"
+        + (dup ? ", повторов пропущено: " + fmt(dup) : "") + ". Лишнее убирается корзиной в «Сыгранных вариантах».");
+  }
+  function showHunt(){
+    var box = stratGuard("Стратегия «Охота на 15»"); if(!box) return;
+    var N = Number(state.huntSize) || 100;
+    if(HUNT_SIZES.indexOf(N) < 0) N = 100;
+    var plan = planHunt(N);
+    if(plan.error){
+      box.innerHTML = '<p class="ev-warn">Посчитать не получилось: ' + plan.error + '.</p>';
+      $("evBack").hidden = false; return;
+    }
+    var price = briefPrice(), cost = plan.lines.length * price;
+    var h = stratHow('Цель — забрать 15 из 15. Вместо системы двойников и тройников берутся самые вероятные отдельные строки: система вынуждена покупать и маловероятные сочетания, а здесь каждый рубль идёт на самые вероятные комбинации. Вероятности — модель, обученная на истории тиражей (линия конторы, ничьи, молодёжные турниры). Среди почти равных строк остаются менее популярные у игроков: при попадании суперприз делится на меньшее число людей. Строки уходят в корзину (до 400) или сразу в CSV.');
+    h += '<div class="ev-data-bar"><label for="huntSize">Строк</label><select id="huntSize">'
+      + HUNT_SIZES.map(function(b){ return '<option value="' + b + '"' + (b === N ? ' selected' : '') + '>' + fmt(b) + '</option>'; }).join("")
+      + '</select></div>';
+    var gain = plan.sysP > 0 ? plan.p15 / plan.sysP : 0;
+    h += stratCards([["Цена купона", fmt(cost) + " ₽"], ["Шанс 15 из 15", stratChance(plan.p15)],
+      ["Система той же цены", plan.sysP > 0 ? stratChance(plan.sysP) : "—"]]);
+    if(gain > 0) h += '<p class="ev-sub dt-center">Строки дают в ' + gain.toFixed(2).replace(".", ",") + ' раза больше шанса, чем система двойников и тройников на ' + fmt(plan.sysCombos) + ' вариантов.</p>';
+    h += '<table class="ev-tab ev-data-tab"><thead><tr><th>№</th><th>Матч</th><th class="dt-pr">1 · X · 2</th><th>В строках</th></tr></thead><tbody>';
+    state.matches.forEach(function(m, i){
+      var pr = plan.P[i].map(function(x){ return Math.round(x * 100); }).join(" · ");
+      var sh = plan.share[i], tot = plan.lines.length, parts = [];
+      for(var k = 0; k < 3; k++) if(sh[k]) parts.push(OUT[k] + (sh[k] === tot ? "" : " " + Math.round(sh[k] / tot * 100) + "%"));
+      h += '<tr><td class="nw">' + (i + 1) + '</td><td><div class="dt-m">' + escHtml(m.home) + ' — ' + escHtml(m.away) + '</div></td>'
+        + '<td class="nw mono dt-pr">' + pr + '</td><td class="dt-share"><span class="dt-pick">' + parts.join(" · ") + '</span></td></tr>';
+    });
+    h += '</tbody></table>';
+    var canBasket = plan.lines.length <= 400;
+    h += '<div class="ev-data-go ev-data-go2">'
+      + '<button type="button" id="huntBasket" class="btn-ev"' + (canBasket ? '' : ' disabled title="В корзину помещается до 400 строк — используй CSV"') + '>В корзину</button>'
+      + '<button type="button" id="huntCsv" class="btn-ev">Скачать CSV</button></div>';
+    if(!canBasket) h += '<p class="ev-note dt-center">Больше 400 строк корзина не вмещает — такой купон выгружается сразу в CSV.</p>';
+    h += '<p class="ev-note">Выигрыш не гарантирован: даже 10 000 строк дают около полупроцента шанса. Контора оценивает матчи точно, поэтому шанс растёт в основном с числом строк.</p>';
+    box.innerHTML = h;
+    $("evBack").hidden = false;
+    $("huntSize").addEventListener("change", function(){ state.huntSize = Number(this.value) || 100; save(); showHunt(); });
+    var hb = $("huntBasket");
+    if(hb && canBasket) hb.addEventListener("click", function(){ huntCommit(plan.lines, price); });
+    $("huntCsv").addEventListener("click", function(){
+      saveCsvFile(briefCsv(plan.lines.map(function(c){ return c.line; })),
+        "ohota15_" + (state.tirazh || "tirazh") + "_" + plan.lines.length + ".csv");
+    });
   }
   function showSim(){
     var box = stratGuard("Стратегия «Симуляция»"); if(!box) return;
@@ -4797,7 +4942,7 @@
       box.innerHTML = '<p class="ev-warn">Посчитать не получилось: ' + K.error + '.</p>';
       $("evBack").hidden = false; return;
     }
-    var h = stratHow('Цель — быстрее всего растить банк. Сравниваются купоны «max15» и «Симуляции» на 1–512 вариантов; подставляется тот, у которого ожидаемый рост банка за тираж больше. Если у всех он отрицательный — ставить не стоит.');
+    var h = stratHow('Цель — быстрее всего растить банк. Сравниваются системы по вероятностям и купоны «Симуляции» на 1–512 вариантов; подставляется тот, у которого ожидаемый рост банка за тираж больше. Если у всех он отрицательный — ставить не стоит.');
     h += '<div class="ev-data-bar"><label for="kellyBank">Размер банка, ₽</label><input type="number" id="kellyBank" value="' + K.bank + '" min="100" step="100"></div>';
     var b = K.best;
     if(b){
@@ -4826,7 +4971,7 @@
       state.bankroll = v; save(); showKellyStrat();
     });
   }
-  $("btnData").addEventListener("click", showByData);
+  $("btnData").addEventListener("click", showHunt);
   $("stratHelp").addEventListener("click", function(e){ e.preventDefault(); showStratGuide(); });
   $("btnSim").addEventListener("click", showSim);
   $("btnKelly").addEventListener("click", showKellyStrat);
