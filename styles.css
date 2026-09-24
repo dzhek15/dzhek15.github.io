@@ -1038,3 +1038,17 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 .btn-blend .lbl{white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0}
 .blend-go{display:flex; gap:10px; justify-content:center; flex-wrap:wrap}
 @media (max-width:520px){ .blend-go .btn-ev{flex:1 1 100%} }
+
+/* ---------- бриф: режим и шансы ---------- */
+.brief-mode{display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin:6px 0 4px}
+.brief-mode .gap-set[aria-pressed="true"]{background:var(--ink); color:var(--surface); border-color:var(--ink)}
+.brief-ch{font-size:11px; color:var(--muted); font-weight:400; white-space:nowrap; margin-top:2px}
+.mscore.void.fsvoid{color:var(--o2, #d9a441)}
+.brief-tab td{white-space:nowrap}
+@media (max-width:560px){
+  .brief-tab th, .brief-tab td{padding-left:4px; padding-right:4px}
+  .brief-tab td.nw{white-space:normal; width:1%}
+  .brief-tab td.nw .gap-set{display:block; width:100%; margin:3px 0; white-space:nowrap}
+  .brief-tab td.brief-no{white-space:normal}
+  .brief-tab th:nth-child(4), .brief-tab td.brief-save{display:none}
+}

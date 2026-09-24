@@ -411,7 +411,10 @@
     return tot;
   }
 
-  function briefBuild(sets, g, budgetMs){
+  /* W — вероятности исходов по матчам (или null): тогда жадный шаг берёт строку, чей шар
+     закрывает больше всего ещё не закрытой ВЕРОЯТНОСТИ, а не штук. Гарантия та же, но
+     строки ложатся на вероятные сочетания — чаще 15 и 14. */
+  function briefBuild(sets, g, budgetMs, W, even){
     budgetMs = budgetMs || 25000;
     var n = sets.length, wide = [], fixed = [], i, k;
     for(i = 0; i < n; i++){ (sets[i].length > 1 ? wide : fixed).push(i); }
@@ -428,6 +431,22 @@
     var mul = new Array(m); mul[0] = 1;
     for(k = 1; k < m; k++) mul[k] = mul[k-1] * sizes[k-1];
     var v = new Int32Array(m);
+    /* вес точки: произведение вероятностей её исходов (внутри купона, нормировано) */
+    var wt = null;
+    if(W){
+      var wk = [];
+      for(k = 0; k < m; k++){
+        var st = sets[wide[k]], pk = W[wide[k]], S = 0, row = [];
+        st.forEach(function(o){ var q = pk ? Math.max(pk[o], 1e-6) : 1; row.push(q); S += q; });
+        wk.push(row.map(function(q){ return q / S; }));
+      }
+      wt = new Float64Array(U);
+      for(var xx = 0; xx < U; xx++){
+        var prod = 1, rest = xx;
+        for(k = 0; k < m; k++){ prod *= wk[k][rest % sizes[k]]; rest = Math.floor(rest / sizes[k]); }
+        wt[xx] = prod;
+      }
+    }
     function dec(x){ for(var j = 0; j < m; j++) v[j] = Math.floor(x / mul[j]) % sizes[j]; }
     function walk(x, depth, start, fn){
       fn(x);
@@ -441,7 +460,8 @@
       }
     }
     var covered = new Uint8Array(U), left = U, code = [];
-    var heap = new Int32Array(U + 1), hkey = new Int32Array(U + 1), hstamp = new Int32Array(U + 1), hn = 0;
+    var gw = even ? null : wt;             /* веса для жадного шага; шансы считаем в любом режиме */
+    var heap = new Int32Array(U + 1), hkey = gw ? new Float64Array(U + 1) : new Int32Array(U + 1), hstamp = new Int32Array(U + 1), hn = 0;
     function push(key, x, st){
       hn++; heap[hn] = x; hkey[hn] = key; hstamp[hn] = st;
       var c = hn, t;
@@ -471,10 +491,12 @@
       return { x: topX, st: topSt };
     }
     var ballSize = 0; walk(0, 0, 0, function(){ ballSize++; });
-    for(var x = 0; x < U; x++) push(ballSize, x, 0);
+    /* со взвешиванием стартовые оценки неизвестны — ставим заведомо большие и
+       устаревшие (штамп −1), CELF пересчитает их при первом же взятии */
+    for(var x = 0; x < U; x++){ if(gw) push(1e9, x, -1); else push(ballSize, x, 0); }
 
     var gen = 0, t0 = Date.now(), cnt = 0;
-    var counter = function(y){ if(!covered[y]) cnt++; };
+    var counter = gw ? function(y){ if(!covered[y]) cnt += gw[y]; } : function(y){ if(!covered[y]) cnt++; };
     var marker = function(y){ if(!covered[y]){ covered[y] = 1; left--; } };
     while(left > 0){
       if((gen & 31) === 0 && Date.now() - t0 > budgetMs)
@@ -494,6 +516,24 @@
       walk(best, 0, 0, marker);
       gen++;
     }
+    /* доля вероятности (при условии, что все исходы попали в купон), где лучшая строка
+       берёт 15 и хотя бы 14 */
+    var w15 = 0, w14 = 0;
+    if(wt){
+      var near = new Uint8Array(U);
+      code.forEach(function(c){
+        w15 += wt[c];
+        if(!near[c]){ near[c] = 1; w14 += wt[c]; }
+        for(var q = 0; q < m; q++){
+          var base = Math.floor(c / mul[q]) % sizes[q];
+          for(var val = 0; val < sizes[q]; val++){
+            if(val === base) continue;
+            var y = c + (val - base) * mul[q];
+            if(!near[y]){ near[y] = 1; w14 += wt[y]; }
+          }
+        }
+      });
+    }
     var lines = [];
     for(i = 0; i < code.length; i++){
       dec(code[i]);
@@ -502,7 +542,7 @@
       for(j = 0; j < m; j++) row[wide[j]] = sets[wide[j]][v[j]];
       lines.push(row);
     }
-    return { lines: lines, U: U, rows: lines.length, m: m, r: r, ms: Date.now() - t0 };
+    return { lines: lines, U: U, rows: lines.length, m: m, r: r, ms: Date.now() - t0, w15: wt ? w15 : null, w14: wt ? w14 : null };
   }
 
   /* потолки: выше первого предупреждаем о долгом счёте, выше второго не беремся вовсе */
@@ -1448,16 +1488,19 @@
       if(!obj.AA){
         if(obj.ZY || obj.ZA){ cur = { country: obj.ZY || "", league: obj.ZA || "", matches: [] }; groups.push(cur); }
       } else if(cur && obj.AE && obj.AF && obj.WU && obj.WV && obj.PX && obj.PY){
-        cur.matches.push({ id: obj.AA, home: obj.AE, away: obj.AF, hSlug: obj.WU, aSlug: obj.WV, hId: obj.PX, aId: obj.PY, ts: obj.AD || obj.ADE || null });
+        cur.matches.push({ id: obj.AA, home: obj.AE, away: obj.AF, hSlug: obj.WU, aSlug: obj.WV, hId: obj.PX, aId: obj.PY, ts: obj.AD || obj.ADE || null, st: obj.AB || "", sc: obj.AC || "" });
       }
     }
     return groups;
   }
   /* фид на день+спорт кэшируем — за один тираж кнопку FS жмут по многу раз подряд для
      одного и того же спорта, незачем качать заново */
-  function fsLoadDay(sportKey, day){
+  var FS_DAY_AT = {};
+  function fsLoadDay(sportKey, day, maxAgeMs){
     var key = sportKey + "|" + day;
+    if(FS_DAY_CACHE[key] && maxAgeMs && Date.now() - (FS_DAY_AT[key] || 0) > maxAgeMs) delete FS_DAY_CACHE[key];
     if(FS_DAY_CACHE[key]) return FS_DAY_CACHE[key];
+    FS_DAY_AT[key] = Date.now();
     var url = FS_FEED_HOST + FS_SPORT_ID[sportKey] + "&day=" + day;
     FS_DAY_CACHE[key] = fetch(url)
       .then(function(r){ return r.ok ? r.text() : null; })
@@ -1487,9 +1530,9 @@
         var mm = g.matches[j];
         if(isWomen && !leagueW && !(/\(ж\)/i.test(mm.home) && /\(ж\)/i.test(mm.away))) continue;
         if(fsNameOk(hClean, hCore, mm.home) && fsNameOk(aClean, aCore, mm.away))
-          return { h: { url: mm.hSlug, id: mm.hId }, a: { url: mm.aSlug, id: mm.aId }, mid: mm.id, ts: mm.ts };
+          return { h: { url: mm.hSlug, id: mm.hId }, a: { url: mm.aSlug, id: mm.aId }, mid: mm.id, ts: mm.ts, st: mm.st, sc: mm.sc };
         if(fsNameOk(hClean, hCore, mm.away) && fsNameOk(aClean, aCore, mm.home))
-          return { h: { url: mm.aSlug, id: mm.aId }, a: { url: mm.hSlug, id: mm.hId }, mid: mm.id, ts: mm.ts };
+          return { h: { url: mm.aSlug, id: mm.aId }, a: { url: mm.hSlug, id: mm.hId }, mid: mm.id, ts: mm.ts, st: mm.st, sc: mm.sc };
       }
     }
     return null;
@@ -1544,6 +1587,63 @@
       });
       if(changed){ save(); render(); }
     }).catch(function(){});
+  }
+  /* ---------- перенос и отмена матча ----------
+     Flashscore помечает матч «перенесён» (AB=3, AC=4) или «отменён» (AC=5) обычно сразу,
+     как об этом объявили. Фид отдаёт только сегодня и завтра, поэтому матчи позже увидим,
+     когда до них останется меньше двух суток. Балтбет засчитывает такой матч угаданным
+     любой ставке, если его не сыграют в срок, — значит, двойник или тройник на нём
+     выброшенные деньги. Найденный матч сразу фиксируем одним исходом: стратегии фикс не
+     трогают и не тратят на него варианты. Прежние исходы помним — если статус снимут
+     (матч вернули в расписание), купон вернётся как был. */
+  var FS_VOID_CODES = { "4": "перенесён", "5": "отменён" };
+  function checkFsVoids(){
+    if(!state.matches.length || typeof fetch !== "function") return;
+    if(document.body.classList.contains("is-prev")) return;
+    if(state.matches.some(function(m){ return m.res; })) return;
+    var sports = {};
+    state.matches.forEach(function(m){ sports[fsFeedSport(m.league)] = true; });
+    var keys = [];
+    Object.keys(sports).forEach(function(sp){ keys.push([sp, 0]); keys.push([sp, 1]); });
+    Promise.all(keys.map(function(k){ return fsLoadDay(k[0], k[1], 10 * 60000); })).then(function(res){
+      var by = {};
+      keys.forEach(function(k, i){ by[k[0]] = (by[k[0]] || []).concat(res[i] || []); });
+      var news = [], back = [];
+      state.matches.forEach(function(m, i){
+        var all = by[fsFeedSport(m.league)];
+        if(!all || !all.length) return;
+        var f = fsLookup(m, all);
+        if(!f) return;
+        var tag = (f.st === "3" && FS_VOID_CODES[f.sc]) || "";
+        if(tag && !m.fsVoid){
+          m.fsVoid = tag;
+          if(m.mode !== "lock"){
+            m.fsVoidPrev = { picks: JSON.parse(JSON.stringify(m.picks)), mode: m.mode, pool: m.pool ? m.pool.slice() : null };
+            var cur = OUT.filter(function(o){ return m.picks[o]; }), keep = cur[0] || "1";
+            var p = (m.pct && m.pct.bk) ? m.pct.bk : null;
+            if(p){ var best = -1; OUT.forEach(function(o, k){ if((!cur.length || m.picks[o]) && Number(p[k]) > best){ best = Number(p[k]); keep = o; } }); }
+            m.picks = { "1": false, "X": false, "2": false }; m.picks[keep] = true; m.mode = "lock";
+          }
+          news.push((i + 1) + " " + tag);
+        } else if(!tag && m.fsVoid){
+          delete m.fsVoid;
+          if(m.fsVoidPrev){ m.picks = m.fsVoidPrev.picks; m.mode = m.fsVoidPrev.mode; m.pool = m.fsVoidPrev.pool; delete m.fsVoidPrev; }
+          back.push(i + 1);
+        }
+      });
+      if(news.length || back.length){
+        save(); render();
+        say((news.length ? "По данным Flashscore матч № " + news.join(", ") + ". Оставил один исход и зафиксировал: если матч не сыграют в срок, Балтбет засчитает его угаданным любой ставке. " : "") +
+            (back.length ? "Матч № " + back.join(", ") + " вернули в расписание — вернул прежние исходы." : ""));
+      }
+    }).catch(function(){});
+  }
+  function mkFsVoid(m){
+    var sc = document.createElement("span");
+    sc.className = "mscore void fsvoid";
+    sc.textContent = m.fsVoid;
+    sc.title = "По данным Flashscore матч " + m.fsVoid + ". Если его не сыграют в срок, Балтбет засчитает его угаданным для любой ставки. Сайт оставил один исход и зафиксировал строку.";
+    return sc;
   }
   function openFs(m){
     var w = window.open("", "_blank");          /* вкладку открываем сразу — после fetch браузер её заблокирует */
@@ -1740,6 +1840,8 @@
       meta.appendChild(mkNewsBtn(m, idx, false));
       if(m.res === VOID){
         teams.appendChild(mkVoid());
+      } else if(!m.res && !m.score && m.fsVoid){
+        teams.appendChild(mkFsVoid(m));
       } else if(m.res || m.score){
         var sc = document.createElement("span");
         /* подведённый счёт зелёный, живой — синий; сам исход всегда синий,
@@ -2892,6 +2994,43 @@
   }
 
   function briefPrice(){ return Number(state.price) > 0 ? Number(state.price) : 30; }
+  /* вероятности исходов для «Брифа»: линия конторы с поправкой по истории */
+  function briefProbs(){
+    return state.matches.map(function(m){ return (m.pct && m.pct.bk) ? calProb(m.pct.bk) : null; });
+  }
+  function briefWeighted(){ return state.briefMode !== "even"; }
+  /* шанс, что все 15 исходов окажутся внутри купона */
+  function briefInside(sets, P){
+    var p = 1;
+    sets.forEach(function(st, i){
+      if(state.matches[i] && state.matches[i].fsVoid) return;
+      if(!P[i]){ p *= st.length / 3; return; }
+      var S = 0; st.forEach(function(o){ S += P[i][o]; }); p *= Math.min(1, S);
+    });
+    return p;
+  }
+  /* строки «Брифа» — в корзину, как броски и прокрутки */
+  var BASKET_MAX = 400;
+  function briefToBasket(lines, g){
+    var price = briefPrice();
+    var stamp = new Date().toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit"});
+    var seen = {}, added = 0, dup = 0;
+    state.played.forEach(function(v){ if(v.sig) seen[v.sig] = true; });
+    lines.forEach(function(L, n){
+      var snap = state.matches.map(function(m, j){
+        var pk = {"1": false, "X": false, "2": false}; pk[OUT[L[j]]] = true;
+        return { picks: pk, mode: "free", pool: (m.pool || OUT).slice() };
+      });
+      var sig = L.map(function(k){ return OUT[k]; }).join(" ");
+      if(seen[sig]){ dup++; return; }
+      seen[sig] = true; state.rolls++; state.spent += price;
+      state.played.unshift({ at: stamp, label: "бриф " + g + " · " + (n + 1) + "/" + lines.length, sig: sig, combos: 1, cost: price, snap: snap });
+      added++;
+    });
+    if(state.played.length > BASKET_MAX) state.played.length = BASKET_MAX;
+    save(); render();
+    return { added: added, dup: dup };
+  }
 
   function briefCsv(lines){
     var price = briefPrice(), sep = state.csvSep === "; " ? "; " : ";";
@@ -2918,31 +3057,38 @@
     var r = state.matches.length - g;
     var wideSizes = sizes.filter(function(x){ return x > 1; });
     var m = wideSizes.length;
-    var key = "g" + g;
+    var key = "g" + g + (briefWeighted() ? "w" : "");
     var have = briefCache(sets)[key];
     var cells;
     if(have && have.rows){
       var cost = have.rows * briefPrice();
       var save = U > 0 ? (100 * (1 - have.rows / U)) : 0;
-      cells = '<td><b>' + fmt(have.rows) + '</b></td><td>' + fmt(cost) + ' ₽</td>' +
-              '<td>' + (U === have.rows ? "—" : "−" + save.toFixed(0) + "%") + '</td>' +
-              '<td class="nw"><button type="button" class="gap-set brief-csv" data-g="' + g + '">скачать CSV</button>' +
+      var ch = "";
+      if(have.w15 != null){
+        var pin = briefInside(sets, briefProbs());
+        ch = '<div class="brief-ch" title="Шанс по модели: 15 из 15 и хотя бы 14 при условии, что все исходы попали в купон, умноженный на шанс такого попадания">15: ' +
+             stratChance(pin * have.w15) + '</div><div class="brief-ch">14+: ' + stratChance(pin * have.w14) + '</div>';
+      }
+      cells = '<td><b>' + fmt(have.rows) + '</b>' + ch + '</td><td>' + fmt(cost) + ' ₽</td>' +
+              '<td class="brief-save">' + (U === have.rows ? "—" : "−" + save.toFixed(0) + "%") + '</td>' +
+              '<td class="nw"><button type="button" class="gap-set brief-cart" data-g="' + g + '">в корзину</button>' +
+              ' <button type="button" class="gap-set brief-csv" data-g="' + g + '">CSV</button>' +
               ' <button type="button" class="gap-set brief-prev" data-g="' + g + '">строки</button></td>';
     } else if(have && have.tooBig){
-      cells = '<td colspan="4" class="brief-no">вселенная ' + fmt(have.U) + ' — не берусь</td>';
+      cells = '<td colspan="3" class="brief-no">вселенная ' + fmt(have.U) + ' — не берусь</td><td class="brief-save"></td>';
     } else if(have && have.slow){
-      cells = '<td colspan="4" class="brief-no">не уложился за ' + Math.round(have.ms/1000) + ' с</td>';
+      cells = '<td colspan="3" class="brief-no">не уложился за ' + Math.round(have.ms/1000) + ' с</td><td class="brief-save"></td>';
     } else {
       var ball = briefBall(wideSizes, r);
       var work = U * ball;
-      if(r >= m) cells = '<td><b>1</b></td><td>' + fmt(briefPrice()) + ' ₽</td><td>−' + (100*(1-1/U)).toFixed(0) + '%</td>' +
+      if(r >= m) cells = '<td><b>1</b></td><td>' + fmt(briefPrice()) + ' ₽</td><td class="brief-save">−' + (100*(1-1/U)).toFixed(0) + '%</td>' +
                          '<td class="nw"><button type="button" class="gap-set brief-go" data-g="' + g + '">собрать</button></td>';
       else if(U > BRIEF_CAP_U || work > BRIEF_MAX_WORK)
-        cells = '<td colspan="4" class="brief-no">слишком большой перебор (' + fmt(U) + ' × ' + fmt(ball) + ')</td>';
+        cells = '<td colspan="3" class="brief-no">слишком большой перебор (' + fmt(U) + ' × ' + fmt(ball) + ')</td><td class="brief-save"></td>';
       else
-        cells = '<td colspan="3" class="brief-no">' +
+        cells = '<td colspan="2" class="brief-no">' +
                 (work > BRIEF_WARN_WORK ? ("считать примерно " + Math.max(1, Math.round(work / 4e6)) + " с") : "не посчитано") +
-                '</td><td class="nw"><button type="button" class="gap-set brief-go" data-g="' + g + '">собрать</button></td>';
+                '</td><td class="brief-save"></td><td class="nw"><button type="button" class="gap-set brief-go" data-g="' + g + '">собрать</button></td>';
     }
     return '<tr><td>' + g + ' из 15</td>' + cells + '</tr>';
   }
@@ -2977,8 +3123,14 @@
       $("evBody").innerHTML = h; $("evBack").hidden = false; return;
     }
 
-    h += '<table class="ev-tab"><thead><tr><th>Гарантия</th><th>Строк</th><th>Цена</th><th>Дешевле</th><th></th></tr></thead><tbody>';
-    h += '<tr><td>15 из 15</td><td><b>' + fmt(U) + '</b></td><td>' + fmt(U * price) + ' ₽</td><td>—</td>' +
+    var wOn = briefWeighted();
+    h += '<div class="brief-mode" role="group" aria-label="Как строить систему">' +
+         '<button type="button" class="gap-set brief-mode-b" data-m="w" aria-pressed="' + wOn + '">С учётом вероятностей</button>' +
+         '<button type="button" class="gap-set brief-mode-b" data-m="even" aria-pressed="' + !wOn + '">Все исходы поровну</button></div>' +
+         '<p class="ev-note">' + (wOn ? 'Жадный подбор в первую очередь закрывает вероятные по линии конторы сочетания. Гарантия та же. Обычно разница небольшая: сравни строки и шансы в обоих режимах и бери, что выгоднее.'
+                                      : 'Классическое покрытие: все исходы купона равноправны.') + '</p>';
+    h += '<table class="ev-tab brief-tab"><thead><tr><th>Гарантия</th><th>Строк</th><th>Цена</th><th>Дешевле</th><th></th></tr></thead><tbody>';
+    h += '<tr><td>15 из 15</td><td><b>' + fmt(U) + '</b></td><td>' + fmt(U * price) + ' ₽</td><td class="brief-save">—</td>' +
          '<td class="nw">полное покрытие</td></tr>';
     for(var g = 14; g >= 9; g--) h += briefRow(g, sets, sizes, U);
     h += '</tbody></table>';
@@ -2994,21 +3146,39 @@
         var g = Number(b.getAttribute("data-g"));
         b.textContent = "считаю…"; b.disabled = true;
         setTimeout(function(){
-          briefCache(sets)["g" + g] = briefBuild(sets, g, 30000);
+          briefCache(sets)["g" + g + (briefWeighted() ? "w" : "")] = briefBuild(sets, g, 30000, briefProbs(), !briefWeighted());
           showBrief();
         }, 30);
       });
     });
+    [].slice.call($("evBody").querySelectorAll(".brief-mode-b")).forEach(function(b){
+      b.addEventListener("click", function(){ state.briefMode = b.getAttribute("data-m"); save(); showBrief(); });
+    });
+    [].slice.call($("evBody").querySelectorAll(".brief-cart")).forEach(function(b){
+      b.addEventListener("click", function(){
+        var g = Number(b.getAttribute("data-g")), res = briefCache(sets)["g" + g + (briefWeighted() ? "w" : "")];
+        if(!res || !res.lines) return;
+        if(res.lines.length > BASKET_MAX){
+          $("briefPrev").innerHTML = '<p class="ev-warn">В корзину помещается до ' + BASKET_MAX + ' строк, а здесь ' + fmt(res.lines.length) +
+            '. Возьми гарантию пониже или скачай CSV.</p>';
+          return;
+        }
+        var r = briefToBasket(res.lines, g);
+        $("evBack").hidden = true;
+        say("«Бриф» " + g + " из 15: в корзину добавлено " + fmt(r.added) + " строк" + (r.dup ? ", " + r.dup + " уже были" : "") +
+            " на " + fmt(r.added * briefPrice()) + " ₽. В CSV уйдут только отмеченные галочкой.");
+      });
+    });
     [].slice.call($("evBody").querySelectorAll(".brief-csv")).forEach(function(b){
       b.addEventListener("click", function(){
-        var g = Number(b.getAttribute("data-g")), res = briefCache(sets)["g" + g];
+        var g = Number(b.getAttribute("data-g")), res = briefCache(sets)["g" + g + (briefWeighted() ? "w" : "")];
         if(!res || !res.lines) return;
         saveCsvFile(briefCsv(res.lines), "brief_" + (state.tirazh || "tirazh") + "_g" + g + "_" + res.rows + ".csv");
       });
     });
     [].slice.call($("evBody").querySelectorAll(".brief-prev")).forEach(function(b){
       b.addEventListener("click", function(){
-        var g = Number(b.getAttribute("data-g")), res = briefCache(sets)["g" + g];
+        var g = Number(b.getAttribute("data-g")), res = briefCache(sets)["g" + g + (briefWeighted() ? "w" : "")];
         if(!res || !res.lines) return;
         var head = res.lines.slice(0, 20).map(function(L, i){
           return (i + 1) + ". " + L.map(function(j){ return OUT[j]; }).join("");
@@ -4110,6 +4280,8 @@
       teams.appendChild(document.createTextNode(m.away));
       if(m.res === VOID){
         teams.appendChild(mkVoid());
+      } else if(!m.res && !m.score && m.fsVoid){
+        teams.appendChild(mkFsVoid(m));
       } else if(m.res || m.score){
         var sc = document.createElement("span");
         sc.className = "mscore" + (m.res ? "" : " live");
@@ -4808,6 +4980,7 @@
       rows.push(r);
     });
     function cover(r){
+      if(r.m && r.m.fsVoid) return 1;
       if(!r.p) return r.locked ? 0.4 : 0;
       var s = 0; r.set.forEach(function(k){ s += r.p[k]; }); return Math.min(1, s);
     }
@@ -4890,6 +5063,7 @@
     var cnt = function(key){ var c = 1; rows.forEach(function(r){ c *= Math.max(1, r[key].length); }); return c; };
     var tails = function(key){
       return poissonBinomial(rows.map(function(r){
+        if(r.m && r.m.fsVoid) return 1;
         if(!r.p) return r.locked ? 0.4 : 0;
         var S = 0; r[key].forEach(function(k){ S += r.p[k]; }); return Math.min(1, S);
       }));
@@ -4901,10 +5075,8 @@
                        : "Келли не посчитался: " + ((K && K.error) || "нет данных") + " — голосуют две стратегии" };
   }
   function blendState(){
-    var force = /[?&]blend=1\b/.test(location.search);
     var dl = kickoffMs(), now = Date.now();
     if(document.body.classList.contains("is-prev")) return { on: false, t: "Сплав к дедлайну · только для текущего тиража" };
-    if(force) return { on: true, t: "Сплав к дедлайну · тестовый режим" };
     if(!dl) return { on: false, t: "Сплав к дедлайну · нет времени закрытия" };
     var left = dl - now;
     if(left <= 0) return { on: false, t: "Сплав к дедлайну · приём закрыт" };
@@ -5313,6 +5485,8 @@
   $("btnBlend").addEventListener("click", showBlend);
   renderBlend();
   setInterval(renderBlend, 30000);
+  setTimeout(checkFsVoids, 4000);
+  setInterval(checkFsVoids, 10 * 60000);
 
   /* ====================================================================
      конец новой аналитики
