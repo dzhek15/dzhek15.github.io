@@ -1269,15 +1269,16 @@
     var h = '<table class="ev-tab th-tab"><tr><th>Тираж</th><th>Дата</th><th style="text-align:left">Матч</th><th>Линия БК</th><th>Пул</th><th>Итог</th><th>Счёт</th></tr>';
     rows.forEach(function(r){
       var e = r.e, mine = r.home ? "1" : "2";
-      var cls = (e.res === "X") ? "" : (e.res === mine ? " w" : " l");
+      var cls = (!e.res || e.res === "X") ? "" : (e.res === mine ? " w" : " l");
       var opp = r.home ? e.away : e.home;
       h += '<tr><td class="nw">' + e.n + '</td><td class="nw">' + fmtDay(e.at) + '</td>' +
         '<td class="tm-me" style="text-align:left">' + escHtml(r.home ? meName : opp) + ' — ' + escHtml(r.home ? opp : meName) +
         '<span class="side">' + (r.home ? "дома" : "в гостях") + '</span></td>' +
         '<td class="nw">' + (e.bk ? e.bk.join(" / ") : "—") + '</td>' +
         '<td class="nw">' + (e.pool ? e.pool.join(" / ") : "—") + '</td>' +
-        '<td class="nw th-res' + cls + '">' + escHtml(e.res) + '</td>' +
-        '<td class="nw">' + escHtml(String(e.score || "").replace(/\s+/g, "")) + '</td></tr>';
+        (e.res ? '<td class="nw th-res' + cls + '">' + escHtml(e.res) + '</td>' +
+                 '<td class="nw">' + escHtml(String(e.score || "").replace(/\s+/g, "")) + '</td></tr>'
+               : '<td class="nw th-void" colspan="2" title="матч отменён, засчитан всем">отменён</td></tr>');
     });
     return h + '</table>';
   }
@@ -1303,7 +1304,7 @@
     if(opp){
       if(h2h.length){
         var hw = 0, hd = 0, hl = 0;
-        h2h.forEach(function(r){ var mine = r.home ? "1" : "2"; if(r.e.res === "X") hd++; else if(r.e.res === mine) hw++; else hl++; });
+        h2h.forEach(function(r){ var mine = r.home ? "1" : "2"; if(!r.e.res) return; if(r.e.res === "X") hd++; else if(r.e.res === mine) hw++; else hl++; });
         h2hBlock = '<h3 class="th-h2">Очные встречи с ' + escHtml(opp) + '</h3>' +
           '<div class="th-sum"><span>всего <b>' + h2h.length + '</b></span>' +
           '<span>' + escHtml(name) + ': В <b>' + hw + '</b> · Н <b>' + hd + '</b> · П <b>' + hl + '</b></span></div>' +
@@ -1321,6 +1322,7 @@
     var w = 0, d = 0, l = 0, favN = 0, favHit = 0;
     rows.forEach(function(r){
       var e = r.e, mine = r.home ? "1" : "2";
+      if(!e.res) return;                      /* отменённый матч не считаем ни победой, ни поражением */
       if(e.res === "X") d++; else if(e.res === mine) w++; else l++;
       if(e.bk){
         var f = 0; if(e.bk[1] > e.bk[f]) f = 1; if(e.bk[2] > e.bk[f]) f = 2;
@@ -1626,7 +1628,9 @@
       if(code) meta.appendChild(mkFlag(code, "flag"));
       meta.appendChild(document.createTextNode(
         [m.date, m.time, m.league].filter(Boolean).join("  ·  ")));
-      if(m.res || m.score){
+      if(m.res === VOID){
+        teams.appendChild(mkVoid());
+      } else if(m.res || m.score){
         var sc = document.createElement("span");
         /* подведённый счёт зелёный, живой — синий; сам исход всегда синий,
            чтобы читался отдельно от счёта */
@@ -3073,7 +3077,7 @@
     for(k = 0; k <= N; k++) alive[k] = 0;
     for(var r = 0; r < book.rows.length; r++){
       var row = book.rows[r], miss = 0;
-      for(i = 0; i < N; i++) if(res[i] && row[i] !== res[i]) miss++;
+      for(i = 0; i < N; i++) if(res[i] && res[i] !== VOID && row[i] !== res[i]) miss++;
       var max = N - miss;
       for(k = 9; k <= max; k++) alive[k]++;
     }
@@ -3281,6 +3285,17 @@
     if(x === "\u0425") x = "X";           /* кириллическая Х из чужих файлов */
     return (x === "1" || x === "X" || x === "2") ? x : null;
   }
+  /* Итог матча из ответа totobrief. Если тираж уже разыгран (status finished), а итога у матча
+     нет — матч отменён: Балтбет засчитывает его угаданным для любой ставки. Помечаем «*».
+     Сверено на тираже 5008 (Леванте — Атлетик): число победителей сходится только так. */
+  var VOID = "*";
+  function evRes(e, info){
+    var r = normOut(e && e.result);
+    if(r) return r;
+    return (info && info.status === "finished") ? VOID : "";
+  }
+  /* попал ли исход строки/клетки в итог: отменённый матч засчитан всем */
+  function hitRes(cell, res){ return res === VOID || String(cell).indexOf(res) >= 0; }
 
   function parseCsvVariants(text){
     var need = state.matches.length;
@@ -3354,7 +3369,7 @@
       var h = 0, ms = 0;
       state.matches.forEach(function(m, i){
         if(!m.res) return;
-        if(String(cur[i]).indexOf(m.res) >= 0) h++; else ms++;
+        if(hitRes(cur[i], m.res)) h++; else ms++;
       });
       line += " · по факту угадано " + h + " из " + st.played +
               (ms ? ", максимум " + (cur.length - ms) : ", идёт на все " + cur.length);
@@ -3705,7 +3720,7 @@
       var np = mkPct(q); if(np) m.pct = np;
       if(q.norm_win_1 != null) m.kf = [q.norm_win_1, q.norm_draw, q.norm_win_2];
       /* сыгранные матчи: фактический исход и счёт приезжают в том же ответе */
-      m.res = normOut(evs[i].result) || "";
+      m.res = evRes(evs[i], info);
       m.score = evs[i].score || "";
     }
     state.resAt = Date.now();          /* когда данные с totobrief пришли в последний раз */
@@ -3783,7 +3798,7 @@
         /* коэффициенты конторы приходят в том же ответе, отдельного источника не нужно */
         kf: (q.norm_win_1 != null) ? [q.norm_win_1, q.norm_draw, q.norm_win_2] : null,
         /* фактический исход и счёт — пусто, пока матч не сыгран */
-        res: normOut(e.result) || "",
+        res: evRes(e, info),
         score: e.score || ""
       });
     });
@@ -3812,6 +3827,13 @@
   }
 
   /* ---------- предыдущий тираж: один шаг назад ---------- */
+  function mkVoid(){
+    var sc = document.createElement("span");
+    sc.className = "mscore void";
+    sc.textContent = "отменён";
+    sc.title = "Матч отменён: Балтбет засчитывает его угаданным для любой ставки";
+    return sc;
+  }
   function snapPrev(tirazh, id, deadline, matches, pool){
     /* собственные дата, пул и суперприз тиража — из списка тиражей, если он уже подтянут */
     var own = (state.drawByNo || {})[String(tirazh || "")] || {};
@@ -3838,7 +3860,7 @@
         var evs = (info.events || []).slice().sort(function(a,b){ return (a.order||0) - (b.order||0); });
         if(evs.length !== p.matches.length) return;
         evs.forEach(function(e, i){
-          p.matches[i].res = normOut(e.result) || "";
+          p.matches[i].res = evRes(e, info);
           p.matches[i].score = e.score || "";
         });
         p.at = Date.now();
@@ -3868,7 +3890,7 @@
               var t = splitTeams(e.name);
               if(!t) return;
               list.push({ home: t[0], away: t[1], league: e.championship || "",
-                          res: normOut(e.result) || "", score: e.score || "" });
+                          res: evRes(e, info), score: e.score || "" });
             });
             if(!list.length) return;
             if(state.prev) return;                       /* пока тянули, тираж уже сменился */
@@ -3901,7 +3923,9 @@
       teams.appendChild(vs);
       if(ac) teams.appendChild(mkFlag(ac, "tflag", m.away));
       teams.appendChild(document.createTextNode(m.away));
-      if(m.res || m.score){
+      if(m.res === VOID){
+        teams.appendChild(mkVoid());
+      } else if(m.res || m.score){
         var sc = document.createElement("span");
         sc.className = "mscore" + (m.res ? "" : " live");
         sc.textContent = m.score ? String(m.score).replace(/\s+/g, "") : "";
@@ -3944,10 +3968,12 @@
     });
     var done = p.matches.filter(function(m){ return m.res; }).length;
     var live = p.matches.filter(function(m){ return !m.res && m.score; }).length;
+    var voids = p.matches.filter(function(m){ return m.res === VOID; }).length;
     var bar = $("prevBar");
     bar.innerHTML = '<span class="pb-t">Просмотр тиража ' + escHtml(p.tirazh) + '</span>' +
       '<span>сыграно <b>' + done + '</b> из ' + p.matches.length + '</span>' +
       (live ? '<span>идёт <b>' + live + '</b></span>' : '') +
+      (voids ? '<span title="засчитан угаданным для любой ставки">отменён <b>' + voids + '</b></span>' : '') +
       (p.at ? '<span>обновлено <b>' + new Date(p.at).toTimeString().slice(0,5) + '</b></span>' : '') +
       '<button type="button" class="pb-back" id="btnPrevBack">К текущему тиражу &#8250;</button>';
     bar.hidden = false;
