@@ -192,6 +192,7 @@
   }
 
   function renderKickoff(){
+    try{ renderBlend(); }catch(e){}
     var tc = $("tkCount"); /* плитку «Матчей» убрали — оставляем проверку на случай возврата */
     if(tc) tc.textContent = state.matches.length;
     /* всё в шапке — по тиражу, который на экране: листаешь стрелками — меняется и суперприз */
@@ -4851,6 +4852,103 @@
     return { rows: rows, combos: combos, sim: { p9: h9 / RUNS, p12: h12 / RUNS, p15: h15 / RUNS, runs: RUNS } };
   }
 
+  /* ---------- «Сплав к дедлайну» ----------
+     Линия «Расхождений» ∪ купон «Симуляции» на тот же бюджет. Лишнее сверх бюджета
+     срезаем с наименее вероятных допов, недобор добиваем самыми выгодными исходами
+     (как в «Отборе»: вероятность × недогруз толпы). Проверка на 854 тиражах (4135–5017):
+     при 32 вариантах отдача 1,45 против 1,38 у одной «Симуляции», без 5 лучших тиражей
+     1,21 против 1,15 — не хуже, но разница в пределах шума. */
+  function blendOpenMs(){ return 60 * 60000; }   /* функция, а не var: renderKickoff зовёт нас раньше, чем var успевает присвоиться */
+  function planBlend(budget){
+    var g = gapSwaps();
+    if(!g) return { error: "нет линии конторы или долей игроков хотя бы в одном матче" };
+    var line = g.base.slice(), swapped = {};
+    var sw = g.swaps.slice().sort(function(a, b){ return b.score - a.score; });
+    for(var k = 0; k < sw.length; k++){
+      if(sw[k].score >= SWAP_MIN && sw[k].loss <= LOSS_CAP){ line[sw[k].i] = sw[k].to; swapped[sw[k].i] = 1; }
+      else break;
+    }
+    var sim = planBySim(budget), K = planByKelly();
+    var kp = K && !K.error ? (K.best || K.cands[0]) : null;
+    var kRows = kp ? kp.plan.rows : null;
+    var rows = sim.rows.map(function(r, i){
+      var votes = [0, 0, 0];
+      var src = { gap: [line[i]], kel: kRows ? kRows[i].set.slice() : [], sim: r.set.slice() };
+      [src.gap, src.kel, src.sim].forEach(function(st){ st.forEach(function(k){ votes[k]++; }); });
+      var set = r.locked ? r.set.slice() : [0, 1, 2].filter(function(k){ return votes[k] > 0; });
+      var strong = r.locked ? r.set.slice() : [0, 1, 2].filter(function(k){ return votes[k] >= 2; });
+      if(!strong.length && set.length){   /* ни один исход не набрал двух голосов — оставляем самый вероятный из выбранных */
+        strong = [set.reduce(function(x, y){ return r.p && r.p[y] > r.p[x] ? y : x; }, set[0])];
+      }
+      var why = r.locked ? "фикс, не трогаю" : !r.p ? "" :
+        "Расхождения: " + OUT[line[i]] + (swapped[i] ? " (замена)" : "") +
+        " · Симуляция: " + src.sim.map(function(k){ return OUT[k]; }).join("") +
+        (kRows ? " · Келли: " + src.kel.map(function(k){ return OUT[k]; }).join("") : "") +
+        (set.length > 1 ? " · голоса: " + set.map(function(k){ return OUT[k] + "×" + votes[k]; }).join(", ") : "");
+      return { idx: r.idx, m: r.m, locked: r.locked, p: r.p, q: r.q, set: set, strong: strong, why: why };
+    });
+    var cnt = function(key){ var c = 1; rows.forEach(function(r){ c *= Math.max(1, r[key].length); }); return c; };
+    var tails = function(key){
+      return poissonBinomial(rows.map(function(r){
+        if(!r.p) return r.locked ? 0.4 : 0;
+        var S = 0; r[key].forEach(function(k){ S += r.p[k]; }); return Math.min(1, S);
+      }));
+    };
+    var dAll = tails("set"), dStr = tails("strong");
+    return { rows: rows, combos: cnt("set"), strongCombos: cnt("strong"),
+             p9: evTail(dAll, 9), p12: evTail(dAll, 12), s9: evTail(dStr, 9),
+             kelly: kp ? (K.best ? "Келли выбрал купон на " + fmt(kp.plan.combos) + " вариант(ов)" : "У Келли выгодного купона нет, взят наименее убыточный на " + fmt(kp.plan.combos) + " вариант(ов)")
+                       : "Келли не посчитался: " + ((K && K.error) || "нет данных") + " — голосуют две стратегии" };
+  }
+  function blendState(){
+    var force = /[?&]blend=1\b/.test(location.search);
+    var dl = kickoffMs(), now = Date.now();
+    if(document.body.classList.contains("is-prev")) return { on: false, t: "Сплав к дедлайну · только для текущего тиража" };
+    if(force) return { on: true, t: "Сплав к дедлайну · тестовый режим" };
+    if(!dl) return { on: false, t: "Сплав к дедлайну · нет времени закрытия" };
+    var left = dl - now;
+    if(left <= 0) return { on: false, t: "Сплав к дедлайну · приём закрыт" };
+    var hm = function(ms){ var m = Math.ceil(ms / 60000), h = Math.floor(m / 60); return h ? h + " ч " + (m % 60) + " мин" : m + " мин"; };
+    if(left > blendOpenMs()) return { on: false, t: "Сплав к дедлайну · через " + hm(left - blendOpenMs()) };
+    return { on: true, t: "Сплав к дедлайну · до закрытия " + hm(left) };
+  }
+  function renderBlend(){
+    var b = $("btnBlend"); if(!b) return;
+    var st = blendState();
+    b.disabled = !st.on;
+    $("blendLbl").textContent = st.t;
+  }
+  function showBlend(){
+    if(!blendState().on) return;
+    var box = stratGuard("Сплав к дедлайну"); if(!box) return;
+    box.innerHTML = '<p class="ev-note">Обновляю тираж — беру самые свежие доли игроков и линию…</p>';
+    var done = function(){ renderBlendBox(); };
+    try{
+      var pr = pullTirazh(true);
+      if(pr && pr.then) pr.then(done, done); else done();
+    }catch(e){ done(); }
+  }
+  function renderBlendBox(){
+    var box = stratGuard("Сплав к дедлайну"); if(!box) return;
+    var budget = stratBudgetValue(), plan = planBlend(budget), price = Number(state.price) || 0;
+    if(plan.error){ box.innerHTML = '<p class="ev-warn">' + escHtml(plan.error) + '</p>'; $("evBack").hidden = false; return; }
+    var h = stratHow('Три стратегии — «Расхождения», «Симуляция» и «Келли» — собирают купон на свежих данных: «Симуляция» на выбранный бюджет, «Келли» сама выбирает размер под твой банк, «Расхождения» дают одну строку. ' +
+      'Все их исходы складываются в один купон: где стратегии расходятся, получается двойник или тройник. У каждого исхода видно, сколько стратегий его выбрали. ' +
+      'Дальше решаешь сам: ставишь всё или снимаешь в купоне лишнее до нужной суммы — первыми обычно снимают исходы с одним голосом.');
+    h += stratBudget(budget).replace("Вариантов не больше", "Бюджет «Симуляции», вариантов");
+    h += stratCards([["Все исходы", fmt(plan.combos) + " · " + fmt(plan.combos * price) + " ₽"],
+                     ["Шанс 9+", stratChance(plan.p9)],
+                     ["Только 2+ голоса", fmt(plan.strongCombos) + " · " + fmt(plan.strongCombos * price) + " ₽"]]);
+    h += '<p class="ev-note">Данные на ' + escHtml(fmtStamp(new Date().toISOString(), true)) + ' МСК. «Только 2+ голоса» — исходы, которые выбрали хотя бы две стратегии из трёх; шанс 9+ у такого купона ' + stratChance(plan.s9) + '. ' + escHtml(plan.kelly) + '.</p>';
+    h += stratTable(plan.rows);
+    h += '<div class="ev-data-go blend-go"><button type="button" id="dataApply" class="btn-ev">Поставить все исходы</button>' +
+         '<button type="button" id="blendStrong" class="btn-ev">Только 2+ голоса</button></div>' + STRAT_NOTE;
+    stratFinish(box, h, plan, "Сплав к дедлайну", renderBlendBox);
+    $("blendStrong").addEventListener("click", function(){
+      stratApply({ rows: plan.rows.map(function(r){ return { idx: r.idx, m: r.m, locked: r.locked, p: r.p, set: r.strong }; }) }, "Сплав · 2+ голоса");
+    });
+  }
+
   /* ---------- «Келли»: какой купон сильнее всего растит банк ----------
      Кандидаты — купоны «По данным» и «Симуляции» на 1…512 вариантов.
      Для каждого: шанс хоть какого-то приза p (купон угадал 9+), средняя выплата
@@ -4904,6 +5002,7 @@
     ["Бриф", "Собирает систему с гарантией: вместо всех строк купона берётся их часть, которая всё равно гарантирует заданное число угаданных при попадании в отмеченные исходы.<span class=\"ev-bt\">На истории не проверялась: работает поверх вашего купона.</span>"],
     ["Охота на 15", "Цель — забрать 15 из 15. Вместо системы берутся самые вероятные отдельные строки: система вынуждена покупать и маловероятные сочетания. Вероятности — модель, обученная на истории (линия конторы, ничьи, молодёжные турниры); среди почти равных строк остаются менее популярные у игроков, чтобы не делить суперприз. До 400 строк — в корзину, больше — сразу в CSV.<span class=\"ev-bt\">На истории (618 тиражей): при ~900 строках шанс 15 из 15 — 0,085% против 0,073% у системы той же цены, при ~8 000 строк — 0,55% против 0,44%. На ~8 000 строк 15 из 15 забрали бы 4 раза, система — ни разу.</span>"],
     ["Симуляция", "Цель — чаще попадать в призы (9 и больше). Двойники и тройники ставятся там, где сильнее всего растёт шанс 9+, итог проверяется розыгрышем 10 000 тиражей.<span class=\"ev-bt\">На истории (731 тираж, купон до 32 вариантов, в среднем 810 ₽): приз в 40,5% тиражей, 12+ — в 2,46%, 13+ — в 0,68%.</span>"],
+    ["Сплав к дедлайну", "Включается за час до закрытия приёма, когда доли игроков и линия уже почти окончательные. «Расхождения», «Симуляция» и «Келли» собирают свои купоны, и все их исходы складываются в один купон с двойниками и тройниками там, где стратегии расходятся. У каждого исхода видно число голосов. Можно поставить всё, только исходы с 2+ голосами или снять лишнее в купоне вручную. Это не гарантия выигрыша."],
     ["Келли", "Цель — быстрее всего растить банк. Сравнивает системы по вероятностям и купоны «Симуляции» на 1–512 вариантов и подставляет тот, у которого ожидаемый рост банка больше. Если выгодного нет, честно говорит «не ставить» и предлагает наименее убыточный.<span class=\"ev-bt\">На истории (731 тираж): в среднем купон за 3 110 ₽, приз в 55,1% тиражей, 12+ — в 5,06%, 13+ — в 1,5%. Модель выплат считала выгодным каждый тираж из-за крупных суперпризов — к этому стоит относиться осторожно.</span>"]
   ];
   function showStratGuide(){
@@ -5211,6 +5310,9 @@
   $("stratHelp").addEventListener("click", function(e){ e.preventDefault(); showStratGuide(); });
   $("btnSim").addEventListener("click", showSim);
   $("btnKelly").addEventListener("click", showKellyStrat);
+  $("btnBlend").addEventListener("click", showBlend);
+  renderBlend();
+  setInterval(renderBlend, 30000);
 
   /* ====================================================================
      конец новой аналитики
