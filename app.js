@@ -4860,6 +4860,17 @@
     });
     return { P: P, lines: lines, p15: p15, share: share, sysP: sysP, sysCombos: sys.combos };
   }
+  /* проставить в таблицу все исходы, которые встречаются в строках охоты */
+  function huntToTable(lines){
+    pushHistory("до «Охоты на 15»");
+    state.matches.forEach(function(m, i){
+      var pk = {"1": false, "X": false, "2": false};
+      lines.forEach(function(c){ pk[OUT[c.line[i]]] = true; });
+      m.picks = pk; m.mode = "free";
+    });
+    save(); render();
+    return tally().combos;
+  }
   function huntCommit(lines, price){
     var stamp = new Date().toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit"});
     var seen = {}, added = 0, dup = 0;
@@ -4878,8 +4889,7 @@
     if(state.played.length > 400) state.played.length = 400;
     save(); render();
     $("evBack").hidden = true;
-    say("«Охота на 15»: в корзину положено " + fmt(added) + " строк(и) на " + fmt(added * price) + " ₽"
-        + (dup ? ", повторов пропущено: " + fmt(dup) : "") + ". Лишнее убирается корзиной в «Сыгранных вариантах».");
+    return { added: added, dup: dup };
   }
   function showHunt(){
     var box = stratGuard("Стратегия «Охота на 15»"); if(!box) return;
@@ -4918,10 +4928,21 @@
     $("evBack").hidden = false;
     $("huntSize").addEventListener("change", function(){ state.huntSize = Number(this.value) || 100; save(); showHunt(); });
     var hb = $("huntBasket");
-    if(hb && canBasket) hb.addEventListener("click", function(){ huntCommit(plan.lines, price); });
+    function tableNote(sys){
+      return " Таблица показывает все исходы строк (система на " + fmt(sys) + " вар.) — «Записать» не нажимай.";
+    }
+    if(hb && canBasket) hb.addEventListener("click", function(){
+      var sys = huntToTable(plan.lines);
+      var r = huntCommit(plan.lines, price);
+      say("«Охота на 15»: в корзину " + fmt(r.added) + " строк на " + fmt(r.added * price) + " ₽"
+        + (r.dup ? ", повторов пропущено: " + fmt(r.dup) : "") + "." + tableNote(sys));
+    });
     $("huntCsv").addEventListener("click", function(){
       saveCsvFile(briefCsv(plan.lines.map(function(c){ return c.line; })),
         "ohota15_" + (state.tirazh || "tirazh") + "_" + plan.lines.length + ".csv");
+      var sys = huntToTable(plan.lines);
+      $("evBack").hidden = true;
+      say("«Охота на 15»: " + fmt(plan.lines.length) + " строк на " + fmt(plan.lines.length * price) + " ₽ — в CSV." + tableNote(sys));
     });
   }
   function showSim(){
