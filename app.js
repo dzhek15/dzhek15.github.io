@@ -1730,6 +1730,58 @@
         '. Это мнение, а не гарантия; составы за час до игры могут всё поменять.</p>' : '');
   }
   /* вариант ИИ: строка исходов «1», «1X», «12»… на каждый матч */
+  /* сравнение со стратегиями сайта: Расхождения, Симуляция, Келли — считаем здесь же, кэш на минуту */
+  var aiCmp = { at: 0, key: "", v: null };
+  function aiStrats(){
+    var key = state.tirazh + "|" + state.price + "|" + state.bankroll + "|" + stratBudgetValue();
+    if(aiCmp.v && aiCmp.key === key && Date.now() - aiCmp.at < 60000) return aiCmp.v;
+    var v = { gap: null, sim: null, kel: null }, str = function(set){ return set.map(function(k){ return OUT[k]; }).join(""); };
+    try {
+      var g = gapSwaps();
+      if(g){
+        var line = g.base.slice(), sw = g.swaps.slice().sort(function(x, y){ return y.score - x.score; });
+        for(var k = 0; k < sw.length; k++){
+          if(sw[k].score >= SWAP_MIN && sw[k].loss <= LOSS_CAP) line[sw[k].i] = sw[k].to; else break;
+        }
+        v.gap = line.map(function(o){ return OUT[o]; });
+      }
+    } catch(e){}
+    try { var sm = planBySim(stratBudgetValue()); if(sm && sm.rows) v.sim = sm.rows.map(function(r){ return str(r.set); }); } catch(e){}
+    try {
+      var K = planByKelly(), kp = K && !K.error ? (K.best || K.cands[0]) : null;
+      if(kp) v.kel = kp.plan.rows.map(function(r){ return str(r.set); });
+    } catch(e){}
+    aiCmp = { at: Date.now(), key: key, v: v };
+    return v;
+  }
+  var AI_SN = [["gap", "Расхождения"], ["sim", "Симуляция"], ["kel", "Келли"]];
+  function aiPickLine(r, idx){
+    if(!r || !r.p) return "";
+    var v = aiStrats(), P = r.p.split(""), cells = "", any = false, union = {};
+    AI_SN.forEach(function(n){
+      var x = v[n[0]] && v[n[0]][idx];
+      if(!x) return; any = true;
+      x.split("").forEach(function(o){ union[o] = 1; });
+      var same = x.length === r.p.length && P.every(function(o){ return x.indexOf(o) >= 0; });
+      cells += '<span class="ai-c"><i>' + n[1] + '</i><b>' + escHtml(x) + '</b>' + (same ? '<em class="ai-eq">=</em>' : '') + '</span>';
+    });
+    var head = '<p class="ai-pick">Вариант ИИ: <b>' + escHtml(r.p) + '</b>';
+    if(!any) return head + '</p>';
+    var add = P.filter(function(o){ return !union[o]; });
+    var tag = add.length ? '<span class="ai-vs ai-vs-diff">ИИ против всех: ' + add.join("") + '</span>' : "";
+    return head + tag + '</p><div class="ai-cmp">' + cells + '</div>';
+  }
+  function aiKellySummary(j){
+    var v = aiStrats(); if(!j || !j.m) return "";
+    var parts = [];
+    AI_SN.forEach(function(n){
+      var a = v[n[0]]; if(!a) return;
+      var same = 0, t = 0;
+      j.m.forEach(function(r, i){ if(r.p && a[i]){ t++; if(r.p.split("").sort().join("") === a[i].split("").sort().join("")) same++; } });
+      if(t) parts.push(n[1] + " " + same + "/" + t);
+    });
+    return parts.length ? '<p class="ev-note">ИИ совпадает по матчам: ' + parts.join(" · ") + '. Стратегии сайта берут те же цифры (линия и толпа), поэтому ИИ отличается от них только там, где есть новости.</p>' : "";
+  }
   function aiPlan(j){
     if(!j || String(j.number) !== String(state.tirazh) || !j.m || j.m.length !== state.matches.length) return null;
     var combos = 1;
@@ -1791,7 +1843,7 @@
         return;
       }
       var all = aiPlan(j);
-      el.innerHTML = (r.p ? '<p class="ai-pick">Вариант ИИ: <b>' + escHtml(r.p) + '</b></p>' : '') + aiHtml(r, true);
+      el.innerHTML = aiPickLine(r, idx) + aiHtml(r, true) + aiKellySummary(j);
       if(r.p){
         var go = $("aiGo");
         go.insertAdjacentHTML("afterbegin",
@@ -1868,7 +1920,8 @@
     $("evBack").hidden = false;
     if(!prev) loadAi().then(function(j){
       var el = $("nwAi"), r = aiFor(j, idx); if(!el || !r) return;
-      el.innerHTML = '<h3 class="th-h2 nw-h">Разбор ИИ</h3>' + (r.p ? '<p class="ai-pick">Вариант ИИ: <b>' + escHtml(r.p) + '</b> · <button type="button" class="nw-btn" id="nwAiMore">поставить</button></p>' : '') + aiHtml(r, false);
+      el.innerHTML = '<h3 class="th-h2 nw-h">Разбор ИИ</h3>' + (r.p ? aiPickLine(r, idx) : '') + aiHtml(r, false);
+      if(r.p) el.insertAdjacentHTML("beforeend", '<p class="ai-more"><button type="button" class="nw-btn" id="nwAiMore">поставить вариант ИИ</button></p>');
       var mb = $("nwAiMore"); if(mb) mb.addEventListener("click", function(){ showAi(m, idx); });
     });
     loadSites().then(function(j){

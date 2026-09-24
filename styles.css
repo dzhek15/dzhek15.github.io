@@ -1082,3 +1082,15 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
   .row .modes .mode{padding-left:7px; padding-right:7px; gap:3px}
 }
 @media (max-width:345px){ .row .modes{gap:3px} .row .modes .mode{padding-left:6px; padding-right:6px} .row .modes .mode svg{display:none} }
+.ai-pick .ai-sep{margin:0 8px; color:var(--rule-strong)}
+.ai-pick b.ai-kel{color:var(--ink)}
+.ai-vs{display:inline-block; margin-left:10px; padding:1px 8px; border-radius:10px; font-size:12px; border:1px solid var(--rule-strong); color:var(--muted); vertical-align:1px}
+.ai-vs-same{color:var(--muted)}
+.ai-vs-add,.ai-vs-del{color:var(--brand-gold); border-color:var(--brand-gold)}
+.ai-vs-diff{color:#E8453C; border-color:#E8453C}
+.ai-cmp{display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin:0 0 10px}
+.ai-c{display:flex; flex-direction:column; align-items:center; gap:2px; padding:6px 4px; border:1px solid var(--rule-strong); border-radius:6px; position:relative}
+.ai-c i{font-style:normal; font-size:11px; color:var(--muted)}
+.ai-c b{font-family:"IBM Plex Mono",monospace; font-size:14px; color:var(--ink)}
+.ai-c .ai-eq{position:absolute; top:3px; right:6px; font-style:normal; font-size:11px; color:var(--brand-gold)}
+.ai-more{margin:4px 0 0; text-align:center}
