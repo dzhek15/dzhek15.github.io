@@ -1704,6 +1704,104 @@
       .catch(function(){ sites.loading = null; return null; });
     return sites.loading;
   }
+  /* разбор матчей от ИИ: data/api/ai.json, пишется один раз на тираж */
+  var ai = { data: null, at: 0, loading: null };
+  function loadAi(){
+    if(ai.data && Date.now() - ai.at < 30 * 60000) return Promise.resolve(ai.data);
+    if(ai.loading) return ai.loading;
+    if(typeof fetch !== "function") return Promise.resolve(null);
+    ai.loading = fetch(MIRROR + "ai.json?t=" + Math.floor(Date.now() / 1800000))
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){ ai.data = j; ai.at = Date.now(); ai.loading = null; return j; })
+      .catch(function(){ ai.loading = null; return null; });
+    return ai.loading;
+  }
+  function aiFor(j, idx){
+    return (j && String(j.number) === String(state.tirazh) && j.m && j.m[idx]) || null;
+  }
+  function aiHtml(r, full){
+    var src = (r.s || []).map(function(x){
+      return '<a target="_blank" rel="noopener noreferrer" href="' + escHtml(x.u) + '">' + escHtml(x.n) + '</a>';
+    }).join(" · ");
+    return '<p class="ai-txt">' + escHtml(r.t) + '</p>' +
+      (src ? '<p class="ai-src">Источники: ' + src + '</p>' : '') +
+      (full ? '<p class="ev-note">Разбор написан ИИ по открытым источникам' +
+        (ai.data && ai.data.at ? ' (' + new Date(ai.data.at).toLocaleString("ru-RU", {day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit", timeZone:"Europe/Moscow"}) + ' МСК)' : '') +
+        '. Это мнение, а не гарантия; составы за час до игры могут всё поменять.</p>' : '');
+  }
+  /* вариант ИИ: строка исходов «1», «1X», «12»… на каждый матч */
+  function aiPlan(j){
+    if(!j || String(j.number) !== String(state.tirazh) || !j.m || j.m.length !== state.matches.length) return null;
+    var combos = 1;
+    for(var i = 0; i < j.m.length; i++){
+      var p = String(j.m[i].p || "");
+      if(!/^[1X2]{1,3}$/.test(p)) return null;
+      combos *= p.length;
+    }
+    return { combos: combos };
+  }
+  function aiApply(j, only){
+    pushHistory("до варианта ИИ");
+    var set = 0, locked = 0;
+    state.matches.forEach(function(m, i){
+      if(only && only.indexOf(i) < 0) return;
+      var p = String((j.m[i] || {}).p || "");
+      if(!/^[1X2]{1,3}$/.test(p)) return;
+      if(m.mode === "lock"){ locked++; return; }
+      m.picks = { "1": false, "X": false, "2": false };
+      p.split("").forEach(function(o){ m.picks[o] = true; });
+      m.mode = "free"; set++;
+    });
+    save(); render();
+    $("evBack").hidden = true;
+    var t0 = tally();
+    say("Вариант ИИ: проставлено " + set + " матч(ей)" + (locked ? ", зафиксированных не трогал: " + locked : "") +
+        ". В купоне " + fmt(t0.combos) + " вариант(ов) на " + fmt(t0.combos * (Number(state.price) || 0)) + " ₽. «Вернуть» откатит.");
+  }
+  /* нет разбора на этот тираж — кнопка серая и не нажимается, место под неё остаётся */
+  function aiBtnState(b, idx){
+    var ok = !!aiFor(ai.data, idx);
+    b.disabled = !ok;
+    b.title = ok ? "Короткий разбор матча от ИИ" : "Разбор не готов";
+  }
+  function aiBtnsUpdate(){
+    [].slice.call(document.querySelectorAll(".ai-btn")).forEach(function(b){ aiBtnState(b, Number(b.getAttribute("data-idx"))); });
+  }
+  function mkAiBtn(m, idx){
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "nw-btn ai-btn";
+    b.textContent = "ИИ";
+    b.setAttribute("data-idx", idx);
+    aiBtnState(b, idx);
+    b.setAttribute("aria-label", "Разбор ИИ: " + m.home + " — " + m.away);
+    b.addEventListener("click", function(ev){ ev.stopPropagation(); showAi(m, idx); });
+    return b;
+  }
+  function showAi(m, idx){
+    $("evTitle").textContent = "Разбор ИИ · " + m.home + " — " + m.away;
+    $("evBody").innerHTML = '<div id="aiBox"><p class="ev-note">Загружаю…</p></div>' +
+      '<div class="blend-go" id="aiGo"><button type="button" class="btn-ev" id="aiNews">Новости и составы</button></div>';
+    $("evBack").hidden = false;
+    $("aiNews").addEventListener("click", function(){ showNews(m, idx, false); });
+    loadAi().then(function(j){
+      var el = $("aiBox"); if(!el) return;
+      var r = aiFor(j, idx);
+      if(!r){
+        el.innerHTML = '<p class="ev-warn">Разбора для этого тиража пока нет: его пишут один раз, вскоре после открытия тиража. Загляни позже или открой новости.</p>';
+        return;
+      }
+      var all = aiPlan(j);
+      el.innerHTML = (r.p ? '<p class="ai-pick">Вариант ИИ: <b>' + escHtml(r.p) + '</b></p>' : '') + aiHtml(r, true);
+      if(r.p){
+        var go = $("aiGo");
+        go.insertAdjacentHTML("afterbegin",
+          '<button type="button" class="btn-ev" id="aiOne">Поставить ' + escHtml(r.p) + ' в матч</button>' +
+          (all ? '<button type="button" class="btn-ev" id="aiAll">Весь купон ИИ · ' + fmt(all.combos) + ' вар.</button>' : ''));
+        $("aiOne").addEventListener("click", function(){ aiApply(j, [idx]); });
+        if(all) $("aiAll").addEventListener("click", function(){ aiApply(j, null); });
+      }
+    });
+  }
   function nwHost(u){ var r = /^https?:\/\/(?:www\.)?([^\/?#]+)/i.exec(u || ""); return r ? r[1] : ""; }
   function siteLink(team, url){
     var ok = /^https?:\/\//i.test(url || "");
@@ -1755,9 +1853,14 @@
       '</div>' +
       '<div class="nw-links" id="nwSites">' + siteLink(h, "") + siteLink(a, "") + '</div>';
     var box = $("evBody");
-    box.innerHTML = links + '<h3 class="th-h2 nw-h">Свежие заголовки</h3><div id="nwList"><p class="ev-note">Загружаю…</p></div>' +
+    box.innerHTML = (prev ? '' : '<div id="nwAi"></div>') + links + '<h3 class="th-h2 nw-h">Свежие заголовки</h3><div id="nwList"><p class="ev-note">Загружаю…</p></div>' +
       '<p class="ev-note">Заголовки обновляются раз в 2 часа. Сначала — про обе команды и с пометкой о травмах, составе, тренере; прогнозы букмекерских сайтов — в конце.</p>';
     $("evBack").hidden = false;
+    if(!prev) loadAi().then(function(j){
+      var el = $("nwAi"), r = aiFor(j, idx); if(!el || !r) return;
+      el.innerHTML = '<h3 class="th-h2 nw-h">Разбор ИИ</h3>' + (r.p ? '<p class="ai-pick">Вариант ИИ: <b>' + escHtml(r.p) + '</b> · <button type="button" class="nw-btn" id="nwAiMore">поставить</button></p>' : '') + aiHtml(r, false);
+      var mb = $("nwAiMore"); if(mb) mb.addEventListener("click", function(){ showAi(m, idx); });
+    });
     loadSites().then(function(j){
       var el = $("nwSites"); if(!el) return;
       var r = j && !prev && String(j.number) === String(state.tirazh) && j.m && j.m[idx];
@@ -1838,6 +1941,7 @@
       meta.appendChild(document.createTextNode(
         [m.date, m.time, m.league].filter(Boolean).join("  ·  ")));
       meta.appendChild(mkNewsBtn(m, idx, false));
+      meta.appendChild(mkAiBtn(m, idx));
       if(m.res === VOID){
         teams.appendChild(mkVoid());
       } else if(!m.res && !m.score && m.fsVoid){
@@ -5486,6 +5590,8 @@
   renderBlend();
   setInterval(renderBlend, 30000);
   setTimeout(checkFsVoids, 4000);
+  loadAi().then(aiBtnsUpdate);
+  setInterval(function(){ loadAi().then(aiBtnsUpdate); }, 30 * 60000);
   setInterval(checkFsVoids, 10 * 60000);
 
   /* ====================================================================
