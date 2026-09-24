@@ -1828,6 +1828,16 @@
     b.addEventListener("click", function(){ showNews(m, idx, prev); });
     return b;
   }
+  function mkAiMode(m, idx){
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "mode nw-mode ai-btn";
+    b.textContent = "ИИ";
+    b.setAttribute("data-idx", idx);
+    b.setAttribute("aria-label", "Разбор ИИ: " + m.home + " — " + m.away);
+    aiBtnState(b, idx);
+    b.addEventListener("click", function(){ showAi(m, idx); });
+    return b;
+  }
   function numNews(el, m, idx, prev){
     el.classList.add("num-nw");
     el.title = "Составы и новости по матчу";
@@ -2125,6 +2135,7 @@
       modes.appendChild(bLock);
       modes.appendChild(mkFs(m));
       modes.appendChild(mkNewsMode(m, idx, false));
+      modes.appendChild(mkAiMode(m, idx));
       row.appendChild(modes);
 
       rowsEl.appendChild(row);
