@@ -1,6 +1,8 @@
 <!doctype html>
 <html lang="ru" data-theme="dark">
 <head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-jfl2gXaeR6/DX8GF60VSTAC6ih29s2OiMC+jvWNUKJw='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://flagcdn.com; connect-src 'self' https://totobrief.com https://sweet-heart-f51d.d-pavlovski51.workers.dev https://api.github.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <script>try{var __t=localStorage.getItem(window.CONFIG?window.CONFIG.THEME_KEY:"theme"); if(__t==="light"||__t==="dark"){document.documentElement.setAttribute("data-theme",__t);}}catch(e){}</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -20,7 +22,7 @@ body{margin:0; font:14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; b
 img{max-width:100%}
 [hidden]{display:none !important}
 </style>
-<link rel="stylesheet" href="styles.css?v=20260924h">
+<link rel="stylesheet" href="styles.css?v=20260924j">
 </head>
 <body>
 
@@ -74,6 +76,10 @@ img{max-width:100%}
           <svg class="ic-sun" width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="10" cy="10" r="4"/><path d="M10 2v2M10 16v2M18 10h-2M4 10H2M15.5 4.5l-1.4 1.4M5.9 14.1l-1.4 1.4M15.5 15.5l-1.4-1.4M5.9 5.9 4.5 4.5"/></svg>
           <svg class="ic-moon" width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 12.5A7 7 0 0 1 7.5 3a7 7 0 1 0 9.5 9.5z"/></svg>
           <span class="lbl">Тема</span>
+        </button>
+        <button id="btnFeedSt" type="button" title="Состояние данных: когда что обновлялось">
+          <span class="data-dot" id="dataDot" aria-hidden="true"></span>
+          <span class="lbl">Данные</span>
         </button>
       </div>
   </div>
@@ -252,8 +258,8 @@ img{max-width:100%}
   </footer>
 </div>
 
-<script src="config.js?v=20260924h"></script>
-<script src="app.js?v=20260924h"></script>
+<script src="config.js?v=20260924j"></script>
+<script src="app.js?v=20260924j"></script>
 
 </body>
 </html>

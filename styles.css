@@ -1020,3 +1020,13 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 }
 @media (max-width:520px){ .nw-links{grid-template-columns:1fr} }
 #nwSites{margin-top:-6px}
+
+/* ---------- состояние данных ---------- */
+#btnFeedSt{display:inline-flex; align-items:center; gap:6px; padding:5px 9px}
+.data-dot{display:inline-block; flex:none; width:8px; height:8px; border-radius:50%; background:var(--rule-strong)}
+.data-dot.lv0{background:#3fa66a}
+.data-dot.lv1{background:var(--brand-gold)}
+.data-dot.lv2{background:#d0463b}
+.ds-ul{list-style:none; margin:0 0 6px; padding:0}
+.ds-ul li{display:flex; gap:10px; align-items:baseline; padding:9px 0; border-bottom:1px solid var(--rule); font-size:13.5px; line-height:1.4}
+.ds-ul li .data-dot{position:relative; top:-1px}

@@ -1546,6 +1546,7 @@
   }
   function openFs(m){
     var w = window.open("", "_blank");          /* вкладку открываем сразу — после fetch браузер её заблокирует */
+    if(w){ try{ w.opener = null; }catch(e){} }   /* чужая страница не должна управлять нашей вкладкой */
     var fallback = "https://www.google.com/search?q=" + encodeURIComponent(m.home + " " + m.away + " flashscore");
     function go(url){ if(w) w.location = url; else window.open(url, "_blank", "noopener"); }
     if(typeof fetch !== "function"){ go(fallback); return; }
@@ -3775,6 +3776,77 @@
     if(short && d.toISOString().slice(0, 10) === new Date(Date.now() + 3 * 3600000).toISOString().slice(0, 10)) return t;
     return p(d.getUTCDate()) + "." + p(d.getUTCMonth() + 1) + " " + t;
   }
+  /* ---------- Состояние данных ----------
+     Точка на кнопке «Данные»: зелёная — всё свежее, жёлтая — что-то запаздывает,
+     красная — источник не отвечает или автообновление давно не запускалось. */
+  var dstat = { at: 0, res: null };
+  var GH_RUNS = "https://api.github.com/repos/dzhek15/dzhek15.github.io/actions/workflows/feed.yml/runs?per_page=1";
+  function jget(url){
+    return fetch(url).then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; });
+  }
+  function ageMin(iso){ var t = Date.parse(iso || ""); return isFinite(t) ? (Date.now() - t) / 60000 : Infinity; }
+  function ageTxt(iso){
+    var m = ageMin(iso); if(!isFinite(m)) return "нет данных";
+    m = Math.max(0, Math.round(m));
+    var t = m < 1 ? "только что" : m < 60 ? m + " мин назад" : m < 48 * 60 ? Math.round(m / 60) + " ч назад" : Math.round(m / 1440) + " дн назад";
+    return t + " (" + fmtStamp(iso, true) + ")";
+  }
+  function checkData(force){
+    if(!force && dstat.res && Date.now() - dstat.at < 5 * 60000) return Promise.resolve(dstat.res);
+    var t = Math.floor(Date.now() / 60000);
+    return Promise.all([
+      jget(MIRROR + "status.json?t=" + t), jget(MIRROR + "news.json?t=" + t),
+      jget(MIRROR + "sites.json?t=" + t), jget(GH_RUNS)
+    ]).then(function(r){
+      var st = r[0] || {}, nw = r[1], si = r[2], gh = r[3] && r[3].workflow_runs && r[3].workflow_runs[0];
+      var rows = [];
+      /* уровень: 0 — норма, 1 — запаздывает, 2 — проблема */
+      if(gh){
+        var ok = gh.conclusion === "success" || gh.status !== "completed";
+        var lv = !ok ? 2 : ageMin(gh.created_at) > 90 ? 2 : ageMin(gh.created_at) > 45 ? 1 : 0;
+        rows.push({ n: "Автообновление на GitHub", d: "каждые 30 минут", at: gh.created_at, lv: lv,
+          s: !ok ? "последний запуск с ошибкой" : gh.status !== "completed" ? "идёт сейчас" : lv ? "давно не запускалось" : "работает" });
+      } else {
+        rows.push({ n: "Автообновление на GitHub", d: "каждые 30 минут", at: null, lv: 1, s: "GitHub не ответил — проверить не удалось" });
+      }
+      var src = function(name, d, okKey, atKey, errKey){
+        var ok = st[okKey] !== false, lv = !ok ? 2 : ageMin(st[atKey]) > 8 * 60 ? 1 : 0;
+        rows.push({ n: name, d: d, at: st[atKey], lv: lv,
+          s: !ok ? "не отвечает" + (st[errKey] ? ": " + String(st[errKey]).slice(0, 80) : "") : lv ? "давно без свежих данных" : "отвечает" });
+      };
+      src("totobrief", "тираж, доли игроков, линия конторы", "totobrief_ok", "totobrief_ok_at", "totobrief_error");
+      src("stavka.tv", "составы тиража и результаты", "stavka_ok", "stavka_ok_at", "stavka_error");
+      var cur = String(state.tirazh || "");
+      var nl = !nw ? 1 : String(nw.number) !== cur ? 1 : ageMin(nw.at) > 5 * 60 ? 1 : 0;
+      rows.push({ n: "Новости по матчам", d: "Google Новости, раз в 2 часа", at: nw && nw.at, lv: nl,
+        s: !nw ? "файла нет" : String(nw.number) !== cur ? "собраны для тиража №" + nw.number : nl ? "давно не обновлялись" : "свежие" });
+      var sl = !si ? 1 : String(si.number) !== cur ? 1 : 0;
+      rows.push({ n: "Сайты команд", d: "Wikidata, для новых команд тиража", at: si && si.at, lv: sl,
+        s: !si ? "файла нет" : String(si.number) !== cur ? "собраны для тиража №" + si.number : "готовы" });
+      dstat = { at: Date.now(), res: rows };
+      var worst = rows.reduce(function(x, y){ return Math.max(x, y.lv); }, 0);
+      var dot = $("dataDot");
+      if(dot) dot.className = "data-dot lv" + worst;
+      var b = $("btnFeedSt");
+      if(b) b.title = worst === 0 ? "Данные: всё обновляется" : worst === 1 ? "Данные: что-то запаздывает — нажми, чтобы посмотреть" : "Данные: есть проблема — нажми, чтобы посмотреть";
+      return rows;
+    });
+  }
+  function showData(){
+    $("evTitle").textContent = "Состояние данных";
+    var box = $("evBody");
+    box.innerHTML = '<p class="ev-note">Проверяю…</p>';
+    $("evBack").hidden = false;
+    checkData(true).then(function(rows){
+      var lab = ["норма", "запаздывает", "проблема"];
+      box.innerHTML = '<ul class="ds-ul">' + rows.map(function(r){
+        return '<li><span class="data-dot lv' + r.lv + '" aria-label="' + lab[r.lv] + '"></span>' +
+          '<div><b>' + escHtml(r.n) + '</b> — ' + escHtml(r.s) +
+          '<span class="nw-meta">' + escHtml(r.d) + ' · ' + escHtml(r.at ? ageTxt(r.at) : "время неизвестно") + '</span></div></li>';
+      }).join("") + '</ul>' +
+      '<p class="ev-note">Время — московское. Основной источник — totobrief, запасной — stavka.tv: если один молчит, сайт берёт данные из другого и из зеркала на GitHub.</p>';
+    });
+  }
   function showFeed(){
     var wrap = $("tkFeedWrap");
     if(feed.src !== "mirror"){ wrap.hidden = true; return; }
@@ -4253,6 +4325,9 @@
     b.setAttribute("aria-pressed", isLight ? "true" : "false");
     b.title = isLight ? "Сейчас светлая тема — нажми, чтобы включить тёмную" : "Сейчас тёмная тема — нажми, чтобы включить светлую";
   }
+  $("btnFeedSt").addEventListener("click", showData);
+  setTimeout(function(){ checkData(); }, 4000);
+  setInterval(function(){ checkData(true); }, 10 * 60000);
   $("btnTheme").addEventListener("click", function(){
     var isLight = document.documentElement.getAttribute("data-theme") === "light";
     var next = isLight ? "dark" : "light";

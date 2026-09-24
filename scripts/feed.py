@@ -695,6 +695,7 @@ def update_sites(infos):
     new = {"number": info.get("number"), "m": pairs, "t": cache}
     if new == {k: old.get(k) for k in new}:
         return 0
+    new["at"] = now_iso()
     log("сайты команд: тираж %s, найдено %d из %d" % (info.get("number"), sum(1 for r in pairs for u in r if u),
                                                       sum(len(r) for r in pairs)))
     return wr("sites.json", new)
