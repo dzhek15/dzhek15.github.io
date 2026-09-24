@@ -486,6 +486,117 @@ def build_elo(hist):
     return {"teams": out, "updated_at": now_iso(), "count": len(out)}
 
 
+# ---------------------------------------------------------------- новости по матчам
+# Заголовки из Google News RSS (бесплатно, без ключа) по каждому матчу активного тиража.
+# Пишем data/api/news.json не чаще раза в NEWS_EVERY, чтобы не плодить коммиты.
+NEWS_EVERY = timedelta(hours=2)
+NEWS_KEEP = 8
+NEWS_DAYS = 4
+GN = "https://news.google.com/rss/search?hl=ru&gl=RU&ceid=RU:ru&q="
+
+
+def clean_team(t):
+    t = re.sub(r"\([^)]*\)", " ", t or "")
+    return re.sub(r"\s+", " ", t).strip()
+
+
+def team_stems(t):
+    """корни слов названия, по которым проверяем, что новость про эту команду"""
+    ws = [w for w in re.split(r"[^\w]+", clean_team(t).lower().replace("ё", "е")) if len(w) >= 4]
+    return [w[:max(4, len(w) - 2)] for w in ws]
+
+
+def gnews(q):
+    import urllib.parse
+    import xml.etree.ElementTree as ET
+    from email.utils import parsedate_to_datetime
+    raw = get(GN + urllib.parse.quote(q + " when:%dd" % NEWS_DAYS), timeout=20)
+    out = []
+    for it in ET.fromstring(raw).iter("item"):
+        title = (it.findtext("title") or "").strip()
+        src = (it.findtext("source") or "").strip()
+        if src and title.endswith(" - " + src):
+            title = title[: -len(src) - 3].strip()
+        try:
+            d = parsedate_to_datetime(it.findtext("pubDate")).astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        except Exception:
+            d = ""
+        out.append({"t": title, "s": src, "d": d, "u": (it.findtext("link") or "").strip()})
+    return out
+
+
+HOT = ("травм", "дисквал", "состав", "ротац", "пропуст", "пропуска", "не сыграет", "не помож", "отстран",
+       "вернул", "вернет", "вернёт", "тренер", "уволен", "отставк", "повреж", "восстанов", "карантин", "забастов")
+FOOT = ("матч", "футбол", "сыгра", "побед", "пораж", "ничь", "гол", "лиг", "чемпионат", "кубок", "тур",
+        "сборн", "игрок", "тренер", "клуб", "состав", "травм", "прогноз", "счет", "счёт")
+FORECAST = ("прогноз", "ставк", "коэффициент", "кэф", "букмекер")
+
+
+def build_news(info):
+    evs = sorted(info.get("events") or [], key=lambda e: e.get("order") or 0)
+    res = []
+    for e in evs:
+        t = DASH.split(e.get("name") or "", 1)
+        if len(t) != 2:
+            res.append([]); continue
+        raw_h, raw_a = t[0], t[1]
+        youth = re.search(r"\((\d\d)\)", raw_h)
+        women = "(ж)" in raw_h
+        h, a = clean_team(raw_h), clean_team(raw_a)
+        sh, sa = team_stems(h), team_stems(a)
+        tag = (" U%s" % youth.group(1)) if youth else (" женщины" if women else "")
+        need = (("молод", "u%s" % youth.group(1), "до %s" % youth.group(1)) if youth
+                else (("женск", "женщин") if women else None))
+        seen, items = set(), []
+        for q, single in ((h + " " + a + tag, False), (h + tag + " футбол", True), (a + tag + " футбол", True)):
+            try:
+                got = gnews(q)
+            except Exception as ex:
+                log("новости: не вышло", q, repr(ex)[:80]); got = []
+            for x in got:
+                low = x["t"].lower().replace("ё", "е")
+                ih, ia = any(st in low for st in sh), any(st in low for st in sa)
+                if not (ih or ia):
+                    continue                              # заголовок не про эти команды
+                if not (ih and ia):
+                    if not any(w in low for w in FOOT):
+                        continue                          # тёзка из другого мира (киберспорт и т. п.)
+                if need and not any(w in low for w in need):
+                    continue                              # молодёжка/женщины: без пометки — это основа
+                if not need and re.search(r"u\d\d|молодеж|до \d\d|женск|юниор|юнош", low):
+                    continue                              # у основы — не про молодёжку и женщин
+                key = re.sub(r"\W+", "", low)[:50]
+                if key in seen:
+                    continue
+                seen.add(key)
+                x["b"] = 1 if (ih and ia) else 0
+                x["h"] = 1 if any(w in low for w in HOT) else 0
+                x["f"] = 1 if any(w in low for w in FORECAST) else 0
+                items.append(x)
+            time.sleep(0.4)
+        items.sort(key=lambda x: x["d"], reverse=True)
+        items.sort(key=lambda x: (-x["b"], -x["h"], x["f"]))   # про оба клуба → горячее → прочее → прогнозы
+        res.append(items[:NEWS_KEEP])
+    return res
+
+
+def update_news(infos):
+    act = [v for v in infos.values() if (v.get("data") or v).get("status") == "active"]
+    if not act:
+        return 0
+    info = act[0].get("data") or act[0]
+    old = rd("news.json", {})
+    try:
+        age = datetime.now(timezone.utc) - datetime.strptime(old.get("at", ""), "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+    except Exception:
+        age = NEWS_EVERY * 10
+    if str(old.get("number")) == str(info.get("number")) and age < NEWS_EVERY:
+        return 0
+    m = build_news(info)
+    log("новости: тираж %s, заголовков %d" % (info.get("number"), sum(len(x) for x in m)))
+    return wr("news.json", {"number": info.get("number"), "at": now_iso(), "m": m})
+
+
 def main():
     status = rd("status.json", {})
     pages = [rd("drawings-%d.json" % p, None) for p in range(1, PAGES + 1)]
@@ -564,6 +675,10 @@ def main():
             removed = True
 
     changed = (1 if removed else 0) + (1 if hist_changed else 0)
+    try:
+        changed += update_news(infos)
+    except Exception as e:
+        log("новости не собрались:", repr(e))
     for i, pg in enumerate(pages):
         changed += wr("drawings-%d.json" % (i + 1), pg)
     for k, v in infos.items():

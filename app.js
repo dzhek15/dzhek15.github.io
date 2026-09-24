@@ -1577,6 +1577,89 @@
     b.addEventListener("click", function(){ openFs(m); });
     return b;
   }
+  /* ---------- Составы и новости по матчу ----------
+     Заголовки собирает GitHub Actions из Google News раз в 2 часа (data/api/news.json),
+     ссылки собираются из названий команд — работают для любой лиги. */
+  var news = { data: null, at: 0, loading: null };
+  function loadNews(){
+    if(news.data && Date.now() - news.at < 10 * 60000) return Promise.resolve(news.data);
+    if(news.loading) return news.loading;
+    if(typeof fetch !== "function") return Promise.resolve(null);
+    news.loading = fetch(MIRROR + "news.json?t=" + Math.floor(Date.now() / 600000))
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){ news.data = j; news.at = Date.now(); news.loading = null; return j; })
+      .catch(function(){ news.loading = null; return null; });
+    return news.loading;
+  }
+  function mkNewsBtn(m, idx, prev){
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "nw-btn";
+    b.textContent = "новости";
+    b.title = "Составы и свежие новости по матчу";
+    b.setAttribute("aria-label", "Составы и новости: " + m.home + " — " + m.away);
+    b.addEventListener("click", function(ev){ ev.stopPropagation(); showNews(m, idx, prev); });
+    return b;
+  }
+  /* на телефоне кнопка стоит в ряду «рандом · фикс · FS» — там ей просторно */
+  function mkNewsMode(m, idx, prev){
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "mode nw-mode";
+    b.textContent = "новости";
+    b.title = "Составы и свежие новости по матчу";
+    b.setAttribute("aria-label", "Составы и новости: " + m.home + " — " + m.away);
+    b.addEventListener("click", function(){ showNews(m, idx, prev); });
+    return b;
+  }
+  function numNews(el, m, idx, prev){
+    el.classList.add("num-nw");
+    el.title = "Составы и новости по матчу";
+    el.addEventListener("click", function(){ showNews(m, idx, prev); });
+  }
+  var NW_HOT = /травм|дисквал|состав|ротац|пропуст|не сыграет|отстран|вернул|верн[её]т|тренер|уволен|отставк|поврежд|восстанов/i;
+  function nwAgo(iso){
+    var t = Date.parse(iso); if(!isFinite(t)) return "";
+    var h = Math.max(0, Math.round((Date.now() - t) / 3600000));
+    return h < 1 ? "только что" : h < 24 ? h + " ч назад" : Math.round(h / 24) + " дн назад";
+  }
+  function nwTeam(x){ return String(x || "").replace(/\([^)]*\)/g, " ").replace(/\s+/g, " ").trim(); }
+  function showNews(m, idx, prev){
+    var h = nwTeam(m.home), a = nwTeam(m.away), pair = h + " " + a;
+    var q = function(s){ return encodeURIComponent(s); };
+    $("evTitle").textContent = m.home + " — " + m.away;
+    var links =
+      '<div class="nw-links">' +
+        '<button type="button" class="nw-link" id="nwFs">Матч на Flashscore<span>составы за час до начала</span></button>' +
+        '<a class="nw-link" target="_blank" rel="noopener noreferrer" href="https://www.google.com/search?q=' + q(pair + " sofascore") + '">Sofascore<span>составы, рейтинги игроков</span></a>' +
+        '<a class="nw-link" target="_blank" rel="noopener noreferrer" href="https://www.google.com/search?q=' + q(pair + " травмы дисквалификации") + '">Травмы и дисквалификации<span>поиск по обеим командам</span></a>' +
+        '<a class="nw-link" target="_blank" rel="noopener noreferrer" href="https://news.google.com/search?hl=ru&gl=RU&ceid=RU:ru&q=' + q(pair + " when:7d") + '">Все новости<span>Google Новости за неделю</span></a>' +
+      '</div>';
+    var box = $("evBody");
+    box.innerHTML = links + '<h3 class="th-h2 nw-h">Свежие заголовки</h3><div id="nwList"><p class="ev-note">Загружаю…</p></div>' +
+      '<p class="ev-note">Заголовки обновляются раз в 2 часа. Сначала — про обе команды и с пометкой о травмах, составе, тренере; прогнозы букмекерских сайтов — в конце.</p>';
+    $("evBack").hidden = false;
+    $("nwFs").addEventListener("click", function(){ openFs(m); });
+    loadNews().then(function(j){
+      var el = $("nwList"); if(!el) return;
+      var ok = j && !prev && String(j.number) === String(state.tirazh) && j.m && j.m[idx];
+      var list = ok ? j.m[idx] : null;
+      if(!ok){
+        el.innerHTML = '<p class="ev-warn">' + (prev ? "Для прошлого тиража заголовки не собираются — открой ссылки выше."
+          : "Заголовки для этого тиража ещё не собраны — открой ссылки выше или загляни позже.") + '</p>';
+        return;
+      }
+      if(!list.length){
+        el.innerHTML = '<p class="ev-warn">За последние 4 дня новостей по этому матчу не нашлось — у небольших лиг так бывает часто. Попробуй ссылки выше.</p>';
+        return;
+      }
+      el.innerHTML = '<ul class="nw-ul">' + list.map(function(x){
+        var hot = NW_HOT.test(x.t) && !x.f;
+        return '<li class="' + (hot ? "hot" : "") + (x.f ? " fc" : "") + '">' +
+          '<a target="_blank" rel="noopener noreferrer" href="' + escHtml(x.u) + '">' + escHtml(x.t) + '</a>' +
+          '<span class="nw-meta">' + escHtml(x.s || "") + (x.d ? " · " + nwAgo(x.d) : "") +
+          (x.b ? "" : " · про одну команду") + (x.f ? " · прогноз" : "") + '</span></li>';
+      }).join("") + '</ul>';
+    });
+  }
   /* название команды — ссылка на её историю в тото */
   function mkTeam(name, opp){
     var t = document.createElement("span");
@@ -1597,6 +1680,7 @@
 
       var num = document.createElement("div");
       num.className = "num"; num.textContent = String(idx+1);
+      numNews(num, m, idx, false);
       row.appendChild(num);
 
       var fix = document.createElement("div");
@@ -1628,6 +1712,7 @@
       if(code) meta.appendChild(mkFlag(code, "flag"));
       meta.appendChild(document.createTextNode(
         [m.date, m.time, m.league].filter(Boolean).join("  ·  ")));
+      meta.appendChild(mkNewsBtn(m, idx, false));
       if(m.res === VOID){
         teams.appendChild(mkVoid());
       } else if(m.res || m.score){
@@ -1808,6 +1893,7 @@
       modes.appendChild(bRand);
       modes.appendChild(bLock);
       modes.appendChild(mkFs(m));
+      modes.appendChild(mkNewsMode(m, idx, false));
       row.appendChild(modes);
 
       rowsEl.appendChild(row);
@@ -3908,6 +3994,7 @@
       row.className = "row";
       var num = document.createElement("div");
       num.className = "num"; num.textContent = String(idx + 1);
+      numNews(num, m, idx, true);
       row.appendChild(num);
       var fix = document.createElement("div");
       fix.className = "fix";
@@ -3944,6 +4031,7 @@
       var code = cont.hit ? ((hc || ac) ? null : cont.flag) : flagCode(m.league);
       if(code) meta.appendChild(mkFlag(code, "flag"));
       meta.appendChild(document.createTextNode(m.league || ""));
+      meta.appendChild(mkNewsBtn(m, idx, true));
       fix.appendChild(meta);
       row.appendChild(fix);
       var picksWrap = document.createElement("div");
@@ -3963,6 +4051,7 @@
       var modes = document.createElement("div");
       modes.className = "modes";
       modes.appendChild(mkFs(m));
+      modes.appendChild(mkNewsMode(m, idx, true));
       row.appendChild(modes);
       rowsEl.appendChild(row);
     });
