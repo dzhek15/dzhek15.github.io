@@ -21,6 +21,7 @@ import os
 import re
 import sys
 import time
+import urllib.parse
 import urllib.request
 import urllib.error
 from datetime import datetime, timezone, timedelta
@@ -575,7 +576,7 @@ def build_news(info):
                 items.append(x)
             time.sleep(0.4)
         items.sort(key=lambda x: x["d"], reverse=True)
-        items.sort(key=lambda x: (-x["b"], -x["h"], x["f"]))   # про оба клуба → горячее → прочее → прогнозы
+        items.sort(key=lambda x: (x["f"], -x["b"], -x["h"]))   # прогнозы всегда в конце; выше — про оба клуба и горячее
         res.append(items[:NEWS_KEEP])
     return res
 
@@ -595,6 +596,108 @@ def update_news(infos):
     m = build_news(info)
     log("новости: тираж %s, заголовков %d" % (info.get("number"), sum(len(x) for x in m)))
     return wr("news.json", {"number": info.get("number"), "at": now_iso(), "m": m})
+
+
+# ---------- официальные сайты команд (Wikidata) ----------
+# ищем один раз и храним в data/api/sites.json; не найденное перепроверяем раз в 2 недели
+WD_API = "https://www.wikidata.org/w/api.php?"
+WD_SPARQL = "https://query.wikidata.org/sparql?"
+WD_UA = {"User-Agent": "dzhek15-bot/1.0 (https://dzhek15.github.io)"}
+SITES_RETRY_DAYS = 14
+NAT_WORDS = ("Лига наций", "сборн", "До 21", "До 19", "До 17", "Чемпионат мира", "Чемпионат Европы",
+             "Товарищеск", "Кубок Африки", "Кубок Азии", "Золотой кубок", "Копа Америка")
+ABBR = ((r"\bо-ва\b", "острова"), (r"\bо-в\b", "остров"), (r"\bФК\b", ""))
+
+
+def wd_get(url, sparql=False):
+    h = dict(WD_UA)
+    if sparql:
+        h["Accept"] = "application/sparql-results+json"
+    with urllib.request.urlopen(urllib.request.Request(url, headers=h), timeout=40) as r:
+        return json.loads(r.read().decode("utf-8"))
+
+
+def site_root(u):
+    m = re.match(r"(https?://[^/?#]+)", u or "")
+    return (m.group(1) + "/") if m else ""
+
+
+def wd_national(name):
+    """сайт федерации (или самой сборной) страны с таким русским названием"""
+    name = name.replace('"', "")
+    q = ('SELECT ?fw ?tw WHERE { ?c rdfs:label "%s"@ru. ?t wdt:P31 wd:Q6979593; wdt:P17 ?c. '
+         'OPTIONAL{?t (wdt:P127|wdt:P749|wdt:P137) ?f. ?f wdt:P856 ?fw} OPTIONAL{?t wdt:P856 ?tw} '
+         'FILTER(BOUND(?fw) || BOUND(?tw)) } LIMIT 20') % name
+    rows = wd_get(WD_SPARQL + urllib.parse.urlencode({"query": q}), True)["results"]["bindings"]
+    cnt = {}
+    for b in rows:
+        u = site_root((b.get("fw") or b.get("tw") or {}).get("value"))
+        if u:
+            cnt[u] = cnt.get(u, 0) + (2 if b.get("fw") else 1)
+    return max(cnt, key=cnt.get) if cnt else ""
+
+
+def wd_club(name):
+    for q in (name + " haswbstatement:P31=Q476028", name + " haswbstatement:P31=Q15944511"):
+        r = wd_get(WD_API + urllib.parse.urlencode({"action": "query", "list": "search", "srsearch": q,
+                                                    "srlimit": 3, "format": "json"}))
+        ids = [x["title"] for x in r.get("query", {}).get("search", [])]
+        if not ids:
+            continue
+        d = wd_get(WD_API + urllib.parse.urlencode({"action": "wbgetentities", "ids": "|".join(ids),
+                                                    "props": "claims", "format": "json"}))
+        for i in ids:
+            w = d["entities"].get(i, {}).get("claims", {}).get("P856")
+            if w:
+                try:
+                    return w[0]["mainsnak"]["datavalue"]["value"]
+                except Exception:
+                    pass
+        time.sleep(0.3)
+    return ""
+
+
+def update_sites(infos):
+    act = [v for v in infos.values() if (v.get("data") or v).get("status") == "active"]
+    if not act:
+        return 0
+    info = act[0].get("data") or act[0]
+    old = rd("sites.json", {})
+    cache = old.get("t") or {}
+    today = datetime.now(timezone.utc).date()
+    evs = sorted(info.get("events") or [], key=lambda e: e.get("order") or 0)
+    pairs, looked = [], 0
+    for e in evs:
+        nat = any(w in (e.get("championship") or "") for w in NAT_WORDS)
+        row = []
+        for raw in DASH.split(e.get("name") or "", 1):
+            n = clean_team(raw)
+            for a, b in ABBR:
+                n = re.sub(a, b, n).strip()
+            key = ("н:" if nat else "к:") + n
+            c = cache.get(key)
+            stale = True
+            if c:
+                try:
+                    stale = not c.get("u") and (today - datetime.strptime(c.get("at", ""), "%Y-%m-%d").date()).days >= SITES_RETRY_DAYS
+                except Exception:
+                    stale = True
+            if (not c or stale) and n and looked < 40:
+                looked += 1
+                try:
+                    u = wd_national(n) if nat else wd_club(n)
+                    cache[key] = {"u": u, "at": today.isoformat()}
+                except Exception as ex:
+                    log("сайт команды: не вышло", n, repr(ex)[:80])
+                time.sleep(0.3)
+            row.append((cache.get(key) or {}).get("u", ""))
+        pairs.append(row)
+    new = {"number": info.get("number"), "m": pairs, "t": cache}
+    if new == {k: old.get(k) for k in new}:
+        return 0
+    log("сайты команд: тираж %s, найдено %d из %d" % (info.get("number"), sum(1 for r in pairs for u in r if u),
+                                                      sum(len(r) for r in pairs)))
+    return wr("sites.json", new)
 
 
 def main():
@@ -679,6 +782,10 @@ def main():
         changed += update_news(infos)
     except Exception as e:
         log("новости не собрались:", repr(e))
+    try:
+        changed += update_sites(infos)
+    except Exception as e:
+        log("сайты команд не собрались:", repr(e))
     for i, pg in enumerate(pages):
         changed += wr("drawings-%d.json" % (i + 1), pg)
     for k, v in infos.items():

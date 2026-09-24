@@ -1591,6 +1591,24 @@
       .catch(function(){ news.loading = null; return null; });
     return news.loading;
   }
+  var sites = { data: null, at: 0, loading: null };
+  function loadSites(){
+    if(sites.data && Date.now() - sites.at < 30 * 60000) return Promise.resolve(sites.data);
+    if(sites.loading) return sites.loading;
+    if(typeof fetch !== "function") return Promise.resolve(null);
+    sites.loading = fetch(MIRROR + "sites.json?t=" + Math.floor(Date.now() / 1800000))
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){ sites.data = j; sites.at = Date.now(); sites.loading = null; return j; })
+      .catch(function(){ sites.loading = null; return null; });
+    return sites.loading;
+  }
+  function nwHost(u){ var r = /^https?:\/\/(?:www\.)?([^\/?#]+)/i.exec(u || ""); return r ? r[1] : ""; }
+  function siteLink(team, url){
+    var ok = /^https?:\/\//i.test(url || "");
+    var href = ok ? url : "https://www.google.com/search?q=" + encodeURIComponent(team + " официальный сайт футбол");
+    return '<a class="nw-link" target="_blank" rel="noopener noreferrer" href="' + escHtml(href) + '">Сайт: ' + escHtml(team) +
+      '<span>' + (ok ? escHtml(nwHost(url)) : "не нашли в базе — поиск в Google") + '</span></a>';
+  }
   function mkNewsBtn(m, idx, prev){
     var b = document.createElement("button");
     b.type = "button"; b.className = "nw-btn";
@@ -1628,16 +1646,21 @@
     $("evTitle").textContent = m.home + " — " + m.away;
     var links =
       '<div class="nw-links">' +
-        '<button type="button" class="nw-link" id="nwFs">Матч на Flashscore<span>составы за час до начала</span></button>' +
+        '<a class="nw-link" target="_blank" rel="noopener noreferrer" href="https://www.google.com/search?q=' + q(pair + " стартовые составы") + '">Стартовые составы<span>поиск, появляются за час до начала</span></a>' +
         '<a class="nw-link" target="_blank" rel="noopener noreferrer" href="https://www.google.com/search?q=' + q(pair + " sofascore") + '">Sofascore<span>составы, рейтинги игроков</span></a>' +
         '<a class="nw-link" target="_blank" rel="noopener noreferrer" href="https://www.google.com/search?q=' + q(pair + " травмы дисквалификации") + '">Травмы и дисквалификации<span>поиск по обеим командам</span></a>' +
         '<a class="nw-link" target="_blank" rel="noopener noreferrer" href="https://news.google.com/search?hl=ru&gl=RU&ceid=RU:ru&q=' + q(pair + " when:7d") + '">Все новости<span>Google Новости за неделю</span></a>' +
-      '</div>';
+      '</div>' +
+      '<div class="nw-links" id="nwSites">' + siteLink(h, "") + siteLink(a, "") + '</div>';
     var box = $("evBody");
     box.innerHTML = links + '<h3 class="th-h2 nw-h">Свежие заголовки</h3><div id="nwList"><p class="ev-note">Загружаю…</p></div>' +
       '<p class="ev-note">Заголовки обновляются раз в 2 часа. Сначала — про обе команды и с пометкой о травмах, составе, тренере; прогнозы букмекерских сайтов — в конце.</p>';
     $("evBack").hidden = false;
-    $("nwFs").addEventListener("click", function(){ openFs(m); });
+    loadSites().then(function(j){
+      var el = $("nwSites"); if(!el) return;
+      var r = j && !prev && String(j.number) === String(state.tirazh) && j.m && j.m[idx];
+      if(r) el.innerHTML = siteLink(h, r[0]) + siteLink(a, r[1]);
+    });
     loadNews().then(function(j){
       var el = $("nwList"); if(!el) return;
       var ok = j && !prev && String(j.number) === String(state.tirazh) && j.m && j.m[idx];
