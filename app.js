@@ -3810,7 +3810,9 @@
         rows.push({ n: "Автообновление на GitHub", d: "каждые 30 минут", at: null, lv: 1, s: "GitHub не ответил — проверить не удалось" });
       }
       var src = function(name, d, okKey, atKey, errKey){
-        var ok = st[okKey] !== false, lv = !ok ? 2 : ageMin(st[atKey]) > 8 * 60 ? 1 : 0;
+        /* один источник молчит, а другой работает — это «запаздывает», а не авария */
+        var other = okKey === "totobrief_ok" ? st.stavka_ok : st.totobrief_ok;
+        var ok = st[okKey] !== false, lv = !ok ? (other === false ? 2 : 1) : ageMin(st[atKey]) > 8 * 60 ? 1 : 0;
         rows.push({ n: name, d: d, at: st[atKey], lv: lv,
           s: !ok ? "не отвечает" + (st[errKey] ? ": " + String(st[errKey]).slice(0, 80) : "") : lv ? "давно без свежих данных" : "отвечает" });
       };
