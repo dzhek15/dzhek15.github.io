@@ -1100,3 +1100,68 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 .modes .mode.srch{order:9}
 body.is-prev .row .pick[aria-pressed="true"]{opacity:1}
 body.is-prev .row .pick.mine-hit{outline-color:var(--brand-gold)}
+
+/* ---------- CSV в прошлом тираже ---------- */
+.pcsv{margin:12px 0 0; padding:14px; border:1px solid var(--brand-gold); border-radius:var(--r); background:var(--surface); box-shadow:var(--shadow); color:var(--ink)}
+.pc-empty{display:flex; flex-direction:column; align-items:center; gap:10px; text-align:center; font-size:13px; color:var(--muted); padding:4px 0}
+.pc-btn{border:1px solid var(--brand-gold); color:var(--ink); background:var(--surface); border-radius:var(--r); padding:7px 14px; font:600 13px "IBM Plex Sans",sans-serif; cursor:pointer}
+.pc-btn:hover{background:var(--surface-2)}
+.pc-btn.ghost{border-color:var(--rule-strong); color:var(--muted)}
+.pc-msg{margin:8px 0 0; font-size:12px; color:var(--muted); text-align:center}
+.pc-head{display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:6px 12px}
+.pc-t{color:var(--brand-gold); font:800 14px "Chivo",sans-serif; letter-spacing:.02em}
+.pc-f{font-size:12px; color:var(--muted); max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.pc-acts{display:inline-flex; gap:6px}
+.pc-acts .pc-btn{padding:5px 11px; font-size:12px}
+.pc-cards{display:flex; flex-wrap:wrap; justify-content:center; gap:6px; max-width:760px; margin:12px auto 4px}
+.pc-cards>div{flex:1 1 0; min-width:96px}
+.pc-cards div{border:1px solid var(--rule); border-radius:var(--r); padding:7px 4px; text-align:center; background:var(--surface-2)}
+.pc-cards span{display:block; font-size:11px; color:var(--muted); line-height:1.2}
+.pc-cards b{display:block; margin-top:2px; font:600 15px "IBM Plex Mono",monospace}
+.pc-sub{display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:6px 12px; margin:14px 0 8px; font:700 13px "Chivo",sans-serif; color:var(--brand-gold); letter-spacing:.02em}
+.pc-sort{display:inline-flex; border:1px solid var(--rule-strong); border-radius:var(--r); overflow:hidden}
+.pc-sort button{border:0; background:transparent; color:var(--muted); padding:4px 10px; font:600 12px "IBM Plex Sans",sans-serif; cursor:pointer}
+.pc-sort button[aria-pressed="true"]{background:var(--surface-3); color:var(--ink)}
+.pc-cov{display:grid; gap:3px; max-width:680px; margin:0 auto}
+.pc-m i b{font-weight:400}
+.pc-m i u{text-decoration:none; color:var(--muted)}
+.pc-cr{display:grid; grid-template-columns:22px minmax(0,1fr) repeat(3,46px); gap:4px; align-items:center}
+.pc-n{font:600 12px "IBM Plex Mono",monospace; color:var(--muted); text-align:center}
+.pc-m{display:flex; align-items:center; gap:6px; min-width:0; font-size:13px}
+.pc-m i{font-style:normal; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0}
+.pc-m em{font-style:normal; flex:none; font:600 12px "IBM Plex Mono",monospace; color:var(--ink); background:var(--surface-3); border-radius:3px; padding:1px 5px}
+.pc-m em.live{color:var(--warn)}
+.pc-o{display:flex; flex-direction:column; align-items:center; justify-content:center; height:34px; border:1px solid var(--rule); border-radius:var(--r); font:700 13px/1 "IBM Plex Mono",monospace; color:var(--muted); opacity:.5}
+.pc-o small{font:500 10px/1.2 "IBM Plex Mono",monospace; margin-top:2px}
+.pc-o.on{opacity:1; color:var(--ink); background:var(--surface-2); border-color:var(--rule-strong)}
+.pc-o.hit{border:2px solid var(--cold); color:var(--cold)}
+.pc-o.miss{opacity:.55}
+.pc-o.hole{opacity:1; border:2px dashed var(--hot); color:var(--hot)}
+.pc-vars{display:grid; gap:2px; overflow-x:auto; max-width:760px; margin:0 auto}
+.pc-vr{display:grid; grid-template-columns:36px repeat(var(--n),minmax(16px,1fr)) 40px; gap:2px; align-items:center}
+.pc-vr span{text-align:center; font:600 12px/22px "IBM Plex Mono",monospace; border-radius:3px; color:var(--ink)}
+.pc-vr span:first-child{color:var(--muted); font-weight:500; font-size:11px}
+.pc-vr span.hit{background:color-mix(in srgb, var(--cold) 22%, transparent); color:var(--cold)}
+.pc-vr span.miss{background:color-mix(in srgb, var(--hot) 18%, transparent); color:var(--hot)}
+.pc-vr .pc-h{font-weight:700; background:var(--surface-3)}
+.pc-vr.win .pc-h{background:var(--cold); color:#fff}
+.pc-vr.dead{opacity:.55}
+.pc-vh span{font-size:10px; color:var(--muted); font-weight:500; line-height:18px}
+.pc-pager{display:flex; align-items:center; justify-content:center; gap:6px; margin-top:12px}
+.pc-pager button{width:32px; height:32px; border:1px solid var(--rule-strong); border-radius:50%; background:transparent; color:var(--ink); font:700 16px/1 "IBM Plex Mono",monospace; cursor:pointer}
+.pc-pager button:hover:not(:disabled){border-color:var(--brand-gold); color:var(--brand-gold)}
+.pc-pager button:disabled{opacity:.3; cursor:default}
+.pc-pager span{min-width:70px; text-align:center; font:500 13px "IBM Plex Mono",monospace; color:var(--muted)}
+.pc-pager b{color:var(--ink)}
+@media (max-width:560px){
+  .pcsv{padding:10px 8px}
+  .pc-cards>div{flex:0 0 calc((100% - 12px) / 3); min-width:0}
+  .pc-cr{grid-template-columns:18px minmax(0,1fr) repeat(3,38px); gap:3px}
+  .pc-m{flex-direction:column; align-items:flex-start; gap:2px; font-size:12px}
+  .pc-m i{max-width:100%; white-space:normal; line-height:1.25}
+  .pc-m i b{display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .pc-m i u{display:none}
+  .pc-vr{grid-template-columns:28px repeat(var(--n),minmax(0,1fr)) 30px; gap:1px}
+  .pc-vr span{font-size:11px; line-height:20px}
+  .pc-vh span{font-size:9px}
+}

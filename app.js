@@ -3780,8 +3780,8 @@
   /* попал ли исход строки/клетки в итог: отменённый матч засчитан всем */
   function hitRes(cell, res){ return res === VOID || String(cell).indexOf(res) >= 0; }
 
-  function parseCsvVariants(text){
-    var need = state.matches.length;
+  function parseCsvVariants(text, needN){
+    var need = needN || state.matches.length;
     var lines = String(text).split(/\r?\n/);
     var out = [], pages = [], bad = 0, over = false;
     for(var i=0;i<lines.length;i++){
@@ -4574,6 +4574,137 @@
       '<button type="button" class="pb-back" id="btnPrevBack">К текущему тиражу &#8250;</button>';
     bar.hidden = false;
     $("btnPrevBack").addEventListener("click", leavePrev);
+    renderPrevCsv();
+  }
+
+  /* ---------- CSV в прошлом тираже: весь купон и варианты по 30 — следить за угаданными ----------
+     Файл читается только здесь и хранится в браузере (последние 3 тиража), купон не трогает. */
+  var PCSV_KEY = "dzhek-prevcsv", PCSV_PAGE = 30;
+  var pcsv = { tir: null, name: "", rows: [], page: 0, sort: "hits" };
+  function pcsvAll(){ try{ return JSON.parse(localStorage.getItem(PCSV_KEY) || "{}") || {}; }catch(e){ return {}; } }
+  function pcsvStore(){
+    var all = pcsvAll();
+    if(pcsv.rows.length) all[pcsv.tir] = { name: pcsv.name, rows: pcsv.rows, at: Date.now() };
+    else delete all[pcsv.tir];
+    Object.keys(all).sort(function(a, b){ return (all[b].at || 0) - (all[a].at || 0); })
+      .slice(3).forEach(function(k){ delete all[k]; });
+    try{ localStorage.setItem(PCSV_KEY, JSON.stringify(all)); return true; }catch(e){ return false; }
+  }
+  function pcsvPick(){
+    var inp = $("filePrevCsv");
+    if(!inp){
+      inp = document.createElement("input");
+      inp.type = "file"; inp.id = "filePrevCsv"; inp.accept = ".csv,text/csv,text/plain"; inp.hidden = true;
+      document.body.appendChild(inp);
+      inp.addEventListener("change", function(e){
+        var f = e.target.files && e.target.files[0];
+        e.target.value = "";
+        if(!f || !state.prev) return;
+        var rd = new FileReader();
+        rd.onload = function(){
+          var res = parseCsvVariants(rd.result, state.prev.matches.length);
+          if(!res.rows.length){
+            pcsv.msg = "В файле «" + f.name + "» нет строк на " + res.need + " матчей (1, X или 2 в каждом).";
+            renderPrevCsv(); return;
+          }
+          pcsv = { tir: String(state.prev.tirazh), name: f.name, page: 0, sort: pcsv.sort || "hits",
+                   rows: res.rows.map(function(r){ return r.join(""); }) };
+          var kept = pcsvStore();
+          pcsv.msg = "Загружено " + fmt(pcsv.rows.length) + " вариант(ов)" +
+            (res.bad ? ", пропущено строк: " + res.bad : "") + (res.over ? ", показаны первые " + fmt(MAX_CSV) : "") +
+            (kept ? "." : ". Файл большой — сохранится до перезагрузки страницы.");
+          renderPrevCsv();
+          try{ $("prevCsv").scrollIntoView({ behavior: "smooth", block: "start" }); }catch(err){}
+        };
+        rd.readAsText(f);
+      });
+    }
+    inp.click();
+  }
+  function renderPrevCsv(){
+    var box = $("prevCsv"); if(!box) return;
+    var p = state.prev;
+    if(!(state.viewPrev && p)){ box.hidden = true; return; }
+    box.hidden = false;
+    if(pcsv.tir !== String(p.tirazh)){
+      var saved = pcsvAll()[String(p.tirazh)];
+      pcsv = { tir: String(p.tirazh), name: saved ? saved.name : "", rows: saved ? saved.rows : [], page: 0, sort: pcsv.sort || "hits" };
+    }
+    var msg = pcsv.msg ? '<p class="pc-msg">' + escHtml(pcsv.msg) + '</p>' : "";
+    pcsv.msg = "";
+    if(!pcsv.rows.length){
+      box.innerHTML = '<div class="pc-empty"><span>Загрузи CSV своих вариантов на этот тираж — здесь появится весь купон и все варианты с угаданными по ходу матчей.</span>' +
+        '<button type="button" class="pc-btn" id="pcLoad">Загрузить CSV</button></div>' + msg;
+      $("pcLoad").addEventListener("click", pcsvPick);
+      return;
+    }
+    var ms = p.matches, n = ms.length, res = ms.map(function(m){ return m.res || ""; });
+    var played = res.filter(Boolean).length, rows = pcsv.rows, total = rows.length;
+    var st = rows.map(function(r, i){
+      var h = 0, miss = 0;
+      for(var j = 0; j < n; j++) if(res[j]){ if(res[j] === VOID || r.charAt(j) === res[j]) h++; else miss++; }
+      return { i: i, h: h, miss: miss };
+    });
+    var best = 0, now9 = 0, can9 = 0, can15 = 0;
+    st.forEach(function(x){ if(x.h > best) best = x.h; if(x.h >= 9) now9++; if(n - x.miss >= 9) can9++; if(!x.miss) can15++; });
+    var h = '<div class="pc-head"><span class="pc-t">Мои варианты</span><span class="pc-f" title="' + escHtml(pcsv.name) + '">' + escHtml(pcsv.name) + '</span>' +
+      '<span class="pc-acts"><button type="button" class="pc-btn" id="pcLoad">Другой файл</button><button type="button" class="pc-btn ghost" id="pcDrop">Убрать</button></span></div>' + msg;
+    h += '<div class="pc-cards">' +
+      '<div><span>Вариантов</span><b>' + fmt(total) + '</b></div>' +
+      '<div><span>Лучший</span><b>' + (played ? best + ' из ' + played : '—') + '</b></div>' +
+      '<div><span>9+ сейчас</span><b>' + fmt(now9) + '</b></div>' +
+      '<div><span>Могут 9+</span><b>' + fmt(can9) + '</b></div>' +
+      '<div><span>Без ошибок</span><b>' + fmt(can15) + '</b></div></div>';
+    /* весь купон: сколько вариантов стоит на каждый исход */
+    h += '<div class="pc-sub">Весь купон</div><div class="pc-cov">';
+    ms.forEach(function(m, j){
+      var c = { "1": 0, "X": 0, "2": 0 };
+      rows.forEach(function(r){ var o = r.charAt(j); if(c[o] != null) c[o]++; });
+      var sc = m.res === VOID ? "отменён" : (m.score ? String(m.score).replace(/\s+/g, "") : "");
+      h += '<div class="pc-cr"><span class="pc-n">' + (j + 1) + '</span><span class="pc-m"><i><b>' + escHtml(m.home) + '</b><u> — </u><b>' + escHtml(m.away) + '</b></i>' +
+        (sc ? '<em class="' + (m.res ? "" : "live") + '">' + escHtml(sc) + '</em>' : '') + '</span>';
+      OUT.forEach(function(o){
+        var cls = "pc-o" + (c[o] ? " on" : "") + (res[j] && (res[j] === o || res[j] === VOID) ? (c[o] ? " hit" : " hole") : (res[j] && c[o] ? " miss" : ""));
+        h += '<span class="' + cls + '" title="' + o + ': ' + fmt(c[o]) + ' вар.">' + o + '<small>' + (c[o] ? (c[o] === total ? "все" : fmt(c[o])) : "·") + '</small></span>';
+      });
+      h += '</div>';
+    });
+    h += '</div>';
+    /* варианты по 30 */
+    var order = st.slice();
+    if(pcsv.sort === "hits") order.sort(function(a, b){ return (b.h - a.h) || (a.miss - b.miss) || (a.i - b.i); });
+    var pages = Math.max(1, Math.ceil(total / PCSV_PAGE));
+    if(pcsv.page >= pages) pcsv.page = pages - 1;
+    var from = pcsv.page * PCSV_PAGE, part = order.slice(from, from + PCSV_PAGE);
+    h += '<div class="pc-sub">Варианты<span class="pc-sort"><button type="button" data-s="hits" aria-pressed="' + (pcsv.sort === "hits") + '">по угаданным</button>' +
+      '<button type="button" data-s="file" aria-pressed="' + (pcsv.sort !== "hits") + '">как в файле</button></span></div>';
+    h += '<div class="pc-vars" style="--n:' + n + '"><div class="pc-vr pc-vh"><span>№</span>';
+    for(var j = 0; j < n; j++) h += '<span>' + (j + 1) + '</span>';
+    h += '<span>угад.</span></div>';
+    part.forEach(function(x){
+      var r = rows[x.i];
+      h += '<div class="pc-vr' + (x.h >= 9 ? " win" : "") + (n - x.miss < 9 ? " dead" : "") + '"><span>' + (x.i + 1) + '</span>';
+      for(var j = 0; j < n; j++){
+        var o = r.charAt(j), cls = !res[j] ? "" : (res[j] === VOID || res[j] === o) ? "hit" : "miss";
+        h += '<span class="' + cls + '">' + o + '</span>';
+      }
+      h += '<span class="pc-h">' + x.h + '</span></div>';
+    });
+    h += '</div>';
+    if(pages > 1) h += '<div class="pc-pager"><button type="button" data-g="0" aria-label="В начало"' + (pcsv.page ? '' : ' disabled') + '>&#171;</button>' +
+      '<button type="button" data-g="' + (pcsv.page - 1) + '" aria-label="Назад"' + (pcsv.page ? '' : ' disabled') + '>&#8249;</button>' +
+      '<span><b>' + (pcsv.page + 1) + '</b> / ' + pages + '</span>' +
+      '<button type="button" data-g="' + (pcsv.page + 1) + '" aria-label="Дальше"' + (pcsv.page < pages - 1 ? '' : ' disabled') + '>&#8250;</button>' +
+      '<button type="button" data-g="' + (pages - 1) + '" aria-label="В конец"' + (pcsv.page < pages - 1 ? '' : ' disabled') + '>&#187;</button></div>';
+    box.innerHTML = h;
+    $("pcLoad").addEventListener("click", pcsvPick);
+    $("pcDrop").addEventListener("click", function(){ pcsv.rows = []; pcsv.name = ""; pcsvStore(); renderPrevCsv(); });
+    [].slice.call(box.querySelectorAll(".pc-sort button")).forEach(function(b){
+      b.addEventListener("click", function(){ pcsv.sort = b.getAttribute("data-s"); pcsv.page = 0; renderPrevCsv(); });
+    });
+    [].slice.call(box.querySelectorAll(".pc-pager button")).forEach(function(b){
+      b.addEventListener("click", function(){ pcsv.page = Number(b.getAttribute("data-g")) || 0; renderPrevCsv(); });
+    });
   }
   function escHtml(x){ return String(x).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
   function enterPrev(){
@@ -4589,7 +4720,7 @@
     $("btnTirPrev").disabled = !state.prev || inPrev;
     $("btnTirNext").disabled = !inPrev;
     $("tirazhName").value = inPrev ? state.prev.tirazh : (state.tirazh || "");
-    if(!inPrev) $("prevBar").hidden = true;
+    if(!inPrev){ $("prevBar").hidden = true; if($("prevCsv")) $("prevCsv").hidden = true; }
   }
 
   /* выбираем тираж: либо заданный номером (ссылка на купон), либо текущий активный */
@@ -5269,7 +5400,7 @@
      (как в «Отборе»: вероятность × недогруз толпы). Проверка на 854 тиражах (4135–5017):
      при 32 вариантах отдача 1,45 против 1,38 у одной «Симуляции», без 5 лучших тиражей
      1,21 против 1,15 — не хуже, но разница в пределах шума. */
-  function blendOpenMs(){ return 60 * 60000; }   /* функция, а не var: renderKickoff зовёт нас раньше, чем var успевает присвоиться */
+  function blendOpenMs(){ return 120 * 60000; }   /* функция, а не var: renderKickoff зовёт нас раньше, чем var успевает присвоиться */
   function planBlend(budget){
     var g = gapSwaps();
     if(!g) return { error: "нет линии конторы или долей игроков хотя бы в одном матче" };
@@ -5412,7 +5543,7 @@
     ["Бриф", "Собирает систему с гарантией: вместо всех строк купона берётся их часть, которая всё равно гарантирует заданное число угаданных при попадании в отмеченные исходы.<span class=\"ev-bt\">На истории не проверялась: работает поверх вашего купона.</span>"],
     ["Охота на 15", "Цель — забрать 15 из 15. Вместо системы берутся самые вероятные отдельные строки: система вынуждена покупать и маловероятные сочетания. Вероятности — модель, обученная на истории (линия конторы, ничьи, молодёжные турниры); среди почти равных строк остаются менее популярные у игроков, чтобы не делить суперприз. До 400 строк — в корзину, больше — сразу в CSV.<span class=\"ev-bt\">На истории (618 тиражей): при ~900 строках шанс 15 из 15 — 0,085% против 0,073% у системы той же цены, при ~8 000 строк — 0,55% против 0,44%. На ~8 000 строк 15 из 15 забрали бы 4 раза, система — ни разу.</span>"],
     ["Симуляция", "Цель — чаще попадать в призы (9 и больше). Двойники и тройники ставятся там, где сильнее всего растёт шанс 9+, итог проверяется розыгрышем 10 000 тиражей.<span class=\"ev-bt\">На истории (731 тираж, купон до 32 вариантов, в среднем 810 ₽): приз в 40,5% тиражей, 12+ — в 2,46%, 13+ — в 0,68%.</span>"],
-    ["Сплав к дедлайну", "Включается за час до закрытия приёма, когда доли игроков и линия уже почти окончательные. «Расхождения», «Симуляция» и «Келли» собирают свои купоны, и все их исходы складываются в один купон с двойниками и тройниками там, где стратегии расходятся. У каждого исхода видно число голосов. Можно поставить всё, только исходы с 2+ голосами или снять лишнее в купоне вручную. Это не гарантия выигрыша."],
+    ["Сплав к дедлайну", "Включается за 2 часа до закрытия приёма, когда доли игроков и линия уже почти окончательные. «Расхождения», «Симуляция» и «Келли» собирают свои купоны, и все их исходы складываются в один купон с двойниками и тройниками там, где стратегии расходятся. У каждого исхода видно число голосов. Можно поставить всё, только исходы с 2+ голосами или снять лишнее в купоне вручную. Это не гарантия выигрыша."],
     ["Келли", "Цель — быстрее всего растить банк. Сравнивает системы по вероятностям и купоны «Симуляции» на 1–512 вариантов и подставляет тот, у которого ожидаемый рост банка больше. Если выгодного нет, честно говорит «не ставить» и предлагает наименее убыточный.<span class=\"ev-bt\">На истории (731 тираж): в среднем купон за 3 110 ₽, приз в 55,1% тиражей, 12+ — в 5,06%, 13+ — в 1,5%. Модель выплат считала выгодным каждый тираж из-за крупных суперпризов — к этому стоит относиться осторожно.</span>"]
   ];
   function showStratGuide(){
