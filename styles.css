@@ -1169,3 +1169,13 @@ body.is-prev .row .pick.mine-hit{outline-color:var(--brand-gold)}
   .pc-vr span.m2{font-size:9px}
   .pc-vr span.m3{font-size:7px; letter-spacing:-.08em}
 }
+
+.pc-paste{display:flex; justify-content:center; gap:6px; max-width:520px; margin:10px auto 0}
+.pc-paste input{flex:1 1 auto; min-width:0; padding:7px 10px; border:1px solid var(--rule-strong); border-radius:var(--r); background:var(--surface-2); color:var(--ink); font:13px "IBM Plex Sans",sans-serif}
+.pc-paste input:focus{outline:none; border-color:var(--brand-gold)}
+.pc-paste .pc-btn{flex:none}
+.pc-paste[hidden]{display:none}
+.pc-empty .pc-acts{flex-wrap:wrap; justify-content:center}
+.pc-btn{white-space:nowrap}
+.pc-acts{flex-wrap:wrap; justify-content:center}
+@media (max-width:400px){ .pc-head{flex-direction:column; gap:6px} .pc-acts .pc-btn{padding:5px 9px} }
