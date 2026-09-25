@@ -4301,6 +4301,36 @@
     }).catch(function(){}).then(function(){ histLoading = false; });
   }
 
+  var COUPON_KEEP = 12;
+  function couponStash(){
+    if(!state.tirazh || !state.matches.length) return;
+    var has = state.matches.some(function(m){ return countPicks(m) > 0 || m.mode !== "free"; }) || (state.played || []).length;
+    if(!state.coupons || typeof state.coupons !== "object") state.coupons = {};
+    if(!has){ delete state.coupons[state.tirazh]; return; }
+    state.coupons[state.tirazh] = {
+      at: Date.now(),
+      rows: state.matches.map(function(m){ return { k: m.home + "|" + m.away, picks: { "1": !!m.picks["1"], "X": !!m.picks["X"], "2": !!m.picks["2"] }, mode: m.mode, pool: (m.pool || OUT).slice() }; }),
+      played: (state.played || []).slice(), spent: state.spent || 0, rolls: state.rolls || 0
+    };
+    var ks = Object.keys(state.coupons).sort(function(a, b){ return state.coupons[b].at - state.coupons[a].at; });
+    ks.slice(COUPON_KEEP).forEach(function(k){ delete state.coupons[k]; });
+  }
+  function couponUnstash(){
+    var c = state.coupons && state.coupons[state.tirazh];
+    if(!c) return false;
+    var by = {};
+    c.rows.forEach(function(r){ by[r.k] = r; });
+    var n = 0;
+    state.matches.forEach(function(m){
+      var r = by[m.home + "|" + m.away]; if(!r) return;
+      m.picks = { "1": !!r.picks["1"], "X": !!r.picks["X"], "2": !!r.picks["2"] };
+      m.mode = r.mode === "rand" || r.mode === "lock" ? r.mode : "free";
+      if(Array.isArray(r.pool) && r.pool.length) m.pool = r.pool.slice();
+      n++;
+    });
+    if(n){ state.played = (c.played || []).slice(); state.spent = c.spent || 0; state.rolls = c.rolls || 0; }
+    return n > 0;
+  }
   function applyDrawing(info){
     var evs = (info.events || []).slice().sort(function(a,b){ return (a.order||0) - (b.order||0); });
     var list = [];
@@ -4326,6 +4356,9 @@
     });
     if(!list.length) throw new Error("в ответе нет матчей");
 
+    /* купон у каждого тиража свой и не теряется: уходя с тиража, запоминаем его,
+       а вернувшись (или перезагрузив тот же тираж) — поднимаем обратно */
+    couponStash();
     pushHistory("до обновления тиража", true);
     /* тираж сменился — прошлый уходит в «один шаг назад» (только результаты и счёт) */
     if(state.matches.length && state.tirazh && String(info.number) !== String(state.tirazh)){
@@ -4340,6 +4373,7 @@
     state.played = [];
     state.spent = 0;
     state.rolls = 0;
+    couponUnstash();
     histArmed = -1;
     save();
     $("tirazhName").value = state.tirazh;
@@ -4425,6 +4459,9 @@
   function renderPrevView(){
     var p = state.prev;
     rowsEl.innerHTML = "";
+    /* свой купон прошлого тиража — из сохранённых купонов по тиражам */
+    var myPrev = {}, myC = state.coupons && state.coupons[p.tirazh];
+    if(myC) myC.rows.forEach(function(r){ myPrev[r.k] = r; });
     p.matches.forEach(function(m, idx){
       var row = document.createElement("div");
       row.className = "row";
@@ -4482,6 +4519,8 @@
         b.className = "pick " + (o === "1" ? "p1" : o === "X" ? "px" : "p2");
         b.textContent = o;
         if(m.res === o) b.classList.add("won");
+        var myr = myPrev[m.home + "|" + m.away];
+        if(myr && myr.picks[o]){ b.setAttribute("aria-pressed", "true"); if(m.res === o) b.classList.add("mine-hit"); }
         cell.appendChild(b);
         picksWrap.appendChild(cell);
       });
@@ -4496,11 +4535,18 @@
     var done = p.matches.filter(function(m){ return m.res; }).length;
     var live = p.matches.filter(function(m){ return !m.res && m.score; }).length;
     var voids = p.matches.filter(function(m){ return m.res === VOID; }).length;
+    var myHit = 0, myN = 0;
+    if(myC) p.matches.forEach(function(m){
+      var r = myPrev[m.home + "|" + m.away]; if(!r || !m.res) return;
+      if(!(r.picks["1"] || r.picks["X"] || r.picks["2"])) return;
+      myN++; if(m.res === VOID || r.picks[m.res]) myHit++;
+    });
     var bar = $("prevBar");
     bar.innerHTML = '<span class="pb-t">Просмотр тиража ' + escHtml(p.tirazh) + '</span>' +
       '<span>сыграно <b>' + done + '</b> из ' + p.matches.length + '</span>' +
       (live ? '<span>идёт <b>' + live + '</b></span>' : '') +
       (voids ? '<span title="засчитан угаданным для любой ставки">отменён <b>' + voids + '</b></span>' : '') +
+      (myN ? '<span title="твой купон на этот тираж">твой купон: угадано <b>' + myHit + '</b> из ' + myN + '</span>' : '') +
       (p.at ? '<span>обновлено <b>' + new Date(p.at).toTimeString().slice(0,5) + '</b></span>' : '') +
       '<button type="button" class="pb-back" id="btnPrevBack">К текущему тиражу &#8250;</button>';
     bar.hidden = false;
@@ -4614,7 +4660,7 @@
         btn.disabled = false; btn.classList.remove("is-loading"); lbl.textContent = was;
         if(res && res.changed){
           say("На totobrief появился тираж №" + res.changed + ", а открыт №" + state.tirazh +
-              ". Нажми «Обновить тираж», чтобы перейти на него — корзина при этом очистится.");
+              ". Нажми «Обновить тираж», чтобы перейти на него — купон и корзина этого тиража сохранятся, к ним можно вернуться.");
           tryPending();
         }
         else if(res && res.soft){
@@ -4968,7 +5014,8 @@
 
   try {
     if(freshStart){ save(); }
-    clearOnLoad();                             /* лист вариантов при загрузке пустой */
+    /* купон при перезагрузке НЕ очищаем (25.09.2026): телефон и браузер сами перезагружают
+       вкладку, и проставленные исходы пропадали. У каждого тиража свой купон (couponStash), очищается только кнопкой. */
     render();
     attachFsTimes(); /* дозаполнить время начала, если тираж пришёл из кэша ещё без него */
     /* если страница размещена в интернете — тихо проверить, не сменился ли тираж */

@@ -1098,3 +1098,5 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 .meta .nw-btn.ai-btn{display:none}
 .row .modes .mode.nw-mode.ai-btn{display:flex}
 .modes .mode.srch{order:9}
+body.is-prev .row .pick[aria-pressed="true"]{opacity:1}
+body.is-prev .row .pick.mine-hit{outline-color:var(--brand-gold)}
