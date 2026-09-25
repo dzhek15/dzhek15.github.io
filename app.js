@@ -3724,6 +3724,13 @@
   function tryPendingBook(){
     if(!pendingBook || !state.matches.length) return;
     var p = pendingBook;
+    /* ссылка на уже закрытый тираж — открываем её в просмотре прошлого тиража,
+       текущий купон и тираж не трогаем */
+    if(p.tirazh && Number(p.tirazh) < Number(state.tirazh)){
+      pendingBook = null;
+      prevBookOpen(p, 0);
+      return;
+    }
     if(p.tirazh && String(p.tirazh) !== String(state.tirazh)){
       if(linkPulling || typeof fetch !== "function"){
         pendingBook = null;
@@ -3759,6 +3766,27 @@
   }
 
   function tryPending(){ tryPendingLink(); tryPendingBook(); }
+  function prevBookOpen(p, tries){
+    if(!(state.prev && String(state.prev.tirazh) === String(p.tirazh))){
+      /* прошлый тираж ещё подгружается фоном — ждём до ~15 с */
+      if(tries < 15 && Number(p.tirazh) === Number(state.tirazh) - 1){ setTimeout(function(){ prevBookOpen(p, tries + 1); }, 1000); return; }
+      say("Ссылка сделана для тиража №" + p.tirazh + ". В просмотре доступен только прошлый тираж" +
+          (state.prev ? " №" + state.prev.tirazh : "") + ", поэтому варианты из ссылки не открыть.");
+      return;
+    }
+    varsDecode(p.payload, state.prev.matches.length, function(rows, pages){
+      if(!rows){ say("Ссылку со списком вариантов развернуть не удалось — похоже, адрес обрезался при пересылке."); return; }
+      pcsv = { tir: String(p.tirazh), name: "по ссылке", page: 0, sort: pcsv.sort || "hits",
+               rows: rows.map(function(r){ return r.join(""); }),
+               sys: (pages || rows).map(function(pg){ return pg.join(","); }) };
+      pcsvStore();
+      pcsv.msg = "Из ссылки открыто " + fmt(pcsv.rows.length) + " вариант(ов)" +
+        (pages && pages.length !== rows.length ? " в " + fmt(pages.length) + " строк(е)" : "") + ". Свой купон цел.";
+      try{ history.replaceState(null, "", location.pathname + location.search); }catch(e){}
+      enterPrev();
+      setTimeout(function(){ try{ $("prevCsv").scrollIntoView({ behavior: "smooth", block: "start" }); }catch(e){} }, 300);
+    });
+  }
 
   /* ---------- Просмотр CSV: варианты листаются в таблице, как страницы книги ----------
      Файл никуда не записывается: купон и корзина остаются нетронутыми,
@@ -4660,7 +4688,7 @@
     var best = 0, now9 = 0, can9 = 0, can15 = 0;
     st.forEach(function(x){ if(x.h > best) best = x.h; if(x.h >= 9) now9++; if(n - x.miss >= 9) can9++; if(!x.miss) can15++; });
     var h = '<div class="pc-head"><span class="pc-t">Мои варианты</span><span class="pc-f" title="' + escHtml(pcsv.name) + '">' + escHtml(pcsv.name) + '</span>' +
-      '<span class="pc-acts"><button type="button" class="pc-btn" id="pcLoad">Другой файл</button><button type="button" class="pc-btn ghost" id="pcDrop">Убрать</button></span></div>' + msg;
+      '<span class="pc-acts"><button type="button" class="pc-btn" id="pcLink">Ссылка</button><button type="button" class="pc-btn" id="pcLoad">Другой файл</button><button type="button" class="pc-btn ghost" id="pcDrop">Убрать</button></span></div>' + msg;
     h += '<div class="pc-cards">' +
       (hasSys ? '<div><span>Строк</span><b>' + fmt(sysL.length) + '</b></div>' : '') +
       '<div><span>Вариантов</span><b>' + fmt(total) + '</b></div>' +
@@ -4727,6 +4755,17 @@
       '<button type="button" data-g="' + (pages - 1) + '" aria-label="В конец"' + (pcsv.page < pages - 1 ? '' : ' disabled') + '>&#187;</button></div>';
     box.innerHTML = h;
     $("pcLoad").addEventListener("click", pcsvPick);
+    $("pcLink").addEventListener("click", function(){
+      var b = this, prs = sysL.length ? sysL : null;
+      varsEncode(rows.map(function(r){ return r.split(""); }), function(pl){
+        if(!pl){ pcsv.msg = "Не получилось упаковать варианты в ссылку."; renderPrevCsv(); return; }
+        var url = location.origin + location.pathname + "#v=" + encodeURIComponent(pcsv.tir) + "-" + pl;
+        if(url.length > 8000){ pcsv.msg = "В ссылку не влезает (" + fmt(url.length) + " символов) — перешли сам CSV."; renderPrevCsv(); return; }
+        var ok = function(){ b.textContent = "Скопировано"; setTimeout(function(){ b.textContent = "Ссылка"; }, 2500); };
+        var manual = function(){ try{ window.prompt("Ссылка на варианты — скопируй:", url); }catch(e){} };
+        if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(ok, manual); else manual();
+      }, prs);
+    });
     $("pcDrop").addEventListener("click", function(){ pcsv.rows = []; pcsv.name = ""; pcsvStore(); renderPrevCsv(); });
     [].slice.call(box.querySelectorAll(".pc-view button")).forEach(function(b){
       b.addEventListener("click", function(){ pcsv.view = b.getAttribute("data-v"); pcsv.page = 0; renderPrevCsv(); });
@@ -5229,8 +5268,8 @@
     if(typeof fetch === "function"){
       /* открыли ссылку на купон — грузим сразу ТОТ тираж, а не текущий */
       setTimeout(function(){
-        var want = (pendingLink && pendingLink.tirazh) ? pendingLink.tirazh :
-                   (pendingBook && pendingBook.tirazh) ? pendingBook.tirazh : null;
+        /* ссылку с вариантами тянем после текущего тиража: закрытый тираж откроется в просмотре прошлого */
+        var want = (pendingLink && pendingLink.tirazh) ? pendingLink.tirazh : null;
         if(want) linkPulling = true;
         pullTirazh(true, want);
         setTimeout(seedPrev, 4000);          /* прошлый тираж — фоном, когда текущий уже на месте */
