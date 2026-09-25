@@ -4395,7 +4395,9 @@
     couponStash();
     pushHistory("до обновления тиража", true);
     /* тираж сменился — прошлый уходит в «один шаг назад» (только результаты и счёт) */
-    if(state.matches.length && state.tirazh && String(info.number) !== String(state.tirazh)){
+    /* берём его, только если он ровно предыдущий: иначе (первый запуск, пропущенные тиражи)
+       «один шаг назад» подтянет seedPrev по номеру — стрелка всегда ведёт на тираж перед текущим */
+    if(state.matches.length && state.tirazh && Number(info.number) === Number(state.tirazh) + 1){
       state.prev = snapPrev(state.tirazh, state.tirazhId, state.deadline, state.matches, state.poolSum);
     }
     state.viewPrev = false;
@@ -4413,6 +4415,7 @@
     $("tirazhName").value = state.tirazh;
     render();
     attachFsTimes();
+    setTimeout(seedPrev, 1500);
     return list.length;
   }
 
@@ -4461,8 +4464,9 @@
   }
   /* при первом запуске после обновления прошлого тиража ещё нет — подтягиваем его по номеру */
   function seedPrev(){
-    if(state.prev || !state.tirazh || typeof fetch !== "function") return;
+    if(!state.tirazh || typeof fetch !== "function") return;
     var wantN = Number(state.tirazh) - 1;
+    if(state.prev && Number(state.prev.tirazh) === wantN) return;
     if(!isFinite(wantN) || wantN <= 0) return;
     apiFetch("baltbet-main/drawings?page=1")
       .then(function(r){ return r.ok ? r.json() : null; })
@@ -4483,7 +4487,8 @@
                           res: evRes(e, info), score: e.score || "" });
             });
             if(!list.length) return;
-            if(state.prev) return;                       /* пока тянули, тираж уже сменился */
+            if(Number(state.tirazh) - 1 !== Number(d.number)) return;   /* пока тянули, тираж уже сменился */
+            if(state.prev && String(state.prev.tirazh) === String(d.number)) return;
             state.prev = snapPrev(d.number, d.id, d.ended_at || "", list, d.pool_sum);
             save(); render();
           });
