@@ -1404,7 +1404,7 @@
   /* «(ж)» в конце названия — это БалтБет помечает женский матч прямо в имени команды; для
      поиска это лишний шум (Flashscore такую строку не найдёт), а по каким командам смотреть —
      полезный сигнал (см. isWomen ниже) */
-  function fsClean(name){ return String(name || "").replace(/\s*\((?:ж|б|мол)\)\s*$/i, "").trim(); }
+  function fsClean(name){ return String(name || "").replace(/\s*\((?:ж|мол)\)\s*$/i, "").trim(); }
   function fsIsWomen(name){ return /\(ж\)\s*$/i.test(String(name || "")); }
   /* слова, которые слишком часто встречаются в чужих названиях, чтобы засчитывать их как
      совпадение (иначе «Ротерем Юнайтед» пройдёт по слову «Юнайтед» и получит «Манчестер Юнайтед») */
@@ -1428,10 +1428,22 @@
         d[i][j] = Math.min(d[i-1][j] + 1, d[i][j-1] + 1, d[i-1][j-1] + (a.charAt(i-1) === b.charAt(j-1) ? 0 : 1));
     return d[m][n];
   }
+  /* FS_STRICT — первый проход: только точное слово или вхождение. Нечёткое сравнение —
+     потом и строже прежнего, иначе «Испания» находила «Италию», «Словения» — «Словакию» */
+  var FS_STRICT = false;
   function fsWordSimilar(a, b){
     if(a === b) return true;
-    if(a.indexOf(b) >= 0 || b.indexOf(a) >= 0) return true;
-    return fsDist(a, b) <= Math.ceil(Math.max(a.length, b.length) * 0.3);
+    if(a.indexOf(b) >= 0 || b.indexOf(a) >= 0) return Math.min(a.length, b.length) >= 4 || !FS_STRICT;
+    if(FS_STRICT) return false;
+    return fsDist(a, b) <= Math.ceil(Math.max(a.length, b.length) * 0.25);
+  }
+  /* молодёжь (U21, «(21)»), дубль («Б», «(Б)», II) — у обеих сторон должно совпадать */
+  function fsTag(name){
+    var n = String(name || "").toLowerCase(), t = "";
+    var y = n.match(/\bu\s?(\d\d)\b|\((\d\d)\)|до\s?(\d\d)/);
+    if(y) t += "y" + (y[1] || y[2] || y[3]);
+    if(/\((?:б|b)\)|\s(?:б|b|ii)\s*$|\s(?:б|b|ii)\s*\(/.test(n)) t += "r";
+    return t;
   }
   /* каждое «важное» слово запроса должно найтись (точно или почти) среди слов кандидата —
      иначе это просто другой клуб с одним общим словом в названии. У части команд (как
@@ -1512,7 +1524,12 @@
      («Торпедо Нижний Новгород» в тираже — просто «Торпедо» на Flashscore), поэтому сверяем
      обе стороны: и что все слова запроса нашлись у кандидата, и наоборот — что все слова
      (более короткого) кандидата нашлись в запросе */
+  /* клубы, которые на Flashscore называются совсем иначе (переименование, аббревиатура) */
+  var FS_ALIAS = { "телеком египет": ["WE SC", "Telecom Egypt"], "юк дублин": ["ЮКД", "UCD"], "юкд": ["ЮК Дублин"] };
   function fsNameOk(queryClean, queryCore, candidateName){
+    if(fsTag(queryClean) !== fsTag(candidateName)) return false;
+    var al = FS_ALIAS[String(queryClean || "").toLowerCase().replace(/ё/g, "е")];
+    if(al && al.some(function(x){ return x.toLowerCase() === String(candidateName || "").toLowerCase(); })) return true;
     if(fsMatches(queryCore, candidateName)) return true;
     var candCore = fsCoreWords(candidateName);
     return !!(candCore.length && fsMatches(candCore, queryClean));
@@ -1541,12 +1558,34 @@
   function fsLookup(m, all){
     var isWomen = fsIsWomen(m.home) || fsIsWomen(m.away);
     var country = fsCountry(m.league);
+    var mine = country ? all.filter(function(g){ return g.country === country; }) : null;
     var found = null;
-    if(country){
-      found = fsFindMatch(all.filter(function(g){ return g.country === country; }), m.home, m.away, isWomen);
-    }
-    if(!found) found = fsFindMatch(all, m.home, m.away, isWomen);
+    /* сначала точные названия (страна, потом все), затем нечёткие, затем одна команда */
+    [true, false].some(function(strict){
+      FS_STRICT = strict;
+      if(mine) found = fsFindMatch(mine, m.home, m.away, isWomen);
+      if(!found) found = fsFindMatch(all, m.home, m.away, isWomen);
+      return !!found;
+    });
+    FS_STRICT = true;
+    if(!found && mine) found = fsFindOneSide(mine, m.home, m.away, isWomen);
+    FS_STRICT = false;
     return found;
+  }
+  /* запасной путь: в турнирах нужной страны совпала только одна команда, а вторая на
+     Flashscore записана по-другому. Берём, только если такой матч ровно один */
+  function fsFindOneSide(groups, homeName, awayName, isWomen){
+    var hClean = fsClean(homeName), aClean = fsClean(awayName);
+    var hCore = fsCoreWords(hClean), aCore = fsCoreWords(aClean), hits = [];
+    groups.forEach(function(g){
+      var leagueW = /жен/i.test(g.league || "");
+      g.matches.forEach(function(mm){
+        if(isWomen && !leagueW && !(/\(ж\)/i.test(mm.home) && /\(ж\)/i.test(mm.away))) return;
+        if(fsNameOk(hClean, hCore, mm.home) || fsNameOk(aClean, aCore, mm.away))
+          hits.push({ h: { url: mm.hSlug, id: mm.hId }, a: { url: mm.aSlug, id: mm.aId }, mid: mm.id, ts: mm.ts, st: mm.st, sc: mm.sc });
+      });
+    });
+    return hits.length === 1 ? hits[0] : null;
   }
   function fsFmtTime(ts){
     var n = Number(ts);
@@ -1657,13 +1696,8 @@
     Promise.all([fsLoadDay(sportKey, 0), fsLoadDay(sportKey, 1)])
       .then(function(days){
         var all = days[0].concat(days[1]);
-        var found = null;
-        /* сначала — только турнир нужной страны (если она известна и не континент), это
-           страхует от тёзок в других странах; не нашли — ищем по всем группам */
-        if(country){
-          found = fsFindMatch(all.filter(function(g){ return g.country === country; }), m.home, m.away, isWomen);
-        }
-        if(!found) found = fsFindMatch(all, m.home, m.away, isWomen);
+        /* сначала — турнир нужной страны, потом все группы, потом совпадение по одной команде */
+        var found = fsLookup(m, all);
         if(found) go("https://www.flashscore.ru/match/" + sportKey + "/" + found.h.url + "-" + found.h.id + "/" + found.a.url + "-" + found.a.id + "/?mid=" + found.mid);
         else go(fallback);
       })
