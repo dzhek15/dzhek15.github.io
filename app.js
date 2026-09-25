@@ -4459,9 +4459,7 @@
   function renderPrevView(){
     var p = state.prev;
     rowsEl.innerHTML = "";
-    /* свой купон прошлого тиража — из сохранённых купонов по тиражам */
-    var myPrev = {}, myC = state.coupons && state.coupons[p.tirazh];
-    if(myC) myC.rows.forEach(function(r){ myPrev[r.k] = r; });
+    /* просмотр прошлого тиража — только счёт и итоги, без своего купона */
     p.matches.forEach(function(m, idx){
       var row = document.createElement("div");
       row.className = "row";
@@ -4519,8 +4517,6 @@
         b.className = "pick " + (o === "1" ? "p1" : o === "X" ? "px" : "p2");
         b.textContent = o;
         if(m.res === o) b.classList.add("won");
-        var myr = myPrev[m.home + "|" + m.away];
-        if(myr && myr.picks[o]){ b.setAttribute("aria-pressed", "true"); if(m.res === o) b.classList.add("mine-hit"); }
         cell.appendChild(b);
         picksWrap.appendChild(cell);
       });
@@ -4535,18 +4531,11 @@
     var done = p.matches.filter(function(m){ return m.res; }).length;
     var live = p.matches.filter(function(m){ return !m.res && m.score; }).length;
     var voids = p.matches.filter(function(m){ return m.res === VOID; }).length;
-    var myHit = 0, myN = 0;
-    if(myC) p.matches.forEach(function(m){
-      var r = myPrev[m.home + "|" + m.away]; if(!r || !m.res) return;
-      if(!(r.picks["1"] || r.picks["X"] || r.picks["2"])) return;
-      myN++; if(m.res === VOID || r.picks[m.res]) myHit++;
-    });
     var bar = $("prevBar");
     bar.innerHTML = '<span class="pb-t">Просмотр тиража ' + escHtml(p.tirazh) + '</span>' +
       '<span>сыграно <b>' + done + '</b> из ' + p.matches.length + '</span>' +
       (live ? '<span>идёт <b>' + live + '</b></span>' : '') +
       (voids ? '<span title="засчитан угаданным для любой ставки">отменён <b>' + voids + '</b></span>' : '') +
-      (myN ? '<span title="твой купон на этот тираж">твой купон: угадано <b>' + myHit + '</b> из ' + myN + '</span>' : '') +
       (p.at ? '<span>обновлено <b>' + new Date(p.at).toTimeString().slice(0,5) + '</b></span>' : '') +
       '<button type="button" class="pb-back" id="btnPrevBack">К текущему тиражу &#8250;</button>';
     bar.hidden = false;
