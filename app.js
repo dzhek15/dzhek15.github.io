@@ -4434,7 +4434,8 @@
       tirazh: String(tirazh || ""), id: id || null, deadline: own.end || deadline || "", at: Date.now(),
       pool: own.pool || Number(pool) || 0, jack: own.jack || 0,
       matches: matches.map(function(m){
-        return { home: m.home, away: m.away, league: m.league || "", res: m.res || "", score: m.score || "" };
+        return { home: m.home, away: m.away, league: m.league || "", res: m.res || "", score: m.score || "",
+                 date: m.date || "", time: m.time || "" };
       })
     };
   }
@@ -4542,7 +4543,7 @@
       meta.className = "meta";
       var code = cont.hit ? ((hc || ac) ? null : cont.flag) : flagCode(m.league);
       if(code) meta.appendChild(mkFlag(code, "flag"));
-      meta.appendChild(document.createTextNode(m.league || ""));
+      meta.appendChild(document.createTextNode([m.date, m.time, m.league].filter(Boolean).join("  ·  ")));
       meta.appendChild(mkNewsBtn(m, idx, true));
       fix.appendChild(meta);
       row.appendChild(fix);
@@ -4740,7 +4741,28 @@
   function escHtml(x){ return String(x).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
   function enterPrev(){
     if(!state.prev) return;
-    state.viewPrev = true; save(); render(); renderKickoff(); refreshPrev();
+    state.viewPrev = true; save(); render(); renderKickoff(); refreshPrev(); attachPrevTimes();
+  }
+  /* время начала у прошлого тиража: берём из снимка, а чего нет — из фида Flashscore
+     (он отдаёт только сегодня и завтра, поэтому вчерашние матчи дозаполнятся, пока они в фиде) */
+  function attachPrevTimes(){
+    var p = state.prev;
+    if(!p || typeof fetch !== "function" || p.matches.every(function(m){ return m.time; })) return;
+    var sports = {};
+    p.matches.forEach(function(m){ if(!m.time) sports[fsFeedSport(m.league)] = true; });
+    var keys = Object.keys(sports);
+    Promise.all(keys.map(function(k){ return Promise.all([fsLoadDay(k, 0), fsLoadDay(k, 1)]); })).then(function(rs){
+      if(state.prev !== p) return;
+      var by = {}, changed = false;
+      keys.forEach(function(k, i){ by[k] = rs[i][0].concat(rs[i][1]); });
+      p.matches.forEach(function(m){
+        if(m.time) return;
+        var f = fsLookup(m, by[fsFeedSport(m.league)] || []);
+        var t = f ? fsFmtTime(f.ts) : "";
+        if(t){ m.time = t; changed = true; }
+      });
+      if(changed){ save(); if(state.viewPrev) render(); }
+    }).catch(function(){});
   }
   function leavePrev(){
     state.viewPrev = false; save(); render(); renderKickoff();
@@ -5212,6 +5234,7 @@
         if(want) linkPulling = true;
         pullTirazh(true, want);
         setTimeout(seedPrev, 4000);          /* прошлый тираж — фоном, когда текущий уже на месте */
+        setTimeout(attachPrevTimes, 7000);   /* и время начала его матчей */
         setTimeout(loadHist, 2500);          /* история тиражей для разбора — тоже фоном */
       }, 300);
     } else {
