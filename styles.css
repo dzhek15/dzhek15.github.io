@@ -1179,3 +1179,8 @@ body.is-prev .row .pick.mine-hit{outline-color:var(--brand-gold)}
 .pc-btn{white-space:nowrap}
 .pc-acts{flex-wrap:wrap; justify-content:center}
 @media (max-width:400px){ .pc-head{flex-direction:column; gap:6px} .pc-acts .pc-btn{padding:5px 9px} }
+
+.pc-tabs{display:flex; flex-wrap:wrap; justify-content:center; gap:6px; margin:12px auto 0; max-width:760px}
+.pc-tabs button{display:inline-flex; align-items:center; gap:6px; max-width:200px; padding:5px 11px; border:1px solid var(--rule-strong); border-radius:999px; background:transparent; color:var(--muted); font:600 12px "IBM Plex Sans",sans-serif; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.pc-tabs button small{font:500 11px "IBM Plex Mono",monospace; opacity:.8}
+.pc-tabs button[aria-pressed="true"]{border-color:var(--brand-gold); color:var(--ink); background:var(--surface-2)}
