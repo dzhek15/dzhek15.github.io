@@ -3767,27 +3767,28 @@
 
   function tryPending(){ tryPendingLink(); tryPendingBook(); }
   function prevBookOpen(p, tries){
-    if(!(state.prev && String(state.prev.tirazh) === String(p.tirazh))){
-      /* прошлый тираж ещё подгружается фоном — ждём до ~15 с */
-      if(tries < 15 && Number(p.tirazh) === Number(state.tirazh) - 1){ setTimeout(function(){ prevBookOpen(p, tries + 1); }, 1000); return; }
-      say("Ссылка сделана для тиража №" + p.tirazh + ". В просмотре доступен только прошлый тираж" +
-          (state.prev ? " №" + state.prev.tirazh : "") + ", поэтому варианты из ссылки не открыть.");
-      return;
-    }
-    varsDecode(p.payload, state.prev.matches.length, function(rows, pages){
-      if(!rows){ say("Ссылку со списком вариантов развернуть не удалось — похоже, адрес обрезался при пересылке."); return; }
-      pcsvEnsure(String(p.tirazh));
-      var nLinks = pcsv.sets.filter(function(x){ return x.link; }).length;
-      var add = pcsvAdd({ name: "Ссылка " + (nLinks + 1), link: 1,
-               rows: rows.map(function(r){ return r.join(""); }),
-               sys: (pages || rows).map(function(pg){ return pg.join(","); }) });
+    var isPrev = !!(state.prev && String(state.prev.tirazh) === String(p.tirazh));
+    /* прошлый тираж ещё подгружается фоном — ждём до ~15 с */
+    if(!isPrev && tries < 15 && Number(p.tirazh) === Number(state.tirazh) - 1){ setTimeout(function(){ prevBookOpen(p, tries + 1); }, 1000); return; }
+    var N = (state.prev && state.prev.matches.length) || state.matches.length || 15;
+    varsDecode(p.payload, N, function(rows, pages){
+      if(!rows){ say("Ссылку со списком вариантов развернуть не удалось — похоже, адрес обрезался при пересылке."); if(p.next) p.next(); return; }
+      var add = pcsvAddTo(String(p.tirazh), { link: 1, rows: rows.map(function(r){ return r.join(""); }),
+                          sys: (pages || rows).map(function(pg){ return pg.join(","); }) });
       try{ history.replaceState(null, "", location.pathname + location.search); }catch(e){}
-      if(!state.viewPrev) enterPrev();
-      pcsv.msgAt = Date.now(); pcsv.msg = (add.dup ? "Эта ссылка уже загружена — «" + pcsv.name + "». " : "Из ссылки открыто " + fmt(pcsv.rows.length) + " вариант(ов)" +
-        (pages && pages.length !== rows.length ? " в " + fmt(pages.length) + " строк(е)" : "") + ". ") + (p.more ? p.more : "Свой купон цел.");
-      renderPrevCsv();
-      if(p.next) p.next();
-      setTimeout(function(){ try{ $("prevCsv").scrollIntoView({ behavior: "smooth", block: "start" }); }catch(e){} }, 300);
+      pcsv.msgAt = Date.now();
+      pcsv.msg = (add.dup ? "Эта ссылка уже загружена — «" + add.name + "». " : "Из ссылки открыто " + fmt(rows.length) + " вариант(ов)" +
+        (pages && pages.length !== rows.length ? " в " + fmt(pages.length) + " строк(е)" : "") + (isPrev ? "" : ", тираж №" + p.tirazh) + ". ") +
+        (p.more ? p.more : "Свой купон цел.");
+      if(isPrev){
+        if(!state.viewPrev) enterPrev();
+        renderPrevCsv();
+        setTimeout(function(){ try{ $("prevCsv").scrollIntoView({ behavior: "smooth", block: "start" }); }catch(e){} }, 300);
+        if(p.next) p.next();
+      } else {
+        prevLoad(Number(p.tirazh), true, function(){ say("Тираж №" + p.tirazh + " подгрузить не удалось, варианты сохранены — откроются, когда он загрузится."); });
+        if(p.next) setTimeout(p.next, 1500);
+      }
     });
   }
 
@@ -4500,12 +4501,16 @@
     var wantN = Number(state.tirazh) - 1;
     if(state.prev && Number(state.prev.tirazh) === wantN) return;
     if(!isFinite(wantN) || wantN <= 0) return;
+    prevLoad(wantN, false);
+  }
+  /* загрузить в просмотр любой закрытый тираж по номеру (для сохранённых вариантов старых тиражей) */
+  function prevLoad(wantN, open, fail){
     apiFetch("baltbet-main/drawings?page=1")
       .then(function(r){ return r.ok ? r.json() : null; })
       .then(function(j){
         var rows = (j && j.data) || [], d = null, i;
         for(i = 0; i < rows.length; i++) if(String(rows[i].number) === String(wantN)){ d = rows[i]; break; }
-        if(!d) return null;
+        if(!d){ if(fail) fail(); return null; }
         return apiFetch("drawing-info/" + d.id).then(function(r){ return r.ok ? r.json() : null; })
           .then(function(j2){
             if(!j2) return;
@@ -4518,14 +4523,15 @@
               list.push({ home: t[0], away: t[1], league: e.championship || "",
                           res: evRes(e, info), score: e.score || "" });
             });
-            if(!list.length) return;
-            if(Number(state.tirazh) - 1 !== Number(d.number)) return;   /* пока тянули, тираж уже сменился */
-            if(state.prev && String(state.prev.tirazh) === String(d.number)) return;
+            if(!list.length){ if(fail) fail(); return; }
+            if(!open && Number(state.tirazh) - 1 !== Number(d.number)) return;   /* пока тянули, тираж уже сменился */
+            if(state.prev && String(state.prev.tirazh) === String(d.number)){ if(open) enterPrev(); return; }
             state.prev = snapPrev(d.number, d.id, d.ended_at || "", list, d.pool_sum);
-            save(); render();
+            save();
+            if(open) enterPrev(); else render();
           });
       })
-      .catch(function(){});
+      .catch(function(){ if(fail) fail(); });
   }
   function renderPrevView(){
     var p = state.prev;
@@ -4627,10 +4633,58 @@
   function pcsvEnsure(tir){
     if(pcsv.tir === tir) return;
     var saved = pcsvAll()[tir] || null, sets = [];
-    if(saved && saved.sets) sets = saved.sets;
-    else if(saved && saved.rows) sets = [{ name: saved.name || "Файл", rows: saved.rows, sys: saved.sys || [] }];
-    pcsv = { tir: tir, sets: sets, act: 0, page: 0, sort: pcsv.sort || "hits", view: pcsv.view };
+    if(saved && saved.sets) sets = saved.sets.map(function(st){ return { name: st.name, link: st.link || 0, sys: st.sys || [], rows: st.rows || pcsvExpand(st.sys || []) }; });
+    else if(saved && saved.rows) sets = [{ name: saved.name || "Файл", rows: saved.rows, sys: saved.sys || saved.rows }];
+    pcsv = { tir: tir, sets: sets, act: 0, page: 0, sort: pcsv.sort || "hits", view: pcsv.view, msg: pcsv.msg, msgAt: pcsv.msgAt };
     pcsvUse(saved && saved.act < sets.length ? saved.act : 0);
+  }
+  function pcsvExpand(sys){
+    var out = [];
+    for(var i = 0; i < sys.length && out.length < MAX_CSV; i++){
+      var combo = [""];
+      String(sys[i]).split(",").forEach(function(c){
+        var nx = [];
+        combo.forEach(function(pfx){ for(var k = 0; k < c.length; k++) nx.push(pfx + c.charAt(k)); });
+        combo = nx;
+      });
+      for(var q = 0; q < combo.length && out.length < MAX_CSV; q++) out.push(combo[q]);
+    }
+    return out;
+  }
+  /* сохранённые наборы других тиражей — кнопки, чтобы открыть их */
+  function pcsvOthers(cur){
+    var all = pcsvAll(), ks = Object.keys(all).filter(function(k){ return k !== cur && all[k] && ((all[k].sets && all[k].sets.length) || all[k].rows); });
+    if(!ks.length) return "";
+    ks.sort(function(a, b){ return Number(b) - Number(a); });
+    return '<div class="pc-others"><span>Сохранено в других тиражах:</span>' + ks.map(function(k){
+      var n = all[k].sets ? all[k].sets.length : 1;
+      return '<button type="button" class="pc-btn ghost" data-tir="' + escHtml(k) + '">№' + escHtml(k) + ' · ' + n + '</button>';
+    }).join("") + '</div>';
+  }
+  function pcsvOthersBind(box){
+    [].slice.call(box.querySelectorAll(".pc-others button")).forEach(function(b){
+      b.addEventListener("click", function(){
+        var n = Number(b.getAttribute("data-tir"));
+        b.disabled = true; b.textContent = "открываю…"; pcsv.msg = "";
+        prevLoad(n, true, function(){ b.disabled = false; b.textContent = "№" + n + " · не открылся"; });
+      });
+    });
+  }
+  /* добавить набор к любому тиражу: к открытому — сразу, к другому — в сохранённые */
+  function pcsvAddTo(tir, set){
+    if(pcsv.tir === tir){
+      if(set.link) set.name = "Ссылка " + (pcsv.sets.filter(function(x){ return x.link; }).length + 1);
+      var r = pcsvAdd(set); return { dup: r.dup, name: pcsv.name };
+    }
+    var all = pcsvAll(), e = all[tir] || { sets: [], act: 0 };
+    if(!e.sets) e = { sets: e.rows ? [{ name: e.name || "Файл", sys: e.sys || e.rows }] : [], act: 0 };
+    var sig = (set.sys || []).join("|");
+    for(var i = 0; i < e.sets.length; i++) if((e.sets[i].sys || []).join("|") === sig){ e.act = i; all[tir] = e; try{ localStorage.setItem(PCSV_KEY, JSON.stringify(all)); }catch(x){} return { dup: true, name: e.sets[i].name }; }
+    var nm = set.link ? "Ссылка " + (e.sets.filter(function(x){ return x.link; }).length + 1) : set.name;
+    e.sets.push({ name: nm, link: set.link || 0, sys: set.sys }); e.act = e.sets.length - 1; e.at = Date.now();
+    all[tir] = e;
+    try{ localStorage.setItem(PCSV_KEY, JSON.stringify(all)); }catch(x){}
+    return { dup: false, name: nm };
   }
   function pcsvAdd(set){
     var sig = (set.sys || []).join("|") + "#" + set.rows.length;
@@ -4645,10 +4699,10 @@
   function pcsvAll(){ try{ return JSON.parse(localStorage.getItem(PCSV_KEY) || "{}") || {}; }catch(e){ return {}; } }
   function pcsvStore(){
     var all = pcsvAll();
-    if(pcsv.sets.length) all[pcsv.tir] = { sets: pcsv.sets, act: pcsv.act, at: Date.now() };
+    /* храним только строки файла (с допами) — варианты разворачиваются при открытии; удаляются только кнопкой «Убрать» */
+    if(pcsv.sets.length) all[pcsv.tir] = { act: pcsv.act, at: Date.now(),
+      sets: pcsv.sets.map(function(st){ return { name: st.name, link: st.link || 0, sys: st.sys }; }) };
     else delete all[pcsv.tir];
-    Object.keys(all).sort(function(a, b){ return (all[b].at || 0) - (all[a].at || 0); })
-      .slice(3).forEach(function(k){ delete all[k]; });
     try{ localStorage.setItem(PCSV_KEY, JSON.stringify(all)); return true; }catch(e){ return false; }
   }
   function pcsvPick(){
@@ -4718,12 +4772,12 @@
       var re = /#v=([^-&#\s]*)-([A-Za-z0-9\-_]+)/g, m, list = [], other = 0;
       while((m = re.exec(v))){
         var t = decodeURIComponent(m[1]);
-        if(state.prev && String(state.prev.tirazh) === String(t)) list.push({ tirazh: t, payload: m[2] });
+        if(Number(t) < Number(state.tirazh)) list.push({ tirazh: t, payload: m[2] });
         else other++;
       }
       if(!list.length){
         pcsv.msgAt = Date.now();
-        pcsv.msg = other ? "Ссылки сделаны для другого тиража, а в просмотре тираж №" + (state.prev ? state.prev.tirazh : "—") + "."
+        pcsv.msg = other ? "Это ссылки на текущий тираж №" + state.tirazh + " — их открывают в самом купоне, а не в просмотре."
                          : "Это не ссылка на варианты: нужна ссылка вида …#v=5017-…";
         renderPrevCsv(); return;
       }
@@ -4731,7 +4785,7 @@
       var step = function(){
         if(k >= total) return;
         var p = list[k++];
-        p.more = total > 1 ? "Обработано ссылок: " + k + " из " + total + (other ? ", для другого тиража пропущено: " + other : "") + "." : "";
+        p.more = total > 1 ? "Обработано ссылок: " + k + " из " + total + (other ? ", на текущий тираж пропущено: " + other : "") + "." : "";
         p.next = step;
         prevBookOpen(p, 0);
       };
@@ -4748,9 +4802,10 @@
     var msg = pcsv.msg && Date.now() - (pcsv.msgAt || 0) < 10000 ? '<p class="pc-msg">' + escHtml(pcsv.msg) + '</p>' : "";
     if(!pcsv.rows.length){
       box.innerHTML = '<div class="pc-empty"><span>Загрузи CSV своих вариантов на этот тираж или вставь ссылку на них — здесь появится весь купон и все варианты с угаданными по ходу матчей.</span>' +
-        '<span class="pc-acts">' + PC_BTNS + '</span></div>' + PC_PASTE + msg;
+        '<span class="pc-acts">' + PC_BTNS + '</span></div>' + PC_PASTE + msg + pcsvOthers(pcsv.tir);
       $("pcLoad").addEventListener("click", pcsvPick);
       pcPasteBind();
+      pcsvOthersBind(box);
       return;
     }
     var ms = p.matches, n = ms.length, res = ms.map(function(m){ return m.res || ""; });
@@ -4840,7 +4895,9 @@
       '<span><b>' + (pcsv.page + 1) + '</b> / ' + pages + '</span>' +
       '<button type="button" data-g="' + (pcsv.page + 1) + '" aria-label="Дальше"' + (pcsv.page < pages - 1 ? '' : ' disabled') + '>&#8250;</button>' +
       '<button type="button" data-g="' + (pages - 1) + '" aria-label="В конец"' + (pcsv.page < pages - 1 ? '' : ' disabled') + '>&#187;</button></div>';
+    h += pcsvOthers(pcsv.tir);
     box.innerHTML = h;
+    pcsvOthersBind(box);
     $("pcLoad").addEventListener("click", pcsvPick);
     pcPasteBind();
     $("pcDrop").addEventListener("click", function(){
