@@ -4589,7 +4589,7 @@
   function pcsvAll(){ try{ return JSON.parse(localStorage.getItem(PCSV_KEY) || "{}") || {}; }catch(e){ return {}; } }
   function pcsvStore(){
     var all = pcsvAll();
-    if(pcsv.rows.length) all[pcsv.tir] = { name: pcsv.name, rows: pcsv.rows, at: Date.now() };
+    if(pcsv.rows.length) all[pcsv.tir] = { name: pcsv.name, rows: pcsv.rows, sys: pcsv.sys || [], at: Date.now() };
     else delete all[pcsv.tir];
     Object.keys(all).sort(function(a, b){ return (all[b].at || 0) - (all[a].at || 0); })
       .slice(3).forEach(function(k){ delete all[k]; });
@@ -4613,9 +4613,11 @@
             renderPrevCsv(); return;
           }
           pcsv = { tir: String(state.prev.tirazh), name: f.name, page: 0, sort: pcsv.sort || "hits",
-                   rows: res.rows.map(function(r){ return r.join(""); }) };
+                   rows: res.rows.map(function(r){ return r.join(""); }),
+                   sys: res.pages.map(function(pg){ return pg.join(","); }) };
           var kept = pcsvStore();
           pcsv.msg = "Загружено " + fmt(pcsv.rows.length) + " вариант(ов)" +
+            (pcsv.sys.length !== pcsv.rows.length ? " в " + fmt(pcsv.sys.length) + " строк(е) файла" : "") +
             (res.bad ? ", пропущено строк: " + res.bad : "") + (res.over ? ", показаны первые " + fmt(MAX_CSV) : "") +
             (kept ? "." : ". Файл большой — сохранится до перезагрузки страницы.");
           renderPrevCsv();
@@ -4633,7 +4635,7 @@
     box.hidden = false;
     if(pcsv.tir !== String(p.tirazh)){
       var saved = pcsvAll()[String(p.tirazh)];
-      pcsv = { tir: String(p.tirazh), name: saved ? saved.name : "", rows: saved ? saved.rows : [], page: 0, sort: pcsv.sort || "hits" };
+      pcsv = { tir: String(p.tirazh), name: saved ? saved.name : "", rows: saved ? saved.rows : [], sys: saved ? (saved.sys || []) : [], page: 0, sort: pcsv.sort || "hits" };
     }
     var msg = pcsv.msg ? '<p class="pc-msg">' + escHtml(pcsv.msg) + '</p>' : "";
     pcsv.msg = "";
@@ -4650,11 +4652,16 @@
       for(var j = 0; j < n; j++) if(res[j]){ if(res[j] === VOID || r.charAt(j) === res[j]) h++; else miss++; }
       return { i: i, h: h, miss: miss };
     });
+    /* строки файла как есть — система с допами («1X», «12») остаётся одной строкой */
+    var sysL = (pcsv.sys || []).map(function(x){ return x.split(","); }).filter(function(x){ return x.length === n; });
+    var hasSys = sysL.length && sysL.length !== rows.length;
+    var view = hasSys && pcsv.view !== "one" ? "sys" : "one";
     var best = 0, now9 = 0, can9 = 0, can15 = 0;
     st.forEach(function(x){ if(x.h > best) best = x.h; if(x.h >= 9) now9++; if(n - x.miss >= 9) can9++; if(!x.miss) can15++; });
     var h = '<div class="pc-head"><span class="pc-t">Мои варианты</span><span class="pc-f" title="' + escHtml(pcsv.name) + '">' + escHtml(pcsv.name) + '</span>' +
       '<span class="pc-acts"><button type="button" class="pc-btn" id="pcLoad">Другой файл</button><button type="button" class="pc-btn ghost" id="pcDrop">Убрать</button></span></div>' + msg;
     h += '<div class="pc-cards">' +
+      (hasSys ? '<div><span>Строк</span><b>' + fmt(sysL.length) + '</b></div>' : '') +
       '<div><span>Вариантов</span><b>' + fmt(total) + '</b></div>' +
       '<div><span>Лучший</span><b>' + (played ? best + ' из ' + played : '—') + '</b></div>' +
       '<div><span>9+ сейчас</span><b>' + fmt(now9) + '</b></div>' +
@@ -4669,31 +4676,47 @@
       h += '<div class="pc-cr"><span class="pc-n">' + (j + 1) + '</span><span class="pc-m"><i><b>' + escHtml(m.home) + '</b><u> — </u><b>' + escHtml(m.away) + '</b></i>' +
         (sc ? '<em class="' + (m.res ? "" : "live") + '">' + escHtml(sc) + '</em>' : '') + '</span>';
       OUT.forEach(function(o){
-        var cls = "pc-o" + (c[o] ? " on" : "") + (res[j] && (res[j] === o || res[j] === VOID) ? (c[o] ? " hit" : " hole") : (res[j] && c[o] ? " miss" : ""));
-        h += '<span class="' + cls + '" title="' + o + ': ' + fmt(c[o]) + ' вар.">' + o + '<small>' + (c[o] ? (c[o] === total ? "все" : fmt(c[o])) : "·") + '</small></span>';
+        var cls = "pc-o" + (c[o] ? " on" : "") + (res[j] === VOID ? (c[o] ? " hit" : "") : res[j] === o ? (c[o] ? " hit" : " hole") : (res[j] && c[o] ? " miss" : ""));
+        h += '<span class="' + cls + '" title="' + o + ': ' + fmt(c[o]) + ' вар.">' + o + (sysL.length === 1 ? '' : '<small>' + (c[o] ? (c[o] === total ? "все" : fmt(c[o])) : "·") + '</small>') + '</span>';
       });
       h += '</div>';
     });
     h += '</div>';
     /* варианты по 30 */
+    var src = rows;
+    if(view === "sys"){
+      src = sysL;
+      st = sysL.map(function(r, i){
+        var h = 0, miss = 0, v = 1;
+        for(var j = 0; j < n; j++){
+          v *= r[j].length;
+          if(res[j]){ if(res[j] === VOID || r[j].indexOf(res[j]) >= 0) h++; else miss++; }
+        }
+        return { i: i, h: h, miss: miss, v: v };
+      });
+    }
     var order = st.slice();
     if(pcsv.sort === "hits") order.sort(function(a, b){ return (b.h - a.h) || (a.miss - b.miss) || (a.i - b.i); });
-    var pages = Math.max(1, Math.ceil(total / PCSV_PAGE));
+    var pages = Math.max(1, Math.ceil(order.length / PCSV_PAGE));
     if(pcsv.page >= pages) pcsv.page = pages - 1;
     var from = pcsv.page * PCSV_PAGE, part = order.slice(from, from + PCSV_PAGE);
-    h += '<div class="pc-sub">Варианты<span class="pc-sort"><button type="button" data-s="hits" aria-pressed="' + (pcsv.sort === "hits") + '">по угаданным</button>' +
+    h += '<div class="pc-sub">' + (view === "sys" ? "Строки файла" : "Варианты") +
+      (hasSys ? '<span class="pc-sort pc-view"><button type="button" data-v="sys" aria-pressed="' + (view === "sys") + '">с допами</button>' +
+        '<button type="button" data-v="one" aria-pressed="' + (view === "one") + '">по одному</button></span>' : '') +
+      '<span class="pc-sort pc-ord"><button type="button" data-s="hits" aria-pressed="' + (pcsv.sort === "hits") + '">по угаданным</button>' +
       '<button type="button" data-s="file" aria-pressed="' + (pcsv.sort !== "hits") + '">как в файле</button></span></div>';
     h += '<div class="pc-vars" style="--n:' + n + '"><div class="pc-vr pc-vh"><span>№</span>';
     for(var j = 0; j < n; j++) h += '<span>' + (j + 1) + '</span>';
     h += '<span>угад.</span></div>';
     part.forEach(function(x){
-      var r = rows[x.i];
+      var r = src[x.i];
       h += '<div class="pc-vr' + (x.h >= 9 ? " win" : "") + (n - x.miss < 9 ? " dead" : "") + '"><span>' + (x.i + 1) + '</span>';
       for(var j = 0; j < n; j++){
-        var o = r.charAt(j), cls = !res[j] ? "" : (res[j] === VOID || res[j] === o) ? "hit" : "miss";
+        var o = view === "sys" ? r[j] : r.charAt(j), cls = !res[j] ? "" : (res[j] === VOID || o.indexOf(res[j]) >= 0) ? "hit" : "miss";
+        if(o.length > 1) cls += " m" + o.length;
         h += '<span class="' + cls + '">' + o + '</span>';
       }
-      h += '<span class="pc-h">' + x.h + '</span></div>';
+      h += '<span class="pc-h"' + (x.v ? ' title="' + fmt(x.v) + ' вар. в строке"' : '') + '>' + x.h + '</span></div>';
     });
     h += '</div>';
     if(pages > 1) h += '<div class="pc-pager"><button type="button" data-g="0" aria-label="В начало"' + (pcsv.page ? '' : ' disabled') + '>&#171;</button>' +
@@ -4704,7 +4727,10 @@
     box.innerHTML = h;
     $("pcLoad").addEventListener("click", pcsvPick);
     $("pcDrop").addEventListener("click", function(){ pcsv.rows = []; pcsv.name = ""; pcsvStore(); renderPrevCsv(); });
-    [].slice.call(box.querySelectorAll(".pc-sort button")).forEach(function(b){
+    [].slice.call(box.querySelectorAll(".pc-view button")).forEach(function(b){
+      b.addEventListener("click", function(){ pcsv.view = b.getAttribute("data-v"); pcsv.page = 0; renderPrevCsv(); });
+    });
+    [].slice.call(box.querySelectorAll(".pc-ord button")).forEach(function(b){
       b.addEventListener("click", function(){ pcsv.sort = b.getAttribute("data-s"); pcsv.page = 0; renderPrevCsv(); });
     });
     [].slice.call(box.querySelectorAll(".pc-pager button")).forEach(function(b){
