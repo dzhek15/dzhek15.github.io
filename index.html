@@ -22,7 +22,7 @@ body{margin:0; font:14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; b
 img{max-width:100%}
 [hidden]{display:none !important}
 </style>
-<link rel="stylesheet" href="styles.css?v=20260925sm">
+<link rel="stylesheet" href="styles.css?v=20260926rd">
 </head>
 <body>
 
@@ -101,7 +101,8 @@ img{max-width:100%}
     </section>
     <div class="roll">
         <div class="roll-secondary roll-service">
-          <button id="btnUndo" type="button" disabled><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M7 4.5 3 8.5l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 8.5H12a4.5 4.5 0 0 1 0 9h-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Вернуть</button>
+          <button id="btnUndo" type="button" disabled><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M7 4.5 3 8.5l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 8.5H12a4.5 4.5 0 0 1 0 9h-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Назад</button>
+          <button id="btnRedo" type="button" disabled><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M13 4.5l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M16.5 8.5H8a4.5 4.5 0 0 0 0 9h2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Вперёд</button>
           <button id="btnFetch" type="button" title="Забрать актуальный тираж Балтсистемы с totobrief"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4.2 12.5a6 6 0 0 1 9.9-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M15.8 7.5a6 6 0 0 1-9.9 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M14.6 3.1v3.6h-3.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.4 16.9v-3.6h3.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lbl">Обновить тираж</span></button>
         </div>
         <div class="roll-group">
@@ -111,7 +112,7 @@ img{max-width:100%}
         <button class="btn-spin btn-crowd" id="btnLeast" type="button"><span class="ar">▼</span><span class="lbl-long">Проставить </span>меньшинство</button>
       </div>
         <div class="roll-secondary">
-          <button id="btnReset" type="button" title="Снять отметки со всех строк, кроме зафиксированных. Откатывается кнопкой «Вернуть»"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="13" height="13" rx="3"/><path d="M7.6 7.6l4.8 4.8"/><path d="M12.4 7.6l-4.8 4.8"/></svg><span class="lbl">Очистить исходы</span></button>
+          <button id="btnReset" type="button" title="Снять отметки со всех строк, кроме зафиксированных. Откатывается кнопкой «Назад»"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="13" height="13" rx="3"/><path d="M7.6 7.6l4.8 4.8"/><path d="M12.4 7.6l-4.8 4.8"/></svg><span class="lbl">Очистить исходы</span></button>
         </div>
         <div class="roll-modes">
         <button id="btnMarkAll" type="button" title="Пометить «рандом» все строки, кроме зафиксированных. Где отмечено два-три исхода — жеребьёвка пойдёт только по ним"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="13" height="13" rx="3"/><circle cx="7.2" cy="7.2" r="1.15" fill="currentColor" stroke="none"/><circle cx="12.8" cy="12.8" r="1.15" fill="currentColor" stroke="none"/></svg><span class="lbl">Все в рандом</span></button>
@@ -255,13 +256,13 @@ img{max-width:100%}
   </div>
 
   <footer>
-    Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. «РАНДОМ» ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; в корзину при этом ничего не уходит — для этого есть «Положить купон в корзину». Строки с «фиксом» он не трогает. «Вернуть» откатывает последнее действие, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
+    Купон и корзина хранятся в этом браузере: закроешь вкладку — всё останется. «РАНДОМ» ставит по одному случайному исходу в каждую строку с пометкой «рандом», выбирая только из отмеченных там исходов; в корзину при этом ничего не уходит — для этого есть «Положить купон в корзину». Строки с «фиксом» он не трогает. «Назад» откатывает последнее действие, «Вперёд» возвращает откаченное, «В купон» загружает любой вариант из корзины обратно. Галочка у варианта решает, уйдёт ли он в CSV.
     <span class="build">сборка 24.09 17:20 МСК</span>
   </footer>
 </div>
 
-<script src="config.js?v=20260925sm"></script>
-<script src="app.js?v=20260925sm"></script>
+<script src="config.js?v=20260926rd"></script>
+<script src="app.js?v=20260926rd"></script>
 
 </body>
 </html>

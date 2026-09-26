@@ -91,6 +91,7 @@
     if(!state || !Array.isArray(state.matches) || !state.matches.length){ state = seedState(); freshStart = true; }
   }catch(e){ state = seedState(); freshStart = true; }
   if(!Array.isArray(state.history)) state.history = [];
+  if(!Array.isArray(state.future)) state.future = [];
   if(!Array.isArray(state.played)) state.played = [];
   state.showPct = !!state.showPct;
   state.showKf  = !!state.showKf;
@@ -301,8 +302,8 @@
     }).join(" ");
   }
 
-  function pushHistory(label, keepMeta){
-    state.history.unshift({
+  function makeSnap(label, keepMeta){
+    return {
       at: new Date().toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"}),
       label: label,
       sig: signature(state.matches),
@@ -314,8 +315,30 @@
         played: state.played.slice(0, 60),
         matches: JSON.parse(JSON.stringify(state.matches))
       } : null
-    });
+    };
+  }
+  function pushHistory(label, keepMeta){
+    state.history.unshift(makeSnap(label, keepMeta));
     if(state.history.length>14) state.history.length=14;
+    state.future = [];                 /* новое действие — «Вперёд» больше некуда */
+  }
+  function applySnap(h){
+    if(!(h.meta && Array.isArray(h.meta.matches) && h.meta.matches.length)){
+      state.matches.forEach(function(m,i){
+        var s = h.snap[i]; if(!s) return;
+        m.picks = {"1":s.picks["1"],"X":s.picks["X"],"2":s.picks["2"]};
+        m.mode = s.mode;
+        if(Array.isArray(s.pool) && s.pool.length) m.pool = s.pool.slice();
+      });
+    }
+    if(h.meta){
+      if(Array.isArray(h.meta.matches) && h.meta.matches.length) state.matches = h.meta.matches;
+      state.tirazh = h.meta.tirazh;
+      state.spent = h.meta.spent;
+      state.rolls = h.meta.rolls;
+      state.played = Array.isArray(h.meta.played) ? h.meta.played : state.played;
+      $("tirazhName").value = state.tirazh || "";
+    }
   }
 
   /* ---------- масштаб ---------- */
@@ -1104,7 +1127,7 @@
     $("evBack").hidden = true;
     say("Положено в корзину: " + fmt(added) + " строк(и) на " + fmt(added * price) + " ₽" +
         (dup ? ", пропущено повторов: " + fmt(dup) : "") +
-        ". Они уйдут в CSV наравне с брошенными вариантами; убрать лишние можно корзиной в списке, откатить всё — кнопкой «Вернуть».");
+        ". Они уйдут в CSV наравне с брошенными вариантами; убрать лишние можно корзиной в списке, откатить всё — кнопкой «Назад».");
   }
 
 
@@ -1842,7 +1865,7 @@
     $("evBack").hidden = true;
     var t0 = tally();
     say("Вариант ИИ: проставлено " + set + " матч(ей)" + (locked ? ", зафиксированных не трогал: " + locked : "") +
-        ". В купоне " + fmt(t0.combos) + " вариант(ов) на " + fmt(t0.combos * (Number(state.price) || 0)) + " ₽. «Вернуть» откатит.");
+        ". В купоне " + fmt(t0.combos) + " вариант(ов) на " + fmt(t0.combos * (Number(state.price) || 0)) + " ₽. «Назад» откатит.");
   }
   /* нет разбора на этот тираж — кнопка серая и не нажимается, место под неё остаётся */
   function aiBtnState(b, idx){
@@ -2258,6 +2281,7 @@
                   ". Вернуть все три — кнопкой «Снять режимы»." : "");
     }
     $("btnUndo").disabled = state.history.length === 0 || spinning;
+    $("btnRedo").disabled = state.future.length === 0 || spinning;
     $("btnKeep").disabled = t.empty > 0 || spinning;
     $("sbRoll").disabled = $("btnSpin").disabled;
     $("sbKeep").disabled = $("btnKeep").disabled;
@@ -2535,7 +2559,7 @@
   /* При открытии и перезагрузке страницы купон должен быть пустым: проставленные
      исходы — это заготовка, а не решение, и каждый раз начинать с чужой раскладки
      неудобно. Зафиксированные строки не трогаем, а прежний набор кладём в историю,
-     чтобы «Вернуть» поднял его, если страницу перезагрузили случайно. */
+     чтобы «Назад» поднял его, если страницу перезагрузили случайно. */
   function clearOnLoad(){
     ensureShape();
     var had = state.matches.some(function(m){
@@ -2729,7 +2753,7 @@
     var n = Math.max(1, Math.min(100000, Math.floor(Number(state.spins) || 1)));
     pushHistory("до прокрутки");
     spinning = true;
-    $("btnSpin").disabled = true; $("btnUndo").disabled = true;
+    $("btnSpin").disabled = true; $("btnUndo").disabled = true; $("btnRedo").disabled = true;
     var base = Number(state.speed) || 0;
     if(base === 0){                       /* без анимации — считаем разом */
       for(var q=0;q<n-1;q++) shuffleOnce();
@@ -2764,25 +2788,21 @@
     })();
   });
 
+  /* «Назад» кладёт текущий вид в «Вперёд», «Вперёд» — обратно в «Назад» */
   $("btnUndo").addEventListener("click", function(){
     var h = state.history.shift();
     if(!h) return;
-    if(!(h.meta && Array.isArray(h.meta.matches) && h.meta.matches.length)){
-      state.matches.forEach(function(m,i){
-        var s = h.snap[i]; if(!s) return;
-        m.picks = {"1":s.picks["1"],"X":s.picks["X"],"2":s.picks["2"]};
-        m.mode = s.mode;
-        if(Array.isArray(s.pool) && s.pool.length) m.pool = s.pool.slice();
-      });
-    }
-    if(h.meta){
-      if(Array.isArray(h.meta.matches) && h.meta.matches.length) state.matches = h.meta.matches;
-      state.tirazh = h.meta.tirazh;
-      state.spent = h.meta.spent;
-      state.rolls = h.meta.rolls;
-      state.played = Array.isArray(h.meta.played) ? h.meta.played : state.played;
-      $("tirazhName").value = state.tirazh || "";
-    }
+    state.future.unshift(makeSnap(h.label, !!h.meta));
+    if(state.future.length>14) state.future.length=14;
+    applySnap(h);
+    save(); render();
+  });
+  $("btnRedo").addEventListener("click", function(){
+    var h = state.future.shift();
+    if(!h) return;
+    state.history.unshift(makeSnap(h.label, !!h.meta));
+    if(state.history.length>14) state.history.length=14;
+    applySnap(h);
     save(); render();
   });
 
@@ -2896,7 +2916,7 @@
     save(); render();
     say("«Рандом» снят с " + cleared + " строк(и), наборы исходов вернулись к полным 1/X/2" +
         (locked ? ". Зафиксированных строк не трогал: " + locked + " — «фикс» снимается кнопкой в самой строке" : "") +
-        ". Отменить — «Вернуть».");
+        ". Отменить — «Назад».");
   });
   $("btnReset").addEventListener("click", function(){
     pushHistory("очистка");
@@ -3061,7 +3081,7 @@
     });
     save(); render();
     $("evBack").hidden = true;
-    say(label + " Отменить — «Вернуть».");
+    say(label + " Отменить — «Назад».");
   }
 
   function showCrowdGaps(){
@@ -3511,7 +3531,7 @@
       }
       if(state.played.length && !window.confirm(
           "Ссылка сделана для тиража №" + p.tirazh + ", а сейчас открыт №" + state.tirazh + ".\n" +
-          "Загрузить тираж из ссылки? Корзина очистится — вернуть можно кнопкой «Вернуть».")){
+          "Загрузить тираж из ссылки? Корзина очистится — вернуть можно кнопкой «Назад».")){
         pendingLink = null;
         say("Остались на тираже №" + state.tirazh + ". Исходы из ссылки не проставлены.");
         return;
@@ -3522,7 +3542,7 @@
       return;
     }
     pendingLink = null;
-    if(applyCouponCode(p.code)) say("Купон из ссылки проставлен. Отменить — «Вернуть».");
+    if(applyCouponCode(p.code)) say("Купон из ссылки проставлен. Отменить — «Назад».");
   }
 
   $("btnLink").addEventListener("click", function(){
@@ -3740,7 +3760,7 @@
       if(state.played.length && !window.confirm(
           "Ссылка с вариантами сделана для тиража №" + p.tirazh +
           ", а сейчас открыт №" + state.tirazh + ".\n" +
-          "Загрузить тираж из ссылки? Корзина очистится — вернуть можно кнопкой «Вернуть».")){
+          "Загрузить тираж из ссылки? Корзина очистится — вернуть можно кнопкой «Назад».")){
         pendingBook = null;
         say("Остались на тираже №" + state.tirazh + ". Варианты из ссылки не открыты.");
         return;
@@ -4095,7 +4115,7 @@
     book = null;
     bookShow();
     save();
-    $("expNote").textContent = "Вариант " + fmt(n) + " перенесён в купон. Отменить — «Вернуть».";
+    $("expNote").textContent = "Вариант " + fmt(n) + " перенесён в купон. Отменить — «Назад».";
   });
 
   document.addEventListener("keydown", function(e){
@@ -5781,7 +5801,7 @@
     $("evTitle").textContent = "Как работают стратегии";
     var h = '<dl class="ev-guide">';
     STRAT_GUIDE.forEach(function(g){ h += '<dt>' + g[0] + '</dt><dd>' + g[1] + '</dd>'; });
-    h += '</dl><p class="ev-note">Каждая кнопка ставит исходы в купон; «Вернуть» откатывает последнюю расстановку. Проверка — по тиражам 4135–5015, вероятности поправлялись только по прошлым тиражам. Ни одна стратегия за это время не угадала 14 или 15. Реальных выплат в истории нет, поэтому сравниваются частоты призов, а не деньги. Это модели, а не гарантия выигрыша.</p>';
+    h += '</dl><p class="ev-note">Каждая кнопка ставит исходы в купон; «Назад» откатывает последнюю расстановку. Проверка — по тиражам 4135–5015, вероятности поправлялись только по прошлым тиражам. Ни одна стратегия за это время не угадала 14 или 15. Реальных выплат в истории нет, поэтому сравниваются частоты призов, а не деньги. Это модели, а не гарантия выигрыша.</p>';
     $("evBody").innerHTML = h;
     $("evBack").hidden = false;
   }
@@ -5825,7 +5845,7 @@
     $("evBack").hidden = true;
     var t0 = tally();
     say("«" + name + "»: проставлено " + set + " матч(ей), " + fmt(t0.combos) + " вариант(ов) на "
-        + fmt(t0.combos * (Number(state.price) || 0)) + " ₽. «Вернуть» откатит изменения.");
+        + fmt(t0.combos * (Number(state.price) || 0)) + " ₽. «Назад» откатит изменения.");
   }
   function stratGuard(title){
     $("evTitle").textContent = title;
@@ -5852,7 +5872,7 @@
     var go = $("dataApply");
     if(go && plan) go.addEventListener("click", function(){ stratApply(plan, name); });
   }
-  var STRAT_NOTE = '<p class="ev-note">Строки с фиксом не меняются. «Вернуть» откатит купон к прежнему виду. Это модель, а не гарантия.</p>';
+  var STRAT_NOTE = '<p class="ev-note">Строки с фиксом не меняются. «Назад» откатит купон к прежнему виду. Это модель, а не гарантия.</p>';
 
   /* ---------- «Охота на 15»: самые вероятные отдельные строки ----------
      Для шанса на 15 из 15 лучший купон из N вариантов — N самых вероятных полных

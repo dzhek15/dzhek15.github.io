@@ -298,10 +298,10 @@ button:disabled{opacity:.45; cursor:not-allowed}
 .roll button svg, .keep-bar button svg, .hist-head-acts button svg, .acts button svg{
   display:block; flex:0 0 auto; opacity:.9}
 .roll button .lbl, .keep-bar button .lbl, .hist-head-acts button .lbl, .acts button .lbl{min-width:0; text-align:center}
-#btnUndo{border-color:var(--o1); color:var(--o1); display:inline-flex; align-items:center; gap:6px}
-#btnUndo svg{display:block}
-#btnUndo:hover:not(:disabled){background:var(--o1-soft); border-color:var(--o1)}
-#btnUndo:disabled{border-color:var(--rule-strong); color:var(--muted); background:transparent}
+#btnUndo, #btnRedo{border-color:var(--o1); color:var(--o1); display:inline-flex; align-items:center; gap:6px}
+#btnUndo svg, #btnRedo svg{display:block}
+#btnUndo:hover:not(:disabled), #btnRedo:hover:not(:disabled){background:var(--o1-soft); border-color:var(--o1)}
+#btnUndo:disabled, #btnRedo:disabled{border-color:var(--rule-strong); color:var(--muted); background:transparent}
 .roll-group > .roll-secondary{width:100%}
 #btnReset{flex:1 1 100%; width:100%; justify-content:center; font-family:"Chivo",sans-serif; font-weight:600;
   font-size:16.5px; padding:12px 18px; border-radius:6px; border-color:var(--o1); background:var(--o1); color:#fff}
@@ -598,7 +598,7 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 .mode.srch .fs-mark i{font-style:normal; color:#E8453C}
 .mode.srch:hover{background:#2a221c; border-color:var(--brand-gold); box-shadow:0 0 0 1px var(--brand-gold) inset}
 /* на телефоне «Вернуть» и «Обновить тираж» — в один ряд, а не полкнопки над целой */
-@media (max-width:600px){ .roll-service{grid-template-columns:1fr 1fr} .roll-service #btnFetch{order:0; grid-column:auto} }
+@media (max-width:600px){ .roll-service{grid-template-columns:1fr 1fr} .roll-service #btnFetch{order:3; grid-column:1 / -1} }
 .th-tab td.tm-me{font-weight:600; color:var(--ink)}
 .th-tab td.tm-me span.side{color:var(--muted); font-weight:400; font-size:11px; margin-left:4px}
 .th-void{color:var(--muted)}
@@ -943,6 +943,7 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
     #tirazhName{border-bottom:0 !important; cursor:default; pointer-events:none}
     /* пульт по шагам: служебная строка, затем «Заполнить / Рандом / Проверить» с подписями-разделителями */
     .roll .roll-service{justify-content:space-between}
+    .roll .roll-service #btnFetch{margin-left:auto}
     #btnMid{background:var(--ox); border-color:var(--ox); color:#fff}
     :root[data-theme="dark"] #btnMid{background:transparent; color:var(--ox)}
     :root[data-theme="dark"] #btnMid .ar{color:currentColor; opacity:.85}
