@@ -4834,6 +4834,7 @@
     h += '<div class="pc-cards">' +
       (hasSys ? '<div><span>Строк</span><b>' + fmt(sysL.length) + '</b></div>' : '') +
       '<div><span>Вариантов</span><b>' + fmt(total) + '</b></div>' +
+      '<div><span>Сумма</span><b>' + fmt(total * (Number(state.price) || 0)) + ' ₽</b></div>' +
       '<div><span>Лучший</span><b>' + (played ? best + ' из ' + played : '—') + '</b></div>' +
       '<div><span>9+ сейчас</span><b>' + fmt(now9) + '</b></div>' +
       '<div><span>Могут 9+</span><b>' + fmt(can9) + '</b></div>' +
@@ -4867,15 +4868,14 @@
       });
     }
     var order = st.slice();
-    if(pcsv.sort === "hits") order.sort(function(a, b){ return (b.h - a.h) || (a.miss - b.miss) || (a.i - b.i); });
+    order.sort(function(a, b){ return (b.h - a.h) || (a.miss - b.miss) || (a.i - b.i); });
     var pages = Math.max(1, Math.ceil(order.length / PCSV_PAGE));
     if(pcsv.page >= pages) pcsv.page = pages - 1;
     var from = pcsv.page * PCSV_PAGE, part = order.slice(from, from + PCSV_PAGE);
     h += '<div class="pc-sub">' + (view === "sys" ? "Строки файла" : "Варианты") +
       (hasSys ? '<span class="pc-sort pc-view"><button type="button" data-v="sys" aria-pressed="' + (view === "sys") + '">с допами</button>' +
         '<button type="button" data-v="one" aria-pressed="' + (view === "one") + '">по одному</button></span>' : '') +
-      '<span class="pc-sort pc-ord"><button type="button" data-s="hits" aria-pressed="' + (pcsv.sort === "hits") + '">по угаданным</button>' +
-      '<button type="button" data-s="file" aria-pressed="' + (pcsv.sort !== "hits") + '">как в файле</button></span></div>';
+      '</div>';
     h += '<div class="pc-vars" style="--n:' + n + '"><div class="pc-vr pc-vh"><span>№</span>';
     for(var j = 0; j < n; j++) h += '<span>' + (j + 1) + '</span>';
     h += '<span>угад.</span></div>';
@@ -4910,9 +4910,6 @@
     });
     [].slice.call(box.querySelectorAll(".pc-view button")).forEach(function(b){
       b.addEventListener("click", function(){ pcsv.view = b.getAttribute("data-v"); pcsv.page = 0; renderPrevCsv(); });
-    });
-    [].slice.call(box.querySelectorAll(".pc-ord button")).forEach(function(b){
-      b.addEventListener("click", function(){ pcsv.sort = b.getAttribute("data-s"); pcsv.page = 0; renderPrevCsv(); });
     });
     [].slice.call(box.querySelectorAll(".pc-pager button")).forEach(function(b){
       b.addEventListener("click", function(){ pcsv.page = Number(b.getAttribute("data-g")) || 0; renderPrevCsv(); });
