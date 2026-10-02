@@ -746,8 +746,8 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 .pick.pop{animation:pickPop .24s cubic-bezier(.2,.9,.3,1)}
 /* --- просмотр CSV: листаем варианты, как книгу --- */
 .book-bar{margin-top:13px; display:flex; flex-wrap:wrap; gap:9px 14px; align-items:center;
-  justify-content:space-between; background:var(--surface); border:1px solid var(--rule); box-shadow:inset 0 -2px 0 var(--brand-gold, #c9a24b); border-radius:var(--r); padding:9px 12px}
-.bk-name{font-family:"IBM Plex Mono",monospace; font-size:12px; font-weight:600; color:var(--ink); word-break:break-all}
+  justify-content:center; text-align:center; background:var(--surface); border:1px solid var(--rule); box-shadow:inset 0 -2px 0 var(--brand-gold, #c9a24b); border-radius:var(--r); padding:9px 12px}
+.bk-name{font-family:"IBM Plex Mono",monospace; font-size:12px; font-weight:600; color:var(--ink); word-break:normal; overflow-wrap:break-word}
 .bk-hit{display:block; font-size:11px; color:var(--muted); margin-top:2px}
 .bk-nav{display:flex; align-items:center; gap:6px}
 .bk-nav button{padding:5px 10px; font-size:13px; line-height:1.15}
@@ -798,7 +798,18 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 [data-book="1"] .row.is-empty .teams{opacity:1}
 [data-book="1"] .row.is-empty .num{color:var(--muted); font-weight:400}
 [data-book="1"] #hint{display:none}
-@media(max-width:560px){ .book-bar{justify-content:center} .bk-l{width:100%; text-align:center} }
+.bk-l{width:100%; text-align:center}
+.bk-r{justify-content:center}
+@media(max-width:560px){ .bk-r{display:grid; grid-template-columns:1fr 1fr; width:100%; max-width:340px; margin:0 auto} .bk-r button{width:100%; white-space:nowrap; padding-left:6px; padding-right:6px} }
+.bk-nav[hidden]{display:none}
+[data-book="1"] .pick.bk-good{background:#1f4d2a; border-color:#3fa45b; color:#e6ffe9; box-shadow:inset 0 -2px 0 #3fa45b}
+[data-book="1"] .pick.bk-bad{background:#4d1f1f; border-color:#c0473f; color:#ffe6e4; box-shadow:inset 0 -2px 0 #c0473f}
+[data-book="1"] .pick.bk-real{outline:2px dashed #3fa45b; outline-offset:1px}
+[data-book="1"] #keepNote, [data-book="1"] #priceHint{visibility:hidden}
+.bk-sum td:nth-child(n+3), .bk-sum th:nth-child(n+3){text-align:center; white-space:nowrap; font-family:"IBM Plex Mono",monospace}
+.bk-sum td:nth-child(2), .bk-sum th:nth-child(2){text-align:left; font-family:inherit; letter-spacing:0}
+.bk-sum td.mx{color:var(--brand-gold, #c9a24b); font-weight:700}
+.bk-sum td.rs{background:rgba(63,164,91,.18)}
 .coupon.spinning{box-shadow:0 0 0 2px var(--accent), var(--shadow)}
 .coupon.spinning .row{background:transparent}
 @media (prefers-reduced-motion: reduce){ .pick{transition:none} .pick.pop{animation:none} }

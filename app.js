@@ -2243,6 +2243,12 @@
         b.setAttribute("aria-pressed", m.picks[o] ? "true" : "false");
         if(book && bookPages()[book.idx] && bookPages()[book.idx].length === state.matches.length
            && String(bookPages()[book.idx][idx]).indexOf(o) >= 0) b.classList.add("bk-on");
+        /* просмотр после игры: угаданный исход — зелёный, мимо — красный */
+        if(book && m.res && m.res !== VOID && bookPages()[book.idx] && bookPages()[book.idx].length === state.matches.length){
+          var bkCell = String(bookPages()[book.idx][idx]);
+          if(o === m.res) b.classList.add(bkCell.indexOf(o) >= 0 ? "bk-good" : "bk-real");
+          else if(bkCell.indexOf(o) >= 0 && bkCell.indexOf(m.res) < 0) b.classList.add("bk-bad");
+        }
         var inPool = m.pool.indexOf(o) >= 0;
         if(m.mode==="rand"){
           if(!inPool) b.classList.add("off-pool");
@@ -3703,7 +3709,68 @@
       return;
     }
     pendingLink = null;
+    if(openCodeBook(p.code)) return;
     if(applyCouponCode(p.code)) say("Купон из ссылки проставлен. Отменить — «Назад».");
+  }
+
+  /* ссылка на один купон открывается в просмотре: свой купон получателя не трогаем,
+     перенести — кнопкой «В купон» */
+  function openCodeBook(code){
+    if(code.length !== state.matches.length) return false;
+    var cells = [];
+    for(var i = 0; i < code.length; i++){
+      var v = Number(code[i]), c = OUT.filter(function(o, k){ return v & (1 << k); }).join("");
+      if(!c) return false;
+      cells.push(c);
+    }
+    var rows = [[]];
+    for(i = 0; i < cells.length; i++){
+      var next = [];
+      for(var r = 0; r < rows.length; r++) for(var j = 0; j < cells[i].length; j++) next.push(rows[r].concat(cells[i][j]));
+      rows = next;
+      if(rows.length > MAX_CSV) return false;
+    }
+    if(book) book = null;
+    book = { name: "купон по ссылке · тираж №" + (state.tirazh || ""), rows: rows, pages: [cells], lines: 0, idx: 0 };
+    try{ history.replaceState(null, "", location.pathname + location.search); }catch(e){}
+    bookShow();
+    say("Купон из ссылки открыт в просмотре. Твой купон цел: «В купон» перенесёт исходы, «Закрыть» вернёт к своему.");
+    try{ $("bookBar").scrollIntoView({ behavior:"smooth", block:"center" }); }catch(e){}
+    return true;
+  }
+
+  /* сводка по открытому файлу/ссылке: сколько стоит и как распределены исходы */
+  function bookSummary(){
+    if(!book || !book.rows.length) return;
+    var N = book.rows.length, L = bookPages().length, price = Number(state.price) || 30;
+    var esc = function(t){ return String(t == null ? "" : t).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]; }); };
+    var h = '<p class="ev-lead"><b>' + fmt(N) + '</b> вариант(ов)' + (L > 1 && L !== N ? ' в ' + fmt(L) + ' строк(е)' : '') +
+            ' · по ' + fmt(price) + '&nbsp;₽ — <b>' + fmt(N * price) + '&nbsp;₽</b>.</p>';
+    var st = bookStats();
+    if(st && st.played){
+      var best = 0;
+      book.rows.forEach(function(row){
+        var h2 = 0; state.matches.forEach(function(m, i){ if(m.res && hitRes(row[i], m.res)) h2++; }); if(h2 > best) best = h2;
+      });
+      h += '<p class="ev-lead">Сыграно ' + st.played + ' из ' + state.matches.length + ' — лучший вариант угадал ' + best + '.</p>';
+    }
+    h += '<p class="ev-lead">Доля вариантов с каждым исходом. Золотом — то, на что ставит большинство' +
+         (st && st.played ? ', галочка — как сыграл матч' : '') + '.</p>';
+    h += '<table class="ev-tab bk-sum"><thead><tr><th>№</th><th>Матч</th><th>1</th><th>X</th><th>2</th></tr></thead><tbody>';
+    state.matches.forEach(function(m, i){
+      var cnt = { "1":0, "X":0, "2":0 };
+      book.rows.forEach(function(row){ var c = String(row[i] || ""); OUT.forEach(function(o){ if(c.indexOf(o) >= 0) cnt[o]++; }); });
+      var mx = Math.max(cnt["1"], cnt["X"], cnt["2"]);
+      h += '<tr><td>' + (i + 1) + '</td><td>' + esc(m.home) + ' — ' + esc(m.away) + '</td>' + OUT.map(function(o){
+        var pc = Math.round(100 * cnt[o] / N);
+        return '<td class="' + (cnt[o] && cnt[o] === mx ? 'mx' : '') + (m.res === o ? ' rs' : '') + '">' +
+               (cnt[o] ? pc + '%' : '—') + (m.res === o ? ' ✓' : '') + '</td>';
+      }).join("") + '</tr>';
+    });
+    h += '</tbody></table>';
+    $("evTitle").textContent = "Сводка: " + book.name;
+    $("evBody").innerHTML = h;
+    $("evBack").hidden = false;
   }
 
   $("btnLink").addEventListener("click", function(){
@@ -4049,17 +4116,19 @@
     }
     bar.hidden = false;
     document.body.dataset.book = "1";
-    $("bkName").textContent = book.name + (book.lines && book.lines !== book.rows.length
-      ? " · " + fmt(book.lines) + " строк → " + fmt(book.rows.length) + " вариантов" : "");
+    $("bkName").textContent = (book.name + (book.lines && book.lines !== book.rows.length
+      ? " · " + fmt(book.lines) + " строк → " + fmt(book.rows.length) + " вариантов" : ""))
+      .replace(/ · /g, "\u00a0· ").replace(/(\d) (строк|вариант)/g, "$1\u00a0$2");
     $("bkNum").max = bookPages().length;
     $("bkNum").value = book.idx + 1;
     $("bkTotal").textContent = "из " + fmt(bookPages().length);
     var cur = bookPages()[book.idx], same = 0, combosHere = 1;
     cur.forEach(function(c){ combosHere *= String(c).length || 1; });
     state.matches.forEach(function(m, i){ if(cur[i] && String(cur[i]).split("").some(function(o){ return m.picks[o]; })) same++; });
+    var mine = state.matches.some(function(m){ return OUT.some(function(o){ return m.picks[o]; }); });
     var line = (book.pages && book.pages.length !== book.rows.length ? "купон " : "вариант ") + fmt(book.idx + 1) +
       (combosHere > 1 ? " (система на " + fmt(combosHere) + " вар.)" : "") +
-      " · совпадает с твоим купоном в " + same + " из " + cur.length + " матчей";
+      (mine ? " · совпадает с твоим купоном в " + same + " из " + cur.length + " матчей" : "");
     var st = bookStats();
     if(st && st.played){
       var h = 0, ms = 0;
@@ -4068,13 +4137,14 @@
         if(hitRes(cur[i], m.res)) h++; else ms++;
       });
       line += " · по факту угадано " + h + " из " + st.played +
-              (ms ? ", максимум " + (cur.length - ms) : ", идёт на все " + cur.length);
+              (ms ? ", максимум\u00a0" + (cur.length - ms) : ", идёт на все\u00a0" + cur.length);
     }
     var ko = kickoffMs();
     if(ko != null && ko <= Date.now() && state.resAt) line += " · обновлено " + resStamp();
     $("bkHit").textContent = line;
     var sb = $("bkStat");
-    if(st && st.played){
+    document.querySelector(".bk-nav").hidden = bookPages().length < 2;
+    if(st && st.played && book.rows.length > 1){
       /* тиражи, где не выбыл ещё никто, сворачиваем в одну фразу: иначе на
          телефоне строка растягивается на три ряда одинаковых чисел */
       var parts = [], floor = 0, k;
@@ -4262,6 +4332,7 @@
     });
   });
 
+  $("bkSum").addEventListener("click", bookSummary);
   $("bkClose").addEventListener("click", function(){ bookClose("Просмотр файла закрыт, купон остался прежним."); });
   $("bkToCoupon").addEventListener("click", function(){
     if(!book) return;
