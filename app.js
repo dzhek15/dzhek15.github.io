@@ -4000,13 +4000,35 @@
   }
 
   var pendingBook = (function(){
-    var m = String(location.hash || "").match(/^#v=([^-]*)-([A-Za-z0-9\-_]+)$/);
+    var h = String(location.hash || "");
+    var ms = h.match(/^#vs=([^-]*)-([A-Za-z0-9\-_.]+)$/);
+    if(ms) return { tirazh: decodeURIComponent(ms[1]), multi: ms[2].split(".").filter(Boolean) };
+    var m = h.match(/^#v=([^-]*)-([A-Za-z0-9\-_]+)$/);
     return m ? { tirazh: decodeURIComponent(m[1]), payload: m[2] } : null;
   })();
+  /* несколько наборов одной ссылкой (#vs=тираж-набор1.набор2…) — открываем по очереди в просмотре тиража */
+  function openMultiPrev(tir, payloads, other){
+    var k = 0, total = payloads.length;
+    var step = function(){
+      if(k >= total) return;
+      var p = { tirazh: tir, payload: payloads[k++] };
+      p.more = total > 1 ? "Открыто наборов: " + k + " из " + total + (other ? ", на текущий тираж пропущено: " + other : "") + "." : "";
+      p.next = step;
+      prevBookOpen(p, 0);
+    };
+    step();
+  }
 
   function tryPendingBook(){
     if(!pendingBook || !state.matches.length) return;
     var p = pendingBook;
+    if(p.multi){
+      pendingBook = null;
+      if(p.tirazh && Number(p.tirazh) < Number(state.tirazh)){ openMultiPrev(p.tirazh, p.multi, 0); return; }
+      if(p.multi.length === 1){ pendingBook = { tirazh: p.tirazh, payload: p.multi[0] }; tryPendingBook(); return; }
+      say("Ссылка на варианты тиража №" + p.tirazh + " — он ещё не начался, такие наборы открываются в просмотре после начала тиража.");
+      return;
+    }
     /* ссылка на уже закрытый тираж — открываем её в просмотре прошлого тиража,
        текущий купон и тираж не трогаем */
     if(p.tirazh && Number(p.tirazh) < Number(state.tirazh)){
@@ -5052,7 +5074,7 @@
         /* если браузер даёт прочитать буфер — подставляем ссылку сразу */
         try{
           if(navigator.clipboard && navigator.clipboard.readText) navigator.clipboard.readText().then(function(t){
-            if(/#v=[^-\s]*-[A-Za-z0-9\-_]+/.test(t || "") && !inp.value) inp.value = String(t).trim();
+            if(/#vs?=[^-\s]*-[A-Za-z0-9\-_.]+/.test(t || "") && !inp.value) inp.value = String(t).trim();
           }, function(){});
         }catch(e){}
       }
@@ -5062,6 +5084,13 @@
       var v = String($("pcUrl").value || "").trim();
       /* можно вставить сразу несколько ссылок — через пробел или с новой строки */
       var re = /#v=([^-&#\s]*)-([A-Za-z0-9\-_]+)/g, m, list = [], other = 0;
+      var reS = /#vs=([^-&#\s]*)-([A-Za-z0-9\-_.]+)/g, ms2;
+      while((ms2 = reS.exec(v))){
+        var t2 = decodeURIComponent(ms2[1]);
+        if(Number(t2) < Number(state.tirazh)) ms2[2].split(".").filter(Boolean).forEach(function(pl){ list.push({ tirazh: t2, payload: pl }); });
+        else other++;
+      }
+      v = v.replace(reS, " ");
       while((m = re.exec(v))){
         var t = decodeURIComponent(m[1]);
         if(Number(t) < Number(state.tirazh)) list.push({ tirazh: t, payload: m[2] });
@@ -5083,6 +5112,48 @@
       };
       step();
     });
+  }
+  function pcsvShareAll(){
+    var b = $("pcShareAll"); if(!b || !pcsv.sets.length) return;
+    var was = b.textContent, sets = pcsv.sets.slice(), tir = pcsv.tir;
+    var nVars = sets.reduce(function(a, st){ return a + st.rows.length; }, 0);
+    b.disabled = true; b.textContent = "собираю…";
+    var urlP = Promise.all(sets.map(function(st){
+      return new Promise(function(res, rej){
+        var pages = (st.sys || []).map(function(x){ return String(x).split(","); });
+        varsEncode(st.rows, function(p){ if(p) res(p); else rej(new Error("pack")); }, pages.length ? pages : null);
+      });
+    })).then(function(list){
+      return location.origin + location.pathname + "#vs=" + encodeURIComponent(tir || "") + "-" + list.join(".");
+    });
+    var wrote = null;
+    if(window.ClipboardItem && navigator.clipboard && navigator.clipboard.write){
+      try{
+        var blobP = urlP.then(function(url){ if(url.length > 8000) throw new Error("long"); return new Blob([url], { type: "text/plain" }); });
+        blobP.catch(function(){});
+        wrote = navigator.clipboard.write([new ClipboardItem({ "text/plain": blobP })]);
+        wrote.catch(function(){});
+      }catch(e){ wrote = null; }
+    }
+    var fin = function(text){ pcsv.msg = text; pcsv.msgAt = Date.now(); renderPrevCsv(); };
+    urlP.then(function(url){
+      if(url.length > 8000){
+        fin("В одну ссылку все наборы не влезают: " + fmt(url.length) + " символов, мессенджер такой адрес обрежет. Перешли наборы по одному или файлами CSV.");
+        return;
+      }
+      var ok = function(){
+        fin("Ссылка скопирована: " + fmt(sets.length) + " набор(ов), " + fmt(nVars) + " вариант(ов), тираж №" + tir +
+          ". Кто откроет — увидит все наборы вкладками в просмотре тиража." + (url.length > 3500 ? " Адрес длинный — в Telegram может не влезть одним сообщением." : ""));
+      };
+      var manual = function(){
+        fin("Скопировать автоматически не вышло — ссылка в окне, скопируй её оттуда.");
+        try{ window.prompt("Ссылка на все варианты — скопируй:", url); }catch(e){}
+      };
+      var viaText = function(){
+        if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(ok, manual); else manual();
+      };
+      if(wrote) wrote.then(ok, viaText); else viaText();
+    }, function(){ b.disabled = false; b.textContent = was; fin("Не получилось упаковать варианты в ссылку."); });
   }
   function renderPrevCsv(){
     var box = $("prevCsv"); if(!box) return;
@@ -5114,7 +5185,9 @@
     var best = 0, now9 = 0, can9 = 0, can15 = 0;
     st.forEach(function(x){ if(x.h > best) best = x.h; if(x.h >= 9) now9++; if(n - x.miss >= 9) can9++; if(!x.miss) can15++; });
     var h = '<div class="pc-head"><span class="pc-t">Мои варианты</span><span class="pc-f" title="' + escHtml(pcsv.name) + '">' + escHtml(pcsv.name) + '</span>' +
-      '<span class="pc-acts">' + PC_BTNS + '<button type="button" class="pc-btn ghost" id="pcDrop">Убрать</button></span></div>' + PC_PASTE + msg;
+      '<span class="pc-acts">' + PC_BTNS + '<button type="button" class="pc-btn pc-share" id="pcShareAll" title="Одна ссылка на все загруженные наборы этого тиража — перешли её, и у получателя откроются все варианты">' +
+      (pcsv.sets.length > 1 ? 'Ссылка на все (' + pcsv.sets.length + ')' : 'Ссылка на варианты') + '</button>' +
+      '<button type="button" class="pc-btn ghost" id="pcDrop">Убрать</button></span></div>' + PC_PASTE + msg;
     if(pcsv.sets.length > 1){
       h += '<div class="pc-tabs" role="tablist">';
       pcsv.sets.forEach(function(st, i){
@@ -5192,6 +5265,7 @@
     pcsvOthersBind(box);
     $("pcLoad").addEventListener("click", pcsvPick);
     pcPasteBind();
+    $("pcShareAll").addEventListener("click", pcsvShareAll);
     $("pcDrop").addEventListener("click", function(){
       pcsv.sets.splice(pcsv.act, 1);
       pcsvUse(Math.max(0, Math.min(pcsv.act, pcsv.sets.length - 1)));
@@ -6346,8 +6420,6 @@
     var b = K.best;
     if(b){
       h += stratCards([["Купон", fmt(b.plan.combos) + " · " + fmt(b.cost) + " ₽"], ["Шанс приза", stratChance(b.pWin)], ["Рост банка", (b.g >= 0 ? "+" : "") + (b.g * 100).toFixed(2) + "%"]]);
-    } else {
-      h += '<div class="ev-top ev-bad ev-data-verdict"><b>Не ставить</b><span>ни один купон не растит банк: средняя выплата меньше цены</span></div>';
     }
     h += '<table class="ev-tab ev-data-cands"><thead><tr><th>Купон</th><th>Цена</th><th>Приз</th><th>Отдача</th><th>Рост</th></tr></thead><tbody>';
     K.cands.slice(0, 6).forEach(function(c, i){
@@ -6358,7 +6430,7 @@
     /* выгодного нет — всё равно даём подставить наименее убыточный купон */
     var pick = b || K.cands[0];
     if(pick){
-      if(!b) h += '<p class="ev-sub">Если всё же играть — наименьшие потери у купона «' + pick.src + ', ' + fmt(pick.plan.combos) + '»:</p>';
+      if(!b) h += '<p class="ev-sub">Наименьшие потери у купона «' + pick.src + ', ' + fmt(pick.plan.combos) + '»:</p>';
       h += stratTable(pick.plan.rows);
       h += '<div class="ev-data-go"><button type="button" id="dataApply" class="btn-ev">'
         + (b ? 'Подставить в купон' : 'Подставить наименее убыточный') + '</button></div>' + STRAT_NOTE;

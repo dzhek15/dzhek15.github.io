@@ -1403,3 +1403,13 @@ body.is-prev .row .pick.mine-hit{outline-color:var(--brand-gold)}
   .ticket .tk:last-child{grid-column:1 / -1}
   .ticket:has(#tkFundWrap[hidden]) .tk:first-child{grid-column:1 / -1}
 }
+
+/* ПК: корзина ровно по высоте соседнего пульта — не растёт и не сжимается от числа купонов,
+   лишнее прокручивается внутри листа */
+@media (min-width:561px){
+  .console-top{align-items:stretch}
+  .console-top > .hist-panel{height:0; min-height:calc(100% - 10px); display:flex; flex-direction:column; box-sizing:border-box}
+  .console-top > .hist-panel .hist{flex:1 1 0; min-height:0; max-height:none}
+  .console-top > .hist-panel .empty{margin-top:auto; margin-bottom:auto}
+}
+.pc-btn.pc-share{border-color:var(--brand-gold); color:var(--ink)}
