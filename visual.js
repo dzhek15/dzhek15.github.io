@@ -42,12 +42,13 @@
     }
     var ko = ($("koTime") || {}).textContent || "—", left = ($("koLeft") || {}).textContent || "";
     cvSub.innerHTML = '<span class="cv-s1"><em>приём до</em> ' + esc(ko.replace(/\s+/g, " ").trim()) + '</span>' +
-      (left && left.trim() !== "—" ? '<i class="cv-sep" aria-hidden="true"></i><span class="cv-s2"><em>осталось</em> ' + esc(left.trim()) + '</span>' : "");
+      (left && left.trim() !== "—" ? '<i class="cv-sep" aria-hidden="true"></i><span class="cv-s2"><em>' + (g.prev ? "статус" : "осталось") + '</em> ' + esc(left.trim()) + '</span>' : "");
     var pool = ($("tkFund") || {}).textContent || "";
     var pe = $("cvPool"), has = pool && pool.trim() !== "—";
-    pe.innerHTML = has ? '<em>Пул</em><b>' + esc(pool.trim()) + '</b>' : "&nbsp;";
+    pe.innerHTML = '<em>Пул</em><b>' + (has ? esc(pool.trim()) : "—") + '</b>';
     pe.classList.toggle("is-on", !!has);
-    var d = new Date();
+    var d = g.prev && g.deadline ? new Date(g.deadline) : new Date();
+    if(isNaN(d)) d = new Date();
     cvDate.textContent = d.toLocaleDateString("ru-RU", { weekday:"long", day:"numeric", month:"long" });
     var sig = g.matches.map(function(m){ return m.home + "|" + m.away + (window.DZ.team(m.home) ? "+" : ""); }).join(";");
     if(sig !== lastTicker && g.matches.length){
@@ -201,7 +202,7 @@
   if($("btnHistDoc")) $("btnHistDoc").addEventListener("click", basketDoc);
 
   function all(){ try{ renderCover(); decorateBasket(); }catch(e){ if(window.console) console.warn("ДЖЕК visual:", e); } }
-  document.addEventListener("dz:render", all);
+  document.addEventListener("dz:render", function(){ all(); setTimeout(function(){ try{ renderCover(); }catch(e){} }, 0); });
   setInterval(function(){ try{ renderCover(); }catch(e){} }, 30000);
   all();
 })();

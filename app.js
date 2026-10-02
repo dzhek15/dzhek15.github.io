@@ -217,7 +217,7 @@
     if(fShow > 0){
       fw.hidden = false;
       $("tkFund").textContent = fmt(fShow) + " ₽";
-    } else { fw.hidden = true; }
+    } else { fw.hidden = false; $("tkFund").textContent = "—"; }
 
     /* ценность тиража: суперприз к типичному фонду, сравниваем с обычным уровнем */
     var vw = $("tkValWrap");
@@ -242,7 +242,7 @@
       $("tkValNote").innerHTML = "суперприз " + r.toFixed(2).replace(".", ",") +
         " от фонда" + (rTyp > 0 ? ", обычно " + rTyp.toFixed(2).replace(".", ",") : "") +
         ' · <i class="tk-why">что это значит</i>';
-    } else { vw.hidden = true; }
+    } else { vw.hidden = false; $("tkVal").textContent = "—"; $("tkVal").classList.remove("good", "bad"); $("tkValNote").innerHTML = "&nbsp;"; }
 
     /* на телефоне плитки лежат сеткой 2×2: нечётную последнюю растягиваем на всю ширину,
        иначе справа от неё просвечивает серый фон контейнера */
@@ -2505,7 +2505,7 @@
       ? "В каждом матче поставить исход, который выбрало меньше всего игроков"
       : "Нет процентов — сначала «Обновить тираж»";
     var pb = $("btnPct");
-    pb.hidden = !havePct;
+    pb.hidden = false; pb.disabled = !havePct;
     pb.setAttribute("aria-pressed", state.showPct ? "true" : "false");
     pb.textContent = state.showPct ? "Скрыть проценты" : "Показать проценты";
     pb.title = state.showPct
@@ -2513,7 +2513,7 @@
       : "Показать под каждым исходом долю игроков и оценку конторы";
     var haveKf = state.matches.some(function(m){ return m.kf; });
     var kb = $("btnKf");
-    kb.hidden = !haveKf;
+    kb.hidden = false; kb.disabled = !haveKf;
     kb.setAttribute("aria-pressed", state.showKf ? "true" : "false");
     kb.textContent = state.showKf ? "Скрыть кэфы" : "Показать кэфы";
     kb.title = state.showKf
@@ -5419,10 +5419,8 @@
         }
         else if(res){
           var noPct = !state.matches.some(function(m){ return m.pct; });
-          say("Тираж №" + res.number + (feed.src === "mirror" ? " загружен из зеркала (totobrief не отвечает): " : " загружен с totobrief: ") + res.n +
-              " матч(ей)" + (noPct ? ", процентов игроков и коэффициентов у этого снимка нет — только состав и дедлайн."
-                                   : ", проценты игроков и конторы подставлены в строки.") +
-              " Исходы и режимы не проставлены — отмечай сам, а для «РАНДОМА» сначала нажми «Все в рандом».");
+          say("Тираж №" + res.number + (feed.src === "mirror" ? " загружен из зеркала: " : " загружен: ") + res.n +
+              " матч(ей)" + (noPct ? ", процентов и кэфов в снимке нет." : ", проценты игроков и конторы в строках."));
         }
         if(res && !res.soft) tryPending();
       })
@@ -6455,6 +6453,10 @@
   /* мост для visual.js (обложка, карта тиража, билеты): только чтение + перерисовка */
   window.DZ = {
     get: function(){
+      var P = state.viewPrev && state.prev ? state.prev : null;
+      if(P) return { matches: P.matches, tirazh: P.tirazh, prev: true, deadline: P.deadline || "",
+               jackpot: Number(P.jack) || Number(((state.drawByNo || {})[P.tirazh] || {}).jack) || 0,
+               kickoff: 0, played: state.played, price: Number(state.price) || 30, viewPrev: true, book: !!book };
       return { matches: state.matches, tirazh: state.tirazh, jackpot: Number(state.jackpot) || 0,
                kickoff: kickoffMs(), played: state.played, price: Number(state.price) || 30,
                viewPrev: !!state.viewPrev, book: !!book };

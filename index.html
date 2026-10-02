@@ -30,7 +30,7 @@ body{margin:0; font:14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; b
 img{max-width:100%}
 [hidden]{display:none !important}
 </style>
-<link rel="stylesheet" href="styles.css?v=20261002al">
+<link rel="stylesheet" href="styles.css?v=20261002am">
 </head>
 <body>
 
@@ -63,7 +63,7 @@ img{max-width:100%}
         <div class="cv-r">
           <div class="cv-k">Суперприз</div>
           <div class="cv-v" id="cvJack">—</div>
-          <div class="cv-pool" id="cvPool" title="Пул — призовой фонд тиража, делится между угадавшими 9 и больше. Пока идёт приём, растёт">&nbsp;</div>
+          <div class="cv-pool" id="cvPool" title="Пул — призовой фонд тиража, делится между угадавшими 9 и больше. Пока идёт приём, растёт"><em>Пул</em><b>—</b></div>
         </div>
       </div>
       <div class="cv-ticker" id="cvTicker"><div class="cv-track" id="cvTrack"></div></div>
@@ -82,16 +82,16 @@ img{max-width:100%}
       <div class="tk tk-dup"><span class="k">Приём до (МСК)</span><span class="v mono" id="koTime">—</span></div>
       <div class="tk tk-dup"><span class="k">Осталось</span><span class="v mono" id="koLeft">—</span></div>
       <div class="tk tk-dup" id="tkJackWrap" hidden><span class="k">Суперприз</span><span class="v mono" id="tkJack">—</span></div>
-      <div class="tk" id="tkFundWrap" hidden title="Пул — призовой фонд тиража (90% всех ставок), делится между угадавшими 9 и больше. У БалтБета это «Возможный выигрыш». Пока идёт приём, пул растёт"><span class="k">Пул</span><span class="v mono" id="tkFund">—</span></div>
-      <div class="tk tk-btn" id="tkValWrap" hidden role="button" tabindex="0" title="Нажми — объясню, что это за число и как его читать"><span class="k">Ценность тиража</span><span class="v" id="tkVal">—</span><span class="tk-note" id="tkValNote"></span></div>
+      <div class="tk" id="tkFundWrap" title="Пул — призовой фонд тиража (90% всех ставок), делится между угадавшими 9 и больше. У БалтБета это «Возможный выигрыш». Пока идёт приём, пул растёт"><span class="k">Пул</span><span class="v mono" id="tkFund">—</span></div>
+      <div class="tk tk-btn" id="tkValWrap" role="button" tabindex="0" title="Нажми — объясню, что это за число и как его читать"><span class="k">Ценность тиража</span><span class="v" id="tkVal">—</span><span class="tk-note" id="tkValNote">&nbsp;</span></div>
     </div>
   </header>
 
   <div class="view-strip">
       <div class="roll-view" role="group" aria-label="Вид страницы">
         <span class="view-lbl">Вид</span>
-        <button id="btnPct" type="button" aria-pressed="false" hidden>Показать проценты</button>
-        <button id="btnKf" type="button" aria-pressed="false" hidden>Показать кэфы</button>
+        <button id="btnPct" type="button" aria-pressed="false" disabled>Показать проценты</button>
+        <button id="btnKf" type="button" aria-pressed="false" disabled>Показать кэфы</button>
         <span class="zoomctl" role="group" aria-label="Масштаб страницы">
           <button id="btnZoomOut" type="button" aria-label="Мельче" title="Мельче на 5%">−</button>
           <b id="zoomVal">100%</b>
@@ -288,9 +288,9 @@ img{max-width:100%}
   </footer>
 </div>
 
-<script src="config.js?v=20261002al"></script>
-<script src="app.js?v=20261002al"></script>
-<script src="visual.js?v=20261002al"></script>
+<script src="config.js?v=20261002am"></script>
+<script src="app.js?v=20261002am"></script>
+<script src="visual.js?v=20261002am"></script>
 
 <script data-goatcounter="https://dzhek15.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 </body>

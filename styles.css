@@ -1414,3 +1414,19 @@ body.is-prev .row .pick.mine-hit{outline-color:var(--brand-gold)}
   .console-top > .hist-panel .hist:empty{display:none}
 }
 .pc-btn.pc-share{border-color:var(--brand-gold); color:var(--ink)}
+
+/* без сдвигов при загрузке: место под подсказку и пул на обложке держим заранее */
+@media (max-width:560px){ .hint{min-height:calc(2lh + 18px)} }
+@media (max-width:340px){ .hint{min-height:calc(3lh + 18px)} }
+.cv-pool:not(.is-on){visibility:hidden}
+#tkValNote{min-height:2lh}
+@media (max-width:560px){ #tkValNote{min-height:0} }
+@media (max-width:380px){ #tkValNote{min-height:2lh} }
+/* корзина полупрозрачная: сквозь бумагу виден фон сайта */
+:root[data-style="classic"] .console{background:color-mix(in srgb, var(--surface) 55%, transparent)}
+.hist-panel{background:
+    radial-gradient(120% 90% at 50% 40%, transparent 55%, rgba(120,90,40,.16) 100%),
+    rgba(241,232,212,.6) !important;
+  box-shadow:0 0 0 4px rgba(241,232,212,.6), 0 0 0 5px #1D1A15, 0 10px 26px -14px rgba(0,0,0,.6) !important;
+  -webkit-backdrop-filter:blur(1px) sepia(.45) brightness(2.3); backdrop-filter:blur(1px) sepia(.45) brightness(2.3)}
+:root[data-theme="light"] .hist-panel{background:radial-gradient(120% 90% at 50% 40%, transparent 55%, rgba(120,90,40,.16) 100%), rgba(241,232,212,.45) !important; -webkit-backdrop-filter:blur(1px) sepia(.4) contrast(1.15); backdrop-filter:blur(1px) sepia(.4) contrast(1.15)}
