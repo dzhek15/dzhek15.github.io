@@ -41,10 +41,12 @@
       lastJack = jt;
     }
     var ko = ($("koTime") || {}).textContent || "—", left = ($("koLeft") || {}).textContent || "";
-    cvSub.innerHTML = '<span>приём до ' + esc(ko.replace(/\s+/g, " ").trim()) + '</span>' +
-      (left && left.trim() !== "—" ? ' <span>· осталось ' + esc(left.trim()) + '</span>' : "");
+    cvSub.innerHTML = '<span class="cv-s1"><em>приём до</em> ' + esc(ko.replace(/\s+/g, " ").trim()) + '</span>' +
+      (left && left.trim() !== "—" ? '<i class="cv-sep" aria-hidden="true"></i><span class="cv-s2"><em>осталось</em> ' + esc(left.trim()) + '</span>' : "");
+    var pool = ($("tkFund") || {}).textContent || "";
+    $("cvPool").innerHTML = pool && pool.trim() !== "—" ? "пул " + esc(pool.trim()) : "&nbsp;";
     var d = new Date();
-    cvDate.textContent = d.toLocaleDateString("ru-RU", { weekday:"long", day:"numeric", month:"long", year:"numeric" });
+    cvDate.textContent = d.toLocaleDateString("ru-RU", { weekday:"short", day:"numeric", month:"long" });
     var sig = g.matches.map(function(m){ return m.home + "|" + m.away + (window.DZ.team(m.home) ? "+" : ""); }).join(";");
     if(sig !== lastTicker && g.matches.length){
       lastTicker = sig;
