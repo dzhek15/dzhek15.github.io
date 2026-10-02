@@ -1763,14 +1763,24 @@
   }
   /* разбор матчей от ИИ: data/api/ai.json, пишется один раз на тираж */
   var ai = { data: null, at: 0, loading: null };
-  function loadAi(){
-    if(ai.data && Date.now() - ai.at < 30 * 60000) return Promise.resolve(ai.data);
+  /* fresh = окно разбора открыто: перечитываем файл, если ему больше минуты,
+     чтобы правки разбора были видны сразу, а не через полчаса */
+  function aiSig(j){ return j ? String(j.number) + "|" + (j.at || "") + "|" + JSON.stringify(j.m || []).length : ""; }
+  function loadAi(fresh){
+    if(ai.data && Date.now() - ai.at < (fresh ? 60000 : 30 * 60000)) return Promise.resolve(ai.data);
     if(ai.loading) return ai.loading;
     if(typeof fetch !== "function") return Promise.resolve(null);
-    ai.loading = fetch(MIRROR + "ai.json?t=" + Math.floor(Date.now() / 1800000))
+    var was = aiSig(ai.data);
+    ai.loading = fetch(MIRROR + "ai.json?t=" + (fresh ? Date.now() : Math.floor(Date.now() / 1800000)), {cache: "no-store"})
       .then(function(r){ return r.ok ? r.json() : null; })
-      .then(function(j){ ai.data = j; ai.at = Date.now(); ai.loading = null; return j; })
-      .catch(function(){ ai.loading = null; return null; });
+      .then(function(j){
+        ai.loading = null;
+        if(!j) return ai.data;
+        ai.data = j; ai.at = Date.now();
+        if(was && was !== aiSig(j)) try { aiCmp.v = null; aiBtnsUpdate(); } catch(e){}
+        return j;
+      })
+      .catch(function(){ ai.loading = null; return ai.data; });
     return ai.loading;
   }
   function aiFor(j, idx){
@@ -1796,6 +1806,12 @@
   function aiStrats(){
     var key = state.tirazh + "|" + state.price + "|" + state.bankroll + "|" + stratBudgetValue();
     if(aiCmp.v && aiCmp.key === key && Date.now() - aiCmp.at < 60000) return aiCmp.v;
+    var v = stratCore();
+    aiCmp = { at: Date.now(), key: key, v: v };
+    return v;
+  }
+  /* строки исходов трёх стратегий по текущему state.matches */
+  function stratCore(){
     var v = { gap: null, sim: null, kel: null }, str = function(set){ return set.map(function(k){ return OUT[k]; }).join(""); };
     try {
       var g = gapSwaps();
@@ -1812,8 +1828,95 @@
       var K = planByKelly(), kp = K && !K.error ? (K.best || K.cands[0]) : null;
       if(kp) v.kel = kp.plan.rows.map(function(r){ return str(r.set); });
     } catch(e){}
-    aiCmp = { at: Date.now(), key: key, v: v };
     return v;
+  }
+
+  /* ---------- точность по тиражам: ИИ и стратегии против итогов ----------
+     Стратегии считаются тем же кодом, что и в купоне, по линии и долям на закрытие
+     тиража. Посчитанное хранится в браузере, так что таблица не теряет тиражи,
+     которые уже ушли из ленты. */
+  var ACC_KEY = "dzhek-acc", ACC_N = 10;
+  function accRead(){ try { return JSON.parse(localStorage.getItem(ACC_KEY)) || {}; } catch(e){ return {}; } }
+  function accWrite(o){ try { localStorage.setItem(ACC_KEY, JSON.stringify(o)); } catch(e){} }
+  function accSetKey(){ return state.price + "|" + state.bankroll + "|" + stratBudgetValue(); }
+  function stratForInfo(info){
+    var list = matchesFromInfo(info);
+    var bak = { matches: state.matches, poolSum: state.poolSum, jackpot: state.jackpot, tirazh: state.tirazh }, v;
+    try {
+      state.matches = list; state.poolSum = Number(info.pool_sum) || 0;
+      state.jackpot = Number(info.jackpot) || 0; state.tirazh = String(info.number);
+      v = stratCore();
+    } finally {
+      state.matches = bak.matches; state.poolSum = bak.poolSum; state.jackpot = bak.jackpot; state.tirazh = bak.tirazh;
+    }
+    return { res: list.map(function(m){ return m.res; }), gap: v.gap, sim: v.sim, kel: v.kel, key: accSetKey() };
+  }
+  function accScore(line, res){
+    if(!Array.isArray(line) || !Array.isArray(res) || line.length !== res.length) return null;
+    var hit = 0, vars = 1;
+    for(var i = 0; i < res.length; i++){
+      var c = String(line[i] || "");
+      if(!c) return null;
+      vars *= c.length;
+      if(hitRes(c, res[i])) hit++;
+    }
+    return { hit: hit, vars: vars };
+  }
+  function showAcc(back){
+    $("evTitle").textContent = "Точность по тиражам";
+    $("evBody").innerHTML = '<div id="accBox"><p class="ev-note">Считаю…</p></div>' +
+      (back ? '<div class="blend-go"><button type="button" class="btn-ev" id="accBack">К разбору</button></div>' : '');
+    $("evBack").hidden = false;
+    if(back) $("accBack").addEventListener("click", back);
+    var store = accRead(), key = accSetKey();
+    var aiH = fetch(MIRROR + "ai_hist.json?t=" + Date.now(), {cache: "no-store"})
+      .then(function(r){ return r.ok ? r.json() : {}; }).catch(function(){ return {}; });
+    var draws = apiFetch("baltbet-main/drawings?page=1")
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){
+        var rows = ((j && j.data) || []).filter(function(d){ return d.status === "finished"; })
+          .sort(function(a, b){ return b.number - a.number; }).slice(0, ACC_N);
+        return Promise.all(rows.map(function(d){
+          var have = store[d.number];
+          if(have && have.key === key) return null;
+          return apiFetch("drawing-info/" + d.id).then(function(r){ return r.ok ? r.json() : null; })
+            .then(function(j2){
+              var info = j2 && (j2.data || j2);
+              if(!info || info.status !== "finished") return;
+              info.number = info.number || d.number;
+              store[d.number] = stratForInfo(info);
+            }).catch(function(){});
+        }));
+      }).catch(function(){});
+    Promise.all([aiH, draws]).then(function(r){
+      var aih = r[0] || {}, el = $("accBox"); if(!el) return;
+      var nums = Object.keys(store).map(Number).sort(function(a, b){ return b - a; });
+      var keep = {}; nums.slice(0, 40).forEach(function(n){ keep[n] = store[n]; }); accWrite(keep);
+      nums = nums.slice(0, ACC_N);
+      if(!nums.length){ el.innerHTML = '<p class="ev-warn">Пока не удалось получить итоги прошлых тиражей. Попробуй позже.</p>'; return; }
+      var cols = [["ai", "ИИ"], ["gap", "Расхожд."], ["sim", "Симул."], ["kel", "Келли"]], sum = {}, cnt = {};
+      var body = nums.map(function(n){
+        var d = store[n], sc = {}, best = -1;
+        cols.forEach(function(c){
+          var line = c[0] === "ai" ? aih[n] : d[c[0]];
+          sc[c[0]] = accScore(line, d.res);
+          if(sc[c[0]] && sc[c[0]].hit > best) best = sc[c[0]].hit;
+        });
+        return '<tr><th scope="row">' + n + '</th>' + cols.map(function(c){
+          var x = sc[c[0]];
+          if(!x) return '<td class="acc-na">—</td>';
+          sum[c[0]] = (sum[c[0]] || 0) + x.hit; cnt[c[0]] = (cnt[c[0]] || 0) + 1;
+          return '<td' + (x.hit === best ? ' class="acc-best"' : '') + '><b>' + x.hit + '</b><small>' + fmt(x.vars) + ' вар.</small></td>';
+        }).join("") + '</tr>';
+      }).join("");
+      var foot = '<tr><th scope="row">Среднее</th>' + cols.map(function(c){
+        return cnt[c[0]] ? '<td><b>' + (sum[c[0]] / cnt[c[0]]).toFixed(1).replace(".", ",") + '</b><small>' + cnt[c[0]] + ' тир.</small></td>' : '<td class="acc-na">—</td>';
+      }).join("") + '</tr>';
+      el.innerHTML = '<p class="ev-note acc-lead">Сколько матчей из 15 накрыл купон — столько угадала бы его лучшая строка. Под числом — сколько вариантов стоил купон. Лучший результат тиража подсвечен.</p>' +
+        '<div class="acc-wrap"><table class="acc"><thead><tr><th>Тираж</th>' + cols.map(function(c){ return '<th>' + c[1] + '</th>'; }).join("") +
+        '</tr></thead><tbody>' + body + '</tbody><tfoot>' + foot + '</tfoot></table></div>' +
+        '<p class="ev-note">Стратегии посчитаны по линии и долям на закрытие тиража при текущих настройках цены и бюджета. «—» — купона не было.</p>';
+    });
   }
   var AI_SN = [["gap", "Расхождения"], ["sim", "Симуляция"], ["kel", "Келли"]];
   function aiPickLine(r, idx){
@@ -1893,10 +1996,12 @@
   function showAi(m, idx){
     $("evTitle").textContent = "Разбор ИИ · " + m.home + " — " + m.away;
     $("evBody").innerHTML = '<div id="aiBox"><p class="ev-note">Загружаю…</p></div>' +
-      '<div class="blend-go" id="aiGo"><button type="button" class="btn-ev" id="aiNews">Новости и составы</button></div>';
+      '<div class="blend-go" id="aiGo"><button type="button" class="btn-ev" id="aiNews">Новости и составы</button>' +
+      '<button type="button" class="btn-ev" id="aiAcc">Точность по тиражам</button></div>';
     $("evBack").hidden = false;
     $("aiNews").addEventListener("click", function(){ showNews(m, idx, false); });
-    loadAi().then(function(j){
+    $("aiAcc").addEventListener("click", function(){ showAcc(function(){ showAi(m, idx); }); });
+    loadAi(true).then(function(j){
       var el = $("aiBox"); if(!el) return;
       var r = aiFor(j, idx);
       if(!r){
@@ -1979,7 +2084,7 @@
     box.innerHTML = (prev ? '' : '<div id="nwAi"></div>') + links + '<h3 class="th-h2 nw-h">Свежие заголовки</h3><div id="nwList"><p class="ev-note">Загружаю…</p></div>' +
       '<p class="ev-note">Заголовки обновляются раз в 2 часа. Сначала — про обе команды и с пометкой о травмах, составе, тренере; прогнозы букмекерских сайтов — в конце.</p>';
     $("evBack").hidden = false;
-    if(!prev) loadAi().then(function(j){
+    if(!prev) loadAi(true).then(function(j){
       var el = $("nwAi"), r = aiFor(j, idx); if(!el || !r) return;
       el.innerHTML = '<h3 class="th-h2 nw-h">Разбор ИИ</h3>' + (r.p ? aiPickLine(r, idx) : '') + aiHtml(r, false);
       if(r.p) el.insertAdjacentHTML("beforeend", '<p class="ai-more"><button type="button" class="nw-btn" id="nwAiMore">поставить вариант ИИ</button></p>');
@@ -4473,7 +4578,7 @@
     if(n){ state.played = (c.played || []).slice(); state.spent = c.spent || 0; state.rolls = c.rolls || 0; }
     return n > 0;
   }
-  function applyDrawing(info){
+  function matchesFromInfo(info){
     var evs = (info.events || []).slice().sort(function(a,b){ return (a.order||0) - (b.order||0); });
     var list = [];
     evs.forEach(function(e, i){
@@ -4496,6 +4601,10 @@
         score: e.score || ""
       });
     });
+    return list;
+  }
+  function applyDrawing(info){
+    var list = matchesFromInfo(info);
     if(!list.length) throw new Error("в ответе нет матчей");
 
     /* купон у каждого тиража свой и не теряется: уходя с тиража, запоминаем его,

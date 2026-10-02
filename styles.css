@@ -1199,3 +1199,21 @@ body.is-prev .row .pick.mine-hit{outline-color:var(--brand-gold)}
 .ai-blk-h{margin:0 0 3px; font-size:12px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--muted)}
 .ai-blk p{margin:0 0 4px; font-size:14px; line-height:1.5; color:var(--ink)}
 .ai-blk p:last-child{margin-bottom:0}
+/* корзина на узких телефонах: кнопки уходят под текст, текст получает всю ширину */
+@media (max-width:420px){
+  .hist li{display:grid; grid-template-columns:auto minmax(0,1fr); column-gap:10px; row-gap:8px; align-items:center}
+  .hist-acts{grid-column:1 / -1; justify-content:center}
+}
+/* точность по тиражам */
+.acc-lead{text-align:center; margin:0 0 10px}
+.acc-wrap{overflow-x:auto; margin:0 auto}
+.acc{width:100%; border-collapse:collapse; font-size:13px; text-align:center}
+.acc th, .acc td{padding:6px 4px; border-bottom:1px solid var(--rule)}
+.acc thead th{font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.03em}
+.acc tbody th, .acc tfoot th{font-family:"IBM Plex Mono",monospace; font-weight:500; color:var(--ink)}
+.acc td b{display:block; font-family:"IBM Plex Mono",monospace; font-size:15px; color:var(--ink)}
+.acc td small{display:block; font-size:10.5px; color:var(--muted); white-space:nowrap}
+.acc td.acc-best b{color:var(--brand-gold)}
+.acc td.acc-na{color:var(--muted)}
+.acc tfoot th, .acc tfoot td{border-bottom:0; border-top:1px solid var(--rule-strong)}
+@media (max-width:360px){ .acc{font-size:12px} .acc th, .acc td{padding:5px 2px} .acc td small{font-size:9.5px} }
