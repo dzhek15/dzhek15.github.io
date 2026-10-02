@@ -1734,38 +1734,58 @@
     var a = /(\d+)\D+(\d+)/.exec(old), b = /(\d+)\D+(\d+)/.exec(sc);
     if(a && b && !m.res && Date.now() - (m.scAt || 0) < 10 * 60000 && (+b[1] > +a[1] || +b[2] > +a[2])){
       m.goalAt = Date.now(); m.goalSide = +b[1] > +a[1] ? "h" : "a";
+      try{ goalToast(m, sc); }catch(e){}
       setTimeout(function(){ try{ if(!book) render(); }catch(e){} }, GOAL_MS + 300);
     }
     m.score = sc; m.scAt = Date.now();
     return true;
   }
+  /* всплывающее уведомление о голе: сверху, 7 секунд, коротко вибрирует на телефоне */
+  var toastTimer = null;
+  function goalToast(m, sc){
+    if(document.hidden) return;
+    var el = document.getElementById("goalToast");
+    if(!el){ el = document.createElement("div"); el.id = "goalToast"; el.setAttribute("role", "status"); el.setAttribute("aria-live", "polite"); document.body.appendChild(el);
+      el.addEventListener("click", function(){ el.classList.remove("on"); }); }
+    var r = /(\d+)\D+(\d+)/.exec(sc) || [0, "", ""], li = liveInfo(m), mn = li && li.ph ? liveMinute(li.ph, li.hockey, false) : null;
+    var side = m.goalSide;
+    el.innerHTML = '<span class="gt-tag">ГОЛ</span><span class="gt-body"><span class="gt-names"><span class="gt-m' + (side === "h" ? " gt-hit" : "") + '">' + escHtml(fsClean(m.home)) + '</span> \u2014 ' +
+      '<span class="gt-m' + (side === "a" ? " gt-hit" : "") + '">' + escHtml(fsClean(m.away)) + '</span></span>' +
+      '<b class="gt-sc"><i' + (side === "h" ? ' class="gt-hit"' : '') + '>' + r[1] + '</i>:<i' + (side === "a" ? ' class="gt-hit"' : '') + '>' + r[2] + '</i></b></span>' +
+      (mn && mn.t !== "" && mn.tick ? '<span class="gt-min">' + escHtml(String(mn.t)) + '\u2019</span>' : "");
+    el.classList.remove("on"); void el.offsetWidth; el.classList.add("on");
+    try{ if(navigator.vibrate) navigator.vibrate([70, 40, 70]); }catch(e){}
+    clearTimeout(toastTimer); toastTimer = setTimeout(function(){ el.classList.remove("on"); }, 7000);
+  }
   function goalOn(m){ return !m.res && !!m.goalAt && Date.now() - m.goalAt < GOAL_MS; }
   function fillScore(sc, m){
     var t = m.score ? String(m.score).replace(/\s+/g, "") : "", r = /^(\d+):(\d+)$/.exec(t);
-    if(!r || !goalOn(m)){ sc.textContent = t; return; }
-    sc.innerHTML = '<span class="' + (m.goalSide === "h" ? "g-hit" : "") + '">' + r[1] + '</span>:<span class="' + (m.goalSide === "a" ? "g-hit" : "") + '">' + r[2] + '</span>';
+    if(!r){ sc.textContent = t; return; }
+    var g = goalOn(m);
+    /* каждая цифра в своём span: на телефоне в просмотре счёт встаёт столбиком у края */
+    sc.innerHTML = '<span class="sh' + (g && m.goalSide === "h" ? " g-hit" : "") + '">' + r[1] + '</span><span class="sc-c">:</span><span class="sa' + (g && m.goalSide === "a" ? " g-hit" : "") + '">' + r[2] + '</span>';
   }
   /* минута матча по данным ленты: футбол — от начала тайма, хоккей — минута периода из ленты */
-  function liveMinute(ph, hockey){
+  function liveMinute(ph, hockey, short){
     if(!ph) return null;
     var ac = String(ph.ac), now = Date.now();
     if(hockey){
       if(/^1[4-6]$/.test(ac)){
         var bx = Number(ph.bx), per = Number(ac) - 13;
-        if(!isFinite(bx) || bx < 0) return { t: per + "-й период" };
+        if(!isFinite(bx) || bx < 0) return { t: short ? "П" + per : per + "-й период", n: (per - 1) * 20 + 10 };
         bx = Math.min(20, bx + Math.floor((now - ph.at) / 60000));
-        return { t: per + "-й п. " + bx, tick: true };
+        return { t: short ? "П" + per + " " + bx : per + "-й п. " + bx, tick: true, n: (per - 1) * 20 + bx, tot: 60 };
       }
-      if(ac === "46") return { t: "Перерыв" };
-      if(ac === "7") return { t: "Овертайм" };
+      if(ac === "46") return { t: short ? "ПЕР" : "Перерыв" };
+      if(ac === "7") return { t: short ? "ОТ" : "Овертайм" };
       return { t: "" };
     }
-    if(ac === "38") return { t: "Перерыв" };
+    if(ac === "38") return { t: short ? "ПЕР" : "Перерыв", n: 45, tot: 90 };
     if(ac === "12" || ac === "13"){
       var ao = Number(ph.ao); if(!isFinite(ao) || ao <= 0) return { t: "" };
       var mn = Math.floor((now / 1000 - ao) / 60) + 1;
-      if(ac === "12") return { t: (mn > 45 ? "45+" : Math.max(1, mn)), tick: true };
-      mn += 45; return { t: (mn > 90 ? "90+" : mn), tick: true };
+      if(ac === "12") return { t: (mn > 45 ? "45+" : Math.max(1, mn)), tick: true, n: Math.min(45, Math.max(1, mn)), tot: 90 };
+      mn += 45; return { t: (mn > 90 ? "90+" : mn), tick: true, n: Math.min(90, mn), tot: 90 };
     }
     return { t: "" };
   }
@@ -1800,8 +1820,10 @@
   setInterval(function(){
     var els = document.querySelectorAll(".lv-min[data-ac]");
     for(var i = 0; i < els.length; i++){
-      var e = els[i], mn = liveMinute({ ac: e.getAttribute("data-ac"), ao: e.getAttribute("data-ao"), bx: e.getAttribute("data-bx"), at: Number(e.getAttribute("data-at")) }, e.getAttribute("data-h") === "1");
+      var e = els[i], mn = liveMinute({ ac: e.getAttribute("data-ac"), ao: e.getAttribute("data-ao"), bx: e.getAttribute("data-bx"), at: Number(e.getAttribute("data-at")) }, e.getAttribute("data-h") === "1", e.getAttribute("data-s") === "1");
       if(mn && String(mn.t) !== e.textContent) e.textContent = String(mn.t);
+      var rw = e.closest && e.closest(".row");
+      if(rw && mn && mn.n != null) rw.style.setProperty("--p", Math.min(100, Math.round(mn.n / mn.tot * 100)) + "%");
     }
   }, 10000);
   function mStartMs(m){
@@ -5145,6 +5167,14 @@
       })
       .catch(function(){ if(fail) fail(); });
   }
+  var pvOpen = {};
+  function pvExpSync(){
+    var b = document.getElementById("btnPrevExp"); if(!b) return;
+    var rows = document.querySelectorAll("#rows .row"), all = rows.length > 0;
+    for(var i = 0; i < rows.length; i++) if(!rows[i].classList.contains("open")){ all = false; break; }
+    b.textContent = all ? "Свернуть все" : "Раскрыть все";
+    b.setAttribute("aria-pressed", all ? "true" : "false");
+  }
   function renderPrevView(){
     var p = state.prev;
     rowsEl.innerHTML = "";
@@ -5210,7 +5240,40 @@
       meta.appendChild(document.createTextNode([m.date, m.time, m.league].filter(Boolean).join("  ·  ")));
       meta.appendChild(mkAiPrev(m, idx, p.tirazh, false));
       liveDecor(m, row, meta);
+      /* телефон: значок LIVE и метка ИИ стоят в одной строке под командами (копии, оригиналы там скрыты) */
+      var stl = document.createElement("div"); stl.className = "st-line";
+      var lcEl = meta.querySelector(".lv-chip"), alEl = teams.querySelector(".ai-live");
+      if(lcEl) stl.appendChild(lcEl.cloneNode(true));
+      if(alEl) stl.appendChild(alEl.cloneNode(true));
       fix.appendChild(meta);
+      if(stl.firstChild) fix.appendChild(stl);
+      /* телефон: слева время или минута, цвет полосы — угадал ли ИИ; строка раскрывается по тапу */
+      var li2 = liveInfo(m), lo2 = liveOutcome(m), fin2 = !!m.res || (li2 && li2.end);
+      var tcol = document.createElement("div"); tcol.className = "tcol";
+      var tt, tAttr = "";
+      if(m.res === VOID) tt = "ОТМ";
+      else if(fin2) tt = "ФТ";
+      else if(li2){
+        var mn2 = liveMinute(li2.ph, li2.hockey, true);
+        tt = mn2 && mn2.t !== "" ? String(mn2.t) : "LIVE";
+        if(mn2 && mn2.tick && li2.ph) tAttr = ' data-ac="' + li2.ph.ac + '" data-ao="' + escHtml(li2.ph.ao || "") + '" data-bx="' + escHtml(li2.ph.bx || "") + '" data-at="' + li2.ph.at + '" data-h="' + (li2.hockey ? 1 : 0) + '" data-s="1"';
+        if(mn2 && mn2.n != null) row.style.setProperty("--p", Math.min(100, Math.round(mn2.n / mn2.tot * 100)) + "%");
+      } else tt = m.time || "—";
+      tcol.innerHTML = '<b class="tc-t' + (li2 && !fin2 ? " tc-live lv-min" : "") + '"' + tAttr + '>' + escHtml(tt) + '</b><i class="tc-n">' + (idx + 1) + '</i>';
+      row.insertBefore(tcol, num.nextSibling);
+      if(li2 && !fin2) row.classList.add("st-live", "is-lv");
+      if(fin2) row.classList.add("st-fin");
+      if(aiRec && lo2) row.classList.add(aiRec.p.indexOf(lo2.o) >= 0 ? "ai-ok" : "ai-no");
+      var okey = p.tirazh + "|" + idx;
+      if(pvOpen[okey]) row.classList.add("open");
+      row.addEventListener("click", function(ev){
+        if(!window.matchMedia("(max-width:560px)").matches || document.documentElement.getAttribute("data-compact") === "1") return;
+        if(ev.target.closest("button, a")) return;
+        row.classList.add("anim");
+        var on = row.classList.toggle("open");
+        if(on) pvOpen[okey] = 1; else delete pvOpen[okey];
+        pvExpSync();
+      });
       row.appendChild(fix);
       var picksWrap = document.createElement("div");
       picksWrap.className = "picks-m";
@@ -5242,13 +5305,26 @@
       '<span>сыграно <b>' + done + '</b> из ' + p.matches.length + '</span>' +
       (live ? '<span>идёт <b>' + live + '</b></span>' : '') +
       (voids ? '<span title="засчитан угаданным для любой ставки">отменён <b>' + voids + '</b></span>' : '') +
-      (aiN.done || aiN.live ? '<span class="pb-ai" title="Вариант ИИ: угадано из сыгранных · в лайве по текущему счёту">ИИ' +
+      (aiN.done || aiN.live ? '<span class="pb-ai" title="Вариант ИИ: угадано из сыгранных · в лайве по текущему счёту">' +
+        '<svg class="pb-ring" viewBox="0 0 32 32" width="30" height="30" aria-hidden="true"><circle cx="16" cy="16" r="12" class="rg-bg"/><circle cx="16" cy="16" r="12" class="rg-fg" style="--rg:' +
+        (75.4 * (aiN.hit + aiN.liveHit) / (aiN.done + aiN.live)).toFixed(1) + '"/></svg>ИИ' +
         (aiN.done ? ' <b>' + aiN.hit + '/' + aiN.done + '</b>' : '') + (aiN.done && aiN.live ? ' ·' : '') +
         (aiN.live ? ' в лайве <b>' + aiN.liveHit + '/' + aiN.live + '</b>' : '') + '</span>' : '') +
       (p.at ? '<span>обновлено <b>' + new Date(p.at).toTimeString().slice(0,5) + '</b></span>' : '') +
+      '<button type="button" class="pb-exp" id="btnPrevExp">Раскрыть все</button>' +
       '<button type="button" class="pb-back" id="btnPrevBack">К текущему тиражу &#8250;</button>';
     bar.hidden = false;
     $("btnPrevBack").addEventListener("click", leavePrev);
+    $("btnPrevExp").addEventListener("click", function(){
+      var rows = document.querySelectorAll("#rows .row"), all = true, i;
+      for(i = 0; i < rows.length; i++) if(!rows[i].classList.contains("open")){ all = false; break; }
+      for(i = 0; i < rows.length; i++){
+        var k = p.tirazh + "|" + i;
+        if(all){ rows[i].classList.remove("open"); delete pvOpen[k]; } else { rows[i].classList.add("open"); pvOpen[k] = 1; }
+      }
+      pvExpSync();
+    });
+    pvExpSync();
     renderPrevCsv();
   }
 
