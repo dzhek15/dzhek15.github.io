@@ -47,7 +47,7 @@ window.CONFIG = {
   LOSS_CAP: 0.05,            /* максимум потери вероятности за одну замену */
 
   /* ---------- Flashscore ---------- */
-  FS_FEED_HOST: "https://sweet-heart-f51d.d-pavlovski51.workers.dev/?sport=",
+  FS_FEED_HOST: "https://sweet-heart-f51d.dzhek15-api.workers.dev/?sport=",
   FS_SPORT_ID: { football: 1, hockey: 4 },
 
   /* ---------- API и зеркало ---------- */
