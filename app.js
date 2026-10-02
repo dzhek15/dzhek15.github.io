@@ -322,6 +322,25 @@
     if(state.history.length>14) state.history.length=14;
     state.future = [];                 /* новое действие — «Вперёд» больше некуда */
   }
+  /* «Назад» для корзины: храним только убранные варианты с их местами,
+     а не копию всей корзины — так история не раздувает память браузера */
+  function pushBasketUndo(label, removed){
+    if(!removed.length) return;
+    state.history.unshift({ at: new Date().toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"}),
+                            label: label, bk: { ins: removed } });
+    if(state.history.length>14) state.history.length=14;
+    state.future = [];
+  }
+  function applyBasket(bk){
+    if(bk.ins){
+      var ins = bk.ins.slice().sort(function(a, b){ return a[0] - b[0]; });
+      ins.forEach(function(p){ state.played.splice(Math.min(p[0], state.played.length), 0, p[1]); });
+      return { del: ins.map(function(p){ return p[0]; }) };
+    }
+    var idx = (bk.del || []).slice().sort(function(a, b){ return b - a; }), back = [];
+    idx.forEach(function(i){ if(i < state.played.length) back.push([i, state.played.splice(i, 1)[0]]); });
+    return { ins: back };
+  }
   function applySnap(h){
     if(!(h.meta && Array.isArray(h.meta.matches) && h.meta.matches.length)){
       state.matches.forEach(function(m,i){
@@ -2644,6 +2663,7 @@
           return;
         }
         histArmed = -1;
+        pushBasketUndo("вариант " + (h.label || "") , [[i, state.played[i]]]);
         state.played.splice(i, 1);
         save(); render();
       });
@@ -2983,6 +3003,12 @@
   $("btnUndo").addEventListener("click", function(){
     var h = state.history.shift();
     if(!h) return;
+    if(h.bk){
+      state.future.unshift({ at: h.at, label: h.label, bk: applyBasket(h.bk) });
+      if(state.future.length>14) state.future.length=14;
+      histArmed = -1; save(); render();
+      return;
+    }
     state.future.unshift(makeSnap(h.label, !!h.meta));
     if(state.future.length>14) state.future.length=14;
     applySnap(h);
@@ -2991,6 +3017,12 @@
   $("btnRedo").addEventListener("click", function(){
     var h = state.future.shift();
     if(!h) return;
+    if(h.bk){
+      state.history.unshift({ at: h.at, label: h.label, bk: applyBasket(h.bk) });
+      if(state.history.length>14) state.history.length=14;
+      histArmed = -1; save(); render();
+      return;
+    }
     state.history.unshift(makeSnap(h.label, !!h.meta));
     if(state.history.length>14) state.history.length=14;
     applySnap(h);
@@ -3008,7 +3040,7 @@
   $("btnDedup").addEventListener("click", function(){
     var d = histDups();
     if(!d.n) return;
-    pushHistory("до удаления повторов", true);
+    pushBasketUndo("повторы (" + d.n + ")", state.played.map(function(v, i){ return [i, v]; }).filter(function(p){ return d.mark[p[0]] != null; }));
     state.played = state.played.filter(function(v, i){ return d.mark[i] == null; });
     save(); render();
     say("Убрано повторов: " + fmt(d.n) + ". Оставлен самый ранний экземпляр каждого купона. Отменить — «Назад».");
@@ -3042,10 +3074,11 @@
     }
     disarmClear();
     var n = state.played.length;
+    pushBasketUndo("вся корзина (" + n + ")", state.played.map(function(v, i){ return [i, v]; }));
     state.played = [];
     histArmed = -1;
     save(); render();
-    say("Корзина очищена: убрано " + n + " шт. Купон и счётчики не тронуты.");
+    say("Корзина очищена: убрано " + n + " шт. Вернуть — «Назад».");
   });
 
   /* Расстановка по долям игроков (строка «П»): most=true — самый популярный исход
