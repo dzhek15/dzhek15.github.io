@@ -19,7 +19,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Cpath%20d='M16%2030.5C7%2026%202.5%2022.5%202.5%2018V3.6c0-.6.5-1.1%201.1-1.1h24.8c.6%200%201.1.5%201.1%201.1V18c0%204.5-4.5%208-13.5%2012.5z'%20fill='%231a1410'%20stroke='%23c9a24b'%20stroke-width='1.6'/%3E%3Cpath%20d='M9.5%2015.6l4.3%204.3L23%208.6'%20fill='none'%20stroke='%23c9a24b'%20stroke-width='4'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@600;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@600;800&family=Oswald:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
 <style>
 :root{color-scheme:light dark}
 *{box-sizing:border-box}
@@ -30,7 +30,7 @@ body{margin:0; font:14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; b
 img{max-width:100%}
 [hidden]{display:none !important}
 </style>
-<link rel="stylesheet" href="styles.css?v=20261002ag">
+<link rel="stylesheet" href="styles.css?v=20261002ai">
 </head>
 <body>
 
@@ -63,7 +63,7 @@ img{max-width:100%}
         <div class="cv-r">
           <div class="cv-k">Суперприз</div>
           <div class="cv-v" id="cvJack">—</div>
-          <div class="cv-date" id="cvPool">&nbsp;</div>
+          <div class="cv-pool" id="cvPool" title="Пул — призовой фонд тиража, делится между угадавшими 9 и больше. Пока идёт приём, растёт">&nbsp;</div>
         </div>
         <div class="cv-sub" id="cvSub">&nbsp;</div>
       </div>
@@ -79,9 +79,9 @@ img{max-width:100%}
         </span>
         <span class="tk-note feed-note" id="tkFeedWrap" hidden title="totobrief не отвечает — данные взяты из зеркала, которое GitHub снимает каждые полчаса"><span id="tkFeed">зеркало</span><span id="tkFeedNote"></span></span>
       </div>
-      <div class="tk"><span class="k">Приём до (МСК)</span><span class="v mono" id="koTime">—</span></div>
-      <div class="tk"><span class="k">Осталось</span><span class="v mono" id="koLeft">—</span></div>
-      <div class="tk" id="tkJackWrap" hidden><span class="k">Суперприз</span><span class="v mono" id="tkJack">—</span></div>
+      <div class="tk tk-dup"><span class="k">Приём до (МСК)</span><span class="v mono" id="koTime">—</span></div>
+      <div class="tk tk-dup"><span class="k">Осталось</span><span class="v mono" id="koLeft">—</span></div>
+      <div class="tk tk-dup" id="tkJackWrap" hidden><span class="k">Суперприз</span><span class="v mono" id="tkJack">—</span></div>
       <div class="tk" id="tkFundWrap" hidden title="Пул — призовой фонд тиража (90% всех ставок), делится между угадавшими 9 и больше. У БалтБета это «Возможный выигрыш». Пока идёт приём, пул растёт"><span class="k">Пул</span><span class="v mono" id="tkFund">—</span></div>
       <div class="tk tk-btn" id="tkValWrap" hidden role="button" tabindex="0" title="Нажми — объясню, что это за число и как его читать"><span class="k">Ценность тиража</span><span class="v" id="tkVal">—</span><span class="tk-note" id="tkValNote"></span></div>
     </div>
@@ -288,9 +288,9 @@ img{max-width:100%}
   </footer>
 </div>
 
-<script src="config.js?v=20261002ag"></script>
-<script src="app.js?v=20261002ag"></script>
-<script src="visual.js?v=20261002ag"></script>
+<script src="config.js?v=20261002ai"></script>
+<script src="app.js?v=20261002ai"></script>
+<script src="visual.js?v=20261002ai"></script>
 
 <script data-goatcounter="https://dzhek15.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 </body>

@@ -1258,24 +1258,31 @@ body.is-prev .row .pick.mine-hit{outline-color:var(--brand-gold)}
 .cv-fx i:nth-child(3){--x:70%; --r:-26deg; animation-delay:-6s}
 @keyframes cvBeam{from{transform:rotate(var(--r)); opacity:.55} to{transform:rotate(calc(var(--r) * -0.6)); opacity:1}}
 .cv-in{display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); grid-template-areas:"l logo r" "sub sub sub";
-  align-items:center; column-gap:28px; row-gap:8px; padding:14px 30px 12px}
-.cover .logo{grid-area:logo; height:92px; margin:0; filter:drop-shadow(0 6px 16px rgba(0,0,0,.55))}
+  align-items:center; column-gap:28px; row-gap:12px; padding:18px 32px 14px}
+.cover .logo{grid-area:logo; height:104px; margin:0; filter:drop-shadow(0 6px 16px rgba(0,0,0,.55))}
 .cv-l{grid-area:l; text-align:left; min-width:0}
 .cv-r{grid-area:r; text-align:right; min-width:0}
-.cv-k{font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:rgba(239,229,204,.62); font-weight:600}
-.cv-num, .cv-v{font-family:"Chivo",sans-serif; font-weight:800; font-size:32px; line-height:1.05; margin:3px 0 4px;
-  font-variant-numeric:tabular-nums; white-space:nowrap; letter-spacing:-.01em}
-.cv-num{background:linear-gradient(100deg, #b88a35 0%, #f3dc9a 22%, #c9a24b 40%, #c9a24b 60%, #f3dc9a 78%, #b88a35 100%);
-  background-size:220% 100%; -webkit-background-clip:text; background-clip:text; color:transparent; animation:cvShine 6s linear infinite}
+.cv-k{font:500 14px/1 "Oswald","Chivo",sans-serif; letter-spacing:.2em; text-transform:uppercase; color:rgba(243,234,210,.82)}
+.cv-num, .cv-v{font-family:"Oswald","Chivo",sans-serif; font-weight:700; font-size:50px; line-height:1; margin:6px 0 8px;
+  font-variant-numeric:tabular-nums lining-nums; white-space:nowrap; letter-spacing:.005em}
+.cv-num{color:#f6eedb; text-shadow:0 2px 0 rgba(0,0,0,.35)}
+.cv-num small{font-size:.56em; font-weight:600; color:#c9a24b; margin-right:4px; vertical-align:.32em}
+.cv-v{background:linear-gradient(100deg, #c9963c 0%, #f6dd95 25%, #e3b955 45%, #e3b955 55%, #f6dd95 75%, #c9963c 100%);
+  background-size:220% 100%; -webkit-background-clip:text; background-clip:text; color:transparent;
+  filter:drop-shadow(0 0 14px rgba(201,162,75,.3)); animation:cvShine 7s linear infinite}
 @keyframes cvShine{from{background-position:110% 0} to{background-position:-110% 0}}
-.cv-v{color:#e9c977; text-shadow:0 0 22px rgba(201,162,75,.35)}
-.cv-date{font-size:12px; letter-spacing:.06em; color:rgba(239,229,204,.6); font-family:"IBM Plex Mono",monospace; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-.cv-sub{grid-area:sub; justify-self:center; display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:6px 16px;
-  padding:7px 18px; border:1px solid rgba(201,162,75,.38); border-radius:999px; background:rgba(0,0,0,.28);
-  font:700 15px/1.2 "IBM Plex Mono",monospace; color:#f3ead2; font-variant-numeric:tabular-nums; min-height:34px; box-sizing:border-box}
+.cv-date{font:500 13px/1.2 "Oswald","Chivo",sans-serif; letter-spacing:.14em; text-transform:uppercase; color:rgba(201,162,75,.9); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.cv-pool{display:inline-flex; align-items:baseline; gap:8px; min-height:30px; box-sizing:border-box; padding:4px 12px; border-radius:6px;
+  border:1px solid transparent; font-family:"Oswald","Chivo",sans-serif; white-space:nowrap}
+.cv-pool.is-on{border-color:rgba(201,162,75,.6); background:linear-gradient(180deg, rgba(201,162,75,.22), rgba(201,162,75,.08))}
+.cv-pool em{font-style:normal; font-weight:500; font-size:12px; letter-spacing:.2em; text-transform:uppercase; color:#d9b866}
+.cv-pool b{font-weight:600; font-size:20px; color:#f6eedb; font-variant-numeric:tabular-nums lining-nums}
+.cv-sub{grid-area:sub; justify-self:center; display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:6px 18px;
+  padding:7px 22px; border:1px solid rgba(201,162,75,.45); border-radius:999px; background:rgba(0,0,0,.32);
+  font:600 21px/1.15 "Oswald","Chivo",sans-serif; color:#f6eedb; font-variant-numeric:tabular-nums lining-nums; min-height:40px; box-sizing:border-box; letter-spacing:.02em}
 .cv-sub span{white-space:nowrap}
-.cv-sub em{font-style:normal; font-weight:500; font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:rgba(201,162,75,.9); margin-right:6px}
-.cv-sep{width:4px; height:4px; border-radius:50%; background:rgba(201,162,75,.7)}
+.cv-sub em{font-style:normal; font-weight:500; font-size:12.5px; letter-spacing:.18em; text-transform:uppercase; color:#d9b866; margin-right:8px; vertical-align:.12em}
+.cv-sep{width:5px; height:5px; border-radius:50%; background:rgba(201,162,75,.75)}
 .cv-ticker{position:relative; height:38px; overflow:hidden; border-top:1px solid rgba(201,162,75,.3); background:rgba(0,0,0,.22);
   -webkit-mask-image:linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); mask-image:linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent)}
 .cv-track{display:flex; width:max-content; height:100%; animation:cvRun var(--cv-dur, 70s) linear infinite}
@@ -1290,21 +1297,24 @@ body.is-prev .row .pick.mine-hit{outline-color:var(--brand-gold)}
 .cv-emb{width:18px; height:18px; object-fit:contain}
 .cv-dot{font-size:8px; color:rgba(201,162,75,.55); font-weight:400}
 @media (max-width:640px){
-  .cv-in{grid-template-columns:minmax(0,1fr) minmax(0,1fr); grid-template-areas:"logo logo" "l r" "sub sub"; column-gap:12px; row-gap:8px; padding:12px 14px 10px}
-  .cover .logo{height:64px; justify-self:center}
-  .cv-num, .cv-v{font-size:24px}
-  .cv-k{font-size:10px; letter-spacing:.12em}
-  .cv-date{font-size:11px; letter-spacing:.02em}
-  .cv-sub{display:grid; grid-template-columns:1fr 1fr; gap:0; width:100%; padding:6px 0; border-radius:12px; font-size:15px}
-  .cv-sub span{display:flex; flex-direction:column; align-items:center; gap:2px; min-width:0}
+  .cv-in{grid-template-columns:auto minmax(0,1fr); grid-template-areas:"logo logo" "l r" "sub sub"; column-gap:10px; row-gap:10px; padding:12px 14px 10px}
+  .cover .logo{height:68px; justify-self:center}
+  .cv-num, .cv-v{font-size:32px; margin:4px 0 6px}
+  .cv-k{font-size:12px; letter-spacing:.16em}
+  .cv-date{font-size:11.5px; letter-spacing:.08em}
+  .cv-pool{gap:6px; padding:3px 8px; min-height:26px}
+  .cv-pool em{font-size:10.5px; letter-spacing:.14em}
+  .cv-pool b{font-size:16px}
+  .cv-sub{display:grid; grid-template-columns:1fr 1fr; gap:0; width:100%; padding:7px 0; border-radius:12px; font-size:19px}
+  .cv-sub span{display:flex; flex-direction:column; align-items:center; gap:3px; min-width:0}
   .cv-sub .cv-s2{border-left:1px solid rgba(201,162,75,.3)}
   .cv-sub .cv-s1:only-child{grid-column:1 / -1}
-  .cv-sub em{font-size:9.5px; margin-right:0}
+  .cv-sub em{font-size:10.5px; margin-right:0; letter-spacing:.14em}
   .cv-sep{display:none}
 }
-@media (max-width:360px){ .cv-num, .cv-v{font-size:21px} .cv-sub{font-size:14px} }
+@media (max-width:360px){ .cv-num, .cv-v{font-size:26px} .cv-in{padding-inline:12px} .cv-sub{font-size:17px} .cv-pool b{font-size:14.5px} .cv-pool em{font-size:9.5px} }
 @media (prefers-reduced-motion: reduce){
-  .cv-fx i, .cv-num{animation:none}
+  .cv-fx i, .cv-v{animation:none}
   .cv-track{animation:none}
   .cv-ticker{overflow-x:auto; -webkit-mask-image:none; mask-image:none}
   .cv-run[aria-hidden="true"]{display:none}
@@ -1335,4 +1345,12 @@ body.is-prev .row .pick.mine-hit{outline-color:var(--brand-gold)}
 @media (max-width:700px){
   :root[data-style="classic"] body::before{background-image:var(--bg-symbols), linear-gradient(180deg, rgba(12,17,20,.4) 0%, rgba(12,17,20,.82) 38%, rgba(12,17,20,.96) 70%), url("img/bg-night-m.webp")}
   :root[data-style="classic"][data-theme="light"] body::before{background-image:var(--bg-symbols), linear-gradient(180deg, rgba(230,234,232,.28) 0%, rgba(230,234,232,.78) 38%, rgba(230,234,232,.95) 70%), url("img/bg-day-m.webp")}
+}
+
+/* срок приёма, «осталось» и суперприз уже на обложке — в инфоблоке не дублируем
+   (элементы остаются в разметке: из них обложка берёт время) */
+.ticket .tk.tk-dup{display:none !important}
+@media (max-width:560px){
+  .ticket .tk:last-child{grid-column:1 / -1}
+  .ticket:has(#tkFundWrap[hidden]) .tk:first-child{grid-column:1 / -1}
 }

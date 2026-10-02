@@ -34,7 +34,7 @@
   function renderCover(){
     if(!cover || !window.DZ) return;
     var g = window.DZ.get();
-    cvNum.textContent = g.tirazh ? "№" + g.tirazh : "№—";
+    cvNum.innerHTML = '<small>№</small>' + (g.tirazh ? esc(g.tirazh) : "—");
     var jt = g.jackpot ? fmt(g.jackpot) + "\u00a0₽" : "—";
     if(jt !== lastJack){
       if(g.jackpot && !cover.dataset.anim){ cover.dataset.anim = "1"; scramble(cvJack, jt); } else cvJack.textContent = jt;
@@ -44,9 +44,11 @@
     cvSub.innerHTML = '<span class="cv-s1"><em>приём до</em> ' + esc(ko.replace(/\s+/g, " ").trim()) + '</span>' +
       (left && left.trim() !== "—" ? '<i class="cv-sep" aria-hidden="true"></i><span class="cv-s2"><em>осталось</em> ' + esc(left.trim()) + '</span>' : "");
     var pool = ($("tkFund") || {}).textContent || "";
-    $("cvPool").innerHTML = pool && pool.trim() !== "—" ? "пул " + esc(pool.trim()) : "&nbsp;";
+    var pe = $("cvPool"), has = pool && pool.trim() !== "—";
+    pe.innerHTML = has ? '<em>Пул</em><b>' + esc(pool.trim()) + '</b>' : "&nbsp;";
+    pe.classList.toggle("is-on", !!has);
     var d = new Date();
-    cvDate.textContent = d.toLocaleDateString("ru-RU", { weekday:"short", day:"numeric", month:"long" });
+    cvDate.textContent = d.toLocaleDateString("ru-RU", { weekday:"long", day:"numeric", month:"long" });
     var sig = g.matches.map(function(m){ return m.home + "|" + m.away + (window.DZ.team(m.home) ? "+" : ""); }).join(";");
     if(sig !== lastTicker && g.matches.length){
       lastTicker = sig;
