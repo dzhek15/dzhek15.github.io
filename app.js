@@ -5382,7 +5382,7 @@
   function pcsvAddTo(tir, set){
     if(pcsv.tir === tir){
       if(set.link) set.name = "Ссылка " + (pcsv.sets.filter(function(x){ return x.link; }).length + 1);
-      var r = pcsvAdd(set); return { dup: r.dup, name: pcsv.name };
+      var r = pcsvAdd(set); return { dup: r.dup, name: pcsvLabel(pcsv.sets[pcsv.act]) || pcsv.name };
     }
     var all = pcsvAll(), e = all[tir] || { sets: [], act: 0 };
     if(!e.sets) e = { sets: e.rows ? [{ name: e.name || "Файл", sys: e.sys || e.rows }] : [], act: 0 };
@@ -5392,7 +5392,7 @@
     e.sets.push({ name: nm, link: set.link || 0, sys: set.sys }); e.act = e.sets.length - 1; e.at = Date.now();
     all[tir] = e;
     try{ localStorage.setItem(PCSV_KEY, JSON.stringify(all)); }catch(x){}
-    return { dup: false, name: nm };
+    return { dup: false, name: set.link ? fmt(pcsvExpand(set.sys || []).length * (Number(state.price) || 0)) + " ₽" : nm };
   }
   function pcsvAdd(set){
     var sig = (set.sys || []).join("|") + "#" + set.rows.length;
@@ -5405,6 +5405,11 @@
     return { dup: false };
   }
   function pcsvAll(){ try{ return JSON.parse(localStorage.getItem(PCSV_KEY) || "{}") || {}; }catch(e){ return {}; } }
+  /* у набора из ссылки вместо слова «Ссылка N» — сумма, на которую он сделан */
+  function pcsvLabel(st){
+    if(!st || !st.link) return st ? st.name : "";
+    return fmt(st.rows.length * (Number(state.price) || 0)) + " ₽";
+  }
   function pcsvStore(){
     var all = pcsvAll();
     /* храним только строки файла (с допами) — варианты разворачиваются при открытии; удаляются только кнопкой «Убрать» */
@@ -5578,15 +5583,15 @@
     var view = hasSys && pcsv.view !== "one" ? "sys" : "one";
     var best = 0, now9 = 0, can9 = 0, can15 = 0;
     st.forEach(function(x){ if(x.h > best) best = x.h; if(x.h >= 9) now9++; if(n - x.miss >= 9) can9++; if(!x.miss) can15++; });
-    var h = '<div class="pc-head"><span class="pc-t">Мои варианты</span><span class="pc-f" title="' + escHtml(pcsv.name) + '">' + escHtml(pcsv.name) + '</span>' +
+    var h = '<div class="pc-head"><span class="pc-t">Мои варианты</span><span class="pc-f" title="' + escHtml(pcsvLabel(pcsv.sets[pcsv.act]) || pcsv.name) + '">' + escHtml(pcsvLabel(pcsv.sets[pcsv.act]) || pcsv.name) + '</span>' +
       '<span class="pc-acts">' + PC_BTNS + '<button type="button" class="pc-btn pc-share" id="pcShareAll" title="Одна ссылка на все загруженные наборы этого тиража — перешли её, и у получателя откроются все варианты">' +
       (pcsv.sets.length > 1 ? 'Ссылка на все (' + pcsv.sets.length + ')' : 'Ссылка на варианты') + '</button>' +
       '<button type="button" class="pc-btn ghost" id="pcDrop">Убрать</button></span></div>' + PC_PASTE + msg;
     if(pcsv.sets.length > 1){
       h += '<div class="pc-tabs" role="tablist">';
       pcsv.sets.forEach(function(st, i){
-        h += '<button type="button" role="tab" data-t="' + i + '" aria-pressed="' + (i === pcsv.act) + '" title="' + escHtml(st.name) + ' · ' + fmt(st.rows.length) + ' вар.">' +
-          escHtml(st.name) + '<small>' + fmt(st.rows.length) + '</small></button>';
+        h += '<button type="button" role="tab" data-t="' + i + '" aria-pressed="' + (i === pcsv.act) + '" title="' + escHtml(st.link ? "Ссылка · " + pcsvLabel(st) : st.name) + ' · ' + fmt(st.rows.length) + ' вар.">' +
+          escHtml(pcsvLabel(st)) + '<small>' + fmt(st.rows.length) + '</small></button>';
       });
       h += '</div>';
     }
