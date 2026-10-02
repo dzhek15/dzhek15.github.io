@@ -1282,6 +1282,10 @@
   }
 
   /* лига вида «Европа. Лига Европы УЕФА» — часть света вместо страны */
+  /* турнир сборных: у них флаг, а не эмблема из ленты (там вместо эмблемы — логотип федерации) */
+  function isNatLeague(league){
+    return /лига наций|чемпионат мира|чемпионат европы|кубок африки|кубок азии|кубок америки|золотой кубок|отбор|сборн|товарищеск.*(сборн|национ)/i.test(String(league || ""));
+  }
   function continentCode(league){
     var head = String(league || "").split(".")[0].toLowerCase()
       .replace(/ё/g, "е").replace(/\s+/g, " ").trim();
@@ -1309,18 +1313,29 @@
       .replace(/\s+/g, " ").trim();
   }
   function teamInfo(name){ return TEAMDB[teamKey(name)] || null; }
+  /* картинка эмблемы: своя база (icons/teams), иначе — эмблема из ленты Flashscore,
+     которую сайт уже читает для времени матчей. У сборных вместо эмблемы — флаг */
+  var FS_LOGO_HOST = "https://static.flashscore.com/res/image/data/";
+  function embSrc(name, nat){
+    var t = teamInfo(name);
+    if(t && t.id) return "icons/teams/" + t.id + ".webp";
+    if(t && t.f) return "icons/teams/fs/" + t.f;
+    if(nat) return null;
+    var f = (state.fsLogo || {})[teamKey(name)];
+    return f && /^[\w-]+\.png$/.test(f) ? FS_LOGO_HOST + f : null;
+  }
   function loadTeamDb(){
     if(typeof fetch !== "function" || (teamDbAt && Date.now() - teamDbAt < 3600000)) return;
     teamDbAt = Date.now();
     fetch(MIRROR + "teams.json?t=" + Math.floor(Date.now() / 3600000))
       .then(function(r){ return r.ok ? r.json() : null; })
-      .then(function(j){ if(j && typeof j === "object"){ TEAMDB = j; render(); } })
+      .then(function(j){ if(j && typeof j === "object"){ TEAMDB = j; render(); } attachFsLogos(); })
       .catch(function(){});
   }
-  function mkEmb(name){
-    var t = teamInfo(name); if(!t || !t.id) return null;
+  function mkEmb(name, nat){
+    var src = embSrc(name, nat); if(!src) return null;
     var img = document.createElement("img");
-    img.className = "temb"; img.src = "icons/teams/" + t.id + ".webp";
+    img.className = "temb"; img.src = src;
     img.width = 18; img.height = 18; img.alt = ""; img.loading = "lazy"; img.decoding = "async";
     img.onerror = function(){ this.remove(); };
     return img;
@@ -1570,7 +1585,7 @@
       if(!obj.AA){
         if(obj.ZY || obj.ZA){ cur = { country: obj.ZY || "", league: obj.ZA || "", matches: [] }; groups.push(cur); }
       } else if(cur && obj.AE && obj.AF && obj.WU && obj.WV && obj.PX && obj.PY){
-        cur.matches.push({ id: obj.AA, home: obj.AE, away: obj.AF, hSlug: obj.WU, aSlug: obj.WV, hId: obj.PX, aId: obj.PY, ts: obj.AD || obj.ADE || null, st: obj.AB || "", sc: obj.AC || "" });
+        cur.matches.push({ id: obj.AA, home: obj.AE, away: obj.AF, hSlug: obj.WU, aSlug: obj.WV, hId: obj.PX, aId: obj.PY, hLogo: obj.OA || "", aLogo: obj.OB || "", ts: obj.AD || obj.ADE || null, st: obj.AB || "", sc: obj.AC || "" });
       }
     }
     return groups;
@@ -1617,9 +1632,9 @@
         var mm = g.matches[j];
         if(isWomen && !leagueW && !(/\(ж\)/i.test(mm.home) && /\(ж\)/i.test(mm.away))) continue;
         if(fsNameOk(hClean, hCore, mm.home) && fsNameOk(aClean, aCore, mm.away))
-          return { h: { url: mm.hSlug, id: mm.hId }, a: { url: mm.aSlug, id: mm.aId }, mid: mm.id, ts: mm.ts, st: mm.st, sc: mm.sc };
+          return { h: { url: mm.hSlug, id: mm.hId, logo: mm.hLogo }, a: { url: mm.aSlug, id: mm.aId, logo: mm.aLogo }, mid: mm.id, ts: mm.ts, st: mm.st, sc: mm.sc };
         if(fsNameOk(hClean, hCore, mm.away) && fsNameOk(aClean, aCore, mm.home))
-          return { h: { url: mm.aSlug, id: mm.aId }, a: { url: mm.hSlug, id: mm.hId }, mid: mm.id, ts: mm.ts, st: mm.st, sc: mm.sc };
+          return { h: { url: mm.aSlug, id: mm.aId, logo: mm.aLogo }, a: { url: mm.hSlug, id: mm.hId, logo: mm.hLogo }, mid: mm.id, ts: mm.ts, st: mm.st, sc: mm.sc };
       }
     }
     return null;
@@ -1652,7 +1667,7 @@
       g.matches.forEach(function(mm){
         if(isWomen && !leagueW && !(/\(ж\)/i.test(mm.home) && /\(ж\)/i.test(mm.away))) return;
         if(fsNameOk(hClean, hCore, mm.home) || fsNameOk(aClean, aCore, mm.away))
-          hits.push({ h: { url: mm.hSlug, id: mm.hId }, a: { url: mm.aSlug, id: mm.aId }, mid: mm.id, ts: mm.ts, st: mm.st, sc: mm.sc });
+          hits.push({ h: { url: mm.hSlug, id: mm.hId, logo: fsNameOk(hClean, hCore, mm.home) ? mm.hLogo : "" }, a: { url: mm.aSlug, id: mm.aId, logo: fsNameOk(aClean, aCore, mm.away) ? mm.aLogo : "" }, mid: mm.id, ts: mm.ts, st: mm.st, sc: mm.sc });
       });
     });
     return hits.length === 1 ? hits[0] : null;
@@ -1667,6 +1682,40 @@
       parts.forEach(function(p){ if(p.type === "hour") hh = p.value; if(p.type === "minute") mi = p.value; });
       return (hh && mi) ? hh + ":" + mi : "";
     } catch(e){ return ""; }
+  }
+  /* эмблемы из ленты Flashscore для клубов, которых нет в своей базе: лента знает
+     матчи на сегодня и завтра, поэтому остальные дозаполнятся при следующих заходах.
+     Найденное запоминаем в браузере — эмблема остаётся и у прошлого тиража */
+  var fsLogoBusy = false;
+  function attachFsLogos(){
+    if(fsLogoBusy || typeof fetch !== "function") return;
+    if(!state.fsLogo || typeof state.fsLogo !== "object") state.fsLogo = {};
+    var list = state.matches.slice();
+    if(state.prev && Array.isArray(state.prev.matches)) list = list.concat(state.prev.matches);
+    var need = list.filter(function(m){
+      return [m.home, m.away].some(function(n){ return n && !teamInfo(n) && !state.fsLogo[teamKey(n)]; });
+    });
+    if(!need.length) return;
+    var sports = {};
+    need.forEach(function(m){ sports[fsFeedSport(m.league)] = true; });
+    var keys = Object.keys(sports);
+    fsLogoBusy = true;
+    Promise.all(keys.map(function(k){ return Promise.all([fsLoadDay(k, 0), fsLoadDay(k, 1)]); })).then(function(rs){
+      var by = {}, changed = false;
+      keys.forEach(function(k, i){ by[k] = rs[i][0].concat(rs[i][1]); });
+      need.forEach(function(m){
+        var f = fsLookup(m, by[fsFeedSport(m.league)] || []);
+        if(!f) return;
+        [[m.home, f.h], [m.away, f.a]].forEach(function(p){
+          var k = teamKey(p[0]);
+          if(p[1] && p[1].logo && !teamInfo(p[0]) && state.fsLogo[k] !== p[1].logo){ state.fsLogo[k] = p[1].logo; changed = true; }
+        });
+      });
+      var ks = Object.keys(state.fsLogo);
+      if(ks.length > 400) ks.slice(0, ks.length - 400).forEach(function(k){ delete state.fsLogo[k]; });
+      fsLogoBusy = false;
+      if(changed){ save(); render(); }
+    }).catch(function(){ fsLogoBusy = false; });
   }
   function attachFsTimes(){
     if(!state.matches.length || typeof fetch !== "function") return;
@@ -2201,7 +2250,7 @@
       if(cont.hit && !ac && window.console && console.info){
         console.info("ДЖЕК: нет в таблице клубов — " + m.away);
       }
-      var he = mkEmb(m.home), ae = mkEmb(m.away);
+      var natM = isNatLeague(m.league), he = mkEmb(m.home, hc || natM), ae = mkEmb(m.away, ac || natM);
       if(he) teams.appendChild(he); else if(hc) teams.appendChild(mkFlag(hc, "tflag", m.home));
       teams.appendChild(mkTeam(m.home, m.away));
       var vs = document.createElement("span"); vs.className="vs"; vs.textContent="—";
@@ -4797,7 +4846,7 @@
     save();
     $("tirazhName").value = state.tirazh;
     render();
-    attachFsTimes();
+    attachFsTimes(); attachFsLogos();
     setTimeout(seedPrev, 1500);
     return list.length;
   }
@@ -4903,7 +4952,7 @@
       var cont = continentCode(m.league);
       var hc = cont.hit ? teamCode(m.home) : null;
       var ac = cont.hit ? teamCode(m.away) : null;
-      var he = mkEmb(m.home), ae = mkEmb(m.away);
+      var natM = isNatLeague(m.league), he = mkEmb(m.home, hc || natM), ae = mkEmb(m.away, ac || natM);
       if(he) teams.appendChild(he); else if(hc) teams.appendChild(mkFlag(hc, "tflag", m.home));
       teams.appendChild(document.createTextNode(m.home));
       var vs = document.createElement("span"); vs.className = "vs"; vs.textContent = "—";
@@ -5322,7 +5371,7 @@
   function escHtml(x){ return String(x).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
   function enterPrev(){
     if(!state.prev) return;
-    state.viewPrev = true; save(); render(); renderKickoff(); refreshPrev(); attachPrevTimes();
+    state.viewPrev = true; save(); render(); renderKickoff(); refreshPrev(); attachPrevTimes(); attachFsLogos();
   }
   /* время начала у прошлого тиража: берём из снимка, а чего нет — из фида Flashscore
      (он отдаёт только сегодня и завтра, поэтому вчерашние матчи дозаполнятся, пока они в фиде) */
@@ -5803,7 +5852,7 @@
     /* купон при перезагрузке НЕ очищаем (25.09.2026): телефон и браузер сами перезагружают
        вкладку, и проставленные исходы пропадали. У каждого тиража свой купон (couponStash), очищается только кнопкой. */
     render();
-    attachFsTimes(); /* дозаполнить время начала, если тираж пришёл из кэша ещё без него */
+    attachFsLogos(); attachFsTimes(); /* дозаполнить время начала, если тираж пришёл из кэша ещё без него */
     /* если страница размещена в интернете — тихо проверить, не сменился ли тираж */
     if(typeof fetch === "function"){
       /* открыли ссылку на купон — грузим сразу ТОТ тираж, а не текущий */
@@ -6499,7 +6548,8 @@
                kickoff: kickoffMs(), played: state.played, price: Number(state.price) || 30,
                viewPrev: !!state.viewPrev, book: !!book };
     },
-    team: teamInfo, emb: mkEmb, fmt: fmt, render: function(){ render(); }
+    team: teamInfo, emb: mkEmb, embSrc: embSrc, fmt: fmt,
+    nat: function(name, league){ return !!(isNatLeague(league) || (continentCode(league).hit && teamCode(name))); }, render: function(){ render(); }
   };
   var renderBase = render;
   render = function(){

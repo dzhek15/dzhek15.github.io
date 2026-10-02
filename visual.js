@@ -27,7 +27,7 @@
   }
   function chipHtml(m, i){
     var D = window.DZ;
-    var e = function(n){ var t = D && D.team(n); return t && t.id ? '<img class="cv-emb" src="icons/teams/' + t.id + '.webp" width="18" height="18" alt="" decoding="async">' : ''; };
+    var e = function(n){ var src = D && D.embSrc && D.embSrc(n, D.nat && D.nat(n, m.league)); return src ? '<img class="cv-emb" src="' + esc(src) + '" width="18" height="18" alt="" decoding="async">' : ''; };
     return '<button type="button" class="cv-chip" data-i="' + i + '"><i>' + (i + 1) + '</i>' + e(m.home) + '<span>' + esc(m.home) +
            '</span><em>—</em><span>' + esc(m.away) + '</span>' + e(m.away) + '</button>';
   }
@@ -50,7 +50,7 @@
     var d = g.prev && g.deadline ? new Date(g.deadline) : new Date();
     if(isNaN(d)) d = new Date();
     cvDate.textContent = d.toLocaleDateString("ru-RU", { weekday:"long", day:"numeric", month:"long" });
-    var sig = g.matches.map(function(m){ return m.home + "|" + m.away + (window.DZ.team(m.home) ? "+" : ""); }).join(";");
+    var sig = g.matches.map(function(m){ return m.home + "|" + m.away + (window.DZ.embSrc ? "+" + (window.DZ.embSrc(m.home) || "") + (window.DZ.embSrc(m.away) || "") : ""); }).join(";");
     if(sig !== lastTicker && g.matches.length){
       lastTicker = sig;
       var one = g.matches.map(chipHtml).join('<b class="cv-dot" aria-hidden="true">◆</b>');
