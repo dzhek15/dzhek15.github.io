@@ -19,7 +19,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Cpath%20d='M16%2030.5C7%2026%202.5%2022.5%202.5%2018V3.6c0-.6.5-1.1%201.1-1.1h24.8c.6%200%201.1.5%201.1%201.1V18c0%204.5-4.5%208-13.5%2012.5z'%20fill='%231a1410'%20stroke='%23c9a24b'%20stroke-width='1.6'/%3E%3Cpath%20d='M9.5%2015.6l4.3%204.3L23%208.6'%20fill='none'%20stroke='%23c9a24b'%20stroke-width='4'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@600;800&family=Oswald:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@600;800&family=Oswald:wght@500;600;700&family=Old+Standard+TT:wght@400;700&family=PT+Serif:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
 <style>
 :root{color-scheme:light dark}
 *{box-sizing:border-box}
@@ -30,7 +30,7 @@ body{margin:0; font:14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; b
 img{max-width:100%}
 [hidden]{display:none !important}
 </style>
-<link rel="stylesheet" href="styles.css?v=20261002ai">
+<link rel="stylesheet" href="styles.css?v=20261002aj">
 </head>
 <body>
 
@@ -65,9 +65,9 @@ img{max-width:100%}
           <div class="cv-v" id="cvJack">—</div>
           <div class="cv-pool" id="cvPool" title="Пул — призовой фонд тиража, делится между угадавшими 9 и больше. Пока идёт приём, растёт">&nbsp;</div>
         </div>
-        <div class="cv-sub" id="cvSub">&nbsp;</div>
       </div>
       <div class="cv-ticker" id="cvTicker"><div class="cv-track" id="cvTrack"></div></div>
+      <div class="cv-foot"><div class="cv-sub" id="cvSub">&nbsp;</div></div>
     </section>
     <div class="ticket">
       <div class="tk">
@@ -119,6 +119,7 @@ img{max-width:100%}
         <div class="hist-head-acts">
           <button id="btnDedup" type="button" hidden disabled title="Убрать из корзины одинаковые купоны, оставив самый ранний"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="6.5" width="9" height="10" rx="2"/><path d="M7.5 6.5V4.5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1h-3"/></svg><span class="lbl">Убрать повторы</span></button>
           <button id="btnSelAll" type="button" disabled title="Отметить или снять все варианты разом"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="13" height="13" rx="3"/><path d="M6.9 10.1l2.4 2.5 4.1-4.8"/></svg><span class="lbl">Снять все</span></button>
+          <button id="btnHistDoc" type="button" disabled title="Скачать корзину одним документом — газетный лист со всеми отмеченными купонами"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.5v9"/><path d="M6.5 9.5 10 13l3.5-3.5"/><path d="M4 15.5h12"/></svg><span class="lbl">Скачать этот документ</span></button>
           <button id="btnClearHist" type="button" disabled><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h12"/><path d="M8.5 6V4.5h3V6"/><path d="M6.5 6l.7 9.5h5.6L13.5 6"/></svg><span class="lbl">Очистить корзину</span></button>
         </div>
       </div>
@@ -288,9 +289,9 @@ img{max-width:100%}
   </footer>
 </div>
 
-<script src="config.js?v=20261002ai"></script>
-<script src="app.js?v=20261002ai"></script>
-<script src="visual.js?v=20261002ai"></script>
+<script src="config.js?v=20261002aj"></script>
+<script src="app.js?v=20261002aj"></script>
+<script src="visual.js?v=20261002aj"></script>
 
 <script data-goatcounter="https://dzhek15.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 </body>

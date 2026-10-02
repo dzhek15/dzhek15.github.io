@@ -72,80 +72,133 @@
     setTimeout(function(){ r.classList.remove("flash"); }, 1600);
   }
 
-  /* ---------- корзина: купоны как билеты, скачать картинкой ---------- */
-  function ticketPng(v, idx){
-    var g = window.DZ.get(), ms = g.matches, picks = String(v.sig || "").split(" ");
-    var dpr = 2, W = 720, rowH = 34, top = 150, H = top + ms.length * rowH + 96;
-    var cv = document.createElement("canvas"); cv.width = W * dpr; cv.height = H * dpr;
-    var x = cv.getContext("2d"); x.scale(dpr, dpr);
-    var paper = "#f6f1e4", ink = "#1c1a16", gold = "#b08a3a", mute = "#6b6354";
-    x.fillStyle = "#1a1410"; x.fillRect(0, 0, W, H);
-    /* бумага с вырезами по бокам */
-    x.fillStyle = paper;
-    x.beginPath(); x.moveTo(16, 16); x.lineTo(W - 16, 16); x.lineTo(W - 16, top - 22);
-    x.arc(W - 16, top - 10, 12, -Math.PI / 2, Math.PI / 2, true); x.lineTo(W - 16, H - 16); x.lineTo(16, H - 16);
-    x.lineTo(16, top + 2); x.arc(16, top - 10, 12, Math.PI / 2, -Math.PI / 2, true); x.closePath(); x.fill();
-    x.setLineDash([6, 6]); x.strokeStyle = gold; x.lineWidth = 1.5;
-    x.beginPath(); x.moveTo(34, top - 10); x.lineTo(W - 34, top - 10); x.stroke(); x.setLineDash([]);
-    x.fillStyle = ink; x.textBaseline = "alphabetic";
-    x.font = "700 34px Georgia, 'Times New Roman', serif"; x.fillText("ДЖЕК 15", 40, 66);
-    x.font = "600 15px 'IBM Plex Mono', monospace"; x.fillStyle = mute;
-    x.fillText("ТИРАЖ №" + (g.tirazh || "—") + "  ·  " + (v.at || "") + "  ·  " + String(v.label || "").slice(0, 34), 40, 96);
-    var n = v.combos || 1, cost = v.cost != null ? v.cost : n * g.price;
-    x.font = "700 18px 'IBM Plex Mono', monospace"; x.fillStyle = ink;
-    x.textAlign = "right"; x.fillText(fmt(n) + " вар. · " + fmt(cost) + " ₽", W - 40, 66); x.textAlign = "left";
-    ms.forEach(function(m, i){
-      var y = top + 8 + i * rowH, p = picks[i] || "";
-      if(i % 2 === 0){ x.fillStyle = "rgba(176,138,58,.08)"; x.fillRect(30, y - 4, W - 60, rowH); }
-      x.fillStyle = mute; x.font = "600 14px 'IBM Plex Mono', monospace"; x.fillText(String(i + 1).padStart(2, " "), 40, y + 19);
-      x.fillStyle = ink; x.font = "600 16px 'IBM Plex Sans', Arial, sans-serif";
-      var name = m.home + " — " + m.away; while(x.measureText(name).width > 430 && name.length > 8) name = name.slice(0, -2);
-      if(name !== m.home + " — " + m.away) name += "…";
-      x.fillText(name, 74, y + 19);
-      OUT.forEach(function(o, k){
-        var bx = W - 186 + k * 50, on = p.indexOf(o) >= 0;
-        x.strokeStyle = on ? ink : "rgba(28,26,22,.25)"; x.lineWidth = 1.5;
-        x.fillStyle = on ? ink : "transparent";
-        x.beginPath(); if(x.roundRect) x.roundRect(bx, y, 40, 26, 4); else x.rect(bx, y, 40, 26); x.fill(); x.stroke();
-        x.fillStyle = on ? paper : "rgba(28,26,22,.35)"; x.font = "700 15px 'IBM Plex Mono', monospace"; x.textAlign = "center";
-        x.fillText(o, bx + 20, y + 18); x.textAlign = "left";
-      });
-    });
-    /* печать */
-    var sy = H - 56;
-    x.save(); x.translate(W - 120, sy); x.rotate(-0.12);
-    x.strokeStyle = "rgba(160,40,30,.75)"; x.lineWidth = 2.5; x.beginPath(); if(x.roundRect) x.roundRect(-74, -22, 148, 44, 8); else x.rect(-74, -22, 148, 44); x.stroke();
-    x.fillStyle = "rgba(160,40,30,.8)"; x.font = "700 16px Georgia, serif"; x.textAlign = "center"; x.fillText("ДЖЕК 15", 0, -2);
-    x.font = "600 10px 'IBM Plex Mono', monospace"; x.fillText("ТИРАЖ №" + (g.tirazh || "—"), 0, 14); x.restore();
-    x.fillStyle = mute; x.font = "500 12px 'IBM Plex Mono', monospace"; x.fillText("dzhek15.github.io", 40, H - 34);
-    cv.toBlob(function(b){
-      if(!b) return;
-      var name = "dzhek15_" + (g.tirazh || "") + "_" + (idx + 1) + ".png";
-      var f = null; try{ f = new File([b], name, { type: "image/png" }); }catch(e){}
-      if(f && navigator.canShare && navigator.canShare({ files: [f] }) && /iPhone|iPad|Android/i.test(navigator.userAgent)){
-        navigator.share({ files: [f], title: "Купон ДЖЕК 15" }).catch(function(){});
-        return;
-      }
-      var a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = name;
-      document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1500);
-    }, "image/png");
+  /* ---------- корзина в стиле старой газеты: купон в одну строку + «Скачать этот документ» ---------- */
+  function sigCells(sig){
+    var parts = String(sig || "").trim().split(/\s+/);
+    return parts.map(function(p, k){
+      var c = p.length >= 3 ? " c3" : (p.length === 2 ? " c2" : "");
+      return '<span class="tc' + c + '" title="Матч ' + (k + 1) + ': ' + esc(p) + '">' + esc(p) + '</span>';
+    }).join("");
   }
-  var IMG_ICO = '<svg width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="15" height="12" rx="2"/><circle cx="7.5" cy="8.5" r="1.5"/><path d="M17.5 13l-4-4-7 7"/></svg>';
   function decorateBasket(){
     var ul = $("hist"); if(!ul || !window.DZ) return;
-    var g = window.DZ.get();
-    Array.prototype.forEach.call(ul.children, function(li, i){
-      li.classList.add("tkt");
-      if(li.querySelector(".tk-img")) return;
-      var acts = li.querySelector(".hist-acts"); if(!acts) return;
-      var b = document.createElement("button");
-      b.type = "button"; b.className = "tk-img"; b.innerHTML = IMG_ICO;
-      b.title = "Скачать этот купон картинкой — билетом ДЖЕК 15";
-      b.setAttribute("aria-label", "Скачать купон картинкой");
-      b.addEventListener("click", function(){ var v = window.DZ.get().played[i]; if(v) ticketPng(v, i); });
-      acts.insertBefore(b, acts.firstChild);
+    Array.prototype.forEach.call(ul.children, function(li){
+      if(li.dataset.tk) return;
+      li.dataset.tk = "1"; li.classList.add("tkt");
+      var cb = li.querySelector(".hist-cb"), acts = li.querySelector(".hist-acts"), sig = li.querySelector(".sig");
+      var left = sig && sig.parentNode, meta = left && left.firstChild;
+      if(!cb || !acts || !sig || !meta) return;
+      var head = document.createElement("div"); head.className = "tk-head";
+      meta.className = "tk-meta"; meta.removeAttribute("style");
+      head.appendChild(cb); head.appendChild(meta); head.appendChild(acts);
+      sig.classList.add("tk-sig"); sig.setAttribute("aria-label", "Купон: " + sig.textContent);
+      sig.innerHTML = sigCells(sig.textContent);
+      li.innerHTML = ""; li.appendChild(head); li.appendChild(sig);
+    });
+    var bd = $("btnHistDoc"); if(bd) bd.disabled = !window.DZ.get().played.length;
+  }
+
+  function loadFonts(){
+    if(!document.fonts || !document.fonts.load) return Promise.resolve();
+    return Promise.all(['700 40px "Old Standard TT"', '400 16px "Old Standard TT"', '400 15px "PT Serif"', '700 15px "PT Serif"', 'italic 400 14px "PT Serif"']
+      .map(function(f){ return document.fonts.load(f).catch(function(){}); })).catch(function(){});
+  }
+  function basketDoc(){
+    var g = window.DZ.get(), ms = g.matches;
+    var list = g.played.filter(function(v){ return v.sel !== false; });
+    if(!list.length) list = g.played.slice();
+    if(!list.length) return;
+    loadFonts().then(function(){
+      var OS = '"Old Standard TT", Georgia, "Times New Roman", serif', PS = '"PT Serif", Georgia, serif', MONO = '"IBM Plex Mono", monospace';
+      var W = 1000, M = 44, half = Math.ceil(ms.length / 2), mH = 26, rowH = 34;
+      var cellW = 40, gridW = cellW * ms.length, gridX = W - M - gridW;
+      var y0 = 238, matchesH = half * mH + 20, tblTop = y0 + 38 + matchesH + 46;
+      var H = tblTop + 30 + list.length * rowH + 140;
+      var dpr = 2, cv = document.createElement("canvas"); cv.width = W * dpr; cv.height = H * dpr;
+      var x = cv.getContext("2d"); x.scale(dpr, dpr);
+      var paper = "#F1E8D4", ink = "#1D1A15", mute = "#5E5446", rule = "#8D7F63", red = "#8E2A1E";
+      x.fillStyle = paper; x.fillRect(0, 0, W, H);
+      /* старение бумаги: виньетка и крап */
+      var vg = x.createRadialGradient(W / 2, H / 2, Math.min(W, H) * .35, W / 2, H / 2, Math.max(W, H) * .75);
+      vg.addColorStop(0, "rgba(120,90,40,0)"); vg.addColorStop(1, "rgba(120,90,40,.22)");
+      x.fillStyle = vg; x.fillRect(0, 0, W, H);
+      x.fillStyle = "rgba(90,70,40,.06)";
+      for(var n = 0; n < 900; n++){ x.fillRect(Math.random() * W, Math.random() * H, 1 + Math.random() * 1.5, 1 + Math.random() * 1.5); }
+      x.strokeStyle = ink; x.fillStyle = ink;
+      function line(y, w){ x.lineWidth = w || 1; x.beginPath(); x.moveTo(M, y); x.lineTo(W - M, y); x.stroke(); }
+      function center(t, y, f, col){ x.font = f; x.fillStyle = col || ink; x.textAlign = "center"; x.fillText(t, W / 2, y); x.textAlign = "left"; }
+      /* шапка газеты */
+      x.font = "400 13px " + PS; x.fillStyle = mute;
+      x.fillText("Тираж №" + (g.tirazh || "—"), M, 46);
+      x.textAlign = "right"; x.fillText("dzhek15.github.io", W - M, 46); x.textAlign = "left";
+      line(58, 1); line(62, 3);
+      center("ДЖЕК 15", 132, "700 72px " + OS);
+      center("ВЕДОМОСТЬ КУПОНОВ  ·  БАЛТБЕТ ТОТО 15", 162, "400 15px " + OS, mute);
+      line(178, 3); line(183, 1);
+      var d = new Date().toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+      var rows = 0, sum = 0;
+      list.forEach(function(v){ rows += v.combos || 1; sum += v.cost != null ? Number(v.cost) : (v.combos || 1) * g.price; });
+      center(d.charAt(0).toUpperCase() + d.slice(1) + "  ·  купонов: " + fmt(list.length) + "  ·  строк: " + fmt(rows) + "  ·  " + fmt(sum) + " ₽", 208, "italic 400 15px " + PS);
+      line(222, 1);
+      /* матчи тиража в две колонки */
+      center("— МАТЧИ ТИРАЖА —", y0 + 18, "700 15px " + OS);
+      var colW = (W - 2 * M - 30) / 2;
+      x.save(); x.strokeStyle = rule; x.lineWidth = 1; x.beginPath(); x.moveTo(W / 2, y0 + 34); x.lineTo(W / 2, y0 + 34 + half * mH); x.stroke(); x.restore();
+      ms.forEach(function(m, i){
+        var col = i < half ? 0 : 1, r = i % half, cx = M + col * (colW + 30), cy = y0 + 34 + r * mH + 18;
+        x.font = "700 14px " + PS; x.fillStyle = red; x.fillText(String(i + 1), cx, cy);
+        x.font = "400 15px " + PS; x.fillStyle = ink;
+        var t = m.home + " — " + m.away;
+        while(x.measureText(t).width > colW - 34 && t.length > 6) t = t.slice(0, -2);
+        if(t !== m.home + " — " + m.away) t += "…";
+        x.fillText(t, cx + 28, cy);
+      });
+      /* таблица купонов */
+      var ty = tblTop;
+      line(ty - 26, 1); center("— КУПОНЫ —", ty - 6, "700 15px " + OS);
+      x.font = "700 12px " + MONO; x.fillStyle = mute; x.textAlign = "center";
+      ms.forEach(function(m, i){ x.fillText(String(i + 1), gridX + i * cellW + cellW / 2, ty + 18); });
+      x.textAlign = "left"; x.font = "700 12px " + OS; x.fillText("№  ·  ВАРИАНТЫ  ·  СУММА", M, ty + 18);
+      x.save(); x.strokeStyle = ink; x.lineWidth = 1.5; x.beginPath(); x.moveTo(M, ty + 26); x.lineTo(W - M, ty + 26); x.stroke(); x.restore();
+      list.forEach(function(v, k){
+        var ry = ty + 30 + k * rowH, picks = String(v.sig || "").split(" ");
+        if(k % 2 === 1){ x.fillStyle = "rgba(141,127,99,.12)"; x.fillRect(M, ry, W - 2 * M, rowH); }
+        x.font = "700 15px " + PS; x.fillStyle = ink; x.fillText(String(k + 1) + ".", M + 4, ry + 22);
+        x.font = "400 14px " + PS; x.fillStyle = mute;
+        var n2 = v.combos || 1, c2 = v.cost != null ? v.cost : n2 * g.price;
+        x.fillText(fmt(n2) + " вар.  ·  " + fmt(c2) + " ₽", M + 34, ry + 22);
+        picks.forEach(function(p, i){
+          var bx = gridX + i * cellW;
+          x.strokeStyle = rule; x.lineWidth = 1; x.strokeRect(bx + 2.5, ry + 5.5, cellW - 5, rowH - 11);
+          x.fillStyle = ink; x.textAlign = "center";
+          x.font = (p.length >= 3 ? "700 11px " : (p.length === 2 ? "700 13px " : "700 15px ")) + MONO;
+          x.fillText(p, bx + cellW / 2, ry + 22); x.textAlign = "left";
+        });
+        x.save(); x.strokeStyle = "rgba(141,127,99,.45)"; x.beginPath(); x.moveTo(M, ry + rowH); x.lineTo(W - M, ry + rowH); x.stroke(); x.restore();
+      });
+      var fy = ty + 30 + list.length * rowH + 30;
+      line(fy, 3); line(fy + 5, 1);
+      x.font = "italic 400 13px " + PS; x.fillStyle = mute;
+      x.fillText("Отпечатано " + new Date().toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) + " · на сайте ДЖЕК 15", M, fy + 30);
+      /* штамп */
+      x.save(); x.translate(W - M - 92, fy + 44); x.rotate(-0.1);
+      x.strokeStyle = "rgba(142,42,30,.8)"; x.lineWidth = 2.5; x.strokeRect(-86, -26, 172, 52);
+      x.lineWidth = 1; x.strokeRect(-81, -21, 162, 42);
+      x.fillStyle = "rgba(142,42,30,.85)"; x.textAlign = "center"; x.font = "700 20px " + OS; x.fillText("ДЖЕК 15", 0, 0);
+      x.font = "400 11px " + OS; x.fillText("ТИРАЖ №" + (g.tirazh || "—"), 0, 15); x.restore();
+      cv.toBlob(function(b){
+        if(!b) return;
+        var name = "dzhek15_" + (g.tirazh || "") + "_korzina.png", f = null;
+        try{ f = new File([b], name, { type: "image/png" }); }catch(e){}
+        if(f && navigator.canShare && navigator.canShare({ files: [f] }) && /iPhone|iPad|Android/i.test(navigator.userAgent)){
+          navigator.share({ files: [f], title: "Корзина ДЖЕК 15" }).catch(function(){}); return;
+        }
+        var a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = name;
+        document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+      }, "image/png");
     });
   }
+  if($("btnHistDoc")) $("btnHistDoc").addEventListener("click", basketDoc);
 
   function all(){ try{ renderCover(); decorateBasket(); }catch(e){ if(window.console) console.warn("ДЖЕК visual:", e); } }
   document.addEventListener("dz:render", all);
