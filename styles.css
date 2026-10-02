@@ -870,10 +870,7 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 .sticky-bar #sbRoll:disabled{background:var(--surface-2); border-color:var(--rule-strong); color:var(--muted)}
 .sb-sum{font-size:12.5px; color:var(--muted); text-align:center; flex:1 1 auto; overflow:hidden;
   white-space:nowrap; text-overflow:ellipsis}
-@media (max-width:820px){
-  .sticky-bar{display:flex}
-  body{padding-block-end:62px}
-}
+/* нижняя панель «РАНДОМ / Записать» на телефоне убрана: те же кнопки есть в самом купоне */
 
 /* ---------- bottom ---------- */
 .grid2{display:grid; grid-template-columns:1fr; gap:18px; margin-top:22px}
@@ -1742,3 +1739,5 @@ body.is-prev .row .pick.ai-pk{box-shadow:inset 0 0 0 2px var(--brand-gold), var(
   .prev-bar .pb-flt{display:grid; grid-template-columns:repeat(2,minmax(0,1fr))}
   .prev-bar .pb-flt button{justify-content:center}
 }
+
+:root:not([data-compact="1"]) body.is-prev .row .tc-t.tc-end{font-size:12px; line-height:1.15; font-weight:700; letter-spacing:.03em; color:#ffb4ab}

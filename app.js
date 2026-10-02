@@ -5328,14 +5328,15 @@
       var tcol = document.createElement("div"); tcol.className = "tcol";
       var tt, tAttr = "";
       if(m.res === VOID) tt = "ОТМ";
-      else if(fin2) tt = "Full time";
+      else if(m.res) tt = "Full time";
+      else if(fin2) tt = "КОНЕЦ";
       else if(li2){
         var mn2 = liveMinute(li2.ph, li2.hockey, true);
         tt = mn2 && mn2.t !== "" ? String(mn2.t) : "LIVE";
         if(mn2 && mn2.tick && li2.ph) tAttr = ' data-ac="' + li2.ph.ac + '" data-ao="' + escHtml(li2.ph.ao || "") + '" data-bx="' + escHtml(li2.ph.bx || "") + '" data-at="' + li2.ph.at + '" data-h="' + (li2.hockey ? 1 : 0) + '" data-s="1"';
         if(mn2 && mn2.n != null) row.style.setProperty("--p", Math.min(100, Math.round(mn2.n / mn2.tot * 100)) + "%");
       } else tt = m.time || "—";
-      tcol.innerHTML = '<b class="tc-t' + (li2 && !fin2 ? " tc-live lv-min" : "") + (tt === "Full time" ? " tc-ft" : "") + '"' + tAttr + '>' + (tt === "Full time" ? "Full<br>time" : escHtml(tt)) + '</b><i class="tc-n">' + (idx + 1) + '</i>';
+      tcol.innerHTML = '<b class="tc-t' + (li2 && !fin2 ? " tc-live lv-min" : "") + (tt === "Full time" ? " tc-ft" : "") + (tt === "КОНЕЦ" ? " tc-end" : "") + '"'  + tAttr + '>' + (tt === "Full time" ? "Full<br>time" : escHtml(tt)) + '</b><i class="tc-n">' + (idx + 1) + '</i>';
       row.insertBefore(tcol, num.nextSibling);
       if(li2 && !fin2) row.classList.add("st-live", "is-lv");
       if(fin2) row.classList.add("st-fin");
