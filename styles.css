@@ -1188,3 +1188,14 @@ body.is-prev .row .pick.mine-hit{outline-color:var(--brand-gold)}
 
 .pc-others{display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:6px; margin:14px auto 0; font-size:12px; color:var(--muted)}
 .pc-others .pc-btn{padding:4px 10px; font-size:12px}
+
+.hist li.is-dup{border-color:var(--hot)}
+.dup-badge{display:inline-block; margin-left:4px; padding:1px 7px; border-radius:999px; border:1px solid var(--hot); color:var(--hot); font-size:11px; font-weight:600; line-height:1.5; vertical-align:1px}
+#btnDedup{border-color:var(--hot); color:var(--hot)}
+#expNote.warn{color:var(--hot)}
+@media (max-width:600px){ .hist-panel .panel-head{flex-wrap:wrap} .hist-head-acts{width:100%; justify-content:center} }
+.ai-blks{display:grid; gap:10px; margin:4px 0 10px; text-align:left}
+.ai-blk{border-left:2px solid var(--rule); padding:2px 0 2px 10px}
+.ai-blk-h{margin:0 0 3px; font-size:12px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--muted)}
+.ai-blk p{margin:0 0 4px; font-size:14px; line-height:1.5; color:var(--ink)}
+.ai-blk p:last-child{margin-bottom:0}

@@ -22,7 +22,7 @@ body{margin:0; font:14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; b
 img{max-width:100%}
 [hidden]{display:none !important}
 </style>
-<link rel="stylesheet" href="styles.css?v=20260926rd">
+<link rel="stylesheet" href="styles.css?v=20261002dp">
 </head>
 <body>
 
@@ -92,6 +92,7 @@ img{max-width:100%}
       <div class="panel-head">
         <h2>Корзина <span class="hist-sum" id="histSum"></span></h2>
         <div class="hist-head-acts">
+          <button id="btnDedup" type="button" hidden disabled title="Убрать из корзины одинаковые купоны, оставив самый ранний"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="6.5" width="9" height="10" rx="2"/><path d="M7.5 6.5V4.5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1h-3"/></svg><span class="lbl">Убрать повторы</span></button>
           <button id="btnSelAll" type="button" disabled title="Отметить или снять все варианты разом"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="13" height="13" rx="3"/><path d="M6.9 10.1l2.4 2.5 4.1-4.8"/></svg><span class="lbl">Снять все</span></button>
           <button id="btnClearHist" type="button" disabled><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h12"/><path d="M8.5 6V4.5h3V6"/><path d="M6.5 6l.7 9.5h5.6L13.5 6"/></svg><span class="lbl">Очистить корзину</span></button>
         </div>
@@ -261,8 +262,8 @@ img{max-width:100%}
   </footer>
 </div>
 
-<script src="config.js?v=20260926rd"></script>
-<script src="app.js?v=20260926rd"></script>
+<script src="config.js?v=20261002dp"></script>
+<script src="app.js?v=20261002dp"></script>
 
 </body>
 </html>

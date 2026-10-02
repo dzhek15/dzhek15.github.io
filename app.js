@@ -1780,7 +1780,11 @@
     var src = (r.s || []).map(function(x){
       return '<a target="_blank" rel="noopener noreferrer" href="' + escHtml(x.u) + '">' + escHtml(x.n) + '</a>';
     }).join(" · ");
-    return '<p class="ai-txt">' + escHtml(r.t) + '</p>' +
+    var blk = (full && Array.isArray(r.b)) ? r.b.filter(function(b){ return b && b.t; }).map(function(b){
+      return '<div class="ai-blk">' + (b.h ? '<h4 class="ai-blk-h">' + escHtml(b.h) + '</h4>' : '') +
+        String(b.t).split(/\n+/).map(function(x){ return '<p>' + escHtml(x) + '</p>'; }).join("") + '</div>';
+    }).join("") : "";
+    return '<p class="ai-txt">' + escHtml(r.t) + '</p>' + (blk ? '<div class="ai-blks">' + blk + '</div>' : '') +
       (src ? '<p class="ai-src">Источники: ' + src + '</p>' : '') +
       (full ? '<p class="ev-note">Разбор написан ИИ по открытым источникам' +
         (ai.data && ai.data.at ? ' (' + new Date(ai.data.at).toLocaleString("ru-RU", {day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit", timeZone:"Europe/Moscow"}) + ' МСК)' : '') +
@@ -2311,11 +2315,17 @@
 
     var plan = csvPlan();
     var en = $("expNote");
+    en.classList.remove("warn");
     if(plan.take.length){
       en.textContent = "В файл уйдут отмеченные варианты из корзины: " + plan.take.length +
         " шт., " + fmt(plan.total) + " строк, " + fmt(plan.total * price) + " ₽." +
         (plan.off ? " Без галочки и мимо файла: " + plan.off + "." : "") +
         (plan.skipped ? " Пропущено записей от другого списка матчей: " + plan.skipped + "." : "");
+      var cd = csvDupLines(plan);
+      en.classList.toggle("warn", cd.lines > 0);
+      if(cd.lines) en.textContent += " Внимание: в файле " + fmt(cd.lines) + " одинаковых строк(и)" +
+        (cd.coupons ? ", из них одинаковых купонов: " + fmt(cd.coupons) + " — убрать их можно кнопкой «Убрать повторы» в корзине" :
+          " — это варианты, которые уже входят в другой купон или систему") + ". Каждая такая строка оплачивается ещё раз.";
       $("btnCsv").disabled = plan.total > MAX_CSV;
       $("btnSend").disabled = $("btnCsv").disabled;
       $("btnCsvSys").disabled = false;
@@ -2378,8 +2388,32 @@
 
   var histArmed = -1, histTimer = null;
   var clearArmed = 0, clearTimer = null;
+  /* одинаковые купоны в корзине: оригинал — самый ранний, остальные помечаются «повтор» */
+  function histDups(){
+    var first = {}, mark = {}, n = 0;
+    for(var i = state.played.length - 1; i >= 0; i--){
+      var v = state.played[i]; if(!v.sig) continue;
+      if(first[v.sig] == null) first[v.sig] = i;
+      else { mark[i] = first[v.sig]; n++; }
+    }
+    return { mark: mark, n: n };
+  }
+  /* сколько одинаковых строк уйдёт в CSV — в том числе одинар, целиком лежащий внутри системы */
+  function csvDupLines(plan){
+    if(!plan.take.length || plan.total > 50000) return { coupons: 0, lines: 0 };
+    var sigs = {}, coupons = 0, seen = {}, lines = 0;
+    plan.take.forEach(function(v){
+      if(v.sig){ if(sigs[v.sig]) coupons++; sigs[v.sig] = 1; }
+      var rows = enumerate(v.snap);
+      if(rows === null || rows === "toobig") return;
+      for(var r = 0; r < rows.length; r++){ var k = rows[r].join(""); if(seen[k]) lines++; else seen[k] = 1; }
+    });
+    return { coupons: coupons, lines: lines };
+  }
+
   function renderHistory(){
     var ul = $("hist"); ul.innerHTML = "";
+    var dups = histDups();
     $("histEmpty").hidden = state.played.length > 0;
     /* общая сумма по сыгранным: считаем прямо из списка, чтобы «Очистить список»
        обнулял её сам собой и не расходился со сводкой */
@@ -2392,8 +2426,11 @@
     });
     $("histSum").textContent = state.played.length
       ? "отмечено " + fmt(on) + " из " + fmt(state.played.length) +
-        " · " + fmt(rows) + " строк · " + fmt(sum) + " ₽"
+        " · " + fmt(rows) + " строк · " + fmt(sum) + " ₽" +
+        (dups.n ? " · повторов: " + fmt(dups.n) : "")
       : "";
+    var bd = $("btnDedup");
+    if(bd){ bd.hidden = !dups.n; bd.disabled = !dups.n; }
     var sa = $("btnSelAll");
     sa.disabled = state.played.length === 0;
     (sa.querySelector(".lbl") || sa).textContent = (on === state.played.length && on > 0) ? "Снять все" : "Отметить все";
@@ -2406,6 +2443,7 @@
     state.played.forEach(function(h, i){
       var li = document.createElement("li");
       if(h.sel === false) li.classList.add("is-off");
+      if(dups.mark[i] != null) li.classList.add("is-dup");
 
       var cbw = document.createElement("label");
       cbw.className = "hist-cb";
@@ -2428,6 +2466,15 @@
         (h.combos ? "  ·  " + fmt(h.combos) + " комб. / " + fmt(h.cost || 0) + " ₽" : "");
       var sig = document.createElement("div");
       sig.className = "sig"; sig.textContent = h.sig;
+      if(dups.mark[i] != null){
+        var o = state.played[dups.mark[i]];
+        var badge = document.createElement("span");
+        badge.className = "dup-badge";
+        badge.textContent = "повтор";
+        badge.title = "Точно такой же купон уже лежит в корзине: " + o.at + " · " + o.label;
+        top.appendChild(document.createTextNode(" "));
+        top.appendChild(badge);
+      }
       left.appendChild(top); left.appendChild(sig);
       var acts = document.createElement("div");
       acts.className = "hist-acts";
@@ -2813,6 +2860,15 @@
     (b.querySelector(".lbl") || b).textContent = "Очистить корзину";
     b.classList.remove("danger");
   }
+
+  $("btnDedup").addEventListener("click", function(){
+    var d = histDups();
+    if(!d.n) return;
+    pushHistory("до удаления повторов", true);
+    state.played = state.played.filter(function(v, i){ return d.mark[i] == null; });
+    save(); render();
+    say("Убрано повторов: " + fmt(d.n) + ". Оставлен самый ранний экземпляр каждого купона. Отменить — «Назад».");
+  });
 
   $("btnSelAll").addEventListener("click", function(){
     if(!state.played.length) return;
