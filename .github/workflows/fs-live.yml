@@ -1,0 +1,43 @@
+name: fs-live
+
+# Снимок идущих матчей Flashscore → data/api/fs-1.txt и fs-4.txt.
+# Запасной путь для сайта, если Cloudflare Worker у посетителя не открывается (например, без VPN).
+# Запускается каждые 5 минут и вручную.
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fs-live
+  cancel-in-progress: true
+
+jobs:
+  snap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+
+      - name: Снять живые матчи
+        run: python3 scripts/fslive.py
+
+      - name: Закоммитить, если что-то изменилось
+        run: |
+          git config user.name "feed-mirror"
+          git config user.email "feed-mirror@users.noreply.github.com"
+          git add data/api/fs-1.txt data/api/fs-4.txt
+          if git diff --cached --quiet; then
+            echo "изменений нет"
+            exit 0
+          fi
+          git commit -m "fs-live: $(date -u +'%H:%M UTC')"
+          for i in 1 2 3; do
+            git pull --rebase --autostash origin "${GITHUB_REF_NAME}" && git push && exit 0
+            sleep 5
+          done
+          exit 1
