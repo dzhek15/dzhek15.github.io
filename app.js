@@ -1585,7 +1585,7 @@
       if(!obj.AA){
         if(obj.ZY || obj.ZA){ cur = { country: obj.ZY || "", league: obj.ZA || "", matches: [] }; groups.push(cur); }
       } else if(cur && obj.AE && obj.AF && obj.WU && obj.WV && obj.PX && obj.PY){
-        cur.matches.push({ id: obj.AA, home: obj.AE, away: obj.AF, hSlug: obj.WU, aSlug: obj.WV, hId: obj.PX, aId: obj.PY, hLogo: obj.OA || "", aLogo: obj.OB || "", hs: obj.AG, as: obj.AH, ts: obj.AD || obj.ADE || null, st: obj.AB || "", sc: obj.AC || "" });
+        cur.matches.push({ id: obj.AA, home: obj.AE, away: obj.AF, hSlug: obj.WU, aSlug: obj.WV, hId: obj.PX, aId: obj.PY, hLogo: obj.OA || "", aLogo: obj.OB || "", hs: obj.AG, as: obj.AH, ao: obj.AO, bx: obj.BX, ts: obj.AD || obj.ADE || null, st: obj.AB || "", sc: obj.AC || "" });
       }
     }
     return groups;
@@ -1632,9 +1632,9 @@
         var mm = g.matches[j];
         if(isWomen && !leagueW && !(/\(ж\)/i.test(mm.home) && /\(ж\)/i.test(mm.away))) continue;
         if(fsNameOk(hClean, hCore, mm.home) && fsNameOk(aClean, aCore, mm.away))
-          return { h: { url: mm.hSlug, id: mm.hId, logo: mm.hLogo }, a: { url: mm.aSlug, id: mm.aId, logo: mm.aLogo }, mid: mm.id, ts: mm.ts, st: mm.st, sc: mm.sc, hs: mm.hs, as: mm.as };
+          return { h: { url: mm.hSlug, id: mm.hId, logo: mm.hLogo }, a: { url: mm.aSlug, id: mm.aId, logo: mm.aLogo }, mid: mm.id, ts: mm.ts, st: mm.st, sc: mm.sc, hs: mm.hs, as: mm.as, ao: mm.ao, bx: mm.bx };
         if(fsNameOk(hClean, hCore, mm.away) && fsNameOk(aClean, aCore, mm.home))
-          return { h: { url: mm.aSlug, id: mm.aId, logo: mm.aLogo }, a: { url: mm.hSlug, id: mm.hId, logo: mm.hLogo }, mid: mm.id, ts: mm.ts, st: mm.st, sc: mm.sc, hs: mm.as, as: mm.hs };
+          return { h: { url: mm.aSlug, id: mm.aId, logo: mm.aLogo }, a: { url: mm.hSlug, id: mm.hId, logo: mm.hLogo }, mid: mm.id, ts: mm.ts, st: mm.st, sc: mm.sc, hs: mm.as, as: mm.hs, ao: mm.ao, bx: mm.bx };
       }
     }
     return null;
@@ -1724,8 +1724,86 @@
   var FS_LIVE_EVERY = 15000, FS_KEEP = 5 * 60000;
   function mergeScore(m, sc){
     if(!m.res && m.fsAt && Date.now() - m.fsAt < FS_KEEP && m.score) return;
-    m.score = sc; if(m.res) delete m.fsAt;
+    noteScore(m, sc); if(m.res){ delete m.fsAt; delete m.fsPh; }
   }
+  /* новый счёт: если число голов выросло — запоминаем гол (кто забил и когда) для подсветки на минуту */
+  var GOAL_MS = 60000;
+  function noteScore(m, sc){
+    var old = m.score || "";
+    if(old === sc){ if(sc) m.scAt = Date.now(); return false; }
+    var a = /(\d+)\D+(\d+)/.exec(old), b = /(\d+)\D+(\d+)/.exec(sc);
+    if(a && b && !m.res && Date.now() - (m.scAt || 0) < 10 * 60000 && (+b[1] > +a[1] || +b[2] > +a[2])){
+      m.goalAt = Date.now(); m.goalSide = +b[1] > +a[1] ? "h" : "a";
+      setTimeout(function(){ try{ if(!book) render(); }catch(e){} }, GOAL_MS + 300);
+    }
+    m.score = sc; m.scAt = Date.now();
+    return true;
+  }
+  function goalOn(m){ return !m.res && !!m.goalAt && Date.now() - m.goalAt < GOAL_MS; }
+  function fillScore(sc, m){
+    var t = m.score ? String(m.score).replace(/\s+/g, "") : "", r = /^(\d+):(\d+)$/.exec(t);
+    if(!r || !goalOn(m)){ sc.textContent = t; return; }
+    sc.innerHTML = '<span class="' + (m.goalSide === "h" ? "g-hit" : "") + '">' + r[1] + '</span>:<span class="' + (m.goalSide === "a" ? "g-hit" : "") + '">' + r[2] + '</span>';
+  }
+  /* минута матча по данным ленты: футбол — от начала тайма, хоккей — минута периода из ленты */
+  function liveMinute(ph, hockey){
+    if(!ph) return null;
+    var ac = String(ph.ac), now = Date.now();
+    if(hockey){
+      if(/^1[4-6]$/.test(ac)){
+        var bx = Number(ph.bx), per = Number(ac) - 13;
+        if(!isFinite(bx) || bx < 0) return { t: per + "-й период" };
+        bx = Math.min(20, bx + Math.floor((now - ph.at) / 60000));
+        return { t: per + "-й п. " + bx, tick: true };
+      }
+      if(ac === "46") return { t: "Перерыв" };
+      if(ac === "7") return { t: "Овертайм" };
+      return { t: "" };
+    }
+    if(ac === "38") return { t: "Перерыв" };
+    if(ac === "12" || ac === "13"){
+      var ao = Number(ph.ao); if(!isFinite(ao) || ao <= 0) return { t: "" };
+      var mn = Math.floor((now / 1000 - ao) / 60) + 1;
+      if(ac === "12") return { t: (mn > 45 ? "45+" : Math.max(1, mn)), tick: true };
+      mn += 45; return { t: (mn > 90 ? "90+" : mn), tick: true };
+    }
+    return { t: "" };
+  }
+  function liveInfo(m){
+    if(m.res || m.res === VOID) return null;
+    var fresh = m.fsPh && m.fsAt && Date.now() - m.fsAt < 3 * 60000;
+    if(!fresh && !m.score) return null;
+    if(m.fsEnd && Date.now() - m.fsEnd < 30 * 60000) return { end: true, ph: null, hockey: false };
+    return { ph: fresh ? m.fsPh : null, hockey: fsFeedSport(m.league) === "hockey" };
+  }
+  /* значок LIVE и минута в начале подписи матча, подсветка строки при голе — как на Flashscore */
+  function liveDecor(m, row, meta){
+    var li = liveInfo(m); if(!li) return;
+    if(li.end){
+      var e = document.createElement("span");
+      e.className = "lv-chip lv-end"; e.title = "Матч закончился, итог подводится";
+      e.innerHTML = '<b class="lv-tag">КОНЕЦ</b>';
+      meta.insertBefore(e, meta.firstChild); return;
+    }
+    var goal = goalOn(m), mn = liveMinute(li.ph, li.hockey);
+    var chip = document.createElement("span");
+    chip.className = "lv-chip" + (goal ? " lv-goal" : "");
+    chip.title = goal ? "Забит гол" : "Матч идёт";
+    var txt = mn && mn.t !== "" ? String(mn.t) : "";
+    var isMin = mn && mn.tick && li.ph;
+    chip.innerHTML = '<i class="lv-dot"></i><b class="lv-tag">' + (goal ? "ГОЛ" : "LIVE") + '</b>' +
+      '<span class="lv-min"' + (isMin ? ' data-ac="' + li.ph.ac + '" data-ao="' + escHtml(li.ph.ao || "") + '" data-bx="' + escHtml(li.ph.bx || "") + '" data-at="' + li.ph.at + '" data-h="' + (li.hockey ? 1 : 0) + '"' : '') + '>' +
+      escHtml(txt) + (isMin && /^\d/.test(txt) ? "" : "") + '</span>';
+    meta.insertBefore(chip, meta.firstChild);
+    if(goal) row.classList.add("goal");
+  }
+  setInterval(function(){
+    var els = document.querySelectorAll(".lv-min[data-ac]");
+    for(var i = 0; i < els.length; i++){
+      var e = els[i], mn = liveMinute({ ac: e.getAttribute("data-ac"), ao: e.getAttribute("data-ao"), bx: e.getAttribute("data-bx"), at: Number(e.getAttribute("data-at")) }, e.getAttribute("data-h") === "1");
+      if(mn && String(mn.t) !== e.textContent) e.textContent = String(mn.t);
+    }
+  }, 10000);
   function mStartMs(m){
     var dm = String(m.date || "").match(/^(\d{1,2})\.(\d{1,2})/), tm = String(m.time || "").match(/^(\d{1,2}):(\d{2})/);
     if(!dm || !tm) return null;
@@ -1759,10 +1837,18 @@
       keys.forEach(function(k, i){ by[k] = rs[i]; });
       cand.forEach(function(m){
         var f = fsLookup(m, by[fsFeedSport(m.league)] || []);
-        if(!f || f.st !== "2" || !/^\d+$/.test(f.hs || "") || !/^\d+$/.test(f.as || "")) return;
-        var sc = f.hs + " : " + f.as;
+        if(!f || (f.st !== "2" && f.st !== "3") || !/^\d+$/.test(f.hs || "") || !/^\d+$/.test(f.as || "")) return;
+        if(f.st === "3" && f.sc !== "3") return;      /* перенос, отмена и прочее — не итог */
+        var sc = f.hs + " : " + f.as, oldAc = m.fsPh ? m.fsPh.ac : null;
         m.fsAt = Date.now();
-        if(m.score !== sc){ m.score = sc; changed = true; if(state.prev && state.prev.matches.indexOf(m) >= 0) state.prev.at = Date.now(); }
+        if(f.st === "3"){
+          if(!m.fsEnd){ m.fsEnd = m.fsAt; changed = true; }
+          if(noteScore(m, sc)) changed = true;
+          return;
+        }
+        m.fsPh = { ac: f.sc, ao: f.ao, bx: f.bx, at: m.fsAt };
+        if(oldAc !== f.sc) changed = true;
+        if(noteScore(m, sc)){ changed = true; if(state.prev && state.prev.matches.indexOf(m) >= 0) state.prev.at = Date.now(); }
       });
       fsLiveBusy = false;
       if(changed){ state.resAt = Date.now(); save(); if(!book) render(); }
@@ -2402,7 +2488,7 @@
         /* подведённый счёт зелёный, живой — синий; сам исход всегда синий,
            чтобы читался отдельно от счёта */
         sc.className = "mscore" + (m.res ? "" : " live");
-        sc.textContent = m.score ? String(m.score).replace(/\s+/g, "") : "";
+        fillScore(sc, m);
         sc.title = m.res ? "матч сыгран, итог " + m.res : "счёт по ходу матча, итог ещё не подведён";
         if(m.res){
           var rs = document.createElement("span");
@@ -2413,6 +2499,7 @@
         }
         teams.appendChild(sc);          /* счёт стоит у названия матча, а не в подписи */
       }
+      liveDecor(m, row, meta);
       fix.appendChild(meta);
 
 
@@ -5093,7 +5180,7 @@
       } else if(m.res || m.score){
         var sc = document.createElement("span");
         sc.className = "mscore" + (m.res ? "" : " live");
-        sc.textContent = m.score ? String(m.score).replace(/\s+/g, "") : "";
+        fillScore(sc, m);
         sc.title = m.res ? "матч сыгран, итог " + m.res : "счёт по ходу матча, итог ещё не подведён";
         if(m.res){
           var rs = document.createElement("span");
@@ -5117,6 +5204,7 @@
       meta.appendChild(document.createTextNode([m.date, m.time, m.league].filter(Boolean).join("  ·  ")));
       meta.appendChild(mkNewsBtn(m, idx, true));
       meta.appendChild(mkAiPrev(m, idx, p.tirazh, false));
+      liveDecor(m, row, meta);
       fix.appendChild(meta);
       row.appendChild(fix);
       var picksWrap = document.createElement("div");
