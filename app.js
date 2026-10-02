@@ -5571,6 +5571,24 @@
       if(wrote) wrote.then(ok, viaText); else viaText();
     }, function(){ b.disabled = false; b.textContent = was; fin("Не получилось упаковать варианты в ссылку."); });
   }
+  /* время матча напротив строки в «Весь купон»: минута в лайве (тикает), ФТ, начало */
+  function pcDay(m){
+    var dm = String(m.date || "").match(/^(\d{1,2})\.(\d{1,2})/); if(!dm) return "";
+    var t = new Date(Date.now() + 3 * 3600000);
+    return (+dm[1] === t.getUTCDate() && +dm[2] === t.getUTCMonth() + 1) ? "" : ("0" + dm[1]).slice(-2) + "." + ("0" + dm[2]).slice(-2);
+  }
+  function pcTime(m){
+    var li = liveInfo(m);
+    if(m.res === VOID) return '<span class="pc-tm">ОТМ</span>';
+    if(m.res) return '<span class="pc-tm">ФТ</span>';
+    if(li && li.end) return '<span class="pc-tm lv">КОНЕЦ</span>';
+    if(li){
+      var mn = liveMinute(li.ph, li.hockey, true), txt = mn && mn.t !== "" ? String(mn.t) : "LIVE";
+      var at = mn && mn.tick && li.ph ? ' data-ac="' + li.ph.ac + '" data-ao="' + escHtml(li.ph.ao || "") + '" data-bx="' + escHtml(li.ph.bx || "") + '" data-at="' + li.ph.at + '" data-h="' + (li.hockey ? 1 : 0) + '" data-s="1"' : "";
+      return '<span class="pc-tm lv"><i class="lv-dot"></i><b class="lv-min"' + at + '>' + escHtml(txt) + '</b></span>';
+    }
+    return '<span class="pc-tm">' + escHtml((pcDay(m) ? pcDay(m) + " " : "") + (m.time || "—")) + '</span>';
+  }
   function renderPrevCsv(){
     var box = $("prevCsv"); if(!box) return;
     var p = state.prev;
@@ -5645,7 +5663,7 @@
       var sc = m.res === VOID ? "отменён" : (m.score ? String(m.score).replace(/\s+/g, "") : "");
       var wiOk = !m.res && m.res !== VOID;
       h += '<div class="pc-cr' + (wiOk ? " wi-able" + (pcsv.what === j ? " wi-on" : "") : "") + '"' + (wiOk ? ' data-w="' + j + '" title="Тап — что будет с вариантами при каждом исходе"' : '') + '><span class="pc-n">' + (j + 1) + '</span><span class="pc-m"><i><b>' + escHtml(m.home) + '</b><u> — </u><b>' + escHtml(m.away) + '</b></i>' +
-        (sc ? '<em class="' + (m.res ? "" : "live") + '">' + escHtml(sc) + '</em>' : '') + '</span>';
+        '<span class="pc-sr">' + (sc ? '<em class="' + (m.res ? "" : "live") + '">' + escHtml(sc) + '</em>' : '') + pcTime(m) + '</span></span>';
       OUT.forEach(function(o){
         var cls = "pc-o" + (c[o] ? " on" : "") + (res[j] === VOID ? (c[o] ? " hit" : "") : res[j] === o ? (c[o] ? " hit" : " hole") : (res[j] && c[o] ? " miss" : ""));
         h += '<span class="' + cls + '" title="' + o + ': ' + fmt(c[o]) + ' вар.">' + o + (sysL.length === 1 ? '' : '<small>' + (c[o] ? (c[o] === total ? "все" : fmt(c[o])) : "·") + '</small>') + '</span>';

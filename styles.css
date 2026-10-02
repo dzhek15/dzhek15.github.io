@@ -1595,3 +1595,10 @@ body.is-prev .row .pick.ai-pk{opacity:1; border-color:var(--brand-gold); color:#
   .pc-lb b{font-size:11px}
   .pc-lb i{height:46px}
 }
+
+/* время матча в «Весь купон» */
+.pc-sr{display:inline-flex; align-items:center; gap:6px; flex:none}
+.pc-tm{display:inline-flex; align-items:center; gap:5px; font:600 11px "IBM Plex Mono",monospace; color:var(--muted); white-space:nowrap}
+.pc-tm.lv{color:#ffb4ab}
+.pc-tm .lv-min{min-width:0; font-weight:700}
+.pc-tm .lv-min:empty{display:inline}
