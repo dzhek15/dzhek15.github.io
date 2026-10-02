@@ -5208,7 +5208,6 @@
       var code = cont.hit ? ((hc || ac) ? null : cont.flag) : flagCode(m.league);
       if(code) meta.appendChild(mkFlag(code, "flag"));
       meta.appendChild(document.createTextNode([m.date, m.time, m.league].filter(Boolean).join("  ·  ")));
-      meta.appendChild(mkNewsBtn(m, idx, true));
       meta.appendChild(mkAiPrev(m, idx, p.tirazh, false));
       liveDecor(m, row, meta);
       fix.appendChild(meta);
@@ -5231,7 +5230,6 @@
       var modes = document.createElement("div");
       modes.className = "modes";
       modes.appendChild(mkFs(m));
-      modes.appendChild(mkNewsMode(m, idx, true));
       modes.appendChild(mkAiPrev(m, idx, p.tirazh, true));
       row.appendChild(modes);
       rowsEl.appendChild(row);
