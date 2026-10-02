@@ -5269,14 +5269,14 @@
       var tcol = document.createElement("div"); tcol.className = "tcol";
       var tt, tAttr = "";
       if(m.res === VOID) tt = "ОТМ";
-      else if(fin2) tt = "ФТ";
+      else if(fin2) tt = "Full time";
       else if(li2){
         var mn2 = liveMinute(li2.ph, li2.hockey, true);
         tt = mn2 && mn2.t !== "" ? String(mn2.t) : "LIVE";
         if(mn2 && mn2.tick && li2.ph) tAttr = ' data-ac="' + li2.ph.ac + '" data-ao="' + escHtml(li2.ph.ao || "") + '" data-bx="' + escHtml(li2.ph.bx || "") + '" data-at="' + li2.ph.at + '" data-h="' + (li2.hockey ? 1 : 0) + '" data-s="1"';
         if(mn2 && mn2.n != null) row.style.setProperty("--p", Math.min(100, Math.round(mn2.n / mn2.tot * 100)) + "%");
       } else tt = m.time || "—";
-      tcol.innerHTML = '<b class="tc-t' + (li2 && !fin2 ? " tc-live lv-min" : "") + '"' + tAttr + '>' + escHtml(tt) + '</b><i class="tc-n">' + (idx + 1) + '</i>';
+      tcol.innerHTML = '<b class="tc-t' + (li2 && !fin2 ? " tc-live lv-min" : "") + (tt === "Full time" ? " tc-ft" : "") + '"' + tAttr + '>' + (tt === "Full time" ? "Full<br>time" : escHtml(tt)) + '</b><i class="tc-n">' + (idx + 1) + '</i>';
       row.insertBefore(tcol, num.nextSibling);
       if(li2 && !fin2) row.classList.add("st-live", "is-lv");
       if(fin2) row.classList.add("st-fin");
@@ -5571,7 +5571,7 @@
       if(wrote) wrote.then(ok, viaText); else viaText();
     }, function(){ b.disabled = false; b.textContent = was; fin("Не получилось упаковать варианты в ссылку."); });
   }
-  /* время матча напротив строки в «Весь купон»: минута в лайве (тикает), ФТ, начало */
+  /* время матча напротив строки в «Весь купон»: минута в лайве (тикает), Full time, начало */
   function pcDay(m){
     var dm = String(m.date || "").match(/^(\d{1,2})\.(\d{1,2})/); if(!dm) return "";
     var t = new Date(Date.now() + 3 * 3600000);
@@ -5580,7 +5580,7 @@
   function pcTime(m){
     var li = liveInfo(m);
     if(m.res === VOID) return '<span class="pc-tm">ОТМ</span>';
-    if(m.res) return '<span class="pc-tm">ФТ</span>';
+    if(m.res) return '<span class="pc-tm">Full time</span>';
     if(li && li.end) return '<span class="pc-tm lv">КОНЕЦ</span>';
     if(li){
       var mn = liveMinute(li.ph, li.hockey, true), txt = mn && mn.t !== "" ? String(mn.t) : "LIVE";
@@ -5625,25 +5625,43 @@
       '<span class="pc-acts">' + PC_BTNS + '<button type="button" class="pc-btn pc-share" id="pcShareAll" title="Одна ссылка на все загруженные наборы этого тиража — перешли её, и у получателя откроются все варианты">' +
       (pcsv.sets.length > 1 ? 'Ссылка на все (' + pcsv.sets.length + ')' : 'Ссылка на варианты') + '</button>' +
       '<button type="button" class="pc-btn ghost" id="pcDrop">Убрать</button></span></div>' + PC_PASTE + msg;
+    var rkNow = null;
     if(pcsv.sets.length > 1){
-      h += '<div class="pc-tabs" role="tablist">';
-      /* лучшие наборы выше: больше угаданных у лучшего варианта, затем больше вариантов в 9+, затем больше живых */
+      /* рейтинг наборов: завершённые матчи + идущие по текущему счёту; выше тот, у кого лучше результат */
+      var er = ms.map(function(m, j){
+        if(res[j]) return res[j];
+        var lo = m.res ? null : liveOutcome(m); return lo && lo.live ? lo.o : "";
+      });
+      var pe = er.filter(Boolean).length, liveN = er.filter(function(x, j){ return x && !res[j]; }).length;
       var sc = pcsv.sets.map(function(set, i){
-        var bst = 0, w = 0, al = 0;
+        var bst = 0, w = 0, al = 0, sum = 0;
         set.rows.forEach(function(r){
           var hh = 0, mm = 0;
-          for(var j = 0; j < n; j++) if(res[j]){ if(res[j] === VOID || r.charAt(j) === res[j]) hh++; else mm++; }
-          if(hh > bst) bst = hh; if(hh >= PAY) w++; if(n - mm >= PAY) al++;
+          for(var j = 0; j < n; j++) if(er[j]){ if(er[j] === VOID || r.charAt(j) === er[j]) hh++; else mm++; }
+          if(hh > bst) bst = hh; if(hh >= PAY) w++; if(n - mm >= PAY) al++; sum += hh;
         });
-        return { i: i, b: bst, w: w, a: al };
+        return { i: i, b: bst, w: w, a: al, avg: set.rows.length ? sum / set.rows.length : 0 };
       });
-      if(played) sc.sort(function(x, y){ return (y.b - x.b) || (y.w - x.w) || (y.a - x.a) || (x.i - y.i); });
-      sc.forEach(function(q){
-        var st = pcsv.sets[q.i], i = q.i;
-        h += '<button type="button" role="tab" data-t="' + i + '" aria-pressed="' + (i === pcsv.act) + '" title="' + escHtml(st.link ? "Ссылка · " + pcsvLabel(st) : st.name) + ' · ' + fmt(st.rows.length) + ' вар.' + (played ? ' · лучший ' + q.b + ' из ' + played + ', в ' + PAY + '+: ' + fmt(q.w) : '') + '">' +
-          escHtml(pcsvLabel(st)) + '<small>' + fmt(st.rows.length) + '</small></button>';
+      if(pe) sc.sort(function(x, y){ return (y.b - x.b) || (y.w - x.w) || (y.avg - x.avg) || (y.a - x.a) || (x.i - y.i); });
+      var rk = pcsv.rk && pcsv.rk.tir === pcsv.tir ? pcsv.rk : (pcsv.rk = { tir: pcsv.tir, pos: {}, mv: {} });
+      sc.forEach(function(q, k){
+        var o = rk.pos[q.i];
+        if(o && o.place !== k + 1 && pe) rk.mv[q.i] = { d: o.place - (k + 1), at: Date.now() };
       });
-      h += '</div>';
+      rkNow = sc;
+      h += '<div class="pc-sub">Рейтинг наборов</div>' +
+        '<p class="pc-lnote pc-rknote">' + (liveN ? '<i class="lv-dot"></i>' : '') + 'Считаются сыгранные матчи' + (liveN ? ' и идущие по текущему счёту (' + liveN + ')' : '') + '. Тап по набору открывает его.</p>' +
+        '<div class="pc-rkt" role="tablist"><div class="pc-rkh"><span>#</span><span>Набор</span><span>Лучший</span><span>9+</span><span>Живых</span></div><div class="pc-rkb">';
+      sc.forEach(function(q, k){
+        var st = pcsv.sets[q.i], mv = rk.mv[q.i], tr = "";
+        if(mv && Date.now() - mv.at < 90000) tr = '<u class="' + (mv.d > 0 ? "up" : "dn") + '">' + (mv.d > 0 ? "▲" : "▼") + Math.abs(mv.d) + '</u>';
+        h += '<button type="button" role="tab" class="pc-rk' + (q.i === pcsv.act ? " on" : "") + (k < 3 && pe ? " m" + (k + 1) : "") + '" data-t="' + q.i + '" data-id="' + q.i + '" aria-pressed="' + (q.i === pcsv.act) + '" title="' + escHtml(st.link ? "Ссылка · " + pcsvLabel(st) : st.name) + ' · ' + fmt(st.rows.length) + ' вар.">' +
+          '<span class="rk-p"><b>' + (k + 1) + '</b>' + tr + '</span>' +
+          '<span class="rk-n"><b>' + escHtml(pcsvLabel(st)) + '</b><small>' + (st.link ? "" : escHtml(st.name) + " · ") + fmt(st.rows.length) + ' вар.</small></span>' +
+          '<span class="rk-v">' + (pe ? q.b + '<small> из ' + pe + '</small>' : '—') + '</span>' +
+          '<span class="rk-v' + (q.w ? " ok" : "") + '">' + fmt(q.w) + '</span><span class="rk-v">' + fmt(q.a) + '</span></button>';
+      });
+      h += '</div></div>';
     }
     h += '<div class="pc-cards">' +
       (hasSys ? '<div><span>Строк</span><b>' + fmt(sysL.length) + '</b></div>' : '') +
@@ -5807,7 +5825,22 @@
       if(nw.length && state.viewPrev) varToast(PAY + "+", false, "Вышли в " + PAY + "+: " + lst(nw));
       else if(nd.length && state.viewPrev) varToast("МИМО", true, "Выбыли из борьбы: " + lst(nd));
     }
-    [].slice.call(box.querySelectorAll(".pc-tabs button")).forEach(function(b){
+    /* плавная перестановка наборов (FLIP): строки едут со старого места на новое */
+    if(rkNow){
+      var rk2 = pcsv.rk, rb = box.querySelector(".pc-rkb");
+      [].slice.call(box.querySelectorAll(".pc-rk")).forEach(function(r){
+        var id = r.getAttribute("data-id"), top = r.offsetTop, o = rk2.pos[id];
+        if(o && o.top !== top){
+          var up = o.top > top;
+          r.style.transition = "none"; r.style.transform = "translateY(" + (o.top - top) + "px)"; r.style.zIndex = up ? 2 : 1;
+          void r.offsetWidth;
+          r.style.transition = "transform .9s cubic-bezier(.22,.8,.25,1)"; r.style.transform = "";
+          r.classList.add(up ? "go-up" : "go-dn");
+        }
+        rk2.pos[id] = { top: top, place: rkNow.map(function(q){ return String(q.i); }).indexOf(id) + 1 };
+      });
+    }
+    [].slice.call(box.querySelectorAll(".pc-rk")).forEach(function(b){
       b.addEventListener("click", function(){ pcsvUse(Number(b.getAttribute("data-t")) || 0); pcsvStore(); renderPrevCsv(); });
     });
     [].slice.call(box.querySelectorAll(".pc-view button")).forEach(function(b){

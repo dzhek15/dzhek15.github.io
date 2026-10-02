@@ -1602,3 +1602,37 @@ body.is-prev .row .pick.ai-pk{opacity:1; border-color:var(--brand-gold); color:#
 .pc-tm.lv{color:#ffb4ab}
 .pc-tm .lv-min{min-width:0; font-weight:700}
 .pc-tm .lv-min:empty{display:inline}
+
+:root:not([data-compact="1"]) body.is-prev .row .tc-t.tc-ft{font-size:12px; line-height:1.15; font-weight:600; text-align:center; color:var(--muted)}
+
+/* рейтинг наборов */
+.pc-rkt{max-width:560px; margin:0 auto; border:1px solid var(--rule-strong); border-radius:var(--r); background:var(--surface-2); overflow:hidden}
+.pc-rkh,.pc-rk{display:grid; grid-template-columns:34px minmax(0,1fr) 62px 40px 46px; align-items:center; gap:4px; padding:0 8px}
+.pc-rkh{height:26px; font-size:10px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); border-bottom:1px solid var(--rule)}
+.pc-rkh span:nth-child(n+3){text-align:center}
+.pc-rkb{position:relative; display:flex; flex-direction:column}
+.pc-rk{height:48px; width:100%; border:0; border-bottom:1px solid var(--rule); border-left:3px solid transparent; background:var(--surface-2); color:var(--ink); text-align:left; cursor:pointer; font-family:"IBM Plex Sans",sans-serif; position:relative}
+.pc-rk:last-child{border-bottom:0}
+.pc-rk:hover{background:var(--surface-3)}
+.pc-rk.on{border-left-color:var(--brand-gold); background:var(--surface-3)}
+.pc-rk.go-up{animation:rkUp 1.6s ease-out}
+.pc-rk.go-dn{animation:rkDn 1.6s ease-out}
+@keyframes rkUp{0%,30%{background:color-mix(in srgb,#3fae6a 28%,var(--surface-2))}}
+@keyframes rkDn{0%,30%{background:color-mix(in srgb,var(--hot) 22%,var(--surface-2))}}
+.rk-p{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px}
+.rk-p b{font:700 16px/1 "IBM Plex Mono",monospace; color:var(--muted)}
+.pc-rk.m1 .rk-p b{color:#e8c25a}
+.pc-rk.m2 .rk-p b{color:#c5ccd3}
+.pc-rk.m3 .rk-p b{color:#cf8f5a}
+.rk-p u{text-decoration:none; font:700 9px/1 "IBM Plex Mono",monospace}
+.rk-p u.up{color:#58c883}
+.rk-p u.dn{color:var(--hot)}
+.rk-n{display:flex; flex-direction:column; min-width:0; gap:2px}
+.rk-n b{font:700 14px/1.1 "IBM Plex Mono",monospace; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.rk-n small{font-size:11px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.rk-v{text-align:center; font:700 14px/1 "IBM Plex Mono",monospace}
+.rk-v small{font:500 10px "IBM Plex Mono",monospace; color:var(--muted)}
+.rk-v.ok{color:#58c883}
+.pc-rknote{margin:0 0 8px}
+.pc-rknote .lv-dot{display:inline-block; vertical-align:middle; margin-right:6px}
+@media (max-width:400px){ .pc-rkh,.pc-rk{grid-template-columns:28px minmax(0,1fr) 54px 32px 40px; gap:3px; padding:0 6px} .rk-n b{font-size:13px} }
