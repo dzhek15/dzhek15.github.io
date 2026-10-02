@@ -1,11 +1,11 @@
 <!doctype html>
-<html lang="ru" data-theme="dark">
+<html lang="ru" data-theme="dark" data-style="classic">
 <head>
 <link rel="canonical" href="https://dzhek15.github.io/">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://gc.zgo.at 'sha256-jfl2gXaeR6/DX8GF60VSTAC6ih29s2OiMC+jvWNUKJw='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://flagcdn.com https://dzhek15.goatcounter.com; connect-src 'self' https://totobrief.com https://sweet-heart-f51d.dzhek15-api.workers.dev https://api.github.com https://dzhek15.goatcounter.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://gc.zgo.at 'sha256-JmaUvWMbtUaunLEIQC4pUadgO9Bm7vCnPlpUg31q8Ck='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://flagcdn.com https://dzhek15.goatcounter.com; connect-src 'self' https://totobrief.com https://sweet-heart-f51d.dzhek15-api.workers.dev https://api.github.com https://dzhek15.goatcounter.com; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="strict-origin-when-cross-origin">
-<script>try{var __t=localStorage.getItem(window.CONFIG?window.CONFIG.THEME_KEY:"theme"); if(__t==="light"||__t==="dark"){document.documentElement.setAttribute("data-theme",__t);}}catch(e){}</script>
+<script>try{var __t=localStorage.getItem(window.CONFIG?window.CONFIG.THEME_KEY:"theme"); if(__t==="light"||__t==="dark"){document.documentElement.setAttribute("data-theme",__t);}var __s=localStorage.getItem("dzStyle"); if(__s==="paper"){document.documentElement.setAttribute("data-style","paper");}}catch(e){}</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ДЖЕК</title>
@@ -19,7 +19,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Cpath%20d='M16%2030.5C7%2026%202.5%2022.5%202.5%2018V3.6c0-.6.5-1.1%201.1-1.1h24.8c.6%200%201.1.5%201.1%201.1V18c0%204.5-4.5%208-13.5%2012.5z'%20fill='%231a1410'%20stroke='%23c9a24b'%20stroke-width='1.6'/%3E%3Cpath%20d='M9.5%2015.6l4.3%204.3L23%208.6'%20fill='none'%20stroke='%23c9a24b'%20stroke-width='4'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@600;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@600;800&family=PT+Serif:wght@400;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
 <style>
 :root{color-scheme:light dark}
 *{box-sizing:border-box}
@@ -30,14 +30,17 @@ body{margin:0; font:14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; b
 img{max-width:100%}
 [hidden]{display:none !important}
 </style>
-<link rel="stylesheet" href="styles.css?v=20261002ad">
+<link rel="stylesheet" href="styles.css?v=20261002ae">
 </head>
 <body>
 
 <div class="wrap">
 
   <header class="masthead">
-    <svg class="logo" viewBox="0 0 200 250" role="img" aria-label="Джек · Аналитика · 15" xmlns="http://www.w3.org/2000/svg">
+    <section class="cover" id="cover" aria-label="Обложка тиража">
+      <div class="cv-fx" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div class="cv-in">
+        <svg class="logo" viewBox="0 0 200 250" role="img" aria-label="Джек · Аналитика · 15" xmlns="http://www.w3.org/2000/svg">
       <defs><linearGradient id="lgGold" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0" stop-color="#e6c877"/><stop offset=".45" stop-color="#c9a24b"/><stop offset="1" stop-color="#8f6b28"/>
       </linearGradient></defs>
@@ -52,6 +55,15 @@ img{max-width:100%}
       <text x="100" y="180" text-anchor="middle" font-family="Georgia,'Times New Roman',serif" font-size="10" letter-spacing="5" fill="#c9a24b" opacity=".85">АНАЛИТИКА</text>
       <text x="100" y="211" text-anchor="middle" font-family="Georgia,'Times New Roman',serif" font-size="35" font-weight="700" fill="url(#lgGold)">15</text>
     </svg>
+        <div class="cv-txt">
+          <div class="cv-date" id="cvDate">&nbsp;</div>
+          <h1 class="cv-title"><span>Тираж</span> <b id="cvNum">№—</b></h1>
+          <div class="cv-jack"><span class="cv-k">Суперприз</span><span class="cv-v" id="cvJack">—</span></div>
+          <div class="cv-sub" id="cvSub">&nbsp;</div>
+        </div>
+      </div>
+      <div class="cv-ticker" id="cvTicker"><div class="cv-track" id="cvTrack"></div></div>
+    </section>
     <div class="ticket">
       <div class="tk">
         <label for="tirazhName">Тираж №</label>
@@ -85,12 +97,27 @@ img{max-width:100%}
           <svg class="ic-moon" width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 12.5A7 7 0 0 1 7.5 3a7 7 0 1 0 9.5 9.5z"/></svg>
           <span class="lbl">Тема</span>
         </button>
+        <button id="btnStyle" type="button" aria-pressed="false" title="Стиль оформления: классика со стадионом или газета">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 4.5h10v11h-10z"/><path d="M13.5 7.5h3v7a1 1 0 0 1-2 0"/><path d="M6 7.5h5M6 10h5M6 12.5h3"/></svg>
+          <span class="lbl">Классика</span>
+        </button>
         <button id="btnFeedSt" type="button" title="Состояние данных: когда что обновлялось">
           <span class="data-dot" id="dataDot" aria-hidden="true"></span>
           <span class="lbl">Данные</span>
         </button>
       </div>
   </div>
+
+  <section class="tmap" id="tmap" hidden aria-label="Карта тиража">
+    <div class="tmap-head">
+      <h2>Карта тиража</h2>
+      <button type="button" id="tmapToggle" class="tmap-tg" aria-expanded="true" aria-controls="tmapBody">Свернуть</button>
+    </div>
+    <div class="tmap-body" id="tmapBody">
+      <div class="tmap-scroll"><div class="tmap-grid" id="tmapGrid"></div></div>
+      <p class="tmap-note" id="tmapNote"></p>
+    </div>
+  </section>
 
   <p class="hint" id="hint" hidden></p>
 
@@ -271,8 +298,9 @@ img{max-width:100%}
   </footer>
 </div>
 
-<script src="config.js?v=20261002ad"></script>
-<script src="app.js?v=20261002ad"></script>
+<script src="config.js?v=20261002ae"></script>
+<script src="app.js?v=20261002ae"></script>
+<script src="visual.js?v=20261002ae"></script>
 
 <script data-goatcounter="https://dzhek15.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 </body>

@@ -1280,6 +1280,40 @@
     return img;
   }
 
+  /* ---------- эмблемы и цвета клубов ----------
+     data/api/teams.json: { "ключ имени": {id, c:[цвет1, цвет2]} }, картинки — icons/teams/<id>.webp.
+     Собираются вне сайта (API-Football), ключ в браузер не попадает. */
+  var TEAMDB = {}, teamDbAt = 0;
+  function teamKey(name){
+    return String(name || "").toLowerCase().replace(/ё/g, "е")
+      .replace(/[«»"'`]/g, " ").replace(/(^|\s)фк\.?(?=\s|$)/g, " ")
+      .replace(/\s+/g, " ").trim();
+  }
+  function teamInfo(name){ return TEAMDB[teamKey(name)] || null; }
+  function loadTeamDb(){
+    if(typeof fetch !== "function" || (teamDbAt && Date.now() - teamDbAt < 3600000)) return;
+    teamDbAt = Date.now();
+    fetch(MIRROR + "teams.json?t=" + Math.floor(Date.now() / 3600000))
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){ if(j && typeof j === "object"){ TEAMDB = j; render(); } })
+      .catch(function(){});
+  }
+  function mkEmb(name){
+    var t = teamInfo(name); if(!t || !t.id) return null;
+    var img = document.createElement("img");
+    img.className = "temb"; img.src = "icons/teams/" + t.id + ".webp";
+    img.width = 18; img.height = 18; img.alt = ""; img.loading = "lazy"; img.decoding = "async";
+    img.onerror = function(){ this.remove(); };
+    return img;
+  }
+  function tintRow(row, m){
+    var h = teamInfo(m.home), a = teamInfo(m.away);
+    if(!h && !a) return;
+    row.classList.add("has-tc");
+    row.style.setProperty("--tc-h", (h && h.c && h.c[0]) || "transparent");
+    row.style.setProperty("--tc-a", (a && a.c && a.c[0]) || "transparent");
+  }
+
   function flagCode(league){
     var head = String(league || "").split(".")[0];
     head = head.toLowerCase().replace(/ё/g, "е").replace(/\s+/g, " ").trim();
@@ -2154,12 +2188,14 @@
       if(cont.hit && !ac && window.console && console.info){
         console.info("ДЖЕК: нет в таблице клубов — " + m.away);
       }
-      if(hc) teams.appendChild(mkFlag(hc, "tflag", m.home));
+      var he = mkEmb(m.home), ae = mkEmb(m.away);
+      if(he) teams.appendChild(he); else if(hc) teams.appendChild(mkFlag(hc, "tflag", m.home));
       teams.appendChild(mkTeam(m.home, m.away));
       var vs = document.createElement("span"); vs.className="vs"; vs.textContent="—";
       teams.appendChild(vs);
-      if(ac) teams.appendChild(mkFlag(ac, "tflag", m.away));
+      if(ae) teams.appendChild(ae); else if(ac) teams.appendChild(mkFlag(ac, "tflag", m.away));
       teams.appendChild(mkTeam(m.away, m.home));
+      tintRow(row, m);
       fix.appendChild(teams);
       var meta = document.createElement("div");
       meta.className="meta";
@@ -2772,12 +2808,18 @@
     if(dup) say("Такой же вариант в списке уже был — записал ещё раз. Лишний убирается корзиной в «Сыгранных вариантах».");
   });
 
+  /* подсказку подкручиваем в поле зрения только после действий человека:
+     сообщения при загрузке не должны уводить страницу с обложки */
+  var userActed = false;
+  ["pointerdown", "keydown", "touchstart"].forEach(function(ev){
+    document.addEventListener(ev, function(){ userActed = true; }, { capture: true, passive: true });
+  });
   function say(msg){
     hintSticky = true;
     var h = $("hint");
     h.hidden = false;
     h.textContent = msg;
-    h.scrollIntoView({block:"nearest"});
+    if(userActed) h.scrollIntoView({block:"nearest"});
   }
 
   function norm(x){
@@ -4808,12 +4850,14 @@
       var cont = continentCode(m.league);
       var hc = cont.hit ? teamCode(m.home) : null;
       var ac = cont.hit ? teamCode(m.away) : null;
-      if(hc) teams.appendChild(mkFlag(hc, "tflag", m.home));
+      var he = mkEmb(m.home), ae = mkEmb(m.away);
+      if(he) teams.appendChild(he); else if(hc) teams.appendChild(mkFlag(hc, "tflag", m.home));
       teams.appendChild(document.createTextNode(m.home));
       var vs = document.createElement("span"); vs.className = "vs"; vs.textContent = "—";
       teams.appendChild(vs);
-      if(ac) teams.appendChild(mkFlag(ac, "tflag", m.away));
+      if(ae) teams.appendChild(ae); else if(ac) teams.appendChild(mkFlag(ac, "tflag", m.away));
       teams.appendChild(document.createTextNode(m.away));
+      tintRow(row, m);
       if(m.res === VOID){
         teams.appendChild(mkVoid());
       } else if(!m.res && !m.score && m.fsVoid){
@@ -6345,6 +6389,24 @@
   loadAi().then(aiBtnsUpdate);
   setInterval(function(){ loadAi().then(aiBtnsUpdate); }, 30 * 60000);
   setInterval(checkFsVoids, 10 * 60000);
+  loadTeamDb();
+  setInterval(loadTeamDb, 3600000);
+
+  /* мост для visual.js (обложка, карта тиража, билеты): только чтение + перерисовка */
+  window.DZ = {
+    get: function(){
+      return { matches: state.matches, tirazh: state.tirazh, jackpot: Number(state.jackpot) || 0,
+               kickoff: kickoffMs(), played: state.played, price: Number(state.price) || 30,
+               viewPrev: !!state.viewPrev, book: !!book };
+    },
+    team: teamInfo, emb: mkEmb, fmt: fmt, render: function(){ render(); }
+  };
+  var renderBase = render;
+  render = function(){
+    renderBase.apply(this, arguments);
+    try{ document.dispatchEvent(new CustomEvent("dz:render")); }catch(e){}
+  };
+  try{ document.dispatchEvent(new CustomEvent("dz:render")); }catch(e){}
 
   /* ====================================================================
      конец новой аналитики
