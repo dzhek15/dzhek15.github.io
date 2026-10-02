@@ -2089,6 +2089,79 @@
     b.addEventListener("click", function(ev){ ev.stopPropagation(); showAi(m, idx); });
     return b;
   }
+  /* ИИ в просмотре начавшегося тиража: полный разбор, пока ai.json про этот тираж,
+     иначе только варианты из ai_hist.json */
+  var aiHist = { data: null, at: 0, loading: null }, aiPrevAsked = "";
+  function loadAiHist(){
+    if(aiHist.data && Date.now() - aiHist.at < 10 * 60000) return Promise.resolve(aiHist.data);
+    if(aiHist.loading) return aiHist.loading;
+    if(typeof fetch !== "function") return Promise.resolve(null);
+    aiHist.loading = fetch(MIRROR + "ai_hist.json?t=" + Math.floor(Date.now() / 600000))
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){ aiHist.loading = null; if(j){ aiHist.data = j; aiHist.at = Date.now(); } return aiHist.data; })
+      .catch(function(){ aiHist.loading = null; return aiHist.data; });
+    return aiHist.loading;
+  }
+  function aiPrevRec(no, idx){
+    var j = ai.data;
+    if(j && String(j.number) === String(no) && j.m && j.m[idx] && j.m[idx].p) return j.m[idx];
+    var h = aiHist.data && aiHist.data[String(no)];
+    var p = Array.isArray(h) ? h[idx] : null;
+    return /^[1X2]{1,3}$/.test(String(p || "")) ? { p: String(p) } : null;
+  }
+  /* загрузить разбор для просмотра один раз на тираж и перерисовать, когда придёт */
+  function aiPrevEnsure(no){
+    if(aiPrevAsked === String(no)) return;
+    aiPrevAsked = String(no);
+    Promise.all([loadAi(), loadAiHist()]).then(function(){
+      if(state.viewPrev && state.prev && String(state.prev.tirazh) === String(no)) render();
+    });
+  }
+  /* исход сейчас: итог матча или текущий счёт в лайве */
+  function liveOutcome(m){
+    if(m.res && /^[1X2]$/.test(m.res)) return { o: m.res, live: false };
+    var r = /^\s*(\d+)\s*[:\-]\s*(\d+)/.exec(String(m.score || ""));
+    if(!r || m.res === VOID) return null;
+    var a = +r[1], b = +r[2];
+    return { o: a > b ? "1" : a < b ? "2" : "X", live: true };
+  }
+  function mkAiLive(rec, m){
+    var lo = rec && liveOutcome(m); if(!lo) return null;
+    var ok = rec.p.indexOf(lo.o) >= 0;
+    var el = document.createElement("span");
+    el.className = "ai-live " + (ok ? "ai-ok" : "ai-no") + (lo.live ? " is-live" : "");
+    el.textContent = "ИИ " + (ok ? "✓" : "✗");
+    el.title = "Вариант ИИ " + rec.p + (lo.live ? ": по текущему счёту " : ": итог ") + (ok ? "угадан" : "не угадан");
+    return el;
+  }
+  function showAiPrev(m, idx, no){
+    var r = aiPrevRec(no, idx);
+    $("evTitle").textContent = "Разбор ИИ · " + m.home + " — " + m.away;
+    var lo = liveOutcome(m), st = "";
+    if(r && lo){
+      var ok = r.p.indexOf(lo.o) >= 0;
+      st = ' <span class="ai-live ' + (ok ? "ai-ok" : "ai-no") + '">' + (lo.live ? "сейчас " : "итог ") + (ok ? "угадан" : "мимо") + '</span>';
+    } else if(r) st = ' <span class="ai-live">матч не начался</span>';
+    $("evBody").innerHTML = '<div id="aiBox">' + (r ? '<p class="ai-pick">Вариант ИИ: <b>' + escHtml(r.p) + '</b>' + st + '</p>' +
+        (r.t ? aiHtml(r, true) : '<p class="ev-note">Текст разбора к этому тиражу уже убран, остался только вариант.</p>')
+      : '<p class="ev-warn">Разбора ИИ по этому тиражу нет.</p>') + '</div>' +
+      '<div class="blend-go"><button type="button" class="btn-ev" id="aiNews">Новости и составы</button>' +
+      '<button type="button" class="btn-ev" id="aiAcc">Точность по тиражам</button></div>';
+    $("evBack").hidden = false;
+    $("aiNews").addEventListener("click", function(){ showNews(m, idx, true); });
+    $("aiAcc").addEventListener("click", function(){ showAcc(function(){ showAiPrev(m, idx, no); }); });
+  }
+  function mkAiPrev(m, idx, no, mode){
+    var b = document.createElement("button");
+    b.type = "button"; b.className = mode ? "mode nw-mode ai-btn" : "nw-btn ai-btn";
+    b.textContent = "ИИ";
+    var ok = !!aiPrevRec(no, idx);
+    b.disabled = !ok;
+    b.title = ok ? "Вариант ИИ и разбор матча" : "Разбора нет";
+    b.setAttribute("aria-label", "Разбор ИИ: " + m.home + " — " + m.away);
+    b.addEventListener("click", function(ev){ ev.stopPropagation(); showAiPrev(m, idx, no); });
+    return b;
+  }
   function showAi(m, idx){
     $("evTitle").textContent = "Разбор ИИ · " + m.home + " — " + m.away;
     $("evBody").innerHTML = '<div id="aiBox"><p class="ev-note">Загружаю…</p></div>' +
@@ -4936,6 +5009,8 @@
   function renderPrevView(){
     var p = state.prev;
     rowsEl.innerHTML = "";
+    aiPrevEnsure(p.tirazh);
+    var aiN = { done: 0, hit: 0, live: 0, liveHit: 0 };
     /* просмотр прошлого тиража — только счёт и итоги, без своего купона */
     p.matches.forEach(function(m, idx){
       var row = document.createElement("div");
@@ -4976,6 +5051,12 @@
         }
         teams.appendChild(sc);
       }
+      var aiRec = aiPrevRec(p.tirazh, idx), aiEl = mkAiLive(aiRec, m);
+      if(aiEl){
+        teams.appendChild(aiEl);
+        var lo = liveOutcome(m), okk = aiRec.p.indexOf(lo.o) >= 0;
+        if(lo.live){ aiN.live++; if(okk) aiN.liveHit++; } else { aiN.done++; if(okk) aiN.hit++; }
+      }
       fix.appendChild(teams);
       var meta = document.createElement("div");
       meta.className = "meta";
@@ -4983,6 +5064,7 @@
       if(code) meta.appendChild(mkFlag(code, "flag"));
       meta.appendChild(document.createTextNode([m.date, m.time, m.league].filter(Boolean).join("  ·  ")));
       meta.appendChild(mkNewsBtn(m, idx, true));
+      meta.appendChild(mkAiPrev(m, idx, p.tirazh, false));
       fix.appendChild(meta);
       row.appendChild(fix);
       var picksWrap = document.createElement("div");
@@ -4995,6 +5077,7 @@
         b.className = "pick " + (o === "1" ? "p1" : o === "X" ? "px" : "p2");
         b.textContent = o;
         if(m.res === o) b.classList.add("won");
+        if(aiRec && aiRec.p.indexOf(o) >= 0){ b.classList.add("ai-pk"); b.title = "в варианте ИИ"; }
         cell.appendChild(b);
         picksWrap.appendChild(cell);
       });
@@ -5003,6 +5086,7 @@
       modes.className = "modes";
       modes.appendChild(mkFs(m));
       modes.appendChild(mkNewsMode(m, idx, true));
+      modes.appendChild(mkAiPrev(m, idx, p.tirazh, true));
       row.appendChild(modes);
       rowsEl.appendChild(row);
     });
@@ -5014,6 +5098,9 @@
       '<span>сыграно <b>' + done + '</b> из ' + p.matches.length + '</span>' +
       (live ? '<span>идёт <b>' + live + '</b></span>' : '') +
       (voids ? '<span title="засчитан угаданным для любой ставки">отменён <b>' + voids + '</b></span>' : '') +
+      (aiN.done || aiN.live ? '<span class="pb-ai" title="Вариант ИИ: угадано из сыгранных · в лайве по текущему счёту">ИИ' +
+        (aiN.done ? ' <b>' + aiN.hit + '/' + aiN.done + '</b>' : '') + (aiN.done && aiN.live ? ' ·' : '') +
+        (aiN.live ? ' в лайве <b>' + aiN.liveHit + '/' + aiN.live + '</b>' : '') + '</span>' : '') +
       (p.at ? '<span>обновлено <b>' + new Date(p.at).toTimeString().slice(0,5) + '</b></span>' : '') +
       '<button type="button" class="pb-back" id="btnPrevBack">К текущему тиражу &#8250;</button>';
     bar.hidden = false;

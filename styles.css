@@ -1437,3 +1437,15 @@ body.is-prev .row .pick.mine-hit{outline-color:var(--brand-gold)}
 .hist-del.danger{animation:delPulse 1s ease-in-out infinite}
 @keyframes delPulse{50%{box-shadow:0 0 0 3px rgba(142,42,30,.35)}}
 @media (prefers-reduced-motion:reduce){ .hist-del.danger{animation:none} }
+
+/* ИИ в просмотре тиража: исходы варианта ИИ и отметка по ходу матча */
+body.is-prev .row .pick.ai-pk{box-shadow:inset 0 0 0 2px var(--brand-gold, #c9a227)}
+.ai-live{display:inline-block; margin-left:8px; padding:0 5px; border-radius:3px; font:700 11px/16px "IBM Plex Mono",monospace;
+  vertical-align:middle; border:1px solid var(--rule-strong); color:var(--muted); white-space:nowrap}
+.ai-live.ai-ok{color:#3fae6a; border-color:#3fae6a}
+.ai-live.ai-no{color:#d0564b; border-color:#d0564b}
+.ai-live.is-live{animation:scoreLive 2.4s ease-in-out infinite}
+.ai-pick .ai-live{font-size:12px}
+@media (max-width:380px){ .ai-live{margin-left:5px; padding:0 3px; font-size:10px} }
+body.is-prev .row .modes .mode.nw-mode.ai-btn{display:flex}
+[data-compact="1"] body.is-prev .row .modes .mode.nw-mode.ai-btn, body.is-prev[data-compact="1"] .row .modes .mode.nw-mode.ai-btn{display:flex}
