@@ -5209,13 +5209,47 @@
       })
       .catch(function(){ if(fail) fail(); });
   }
-  var pvOpen = {};
+  var PVUI_KEY = "dzhek-pvui", pvFlt = "all", pvFltTir = "";
+  var pvOpen = (function(){
+    try{
+      var u = JSON.parse(localStorage.getItem(PVUI_KEY) || "null");
+      if(u){ pvFlt = u.flt || "all"; pvFltTir = u.tir || ""; return u.open && typeof u.open === "object" ? u.open : {}; }
+    }catch(e){}
+    return {};
+  })();
+  /* что раскрыто и какой фильтр — запоминаем, после обновления страницы всё на месте */
+  function pvSave(){
+    try{
+      var tir = state.prev ? String(state.prev.tirazh) : pvFltTir, keep = {};
+      Object.keys(pvOpen).forEach(function(k){ if(k.indexOf(tir + "|") === 0) keep[k] = 1; });
+      pvOpen = keep; pvFltTir = tir;
+      localStorage.setItem(PVUI_KEY, JSON.stringify({ tir: tir, flt: pvFlt, open: keep }));
+    }catch(e){}
+  }
+  var PVF = [["all", "Все"], ["live", "Идут"], ["wait", "Ждём"], ["fin", "Сыграны"]];
+  function pvStat(row){ return row.classList.contains("st-live") ? "live" : row.classList.contains("st-fin") ? "fin" : "wait"; }
+  function pvFltRender(){
+    var box = document.getElementById("pvFlt"); if(!box) return;
+    var rows = document.querySelectorAll("#rows .row"), cnt = { all: rows.length, live: 0, wait: 0, fin: 0 }, i;
+    for(i = 0; i < rows.length; i++) cnt[pvStat(rows[i])]++;
+    /* фильтр, который ничего не меняет (равен «Все») или пуст, сбрасывается */
+    if(pvFlt !== "all" && (!cnt[pvFlt] || cnt[pvFlt] === cnt.all)) pvFlt = "all";
+    var h = "";
+    PVF.forEach(function(f){
+      var c = cnt[f[0]], off = f[0] !== "all" && (!c || c === cnt.all);
+      h += '<button type="button" data-f="' + f[0] + '" aria-pressed="' + (pvFlt === f[0]) + '"' + (off ? " disabled" : "") + '>' + f[1] + ' <small>' + c + '</small></button>';
+    });
+    box.innerHTML = h;
+    for(i = 0; i < rows.length; i++) rows[i].classList.toggle("pv-hide", pvFlt !== "all" && pvStat(rows[i]) !== pvFlt);
+    box.hidden = false;
+  }
   function pvExpSync(){
     var b = document.getElementById("btnPrevExp"); if(!b) return;
     var rows = document.querySelectorAll("#rows .row"), all = rows.length > 0;
     for(var i = 0; i < rows.length; i++) if(!rows[i].classList.contains("open")){ all = false; break; }
     b.textContent = all ? "Свернуть все" : "Раскрыть все";
     b.setAttribute("aria-pressed", all ? "true" : "false");
+    pvSave();
   }
   function renderPrevView(){
     var p = state.prev;
@@ -5346,6 +5380,8 @@
     bar.innerHTML = '<span class="pb-t">Просмотр тиража ' + escHtml(p.tirazh) + '</span>' +
       '<span>сыграно <b>' + done + '</b> из ' + p.matches.length + '</span>' +
       (live ? '<span>идёт <b>' + live + '</b></span>' : '') +
+      (p.matches.length - done - live - voids > 0 ? '<span>ждём <b>' + (p.matches.length - done - live - voids) + '</b></span>' : '') +
+      '<span id="pbBest" hidden>лучший набор <b></b></span>' +
       (voids ? '<span title="засчитан угаданным для любой ставки">отменён <b>' + voids + '</b></span>' : '') +
       (aiN.done || aiN.live ? '<span class="pb-ai" title="Вариант ИИ: угадано из сыгранных · в лайве по текущему счёту">' +
         '<svg class="pb-ring" viewBox="0 0 32 32" width="30" height="30" aria-hidden="true"><circle cx="16" cy="16" r="12" class="rg-bg"/><circle cx="16" cy="16" r="12" class="rg-fg" style="--rg:' +
@@ -5354,8 +5390,15 @@
         (aiN.live ? ' в лайве <b>' + aiN.liveHit + '/' + aiN.live + '</b>' : '') + '</span>' : '') +
       (p.at ? '<span>обновлено <b>' + new Date(p.at).toTimeString().slice(0,5) + '</b></span>' : '') +
       '<button type="button" class="pb-exp" id="btnPrevExp">Раскрыть все</button>' +
-      '<button type="button" class="pb-back" id="btnPrevBack">К текущему тиражу &#8250;</button>';
+      '<button type="button" class="pb-back" id="btnPrevBack">К текущему тиражу &#8250;</button>' +
+      '<div class="pb-flt" id="pvFlt" role="group" aria-label="Фильтр матчей" hidden></div>';
     bar.hidden = false;
+    if(pvFltTir !== String(p.tirazh)){ pvFlt = "all"; pvFltTir = String(p.tirazh); }
+    pvFltRender();
+    $("pvFlt").addEventListener("click", function(ev){
+      var bt = ev.target.closest("button[data-f]"); if(!bt || bt.disabled) return;
+      pvFlt = bt.getAttribute("data-f"); pvFltRender(); pvSave();
+    });
     $("btnPrevBack").addEventListener("click", leavePrev);
     $("btnPrevExp").addEventListener("click", function(){
       var rows = document.querySelectorAll("#rows .row"), all = true, i;
@@ -5628,6 +5671,7 @@
     /* сообщение держим 10 с: фоновые обновления счёта перерисовывают блок */
     var msg = pcsv.msg && Date.now() - (pcsv.msgAt || 0) < 10000 ? '<p class="pc-msg">' + escHtml(pcsv.msg) + '</p>' : "";
     if(!pcsv.rows.length){
+      var pbE = document.getElementById("pbBest"); if(pbE) pbE.hidden = true;
       box.innerHTML = '<div class="pc-empty"><span>Загрузи CSV своих вариантов на этот тираж или вставь ссылку на них — здесь появится весь купон и все варианты с угаданными по ходу матчей.</span>' +
         '<span class="pc-acts">' + PC_BTNS + '</span></div>' + PC_PASTE + msg;
       $("pcLoad").addEventListener("click", pcsvPick);
@@ -5693,6 +5737,11 @@
           '<span class="rk-bar" data-w="' + (n ? Math.round(q.b / n * 100) : 0) + '" data-pay="' + (n ? Math.round(PAY / n * 100) : 60) + '"><i></i><u></u></span></button>';
       });
       h += '</div></div></div>';
+    }
+    var pbB = document.getElementById("pbBest");
+    if(pbB){
+      var bb = rkNow ? sc[0].b : best, bo = rkNow ? pe : played;
+      pbB.hidden = !bo; if(bo) pbB.innerHTML = 'лучший набор <b>' + bb + '</b> из ' + bo;
     }
     h += '<div class="pc-cards">' +
       (hasSys ? '<div><span>Строк</span><b>' + fmt(sysL.length) + '</b></div>' : '') +

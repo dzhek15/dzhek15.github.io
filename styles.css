@@ -1719,3 +1719,27 @@ body.is-prev .row .pick.ai-pk{opacity:1; border-color:var(--brand-gold); color:#
 }
 
 .pc-sr .pc-tm.pc-ftm{color:var(--brand-gold); text-shadow:0 0 6px rgba(201,162,75,.4)}
+
+/* фильтр матчей в просмотре тиража */
+.prev-bar .pb-flt{flex:0 0 100%; display:flex; flex-wrap:wrap; gap:6px; padding-top:8px; margin-top:2px; border-top:1px solid var(--rule)}
+.prev-bar .pb-flt[hidden]{display:none}
+.prev-bar .pb-flt button{display:inline-flex; align-items:center; gap:6px; padding:4px 11px; border:1px solid var(--rule-strong); border-radius:999px; background:transparent; color:var(--muted); font:600 12px "IBM Plex Sans",sans-serif; cursor:pointer}
+.prev-bar .pb-flt button small{font:500 11px "IBM Plex Mono",monospace; opacity:.85}
+.prev-bar .pb-flt button[aria-pressed="true"]{border-color:var(--brand-gold); color:var(--ink); background:var(--surface-2)}
+.prev-bar .pb-flt button:disabled{opacity:.4; cursor:default}
+body.is-prev .row.pv-hide{display:none}
+.prev-bar #pbBest[hidden]{display:none}
+
+/* ПРОБА: единый золотой стиль. Золото = итог и ИИ, красный = только лайв и гол. Чтобы откатить — удалить этот блок */
+:root{--gold-glow:0 0 8px rgba(201,162,75,.4)}
+body.is-prev .row.ai-ok{--stripe:#3fae6a}
+body.is-prev .row.ai-no{--stripe:#d0564b}
+body.is-prev .row.ai-ok{box-shadow:inset 3px 0 0 var(--stripe), inset 18px 0 22px -20px rgba(63,174,106,.45)}
+body.is-prev .row .pick.ai-pk{box-shadow:inset 0 0 0 2px var(--brand-gold), var(--gold-glow)}
+.prev-bar{box-shadow:var(--shadow), 0 0 14px -6px rgba(201,162,75,.5)}
+.prev-bar .pb-ai b, .prev-bar #pbBest b{color:var(--brand-gold); text-shadow:0 0 6px rgba(201,162,75,.4)}
+
+@media (max-width:420px){
+  .prev-bar .pb-flt{display:grid; grid-template-columns:repeat(2,minmax(0,1fr))}
+  .prev-bar .pb-flt button{justify-content:center}
+}
