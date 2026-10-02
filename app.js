@@ -5627,8 +5627,20 @@
       '<button type="button" class="pc-btn ghost" id="pcDrop">Убрать</button></span></div>' + PC_PASTE + msg;
     if(pcsv.sets.length > 1){
       h += '<div class="pc-tabs" role="tablist">';
-      pcsv.sets.forEach(function(st, i){
-        h += '<button type="button" role="tab" data-t="' + i + '" aria-pressed="' + (i === pcsv.act) + '" title="' + escHtml(st.link ? "Ссылка · " + pcsvLabel(st) : st.name) + ' · ' + fmt(st.rows.length) + ' вар.">' +
+      /* лучшие наборы выше: больше угаданных у лучшего варианта, затем больше вариантов в 9+, затем больше живых */
+      var sc = pcsv.sets.map(function(set, i){
+        var bst = 0, w = 0, al = 0;
+        set.rows.forEach(function(r){
+          var hh = 0, mm = 0;
+          for(var j = 0; j < n; j++) if(res[j]){ if(res[j] === VOID || r.charAt(j) === res[j]) hh++; else mm++; }
+          if(hh > bst) bst = hh; if(hh >= PAY) w++; if(n - mm >= PAY) al++;
+        });
+        return { i: i, b: bst, w: w, a: al };
+      });
+      if(played) sc.sort(function(x, y){ return (y.b - x.b) || (y.w - x.w) || (y.a - x.a) || (x.i - y.i); });
+      sc.forEach(function(q){
+        var st = pcsv.sets[q.i], i = q.i;
+        h += '<button type="button" role="tab" data-t="' + i + '" aria-pressed="' + (i === pcsv.act) + '" title="' + escHtml(st.link ? "Ссылка · " + pcsvLabel(st) : st.name) + ' · ' + fmt(st.rows.length) + ' вар.' + (played ? ' · лучший ' + q.b + ' из ' + played + ', в ' + PAY + '+: ' + fmt(q.w) : '') + '">' +
           escHtml(pcsvLabel(st)) + '<small>' + fmt(st.rows.length) + '</small></button>';
       });
       h += '</div>';
