@@ -1594,19 +1594,4 @@ body.is-prev .row .pick.ai-pk{opacity:1; border-color:var(--brand-gold); color:#
   .pc-lb{padding:5px 0 4px}
   .pc-lb b{font-size:11px}
   .pc-lb i{height:46px}
-  .pc-vars{gap:8px; overflow:visible}
-  .pc-vh{display:none}
-  .pc-vr{grid-template-columns:repeat(var(--cols),minmax(0,1fr)); gap:5px; padding:8px; border:1px solid var(--rule); border-radius:var(--r); background:var(--surface-2); align-items:stretch}
-  .pc-vr span{font-size:15px; line-height:34px; border-radius:5px; position:relative; background:var(--surface-3)}
-  .pc-vr span.hit{background:color-mix(in srgb, var(--cold) 26%, transparent)}
-  .pc-vr span.miss{background:color-mix(in srgb, var(--hot) 22%, transparent)}
-  .pc-vr span[data-j]::before{content:attr(data-j); position:absolute; top:2px; left:4px; font-size:8px; line-height:1; font-weight:500; opacity:.65}
-  .pc-vr span.m2{font-size:13px}
-  .pc-vr span.m3{font-size:11px; letter-spacing:-.04em}
-  .pc-vr span:first-child{grid-column:1 / span 2; justify-self:start; background:none; text-align:left; font-size:13px; line-height:26px; color:var(--muted)}
-  .pc-vr span:first-child::before{content:"№ "}
-  .pc-vr .pc-h{grid-column:3 / -1; justify-self:end; order:-1; padding:0 12px; font-size:15px; line-height:26px; background:var(--surface-3)}
-  .pc-vr span:first-child{order:-2}
-  .pc-vr .pc-h::before{content:"угад. "; font:500 11px "IBM Plex Sans",sans-serif; opacity:.8}
-  .pc-vr.win .pc-h{background:var(--cold)}
 }

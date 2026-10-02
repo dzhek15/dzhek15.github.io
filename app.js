@@ -5581,10 +5581,9 @@
     var msg = pcsv.msg && Date.now() - (pcsv.msgAt || 0) < 10000 ? '<p class="pc-msg">' + escHtml(pcsv.msg) + '</p>' : "";
     if(!pcsv.rows.length){
       box.innerHTML = '<div class="pc-empty"><span>Загрузи CSV своих вариантов на этот тираж или вставь ссылку на них — здесь появится весь купон и все варианты с угаданными по ходу матчей.</span>' +
-        '<span class="pc-acts">' + PC_BTNS + '</span></div>' + PC_PASTE + msg + pcsvOthers(pcsv.tir);
+        '<span class="pc-acts">' + PC_BTNS + '</span></div>' + PC_PASTE + msg;
       $("pcLoad").addEventListener("click", pcsvPick);
       pcPasteBind();
-      pcsvOthersBind(box);
       return;
     }
     var ms = p.matches, n = ms.length, res = ms.map(function(m){ return m.res || ""; });
@@ -5734,9 +5733,7 @@
       '<span><b>' + (pcsv.page + 1) + '</b> / ' + pages + '</span>' +
       '<button type="button" data-g="' + (pcsv.page + 1) + '" aria-label="Дальше"' + (pcsv.page < pages - 1 ? '' : ' disabled') + '>&#8250;</button>' +
       '<button type="button" data-g="' + (pages - 1) + '" aria-label="В конец"' + (pcsv.page < pages - 1 ? '' : ' disabled') + '>&#187;</button></div>';
-    h += pcsvOthers(pcsv.tir);
     box.innerHTML = h;
-    pcsvOthersBind(box);
     $("pcLoad").addEventListener("click", pcsvPick);
     pcPasteBind();
     $("pcShareAll").addEventListener("click", pcsvShareAll);
