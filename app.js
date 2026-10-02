@@ -1585,7 +1585,7 @@
       if(!obj.AA){
         if(obj.ZY || obj.ZA){ cur = { country: obj.ZY || "", league: obj.ZA || "", matches: [] }; groups.push(cur); }
       } else if(cur && obj.AE && obj.AF && obj.WU && obj.WV && obj.PX && obj.PY){
-        cur.matches.push({ id: obj.AA, home: obj.AE, away: obj.AF, hSlug: obj.WU, aSlug: obj.WV, hId: obj.PX, aId: obj.PY, hLogo: obj.OA || "", aLogo: obj.OB || "", ts: obj.AD || obj.ADE || null, st: obj.AB || "", sc: obj.AC || "" });
+        cur.matches.push({ id: obj.AA, home: obj.AE, away: obj.AF, hSlug: obj.WU, aSlug: obj.WV, hId: obj.PX, aId: obj.PY, hLogo: obj.OA || "", aLogo: obj.OB || "", hs: obj.AG, as: obj.AH, ts: obj.AD || obj.ADE || null, st: obj.AB || "", sc: obj.AC || "" });
       }
     }
     return groups;
@@ -1632,9 +1632,9 @@
         var mm = g.matches[j];
         if(isWomen && !leagueW && !(/\(ж\)/i.test(mm.home) && /\(ж\)/i.test(mm.away))) continue;
         if(fsNameOk(hClean, hCore, mm.home) && fsNameOk(aClean, aCore, mm.away))
-          return { h: { url: mm.hSlug, id: mm.hId, logo: mm.hLogo }, a: { url: mm.aSlug, id: mm.aId, logo: mm.aLogo }, mid: mm.id, ts: mm.ts, st: mm.st, sc: mm.sc };
+          return { h: { url: mm.hSlug, id: mm.hId, logo: mm.hLogo }, a: { url: mm.aSlug, id: mm.aId, logo: mm.aLogo }, mid: mm.id, ts: mm.ts, st: mm.st, sc: mm.sc, hs: mm.hs, as: mm.as };
         if(fsNameOk(hClean, hCore, mm.away) && fsNameOk(aClean, aCore, mm.home))
-          return { h: { url: mm.aSlug, id: mm.aId, logo: mm.aLogo }, a: { url: mm.hSlug, id: mm.hId, logo: mm.hLogo }, mid: mm.id, ts: mm.ts, st: mm.st, sc: mm.sc };
+          return { h: { url: mm.aSlug, id: mm.aId, logo: mm.aLogo }, a: { url: mm.hSlug, id: mm.hId, logo: mm.hLogo }, mid: mm.id, ts: mm.ts, st: mm.st, sc: mm.sc, hs: mm.as, as: mm.hs };
       }
     }
     return null;
@@ -1717,6 +1717,58 @@
       if(changed){ save(); render(); }
     }).catch(function(){ fsLogoBusy = false; });
   }
+  /* ---------- быстрый счёт из ленты Flashscore ----------
+     totobrief отдаёт счёт с задержкой, лента Flashscore — почти сразу. Пока матч идёт, счёт
+     берём из ленты (каждые 15 секунд); итог матча и исход по-прежнему только от totobrief.
+     Свежий счёт из ленты не затирается более старым от totobrief, пока тот не подведёт итог. */
+  var FS_LIVE_EVERY = 15000, FS_KEEP = 5 * 60000;
+  function mergeScore(m, sc){
+    if(!m.res && m.fsAt && Date.now() - m.fsAt < FS_KEEP && m.score) return;
+    m.score = sc; if(m.res) delete m.fsAt;
+  }
+  function mStartMs(m){
+    var dm = String(m.date || "").match(/^(\d{1,2})\.(\d{1,2})/), tm = String(m.time || "").match(/^(\d{1,2}):(\d{2})/);
+    if(!dm || !tm) return null;
+    var y = new Date().getUTCFullYear();
+    return Date.UTC(y, +dm[2] - 1, +dm[1], +tm[1] - 3, +tm[2]);
+  }
+  /* матч мог уже идти: есть счёт, либо время старта прошло не больше 4 часов назад */
+  function maybeLive(m){
+    if(m.res) return false;
+    if(m.score) return true;
+    var t = mStartMs(m), d = t == null ? null : Date.now() - t;
+    return d != null && d > -60000 && d < 4 * 3600000;
+  }
+  var fsLiveBusy = false, fsLiveAt = 0;
+  function fsLiveTick(){
+    if(fsLiveBusy || document.hidden || typeof fetch !== "function") return;
+    if(Date.now() - fsLiveAt < FS_LIVE_EVERY - 1500) return;
+    var lists = [];
+    if(state.matches.length) lists.push(state.matches);
+    if(state.prev && Array.isArray(state.prev.matches) && !prevDone()) lists.push(state.prev.matches);
+    var cand = [], sports = {};
+    lists.forEach(function(l){ l.forEach(function(m){ if(maybeLive(m)){ cand.push(m); sports[fsFeedSport(m.league)] = true; } }); });
+    if(!cand.length) return;
+    fsLiveBusy = true; fsLiveAt = Date.now();
+    var keys = Object.keys(sports);
+    Promise.all(keys.map(function(k){
+      return fetch(FS_FEED_HOST + FS_SPORT_ID[k] + "&day=0&_=" + Date.now(), { cache: "no-store" })
+        .then(function(r){ return r.ok ? r.text() : null; }).then(fsParseFeed).catch(function(){ return []; });
+    })).then(function(rs){
+      var by = {}, changed = false;
+      keys.forEach(function(k, i){ by[k] = rs[i]; });
+      cand.forEach(function(m){
+        var f = fsLookup(m, by[fsFeedSport(m.league)] || []);
+        if(!f || f.st !== "2" || !/^\d+$/.test(f.hs || "") || !/^\d+$/.test(f.as || "")) return;
+        var sc = f.hs + " : " + f.as;
+        m.fsAt = Date.now();
+        if(m.score !== sc){ m.score = sc; changed = true; if(state.prev && state.prev.matches.indexOf(m) >= 0) state.prev.at = Date.now(); }
+      });
+      fsLiveBusy = false;
+      if(changed){ state.resAt = Date.now(); save(); if(!book) render(); }
+    }).catch(function(){ fsLiveBusy = false; });
+  }
+  setInterval(fsLiveTick, 5000);
   function attachFsTimes(){
     if(!state.matches.length || typeof fetch !== "function") return;
     var need = {};
@@ -4778,7 +4830,7 @@
       if(q.norm_win_1 != null) m.kf = [q.norm_win_1, q.norm_draw, q.norm_win_2];
       /* сыгранные матчи: фактический исход и счёт приезжают в том же ответе */
       m.res = evRes(evs[i], info);
-      m.score = evs[i].score || "";
+      mergeScore(m, evs[i].score || "");
     }
     state.resAt = Date.now();          /* когда данные с totobrief пришли в последний раз */
     if(info.id) state.tirazhId = info.id;
@@ -4960,7 +5012,7 @@
         if(evs.length !== p.matches.length) return;
         evs.forEach(function(e, i){
           p.matches[i].res = evRes(e, info);
-          p.matches[i].score = e.score || "";
+          mergeScore(p.matches[i], e.score || "");
         });
         p.at = Date.now();
         save();
