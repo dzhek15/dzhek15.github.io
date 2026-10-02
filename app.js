@@ -5707,7 +5707,7 @@
       h += '<div class="pc-flt" role="group" aria-label="Фильтр вариантов">';
       chips.forEach(function(c){
         var on = c[0] === "all" ? !pred : flt === c[0];
-        h += '<button type="button" data-f="' + c[0] + '" aria-pressed="' + on + '"' + (c[0] !== "all" && !c[2] && !on ? ' disabled' : '') + '>' + c[1] + '<small>' + fmt(c[2]) + '</small></button>';
+        h += '<button type="button" data-f="' + c[0] + '" aria-pressed="' + on + '"' + (c[0] !== "all" && (!c[2] || c[2] === st.length) && !on ? ' disabled title="' + (c[2] ? "Совпадает со списком «Все» — все варианты подходят" : "Таких вариантов нет") + '"' : '') + '>' + c[1] + '<small>' + fmt(c[2]) + '</small></button>';
       });
       if(fk !== null) h += '<button type="button" data-f="all" aria-pressed="true" class="pc-fx">' + (fk < 0 ? "меньше " + PAY : "угадано " + fk) + ' &times;</button>';
       h += '</div>';
