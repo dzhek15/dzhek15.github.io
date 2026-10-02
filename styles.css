@@ -1476,7 +1476,6 @@ body.is-prev .row{box-shadow:inset 3px 0 0 var(--stripe,transparent)}
 body.is-prev .row.ai-ok{--stripe:#3fae6a}
 body.is-prev .row.ai-no{--stripe:#d0564b}
 body.is-prev .row.goal{--stripe:#e0483e}
-.row.is-lv::after{content:""; position:absolute; left:0; bottom:0; height:2px; width:var(--p,0); background:linear-gradient(90deg,#e0483e,#ff8a7e); transition:width .6s linear; pointer-events:none}
 body.is-prev .row .pick.ai-pk{opacity:1; border-color:var(--brand-gold); color:#f6dc92;
   background:color-mix(in srgb, var(--brand-gold) 24%, transparent)}
 .st-line{display:none}
