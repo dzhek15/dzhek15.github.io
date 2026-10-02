@@ -2631,18 +2631,16 @@
       del.title = "Убрать этот вариант из списка и из выгрузки";
       del.innerHTML = '<svg width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden="true">' +
         '<path d="M4 6h12M8.5 6V4.5h3V6M6.5 6l.7 9.5h5.6L13.5 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-      if(i === histArmed){
-        del.classList.add("danger");
-        del.innerHTML = "Удалить?";
-      }
-      del.addEventListener("click", function(){
-        clearTimeout(histTimer);
+      if(i === histArmed){ del.classList.add("danger"); del.title = "Нажми ещё раз — вариант удалится"; }
+      del.addEventListener("click", function(e){
+        e.stopPropagation();
         if(histArmed !== i){
+          /* первое нажатие только взводит кнопку: без перерисовки и без таймера,
+             чтобы ряд не сдвигался; снимается нажатием в любом другом месте */
           histArmed = i;
-          renderHistory();
-          histTimer = setTimeout(function(){
-            if(histArmed !== -1){ histArmed = -1; renderHistory(); }
-          }, 4000);
+          [].forEach.call(document.querySelectorAll("#hist .hist-del.danger"), function(x){ x.classList.remove("danger"); x.title = "Убрать этот вариант из списка и из выгрузки"; });
+          del.classList.add("danger");
+          del.title = "Нажми ещё раз — вариант удалится";
           return;
         }
         histArmed = -1;
@@ -3025,6 +3023,14 @@
               : "Отмечены все варианты в корзине — в CSV уйдут все.");
   });
 
+  /* взведённые «удалить» и «очистить» снимаются нажатием в любом другом месте */
+  document.addEventListener("click", function(e){
+    if(histArmed !== -1 && !(e.target.closest && e.target.closest(".hist-del"))){
+      histArmed = -1;
+      [].forEach.call(document.querySelectorAll("#hist .hist-del.danger"), function(x){ x.classList.remove("danger"); x.title = "Убрать этот вариант из списка и из выгрузки"; });
+    }
+    if(clearArmed && !(e.target.closest && e.target.closest("#btnClearHist"))) disarmClear();
+  }, true);
   $("btnClearHist").addEventListener("click", function(){
     var b = $("btnClearHist");
     if(!state.played.length){ disarmClear(); return; }
@@ -3032,7 +3038,6 @@
       clearArmed = 1;
       (b.querySelector(".lbl") || b).textContent = "Точно очистить?";
       b.classList.add("danger");
-      clearTimer = setTimeout(disarmClear, 4000);
       return;
     }
     disarmClear();

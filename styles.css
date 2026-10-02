@@ -1430,3 +1430,10 @@ body.is-prev .row .pick.mine-hit{outline-color:var(--brand-gold)}
   box-shadow:0 0 0 4px rgba(241,232,212,.6), 0 0 0 5px #1D1A15, 0 10px 26px -14px rgba(0,0,0,.6) !important;
   -webkit-backdrop-filter:blur(1px) sepia(.45) brightness(2.3); backdrop-filter:blur(1px) sepia(.45) brightness(2.3)}
 :root[data-theme="light"] .hist-panel{background:radial-gradient(120% 90% at 50% 40%, transparent 55%, rgba(120,90,40,.16) 100%), rgba(241,232,212,.45) !important; -webkit-backdrop-filter:blur(1px) sepia(.4) contrast(1.15); backdrop-filter:blur(1px) sepia(.4) contrast(1.15)}
+/* корзина ровно по центру колонки: поля под двойную рамку внутри ширины, а не сверху */
+.console-top > .hist-panel{width:auto !important; max-width:none; justify-self:stretch; box-sizing:border-box}
+@media (max-width:340px){ .hist-panel .hist-head-acts button{font-size:11px; letter-spacing:.04em; padding-left:8px; padding-right:8px; white-space:nowrap} }
+/* взведённая корзина-удалить: тот же размер, что у обычной, ряд не сдвигается */
+.hist-del.danger{animation:delPulse 1s ease-in-out infinite}
+@keyframes delPulse{50%{box-shadow:0 0 0 3px rgba(142,42,30,.35)}}
+@media (prefers-reduced-motion:reduce){ .hist-del.danger{animation:none} }
