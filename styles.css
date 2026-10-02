@@ -1547,3 +1547,66 @@ body.is-prev .row .pick.ai-pk{opacity:1; border-color:var(--brand-gold); color:#
   :root:not([data-compact="1"]) body.is-prev .row .teams .mscore.live .sa{animation:scoreLive 2.4s ease-in-out infinite}
   :root:not([data-compact="1"]) body.is-prev .row .teams .mscore.void{display:block; grid-column:1 / -1; grid-row:3; margin:0; text-align:left}
 }
+
+/* Мои варианты: лесенка, фильтры, что-если, карточки вариантов */
+.pc-lad{display:grid; grid-template-columns:repeat(var(--cols),minmax(0,1fr)); gap:6px; max-width:520px; margin:0 auto; align-items:end}
+.pc-lb{display:flex; flex-direction:column; align-items:center; gap:4px; padding:6px 2px 5px; border:1px solid var(--rule); border-radius:var(--r); background:var(--surface-2); color:var(--ink); cursor:pointer; font-family:"IBM Plex Mono",monospace; min-width:0}
+.pc-lb b{font-size:13px; font-weight:700; line-height:1}
+.pc-lb i{display:flex; align-items:flex-end; justify-content:center; width:100%; height:54px}
+.pc-lb u{display:block; width:62%; max-width:30px; background:var(--rule-strong); border-radius:3px 3px 0 0; transition:height .5s ease-out; animation:ladIn .6s ease-out}
+.pc-lb.pay u{background:#3fae6a}
+.pc-lb.pay b{color:#58c883}
+.pc-lb span{font-size:12px; font-weight:600; color:var(--muted); line-height:1}
+.pc-lb[aria-pressed="true"]{border-color:var(--brand-gold); background:var(--surface-3)}
+.pc-lb[aria-pressed="true"] span{color:var(--ink)}
+.pc-lb.zero{opacity:.45; cursor:default}
+@keyframes ladIn{from{height:0}}
+.pc-lnote{margin:6px 0 0; font-size:11px; color:var(--muted); text-align:center}
+.pc-flt{display:flex; flex-wrap:wrap; justify-content:center; gap:6px; margin:0 auto 10px; max-width:760px}
+.pc-flt button{display:inline-flex; align-items:center; gap:6px; padding:5px 11px; border:1px solid var(--rule-strong); border-radius:999px; background:transparent; color:var(--muted); font:600 12px "IBM Plex Sans",sans-serif; cursor:pointer}
+.pc-flt button small{font:500 11px "IBM Plex Mono",monospace; opacity:.85}
+.pc-flt button[aria-pressed="true"]{border-color:var(--brand-gold); color:var(--ink); background:var(--surface-2)}
+.pc-flt button:disabled{opacity:.4; cursor:default}
+.pc-none{padding:16px 8px; text-align:center; font-size:13px; color:var(--muted)}
+.pc-cards>div.bump{animation:pcBump .9s ease-out}
+@keyframes pcBump{0%{transform:scale(1)} 25%{transform:scale(1.08); border-color:var(--brand-gold); background:var(--surface-3)} 100%{transform:scale(1)}}
+.pc-cr.wi-able{cursor:pointer; border-radius:var(--r)}
+.pc-cr.wi-able .pc-n{color:var(--brand-gold)}
+.pc-cr.wi-on{background:var(--surface-2)}
+.pc-wi{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; padding:8px; margin:2px 0 6px; border:1px solid var(--brand-gold); border-radius:var(--r); background:var(--surface-2); animation:wiIn .25s ease-out}
+@keyframes wiIn{from{opacity:0; transform:translateY(-4px)}}
+.pc-wt{grid-column:1 / -1; text-align:center; font-size:12px; color:var(--muted)}
+.pc-wc{display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 2px; border:1px solid var(--rule); border-radius:var(--r); text-align:center; font-size:12px; min-width:0}
+.pc-wc b{font:700 16px/1 "IBM Plex Mono",monospace}
+.pc-wc b small{display:block; margin-top:2px; font:600 9px/1 "IBM Plex Sans",sans-serif; color:var(--warn); text-transform:uppercase; letter-spacing:.04em}
+.pc-wc.cur{border-color:var(--warn)}
+.pc-wc span{color:var(--muted); line-height:1.25}
+.pc-wc strong{color:var(--ink); font-family:"IBM Plex Mono",monospace}
+.pc-wc em{font-style:normal; font:600 11px "IBM Plex Mono",monospace; margin-left:4px}
+.pc-wc em.up{color:#58c883}
+.pc-wc em.dn{color:var(--hot)}
+#goalToast.vt{border-color:#3fae6a}
+#goalToast.vt .gt-tag{background:#2f9a5a}
+#goalToast.vt-bad{border-color:#7a7468}
+#goalToast.vt-bad .gt-tag{background:#6b6558}
+@media (max-width:560px){
+  .pc-lad{gap:4px}
+  .pc-lb{padding:5px 0 4px}
+  .pc-lb b{font-size:11px}
+  .pc-lb i{height:46px}
+  .pc-vars{gap:8px; overflow:visible}
+  .pc-vh{display:none}
+  .pc-vr{grid-template-columns:repeat(var(--cols),minmax(0,1fr)); gap:5px; padding:8px; border:1px solid var(--rule); border-radius:var(--r); background:var(--surface-2); align-items:stretch}
+  .pc-vr span{font-size:15px; line-height:34px; border-radius:5px; position:relative; background:var(--surface-3)}
+  .pc-vr span.hit{background:color-mix(in srgb, var(--cold) 26%, transparent)}
+  .pc-vr span.miss{background:color-mix(in srgb, var(--hot) 22%, transparent)}
+  .pc-vr span[data-j]::before{content:attr(data-j); position:absolute; top:2px; left:4px; font-size:8px; line-height:1; font-weight:500; opacity:.65}
+  .pc-vr span.m2{font-size:13px}
+  .pc-vr span.m3{font-size:11px; letter-spacing:-.04em}
+  .pc-vr span:first-child{grid-column:1 / span 2; justify-self:start; background:none; text-align:left; font-size:13px; line-height:26px; color:var(--muted)}
+  .pc-vr span:first-child::before{content:"№ "}
+  .pc-vr .pc-h{grid-column:3 / -1; justify-self:end; order:-1; padding:0 12px; font-size:15px; line-height:26px; background:var(--surface-3)}
+  .pc-vr span:first-child{order:-2}
+  .pc-vr .pc-h::before{content:"угад. "; font:500 11px "IBM Plex Sans",sans-serif; opacity:.8}
+  .pc-vr.win .pc-h{background:var(--cold)}
+}

@@ -1741,7 +1741,7 @@
     return true;
   }
   /* всплывающее уведомление о голе: сверху, 7 секунд, коротко вибрирует на телефоне */
-  var toastTimer = null;
+  var toastTimer = null, toastUntil = 0;
   function goalToast(m, sc){
     if(document.hidden) return;
     var el = document.getElementById("goalToast");
@@ -1753,9 +1753,26 @@
       '<span class="gt-m' + (side === "a" ? " gt-hit" : "") + '">' + escHtml(fsClean(m.away)) + '</span></span>' +
       '<b class="gt-sc"><i' + (side === "h" ? ' class="gt-hit"' : '') + '>' + r[1] + '</i>:<i' + (side === "a" ? ' class="gt-hit"' : '') + '>' + r[2] + '</i></b></span>' +
       (mn && mn.t !== "" && mn.tick ? '<span class="gt-min">' + escHtml(String(mn.t)) + '\u2019</span>' : "");
-    el.classList.remove("on"); void el.offsetWidth; el.classList.add("on");
+    el.classList.remove("on", "vt", "vt-bad"); void el.offsetWidth; el.classList.add("on");
     try{ if(navigator.vibrate) navigator.vibrate([70, 40, 70]); }catch(e){}
+    toastUntil = Date.now() + 7000;
     clearTimeout(toastTimer); toastTimer = setTimeout(function(){ el.classList.remove("on"); }, 7000);
+  }
+  /* уведомление о вариантах: вышли в 9+ / выбыли — ждёт, пока уйдёт уведомление о голе */
+  function varToast(tag, bad, text){
+    if(document.hidden) return;
+    var go = function(){
+      var el = document.getElementById("goalToast");
+      if(!el){ el = document.createElement("div"); el.id = "goalToast"; el.setAttribute("role", "status"); el.setAttribute("aria-live", "polite"); document.body.appendChild(el);
+        el.addEventListener("click", function(){ el.classList.remove("on"); }); }
+      el.innerHTML = '<span class="gt-tag">' + escHtml(tag) + '</span><span class="gt-body"><span class="gt-names">' + escHtml(text) + '</span></span>';
+      el.classList.remove("on", "vt", "vt-bad"); el.classList.add(bad ? "vt-bad" : "vt"); void el.offsetWidth; el.classList.add("on");
+      try{ if(navigator.vibrate) navigator.vibrate(bad ? 60 : [40, 30, 40]); }catch(e){}
+      toastUntil = Date.now() + 6000;
+      clearTimeout(toastTimer); toastTimer = setTimeout(function(){ el.classList.remove("on"); }, 6000);
+    };
+    var wait = toastUntil - Date.now();
+    if(wait > 0) setTimeout(go, wait + 400); else go();
   }
   function goalOn(m){ return !m.res && !!m.goalAt && Date.now() - m.goalAt < GOAL_MS; }
   function fillScore(sc, m){
@@ -5335,7 +5352,7 @@
   var pcsv = { tir: null, sets: [], act: 0, name: "", rows: [], sys: [], page: 0, sort: "hits" };
   function pcsvUse(i){
     var st = pcsv.sets[i];
-    pcsv.act = st ? i : 0; pcsv.page = 0;
+    pcsv.act = st ? i : 0; pcsv.page = 0; pcsv.flt = "all"; pcsv.what = null;
     pcsv.name = st ? st.name : ""; pcsv.rows = st ? st.rows : []; pcsv.sys = st ? (st.sys || []) : [];
   }
   function pcsvEnsure(tir){
@@ -5581,8 +5598,12 @@
     var sysL = (pcsv.sys || []).map(function(x){ return x.split(","); }).filter(function(x){ return x.length === n; });
     var hasSys = sysL.length && sysL.length !== rows.length;
     var view = hasSys && pcsv.view !== "one" ? "sys" : "one";
-    var best = 0, now9 = 0, can9 = 0, can15 = 0;
-    st.forEach(function(x){ if(x.h > best) best = x.h; if(x.h >= 9) now9++; if(n - x.miss >= 9) can9++; if(!x.miss) can15++; });
+    var PAY = 9, best = 0, now9 = 0, can9 = 0, can15 = 0, vst = st, lad = {}, winSet = {}, deadSet = {};
+    st.forEach(function(x){
+      if(x.h > best) best = x.h; if(x.h >= PAY){ now9++; winSet[x.i] = 1; } if(n - x.miss >= PAY) can9++; else deadSet[x.i] = 1; if(!x.miss) can15++;
+      lad[x.h] = (lad[x.h] || 0) + 1;
+    });
+    var flt = pcsv.flt || "all";
     var h = '<div class="pc-head"><span class="pc-t">Мои варианты</span><span class="pc-f" title="' + escHtml(pcsvLabel(pcsv.sets[pcsv.act]) || pcsv.name) + '">' + escHtml(pcsvLabel(pcsv.sets[pcsv.act]) || pcsv.name) + '</span>' +
       '<span class="pc-acts">' + PC_BTNS + '<button type="button" class="pc-btn pc-share" id="pcShareAll" title="Одна ссылка на все загруженные наборы этого тиража — перешли её, и у получателя откроются все варианты">' +
       (pcsv.sets.length > 1 ? 'Ссылка на все (' + pcsv.sets.length + ')' : 'Ссылка на варианты') + '</button>' +
@@ -5599,25 +5620,59 @@
       (hasSys ? '<div><span>Строк</span><b>' + fmt(sysL.length) + '</b></div>' : '') +
       '<div><span>Вариантов</span><b>' + fmt(total) + '</b></div>' +
       '<div><span>Сумма</span><b>' + fmt(total * (Number(state.price) || 0)) + ' ₽</b></div>' +
-      '<div><span>Лучший</span><b>' + (played ? best + ' из ' + played : '—') + '</b></div>' +
-      '<div><span>9+ сейчас</span><b>' + fmt(now9) + '</b></div>' +
-      '<div><span>Могут 9+</span><b>' + fmt(can9) + '</b></div>' +
-      '<div><span>Без ошибок</span><b>' + fmt(can15) + '</b></div></div>';
+      '<div data-k="best"><span>Лучший</span><b>' + (played ? best + ' из ' + played : '—') + '</b></div>' +
+      '<div data-k="now9"><span>9+ сейчас</span><b>' + fmt(now9) + '</b></div>' +
+      '<div data-k="can9"><span>Могут 9+</span><b>' + fmt(can9) + '</b></div>' +
+      '<div data-k="can15"><span>Без ошибок</span><b>' + fmt(can15) + '</b></div></div>';
+    /* лесенка: сколько вариантов угадали k матчей; тап — показать только их */
+    if(played){
+      var lv = [], lo = 0, mx = 1;
+      for(var k = n; k >= PAY; k--){ lv.push({ k: k, c: lad[k] || 0 }); }
+      for(var kk = 0; kk < PAY; kk++) lo += lad[kk] || 0;
+      lv.push({ k: -1, c: lo });
+      lv.forEach(function(x){ if(x.c > mx) mx = x.c; });
+      h += '<div class="pc-sub">Сколько угадали</div><div class="pc-lad" style="--cols:' + lv.length + '">';
+      lv.forEach(function(x){
+        h += '<button type="button" class="pc-lb' + (x.k >= PAY ? " pay" : "") + (x.c ? "" : " zero") + '" data-h="' + x.k + '" aria-pressed="' + (flt === "h" + x.k) + '"' + (x.c ? '' : ' disabled') +
+          ' title="' + (x.k < 0 ? "меньше " + PAY : x.k) + ' из ' + played + ': ' + fmt(x.c) + ' вар."><b>' + (x.c ? fmt(x.c) : "·") + '</b><i><u style="height:' + (x.c ? Math.max(4, Math.round(x.c / mx * 100)) : 0) + '%"></u></i><span>' + (x.k < 0 ? "&lt;" + PAY : x.k) + '</span></button>';
+      });
+      h += '</div><p class="pc-lnote">Зелёные столбики: от ' + PAY + ' угаданных</p>';
+    }
     /* весь купон: сколько вариантов стоит на каждый исход */
     h += '<div class="pc-sub">Весь купон</div><div class="pc-cov">';
     ms.forEach(function(m, j){
       var c = { "1": 0, "X": 0, "2": 0 };
       rows.forEach(function(r){ var o = r.charAt(j); if(c[o] != null) c[o]++; });
       var sc = m.res === VOID ? "отменён" : (m.score ? String(m.score).replace(/\s+/g, "") : "");
-      h += '<div class="pc-cr"><span class="pc-n">' + (j + 1) + '</span><span class="pc-m"><i><b>' + escHtml(m.home) + '</b><u> — </u><b>' + escHtml(m.away) + '</b></i>' +
+      var wiOk = !m.res && m.res !== VOID;
+      h += '<div class="pc-cr' + (wiOk ? " wi-able" + (pcsv.what === j ? " wi-on" : "") : "") + '"' + (wiOk ? ' data-w="' + j + '" title="Тап — что будет с вариантами при каждом исходе"' : '') + '><span class="pc-n">' + (j + 1) + '</span><span class="pc-m"><i><b>' + escHtml(m.home) + '</b><u> — </u><b>' + escHtml(m.away) + '</b></i>' +
         (sc ? '<em class="' + (m.res ? "" : "live") + '">' + escHtml(sc) + '</em>' : '') + '</span>';
       OUT.forEach(function(o){
         var cls = "pc-o" + (c[o] ? " on" : "") + (res[j] === VOID ? (c[o] ? " hit" : "") : res[j] === o ? (c[o] ? " hit" : " hole") : (res[j] && c[o] ? " miss" : ""));
         h += '<span class="' + cls + '" title="' + o + ': ' + fmt(c[o]) + ' вар.">' + o + (sysL.length === 1 ? '' : '<small>' + (c[o] ? (c[o] === total ? "все" : fmt(c[o])) : "·") + '</small>') + '</span>';
       });
       h += '</div>';
+      if(wiOk && pcsv.what === j){
+        var lw = liveOutcome(m), wi = { "1": [0, 0], "X": [0, 0], "2": [0, 0] };
+        vst.forEach(function(x){
+          OUT.forEach(function(o){
+            var add = rows[x.i].charAt(j) === o ? 1 : 0;
+            if(n - x.miss - (1 - add) >= PAY) wi[o][1]++;
+            if(x.h + add >= PAY) wi[o][0]++;
+          });
+        });
+        h += '<div class="pc-wi"><div class="pc-wt">Если в матче № ' + (j + 1) + ' выйдет…</div>';
+        OUT.forEach(function(o){
+          var d0 = wi[o][0] - now9, d1 = wi[o][1] - can9;
+          h += '<div class="pc-wc' + (lw && lw.o === o ? " cur" : "") + '"><b>' + o + (lw && lw.o === o ? '<small>сейчас</small>' : '') + '</b>' +
+            '<span>9+ <strong>' + fmt(wi[o][0]) + '</strong>' + (d0 ? '<em class="' + (d0 > 0 ? "up" : "dn") + '">' + (d0 > 0 ? "+" : "−") + fmt(Math.abs(d0)) + '</em>' : '') + '</span>' +
+            '<span>живых <strong>' + fmt(wi[o][1]) + '</strong>' + (d1 ? '<em class="' + (d1 > 0 ? "up" : "dn") + '">' + (d1 > 0 ? "+" : "−") + fmt(Math.abs(d1)) + '</em>' : '') + '</span></div>';
+        });
+        h += '</div>';
+      }
     });
     h += '</div>';
+    if(ms.some(function(m){ return !m.res; })) h += '<p class="pc-lnote">Тап по матчу без итога: что будет с вариантами при каждом исходе</p>';
     /* варианты по 30 */
     var src = rows;
     if(view === "sys"){
@@ -5631,7 +5686,15 @@
         return { i: i, h: h, miss: miss, v: v };
       });
     }
-    var order = st.slice();
+    var fm = /^h(-?\d+)$/.exec(flt), fk = fm ? Number(fm[1]) : null;
+    if(fk !== null && view === "sys"){ view = "one"; pcsv.view = "one"; }
+    var pred = flt === "w" ? function(x){ return x.h >= PAY; } : flt === "c" ? function(x){ return n - x.miss >= PAY; } :
+      flt === "z" ? function(x){ return !x.miss; } : flt === "d" ? function(x){ return n - x.miss < PAY; } :
+      fk !== null ? function(x){ return fk < 0 ? x.h < PAY : x.h === fk; } : null;
+    if(fk !== null && view === "one"){ src = rows; st = vst; }
+    var fl = { w: 0, c: 0, z: 0, d: 0 };
+    st.forEach(function(x){ if(x.h >= PAY) fl.w++; if(n - x.miss >= PAY) fl.c++; else fl.d++; if(!x.miss) fl.z++; });
+    var order = pred ? st.filter(pred) : st.slice();
     order.sort(function(a, b){ return (b.h - a.h) || (a.miss - b.miss) || (a.i - b.i); });
     var pages = Math.max(1, Math.ceil(order.length / PCSV_PAGE));
     if(pcsv.page >= pages) pcsv.page = pages - 1;
@@ -5640,7 +5703,18 @@
       (hasSys ? '<span class="pc-sort pc-view"><button type="button" data-v="sys" aria-pressed="' + (view === "sys") + '">с допами</button>' +
         '<button type="button" data-v="one" aria-pressed="' + (view === "one") + '">по одному</button></span>' : '') +
       '</div>';
-    h += '<div class="pc-vars" style="--n:' + n + '"><div class="pc-vr pc-vh"><span>№</span>';
+    if(played){
+      var chips = [["all", "Все", st.length], ["w", PAY + "+ сейчас", fl.w], ["c", "Могут " + PAY + "+", fl.c], ["z", "Без ошибок", fl.z], ["d", "Мёртвые", fl.d]];
+      h += '<div class="pc-flt" role="group" aria-label="Фильтр вариантов">';
+      chips.forEach(function(c){
+        var on = c[0] === "all" ? !pred : flt === c[0];
+        h += '<button type="button" data-f="' + c[0] + '" aria-pressed="' + on + '"' + (c[0] !== "all" && !c[2] && !on ? ' disabled' : '') + '>' + c[1] + '<small>' + fmt(c[2]) + '</small></button>';
+      });
+      if(fk !== null) h += '<button type="button" data-f="all" aria-pressed="true" class="pc-fx">' + (fk < 0 ? "меньше " + PAY : "угадано " + fk) + ' &times;</button>';
+      h += '</div>';
+    }
+    var cols = n % 5 === 0 ? 5 : n % 4 === 0 ? 4 : n % 6 === 0 ? 6 : 8;
+    h += '<div class="pc-vars" style="--n:' + n + ';--cols:' + cols + '"><div class="pc-vr pc-vh"><span>№</span>';
     for(var j = 0; j < n; j++) h += '<span>' + (j + 1) + '</span>';
     h += '<span>угад.</span></div>';
     part.forEach(function(x){
@@ -5649,10 +5723,11 @@
       for(var j = 0; j < n; j++){
         var o = view === "sys" ? r[j] : r.charAt(j), cls = !res[j] ? "" : (res[j] === VOID || o.indexOf(res[j]) >= 0) ? "hit" : "miss";
         if(o.length > 1) cls += " m" + o.length;
-        h += '<span class="' + cls + '">' + o + '</span>';
+        h += '<span class="' + cls + '" data-j="' + (j + 1) + '">' + o + '</span>';
       }
       h += '<span class="pc-h"' + (x.v ? ' title="' + fmt(x.v) + ' вар. в строке"' : '') + '>' + x.h + '</span></div>';
     });
+    if(!part.length) h += '<div class="pc-none">Нет вариантов по этому фильтру</div>';
     h += '</div>';
     if(pages > 1) h += '<div class="pc-pager"><button type="button" data-g="0" aria-label="В начало"' + (pcsv.page ? '' : ' disabled') + '>&#171;</button>' +
       '<button type="button" data-g="' + (pcsv.page - 1) + '" aria-label="Назад"' + (pcsv.page ? '' : ' disabled') + '>&#8249;</button>' +
@@ -5670,6 +5745,41 @@
       pcsvUse(Math.max(0, Math.min(pcsv.act, pcsv.sets.length - 1)));
       pcsvStore(); renderPrevCsv();
     });
+    [].slice.call(box.querySelectorAll(".pc-lb")).forEach(function(b){
+      b.addEventListener("click", function(){
+        var f = "h" + b.getAttribute("data-h");
+        pcsv.flt = pcsv.flt === f ? "all" : f; pcsv.page = 0; renderPrevCsv();
+        var t = box.querySelector(".pc-flt"); if(t) try{ t.scrollIntoView({ behavior: "smooth", block: "center" }); }catch(e){}
+      });
+    });
+    [].slice.call(box.querySelectorAll(".pc-flt button")).forEach(function(b){
+      b.addEventListener("click", function(){ pcsv.flt = b.getAttribute("data-f"); pcsv.page = 0; renderPrevCsv(); });
+    });
+    [].slice.call(box.querySelectorAll(".pc-cr.wi-able")).forEach(function(r){
+      r.addEventListener("click", function(){ var j = Number(r.getAttribute("data-w")); pcsv.what = pcsv.what === j ? null : j; renderPrevCsv(); });
+    });
+    /* живая реакция: счётчики крутятся, а вышедшие в 9+ и выбывшие варианты попадают в уведомление */
+    var skey = pcsv.tir + "|" + pcsv.act + "|" + total, ps = pcsv.snap && pcsv.snap.key === skey ? pcsv.snap : null;
+    pcsv.snap = { key: skey, best: best, now9: now9, can9: can9, can15: can15, win: winSet, dead: deadSet };
+    if(ps){
+      var cur = { best: best, now9: now9, can9: can9, can15: can15 };
+      Object.keys(cur).forEach(function(k){
+        if(cur[k] === ps[k]) return;
+        var b = box.querySelector('[data-k="' + k + '"] b'); if(!b) return;
+        b.parentNode.classList.add("bump");
+        if(k === "best") return;
+        var t0 = Date.now(), from = ps[k], to = cur[k];
+        (function tick(){
+          var f = Math.min(1, (Date.now() - t0) / 700);
+          b.textContent = fmt(Math.round(from + (to - from) * f));
+          if(f < 1 && b.isConnected) requestAnimationFrame(tick);
+        })();
+      });
+      var nw = Object.keys(winSet).filter(function(i){ return !ps.win[i]; }), nd = Object.keys(deadSet).filter(function(i){ return !ps.dead[i]; });
+      var lst = function(a){ return "№" + a.slice(0, 4).map(function(i){ return Number(i) + 1; }).join(", №") + (a.length > 4 ? " и ещё " + (a.length - 4) : ""); };
+      if(nw.length && state.viewPrev) varToast(PAY + "+", false, "Вышли в " + PAY + "+: " + lst(nw));
+      else if(nd.length && state.viewPrev) varToast("МИМО", true, "Выбыли из борьбы: " + lst(nd));
+    }
     [].slice.call(box.querySelectorAll(".pc-tabs button")).forEach(function(b){
       b.addEventListener("click", function(){ pcsvUse(Number(b.getAttribute("data-t")) || 0); pcsvStore(); renderPrevCsv(); });
     });
