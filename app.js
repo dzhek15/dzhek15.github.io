@@ -5167,12 +5167,18 @@
       var hc = cont.hit ? teamCode(m.home) : null;
       var ac = cont.hit ? teamCode(m.away) : null;
       var natM = isNatLeague(m.league), he = mkEmb(m.home, hc || natM), ae = mkEmb(m.away, ac || natM);
-      if(he) teams.appendChild(he); else if(hc) teams.appendChild(mkFlag(hc, "tflag", m.home));
-      teams.appendChild(document.createTextNode(m.home));
+      /* каждая команда в своём span: на телефоне названия встают отдельными строками */
+      var tmH = document.createElement("span"), tmA = document.createElement("span");
+      tmH.className = "tm"; tmA.className = "tm";
+      if(he) tmH.appendChild(he); else if(hc) tmH.appendChild(mkFlag(hc, "tflag", m.home));
+      tmH.appendChild(document.createTextNode(m.home));
+      teams.appendChild(tmH);
       var vs = document.createElement("span"); vs.className = "vs"; vs.textContent = "—";
       teams.appendChild(vs);
-      if(ae) teams.appendChild(ae); else if(ac) teams.appendChild(mkFlag(ac, "tflag", m.away));
-      teams.appendChild(document.createTextNode(m.away));
+      if(ae) tmA.appendChild(ae); else if(ac) tmA.appendChild(mkFlag(ac, "tflag", m.away));
+      tmA.appendChild(document.createTextNode(m.away));
+      teams.appendChild(tmA);
+      if(m.res === VOID || m.res || m.score || m.fsVoid) teams.classList.add("has-sc");
       if(m.res === VOID){
         teams.appendChild(mkVoid());
       } else if(!m.res && !m.score && m.fsVoid){

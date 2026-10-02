@@ -1469,3 +1469,25 @@ body.is-prev .row .modes .mode.nw-mode.ai-btn{display:flex}
 @media (max-width:380px){ .lv-chip{margin-right:5px; padding:0 4px; gap:3px; font-size:10px} }
 .lv-chip.lv-end{border-color:var(--rule-strong); color:var(--muted)}
 .lv-chip.lv-end .lv-tag{min-width:0}
+
+/* Просмотр тиража на телефоне: карточка по центру, всё отдельными строками —
+   номер, значок LIVE и лига, команда, счёт, команда, исходы, кнопки */
+@media (max-width:560px){
+  :root:not([data-compact="1"]) body.is-prev .row{gap:12px; padding:18px 14px 16px; text-align:center}
+  :root:not([data-compact="1"]) body.is-prev .row .num{justify-self:center; font-size:13px; letter-spacing:.08em; color:var(--muted)}
+  :root:not([data-compact="1"]) body.is-prev .row .fix{display:flex; flex-direction:column; align-items:center; gap:8px}
+  :root:not([data-compact="1"]) body.is-prev .row .teams{display:flex; flex-direction:column; align-items:center; gap:4px; width:100%; font-size:18px; line-height:1.25}
+  :root:not([data-compact="1"]) body.is-prev .row .teams .tm{order:1; display:flex; align-items:center; justify-content:center; gap:7px; max-width:100%}
+  :root:not([data-compact="1"]) body.is-prev .row .teams .tm:last-of-type{order:3}
+  :root:not([data-compact="1"]) body.is-prev .row .teams .vs{order:2; padding:0; font-size:13px; color:var(--muted)}
+  :root:not([data-compact="1"]) body.is-prev .row .teams.has-sc .vs{display:none}
+  :root:not([data-compact="1"]) body.is-prev .row .teams .mscore{order:2; margin:4px 0; font-size:30px; line-height:1.1}
+  :root:not([data-compact="1"]) body.is-prev .row .teams .mscore.void{font-size:14px}
+  :root:not([data-compact="1"]) body.is-prev .row .teams .mres{font-size:20px}
+  :root:not([data-compact="1"]) body.is-prev .row .teams .ai-live{order:4; margin:4px 0 0; font-size:12px; line-height:18px; padding:0 8px}
+  :root:not([data-compact="1"]) body.is-prev .row .meta{order:-1; display:block; margin:0; font-size:13px; line-height:1.6; color:var(--muted); text-align:center; text-wrap:balance}
+  :root:not([data-compact="1"]) body.is-prev .row .meta .lv-chip{display:flex; width:max-content; margin:0 auto 6px}
+  :root:not([data-compact="1"]) body.is-prev .row .meta .flag{vertical-align:-2px; margin-right:6px}
+  :root:not([data-compact="1"]) body.is-prev .row .picks-m{gap:10px}
+  :root:not([data-compact="1"]) body.is-prev .row .modes{gap:8px}
+}
