@@ -1306,13 +1306,7 @@
     img.onerror = function(){ this.remove(); };
     return img;
   }
-  function tintRow(row, m){
-    var h = teamInfo(m.home), a = teamInfo(m.away);
-    if(!h && !a) return;
-    row.classList.add("has-tc");
-    row.style.setProperty("--tc-h", (h && h.c && h.c[0]) || "transparent");
-    row.style.setProperty("--tc-a", (a && a.c && a.c[0]) || "transparent");
-  }
+
 
   function flagCode(league){
     var head = String(league || "").split(".")[0];
@@ -2195,7 +2189,6 @@
       teams.appendChild(vs);
       if(ae) teams.appendChild(ae); else if(ac) teams.appendChild(mkFlag(ac, "tflag", m.away));
       teams.appendChild(mkTeam(m.away, m.home));
-      tintRow(row, m);
       fix.appendChild(teams);
       var meta = document.createElement("div");
       meta.className="meta";
@@ -4857,7 +4850,6 @@
       teams.appendChild(vs);
       if(ae) teams.appendChild(ae); else if(ac) teams.appendChild(mkFlag(ac, "tflag", m.away));
       teams.appendChild(document.createTextNode(m.away));
-      tintRow(row, m);
       if(m.res === VOID){
         teams.appendChild(mkVoid());
       } else if(!m.res && !m.score && m.fsVoid){

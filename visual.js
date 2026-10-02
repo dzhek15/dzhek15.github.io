@@ -1,4 +1,4 @@
-/* ДЖЕК 15 — визуальный слой: обложка тиража, карта тиража, билеты в корзине, стиль «Газета».
+/* ДЖЕК 15 — визуальный слой: обложка тиража и билеты в корзине.
    Данные только читает через window.DZ (app.js), купон не меняет. */
 (function(){
   "use strict";
@@ -8,21 +8,6 @@
   var OUT = ["1", "X", "2"];
   function esc(t){ return String(t == null ? "" : t).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]; }); }
   function fmt(n){ return Number(n || 0).toLocaleString("ru-RU"); }
-
-  /* ---------- стиль оформления: классика / газета (тема светлая/тёмная — отдельно) ---------- */
-  var STYLE_KEY = "dzStyle";
-  function setStyle(v){
-    root.setAttribute("data-style", v);
-    try{ localStorage.setItem(STYLE_KEY, v); }catch(e){}
-    var b = $("btnStyle");
-    if(b){ b.setAttribute("aria-pressed", v === "paper" ? "true" : "false");
-      var l = b.querySelector(".lbl"); if(l) l.textContent = v === "paper" ? "Газета" : "Классика"; }
-  }
-  (function(){
-    var b = $("btnStyle"); if(!b) return;
-    setStyle(root.getAttribute("data-style") === "paper" ? "paper" : "classic");
-    b.addEventListener("click", function(){ setStyle(root.getAttribute("data-style") === "paper" ? "classic" : "paper"); });
-  })();
 
   /* ---------- обложка тиража ---------- */
   var cover = $("cover"), cvNum = $("cvNum"), cvJack = $("cvJack"), cvSub = $("cvSub"), cvTrack = $("cvTrack"), cvDate = $("cvDate");
@@ -81,53 +66,6 @@
     try{ r.scrollIntoView({ behavior: RM ? "auto" : "smooth", block: "center" }); }catch(e){ r.scrollIntoView(); }
     r.classList.remove("flash"); void r.offsetWidth; r.classList.add("flash");
     setTimeout(function(){ r.classList.remove("flash"); }, 1600);
-  }
-
-  /* ---------- карта тиража: 15 матчей × 1/X/2, цвет — доля игроков ---------- */
-  var mapEl = $("tmap"), mapGrid = $("tmapGrid"), mapNote = $("tmapNote"), MAP_KEY = "dzMapOff";
-  function renderMap(){
-    if(!mapEl || !window.DZ) return;
-    var g = window.DZ.get(), ms = g.matches;
-    if(!ms.length || g.viewPrev){ mapEl.hidden = true; return; }
-    var src = ms.some(function(m){ return m.pct && m.pct.pool; }) ? "pool" : (ms.some(function(m){ return m.pct && m.pct.bk; }) ? "bk" : null);
-    if(!src){ mapEl.hidden = true; return; }
-    mapEl.hidden = false;
-    var off = false; try{ off = localStorage.getItem(MAP_KEY) === "1"; }catch(e){}
-    mapEl.classList.toggle("is-off", off);
-    $("tmapToggle").textContent = off ? "Показать" : "Свернуть";
-    $("tmapToggle").setAttribute("aria-expanded", off ? "false" : "true");
-    var h = '<div class="tm-lab"></div>';
-    ms.forEach(function(m, i){
-      var p = (m.pct && m.pct[src]) || [0, 0, 0], s = p.slice().sort(function(a, b){ return b - a; });
-      var open = (s[0] - s[1]) < 10;
-      h += '<button type="button" class="tm-h' + (open ? ' open' : '') + '" data-i="' + i + '" title="' + esc(m.home + " — " + m.away) +
-           (open ? " · спорный матч" : "") + '">' + (i + 1) + '</button>';
-    });
-    OUT.forEach(function(o, k){
-      h += '<div class="tm-lab">' + o + '</div>';
-      ms.forEach(function(m, i){
-        var p = (m.pct && m.pct[src]) || [0, 0, 0], v = Math.round(Number(p[k]) || 0);
-        var mine = m.picks && m.picks[o], res = m.res === o;
-        var a = Math.max(0.06, Math.min(1, v / 75));
-        h += '<button type="button" class="tm-c' + (a > 0.55 ? ' hi' : '') + (mine ? ' mine' : '') + (res ? ' res' : '') + '" data-i="' + i + '" style="--a:' + a.toFixed(2) + '" title="' +
-             esc((i + 1) + ". " + m.home + " — " + m.away + " · " + o + ": " + v + "%") + (mine ? " · в твоём купоне" : "") + (res ? " · так сыграл" : "") + '"><span>' + v + '</span></button>';
-      });
-    });
-    mapGrid.style.setProperty("--n", ms.length);
-    mapGrid.innerHTML = h;
-    mapNote.textContent = (src === "pool" ? "Цвет — доля игроков на исход" : "Цвет — оценка конторы") +
-      ". Красный номер — спорный матч: лидер впереди меньше чем на 10 пунктов. Рамка — твой купон, зелёная — как сыграл. Нажми — перейти к матчу.";
-  }
-  if(mapEl){
-    mapGrid.addEventListener("click", function(e){
-      var c = e.target.closest && e.target.closest("[data-i]"); if(!c) return;
-      goRow(Number(c.getAttribute("data-i")));
-    });
-    $("tmapToggle").addEventListener("click", function(){
-      var off = !mapEl.classList.contains("is-off");
-      try{ localStorage.setItem(MAP_KEY, off ? "1" : "0"); }catch(e){}
-      renderMap();
-    });
   }
 
   /* ---------- корзина: купоны как билеты, скачать картинкой ---------- */
@@ -205,7 +143,7 @@
     });
   }
 
-  function all(){ try{ renderCover(); renderMap(); decorateBasket(); }catch(e){ if(window.console) console.warn("ДЖЕК visual:", e); } }
+  function all(){ try{ renderCover(); decorateBasket(); }catch(e){ if(window.console) console.warn("ДЖЕК visual:", e); } }
   document.addEventListener("dz:render", all);
   setInterval(function(){ try{ renderCover(); }catch(e){} }, 30000);
   all();
