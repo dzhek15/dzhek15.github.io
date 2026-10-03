@@ -123,9 +123,182 @@
 
   function save(){
     try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}
+    if(typeof ujSoon === "function" && UJ && UJ.last) ujSoon();
   }
 
   var $ = function(id){ return document.getElementById(id); };
+
+  /* ---------- единый журнал «Назад / Вперёд» ----------
+     Любое изменение купона и корзины (исход, режим строки, жребий, «в корзину», отметка,
+     удаление, очистка, стратегии, загрузка тиража…) замечается само: после каждого действия
+     сравниваем пользовательскую часть состояния с прежней и кладём прежнюю в стопку.
+     Корзину храним как список id вариантов + общий словарь самих вариантов (не копии целиком).
+     Стопка живёт до 300 шагов, последние 25 переживают перезагрузку страницы. */
+  var UJ = { back: [], fwd: [], ent: {}, last: null, lastFp: "", busy: false, q: false, pt: 0, n: 0, gKey: "", gAt: 0, silent: false, MAX: 300, KEEP: 25 };
+  var UJ_KEY = "dzhek-undo1";
+  function ujNewId(){ UJ.n++; return "e" + Date.now().toString(36) + UJ.n.toString(36) + Math.floor(Math.random() * 1296).toString(36); }
+  function ujTime(){ return new Date().toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" }); }
+  function ujId(){ return state.matches.map(function(m){ return (m.id || "") + "|" + m.home + "|" + m.away; }).join("~"); }
+  function ujParts(){
+    var p = [], so = [];
+    state.played.forEach(function(v){
+      if(!v.u) v.u = ujNewId();
+      p.push(v.u); if(v.sel === false) so.push(v.u);
+    });
+    return {
+      id: ujId(),
+      mt: state.matches.map(function(m){ return [OUT.filter(function(o){ return m.picks && m.picks[o]; }).join(""), m.mode, (m.pool || OUT).join("")]; }),
+      p: p, so: so,
+      sc: [state.spent, state.rolls, Number(state.price), state.spins, Number(state.target) || 0],
+      tz: String(state.tirazh || "")
+    };
+  }
+  function ujFp(){ var x = ujParts(); return JSON.stringify([x.id, x.mt, x.p, x.so, x.sc, x.tz]); }
+  function ujCap(){
+    var x = ujParts();
+    state.played.forEach(function(v){
+      if(UJ.ent[v.u]) return;
+      var c = {}; Object.keys(v).forEach(function(k){ if(k !== "sel") c[k] = v[k]; });
+      UJ.ent[v.u] = c;
+    });
+    x.at = ujTime();
+    x.ti = state.tirazhId || null; x.dl = state.deadline || "";
+    x.mfull = JSON.parse(JSON.stringify(state.matches));
+    return x;
+  }
+  /* что именно изменилось — для подсказки на кнопке и для склейки набора цифр в одно действие */
+  function ujDiff(a, b){
+    var L = [], g = "";
+    if(a.id !== b.id){ L.push("смена тиража"); g = "draw"; }
+    else {
+      var np = 0, nm = 0, nl = 0;
+      b.mt.forEach(function(x, i){ var y = a.mt[i]; if(!y) return; if(x[0] !== y[0]) np++; if(x[1] !== y[1]) nm++; if(x[2] !== y[2]) nl++; });
+      if(np) L.push(np > 1 ? "расстановка исходов" : "выбор исхода");
+      if(nm) L.push("режим строки");
+      if(nl) L.push("жеребьёвка исходов");
+    }
+    if(a.p.join() !== b.p.join()){
+      if(b.p.length > a.p.length) L.push("в корзину");
+      else if(b.p.length === 0) L.push("очистка корзины");
+      else if(b.p.length < a.p.length) L.push("из корзины");
+      else L.push("порядок в корзине");
+    } else if(a.so.join() !== b.so.join()) L.push("отметка в корзине");
+    var nmz = ["spent", "rolls", "price", "spins", "target"];
+    [2, 3, 4].forEach(function(i){ if(a.sc[i] !== b.sc[i]){ var k = nmz[i]; L.push(k === "price" ? "цена" : k === "spins" ? "число бросков" : "цель"); if(!g) g = k; } });
+    if(a.tz !== b.tz && a.id === b.id){ L.push("номер тиража"); if(!g) g = "tz"; }
+    return { l: L.length ? L.join(" + ") : "изменение", g: L.length === 1 && (g === "price" || g === "spins" || g === "target" || g === "tz") ? g : "" };
+  }
+  function ujSync(){
+    var u = $("btnUndo"), r = $("btnRedo");
+    if(u){
+      u.disabled = UJ.back.length === 0 || spinning;
+      u.title = UJ.back.length ? "Отменить: " + UJ.back[UJ.back.length - 1].l + " (шагов назад: " + UJ.back.length + ")" : "Отменять пока нечего";
+    }
+    if(r){
+      r.disabled = UJ.fwd.length === 0 || spinning;
+      r.title = UJ.fwd.length ? "Вернуть: " + UJ.fwd[UJ.fwd.length - 1].l + " (шагов вперёд: " + UJ.fwd.length + ")" : "Возвращать пока нечего";
+    }
+  }
+  function ujCheck(){
+    if(UJ.busy || spinning || !UJ.last) return;
+    var fp = ujFp();
+    if(fp === UJ.lastFp) return;
+    var cur = ujCap(), prev = UJ.last, d = ujDiff(prev, cur), now = Date.now();
+    var merge = d.g && d.g === UJ.gKey && now - UJ.gAt < 1500 && UJ.back.length;
+    UJ.gKey = d.g; UJ.gAt = now;
+    if(!merge){
+      prev.mf = prev.id !== cur.id ? prev.mfull : null; delete prev.mfull; prev.l = d.l;
+      UJ.back.push(prev);
+      if(UJ.back.length > UJ.MAX) UJ.back.splice(0, UJ.back.length - UJ.MAX);
+    } else {
+      UJ.back[UJ.back.length - 1].l = d.l;
+    }
+    UJ.fwd = [];
+    UJ.last = cur; UJ.lastFp = fp;
+    ujSync(); ujSave();
+  }
+  function ujSoon(){
+    if(UJ.q) return; UJ.q = true;
+    Promise.resolve().then(function(){ UJ.q = false; try{ ujCheck(); }catch(e){} });
+  }
+  function ujApply(s){
+    if(s.mf){
+      state.matches = JSON.parse(JSON.stringify(s.mf));
+      state.tirazhId = s.ti; state.deadline = s.dl;
+    } else {
+      state.matches.forEach(function(m, i){
+        var x = s.mt[i]; if(!x) return;
+        m.picks = { "1": x[0].indexOf("1") >= 0, "X": x[0].indexOf("X") >= 0, "2": x[0].indexOf("2") >= 0 };
+        m.mode = x[1];
+        var pl = OUT.filter(function(o){ return x[2].indexOf(o) >= 0; });
+        m.pool = pl.length ? pl : OUT.slice();
+      });
+    }
+    state.tirazh = s.tz;
+    var tn = $("tirazhName"); if(tn) tn.value = state.tirazh || "";
+    state.spent = s.sc[0]; state.rolls = s.sc[1]; state.price = s.sc[2]; state.spins = s.sc[3]; state.target = s.sc[4];
+    var off = {}; s.so.forEach(function(u){ off[u] = 1; });
+    state.played = s.p.map(function(u){
+      var e = UJ.ent[u]; if(!e) return null;
+      var c = {}; Object.keys(e).forEach(function(k){ c[k] = e[k]; });
+      if(off[u]) c.sel = false;
+      return c;
+    }).filter(Boolean);
+  }
+  /* from → откуда берём шаг, to → куда кладём текущее состояние (для «Вперёд» наоборот) */
+  function ujMove(from, to){
+    if(spinning || !from.length) return;
+    var s = from.pop();
+    UJ.busy = true;
+    try{
+      var cur = ujCap();
+      cur.mf = cur.id !== s.id ? cur.mfull : null; delete cur.mfull; cur.l = s.l;
+      to.push(cur);
+      if(to.length > UJ.MAX) to.splice(0, to.length - UJ.MAX);
+      ujApply(s);
+      UJ.last = ujCap(); UJ.lastFp = ujFp(); UJ.gKey = "";
+      histArmed = -1; try{ disarmClear(); }catch(e){}
+      save(); render();
+    } finally { UJ.busy = false; }
+    ujSync(); ujSave();
+    var h = $("hint"); if(h && !h.hidden){ h.hidden = true; h.textContent = ""; }
+  }
+  function ujReset(){ UJ.back = []; UJ.fwd = []; UJ.ent = {}; UJ.last = ujCap(); UJ.lastFp = ujFp(); UJ.gKey = ""; ujSync(); ujSave(); }
+  function ujSave(){ clearTimeout(UJ.pt); UJ.pt = setTimeout(ujFlush, 700); }
+  function ujFlush(){
+    clearTimeout(UJ.pt);
+    try{
+      var keep = UJ.KEEP, str = "";
+      for(var tries = 0; tries < 4; tries++){
+        var b = UJ.back.slice(-keep), f = UJ.fwd.slice(-keep), need = {}, e = {};
+        b.concat(f).forEach(function(s){ s.p.forEach(function(u){ need[u] = 1; }); });
+        Object.keys(need).forEach(function(u){ if(UJ.ent[u]) e[u] = UJ.ent[u]; });
+        str = JSON.stringify({ b: b, f: f, e: e });
+        if(str.length < 1400000) break;
+        keep = Math.max(3, Math.floor(keep / 2));
+      }
+      localStorage.setItem(UJ_KEY, str);
+      /* словарь вариантов чистим от тех, на кого никто не ссылается */
+      var used = {};
+      UJ.back.concat(UJ.fwd).forEach(function(s){ s.p.forEach(function(u){ used[u] = 1; }); });
+      if(UJ.last) UJ.last.p.forEach(function(u){ used[u] = 1; });
+      Object.keys(UJ.ent).forEach(function(u){ if(!used[u]) delete UJ.ent[u]; });
+    }catch(e){ try{ localStorage.removeItem(UJ_KEY); }catch(_){} }
+  }
+  try{
+    var ujRaw = localStorage.getItem(UJ_KEY);
+    if(ujRaw){
+      var ujo = JSON.parse(ujRaw);
+      var okStep = function(s){ return s && Array.isArray(s.mt) && Array.isArray(s.p) && Array.isArray(s.so) && Array.isArray(s.sc) && typeof s.id === "string"; };
+      if(ujo && Array.isArray(ujo.b) && Array.isArray(ujo.f) && ujo.e && typeof ujo.e === "object"){
+        UJ.back = ujo.b.filter(okStep); UJ.fwd = ujo.f.filter(okStep); UJ.ent = ujo.e;
+      }
+    }
+  }catch(e){ UJ.back = []; UJ.fwd = []; UJ.ent = {}; }
+  state.history = []; state.future = [];     /* старая стопка заменена единым журналом */
+  UJ.last = ujCap(); UJ.lastFp = ujFp();
+  window.addEventListener("pagehide", function(){ ujCheck(); ujFlush(); });
+  document.addEventListener("visibilitychange", function(){ if(document.visibilityState === "hidden"){ ujCheck(); ujFlush(); } });
 
   /* любая строка обязана иметь набор исходов и объект picks — иначе рендер падает */
   function ensureShape(){
@@ -317,20 +490,10 @@
       } : null
     };
   }
-  function pushHistory(label, keepMeta){
-    state.history.unshift(makeSnap(label, keepMeta));
-    if(state.history.length>14) state.history.length=14;
-    state.future = [];                 /* новое действие — «Вперёд» больше некуда */
-  }
+  function pushHistory(label, keepMeta){ /* история теперь ведётся автоматически: см. журнал UJ */ }
   /* «Назад» для корзины: храним только убранные варианты с их местами,
      а не копию всей корзины — так история не раздувает память браузера */
-  function pushBasketUndo(label, removed){
-    if(!removed.length) return;
-    state.history.unshift({ at: new Date().toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"}),
-                            label: label, bk: { ins: removed } });
-    if(state.history.length>14) state.history.length=14;
-    state.future = [];
-  }
+  function pushBasketUndo(label, removed){ /* см. журнал UJ */ }
   function applyBasket(bk){
     if(bk.ins){
       var ins = bk.ins.slice().sort(function(a, b){ return a[0] - b[0]; });
@@ -2516,7 +2679,8 @@
     t.addEventListener("click", function(){ showTeam(name, opp); });
     return t;
   }
-  function render(){
+  function render(){ renderCore(); ujSoon(); }
+  function renderCore(){
     ensureShape();
     syncTirNav();
     if(state.viewPrev && state.prev){ renderPrevView(); return; }
@@ -2788,8 +2952,7 @@
                   (frozen === t.rand ? ", поэтому выбор будет крутиться вхолостую" : "") +
                   ". Вернуть все три — кнопкой «Снять режимы»." : "");
     }
-    $("btnUndo").disabled = state.history.length === 0 || spinning;
-    $("btnRedo").disabled = state.future.length === 0 || spinning;
+    ujSync();
     $("btnKeep").disabled = t.empty > 0 || spinning;
     $("sbRoll").disabled = $("btnSpin").disabled;
     $("sbKeep").disabled = $("btnKeep").disabled;
@@ -3345,34 +3508,8 @@
   });
 
   /* «Назад» кладёт текущий вид в «Вперёд», «Вперёд» — обратно в «Назад» */
-  $("btnUndo").addEventListener("click", function(){
-    var h = state.history.shift();
-    if(!h) return;
-    if(h.bk){
-      state.future.unshift({ at: h.at, label: h.label, bk: applyBasket(h.bk) });
-      if(state.future.length>14) state.future.length=14;
-      histArmed = -1; save(); render();
-      return;
-    }
-    state.future.unshift(makeSnap(h.label, !!h.meta));
-    if(state.future.length>14) state.future.length=14;
-    applySnap(h);
-    save(); render();
-  });
-  $("btnRedo").addEventListener("click", function(){
-    var h = state.future.shift();
-    if(!h) return;
-    if(h.bk){
-      state.history.unshift({ at: h.at, label: h.label, bk: applyBasket(h.bk) });
-      if(state.history.length>14) state.history.length=14;
-      histArmed = -1; save(); render();
-      return;
-    }
-    state.history.unshift(makeSnap(h.label, !!h.meta));
-    if(state.history.length>14) state.history.length=14;
-    applySnap(h);
-    save(); render();
-  });
+  $("btnUndo").addEventListener("click", function(){ ujMove(UJ.back, UJ.fwd); });
+  $("btnRedo").addEventListener("click", function(){ ujMove(UJ.fwd, UJ.back); });
 
   function disarmClear(){
     var b = $("btnClearHist");
@@ -5120,6 +5257,7 @@
 
     /* купон у каждого тиража свой и не теряется: уходя с тиража, запоминаем его,
        а вернувшись (или перезагрузив тот же тираж) — поднимаем обратно */
+    var tzWas = state.tirazh;
     couponStash();
     pushHistory("до обновления тиража", true);
     /* тираж сменился — прошлый уходит в «один шаг назад» (только результаты и счёт) */
@@ -5140,6 +5278,8 @@
     couponUnstash();
     histArmed = -1;
     save();
+    /* тихая смена тиража (в корзине пусто) — не действие человека, «Назад» через неё не ходит */
+    if(UJ.silent && String(tzWas) !== String(state.tirazh)) ujReset();
     $("tirazhName").value = state.tirazh;
     render();
     attachFsTimes(); attachFsLogos();
@@ -6018,6 +6158,7 @@
   }
 
   function pullTirazh(silent, wantNumber){
+    UJ.silent = !!silent;
     var btn = $("btnFetch");
     var lbl = btn.querySelector(".lbl") || btn;
     btn.disabled = true;
@@ -6268,16 +6409,41 @@
     return { csv: lines.join("\n") + "\n", rows: lines.length, price: price, src: src };
   }
 
+  /* обычное скачивание в папку загрузок браузера — запасной путь */
+  function plainDownload(csv, name){
+    var blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    $("expNote").textContent = "Файл " + name + " сохранён в загрузки.";
+  }
+  /* На ПК (Chrome, Edge, Opera) браузер сам спрашивает папку и имя файла и запоминает
+     последнюю выбранную папку. Если окна выбора нет (телефон, Firefox, Safari) —
+     файл уходит в папку загрузок, как раньше. Окно можно открыть только прямо из клика. */
   function saveCsvFile(csv, name){
     if(!(window.claude && typeof window.claude.use === "function")){
-      try{
-        var blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
-        var a = document.createElement("a");
-        a.href = URL.createObjectURL(blob); a.download = name;
-        document.body.appendChild(a); a.click();
-        setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
-        $("expNote").textContent = "Файл " + name + " сохранён в загрузки.";
-      }catch(e){ showFallback(csv); }
+      if(typeof window.showSaveFilePicker === "function" && window.isSecureContext){
+        var p;
+        try{
+          p = window.showSaveFilePicker({
+            suggestedName: name, id: "dzhek-csv", startIn: "downloads",
+            types: [{ description: "Таблица CSV", accept: { "text/csv": [".csv"] } }]
+          });
+        }catch(e){ p = null; }
+        if(p){
+          p.then(function(h){
+            return h.createWritable().then(function(w){
+              return w.write(new Blob([csv], {type:"text/csv;charset=utf-8"})).then(function(){ return w.close(); });
+            }).then(function(){ $("expNote").textContent = "Файл " + (h.name || name) + " сохранён там, где вы указали."; });
+          }).catch(function(e){
+            if(e && e.name === "AbortError"){ $("expNote").textContent = "Сохранение отменено."; return; }
+            try{ plainDownload(csv, name); }catch(e2){ showFallback(csv); }
+          });
+          return;
+        }
+      }
+      try{ plainDownload(csv, name); }catch(e){ showFallback(csv); }
       return;
     }
     var done = false;
@@ -6369,27 +6535,7 @@
     if(!csv){ $("expNote").textContent = "Нечего выгружать — купон пустой."; return; }
     var rowsN = csv.replace(/\n+$/,"").split("\n").length;
     var name = "export_random_" + rowsN + "_" + (rowsN * (Number(state.price)||0)) + ".csv";
-    var done = false;
-    if(!(window.claude && typeof window.claude.use === "function")){
-      try{
-        var blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
-        var a = document.createElement("a");
-        a.href = URL.createObjectURL(blob); a.download = name;
-        document.body.appendChild(a); a.click();
-        setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
-        $("expNote").textContent = "Файл " + name + " сохранён в загрузки.";
-        return;
-      }catch(e){ showFallback(csv); return; }
-    }
-    if(window.claude && typeof window.claude.use === "function"){
-      window.claude.use("downloads").then(function(dl){
-        if(!dl || done) { if(!done) showFallback(csv); return; }
-        done = true;
-        dl.save({filename:name, data:csv}).catch(function(){ showFallback(csv); });
-      }).catch(function(){ showFallback(csv); });
-    } else {
-      showFallback(csv);
-    }
+    saveCsvFile(csv, name);
   });
 
   $("btnSend").addEventListener("click", function(){
