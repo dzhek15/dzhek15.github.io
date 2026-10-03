@@ -5671,7 +5671,7 @@
   function pcsvAdd(set){
     var sig = (set.sys || []).join("|") + "#" + set.rows.length;
     for(var i = 0; i < pcsv.sets.length; i++){
-      if(((pcsv.sets[i].sys || []).join("|") + "#" + pcsv.sets[i].rows.length) === sig){ pcsvUse(i); pcsvStore(); return { dup: true }; }
+      if(((pcsv.sets[i].sys || []).join("|") + "#" + pcsv.sets[i].rows.length) === sig){ pcsvUse(i); pcsvStore(); return { dup: true, of: pcsv.sets[i].name }; }
     }
     pcsv.sets.push(set);
     pcsvUse(pcsv.sets.length - 1);
@@ -5762,6 +5762,14 @@
     });
   }
   pcsvLoadDb();
+  /* подпись сборки внизу — по версии скрипта, чтобы видеть, какая версия реально открыта */
+  (function(){
+    try{
+      var sc = document.querySelector('script[src*="app.js"]'), el = document.querySelector(".build");
+      var m = sc && /v=(\d{4})(\d{2})(\d{2})([a-z]*)/.exec(sc.getAttribute("src") || "");
+      if(el && m) el.textContent = "сборка " + m[3] + "." + m[2] + (m[4] ? " · " + m[4] : "");
+    }catch(e){}
+  })();
   /* у набора из ссылки вместо слова «Ссылка N» — сумма, на которую он сделан */
   function pcsvLabel(st){
     if(!st) return "";
@@ -5793,15 +5801,16 @@
         e.target.value = "";
         if(!files.length || !state.prev) return;
         pcsvEnsure(String(state.prev.tirazh));
-        var ok = 0, dup = 0, bad = [], k = 0;
+        var ok = 0, dup = 0, bad = [], dupN = [], k = 0;
         var next = function(){
           if(k >= files.length){
             var kept = pcsvStore();
             pcsv.msgAt = Date.now();
             pcsv.msg = (ok ? (files.length > 1 ? "Загружено файлов: " + ok + ". " : "Загружено " + fmt(pcsv.rows.length) + " вариант(ов)" +
                           (pcsv.sys.length !== pcsv.rows.length ? " в " + fmt(pcsv.sys.length) + " строк(е) файла" : "") + ". ") : "") +
-              (dup ? "Уже были загружены: " + dup + ". " : "") +
-              (bad.length ? "Не на " + state.prev.matches.length + " матчей: " + bad.join(", ") + ". " : "") +
+              (dup ? "Уже были загружены (такое же содержимое): " + dup + " — " + dupN.slice(0, 5).join(", ") + (dupN.length > 5 ? " и ещё " + (dupN.length - 5) : "") + ". " : "") +
+              (bad.length ? "Не на " + state.prev.matches.length + " матчей или пустой файл: " + bad.slice(0, 5).join(", ") + (bad.length > 5 ? " и ещё " + (bad.length - 5) : "") + ". " : "") +
+              "Всего наборов в тираже: " + pcsv.sets.length + ". " +
               (kept ? "" : "Файлы большие — сохранятся до перезагрузки страницы.");
             renderPrevCsv();
             try{ $("prevCsv").scrollIntoView({ behavior: "smooth", block: "start" }); }catch(err){}
@@ -5813,7 +5822,7 @@
             if(!res.rows.length){ bad.push("«" + f.name + "»"); next(); return; }
             var a = pcsvAdd({ name: f.name, rows: res.rows.map(function(r){ return r.join(""); }),
                               sys: res.pages.map(function(pg){ return pg.join(","); }) });
-            if(a.dup) dup++; else ok++;
+            if(a.dup){ dup++; dupN.push("«" + f.name + "» = «" + (a.of || "?") + "»"); } else ok++;
             next();
           };
           rd.onerror = function(){ bad.push("«" + f.name + "»"); next(); };
@@ -5942,7 +5951,7 @@
     box.hidden = false;
     pcsvEnsure(String(p.tirazh));
     /* сообщение держим 10 с: фоновые обновления счёта перерисовывают блок */
-    var msg = pcsv.msg && Date.now() - (pcsv.msgAt || 0) < 10000 ? '<p class="pc-msg">' + escHtml(pcsv.msg) + '</p>' : "";
+    var msg = pcsv.msg && Date.now() - (pcsv.msgAt || 0) < 45000 ? '<p class="pc-msg">' + escHtml(pcsv.msg) + '</p>' : "";
     if(!pcsv.rows.length){
       var pbE = document.getElementById("pbBest"); if(pbE) pbE.hidden = true;
       var pbS0 = document.getElementById("pbSum"); if(pbS0) pbS0.hidden = true;
