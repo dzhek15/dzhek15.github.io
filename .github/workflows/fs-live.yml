@@ -30,7 +30,7 @@ jobs:
         run: |
           git config user.name "feed-mirror"
           git config user.email "feed-mirror@users.noreply.github.com"
-          git add data/api/fs-1.txt data/api/fs-4.txt
+          git add data/api/fs-1.txt data/api/fs-4.txt data/api/fs-draw-1.txt data/api/fs-draw-4.txt
           if git diff --cached --quiet; then
             echo "изменений нет"
             exit 0

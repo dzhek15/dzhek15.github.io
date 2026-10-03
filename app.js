@@ -1599,10 +1599,14 @@
     if(FS_DAY_CACHE[key]) return FS_DAY_CACHE[key];
     FS_DAY_AT[key] = Date.now();
     var url = FS_FEED_HOST + FS_SPORT_ID[sportKey] + "&day=" + day;
-    FS_DAY_CACHE[key] = fetch(url)
-      .then(function(r){ return r.ok ? r.text() : null; })
+    /* Worker может не открываться (workers.dev без VPN): ждём недолго и не запоминаем неудачу */
+    if(Date.now() - fsWorkerDown < 5 * 60000) return Promise.resolve([]);
+    var ctl = typeof AbortController === "function" ? new AbortController() : null;
+    var tm = ctl ? setTimeout(function(){ ctl.abort(); }, 6000) : null;
+    FS_DAY_CACHE[key] = fetch(url, ctl ? { signal: ctl.signal } : undefined)
+      .then(function(r){ if(tm) clearTimeout(tm); if(!r.ok) throw new Error("http"); return r.text(); })
       .then(fsParseFeed)
-      .catch(function(){ return []; });
+      .catch(function(){ if(tm) clearTimeout(tm); fsWorkerDown = Date.now(); delete FS_DAY_CACHE[key]; return []; });
     return FS_DAY_CACHE[key];
   }
   /* дневной фид хранит команду часто под коротким «фирменным» именем без города-уточнения
@@ -2019,10 +2023,26 @@
         var all = days[0].concat(days[1]);
         /* сначала — турнир нужной страны, потом все группы, потом совпадение по одной команде */
         var found = fsLookup(m, all);
+        if(found) return found;
+        /* Worker не ответил или матча в ленте нет — ищем в снимке матчей тиража на GitHub */
+        return fsDrawMirror(sportKey).then(function(g){ return fsLookup(m, g); });
+      })
+      .then(function(found){
         if(found) go("https://www.flashscore.ru/match/" + sportKey + "/" + found.h.url + "-" + found.h.id + "/" + found.a.url + "-" + found.a.id + "/?mid=" + found.mid);
         else go(fallback);
       })
       .catch(function(){ go(fallback); });
+  }
+  var FS_DRAW = {};
+  function fsDrawMirror(k){
+    var c = FS_DRAW[k];
+    if(c && Date.now() - c.at < 5 * 60000) return c.p;
+    var p = fetch(C.MIRROR_PATH + "fs-draw-" + FS_SPORT_ID[k] + ".txt?t=" + Math.floor(Date.now() / 300000), { cache: "no-store" })
+      .then(function(r){ return r.ok ? r.text() : null; })
+      .then(fsParseFeed)
+      .catch(function(){ return []; });
+    FS_DRAW[k] = { at: Date.now(), p: p };
+    return p;
   }
   /* кнопка FS — в купоне и в просмотре прошлого тиража одна и та же */
   function mkFs(m){
