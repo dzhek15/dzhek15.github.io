@@ -5553,6 +5553,7 @@
       (live ? '<span>идёт <b>' + live + '</b></span>' : '') +
       (p.matches.length - done - live - voids > 0 ? '<span>ждём <b>' + (p.matches.length - done - live - voids) + '</b></span>' : '') +
       '<span id="pbBest" hidden>лучший набор <b></b></span>' +
+      '<span id="pbSum" hidden title="Сумма всех загруженных наборов этого тиража">сумма <b></b></span>' +
       (voids ? '<span title="засчитан угаданным для любой ставки">отменён <b>' + voids + '</b></span>' : '') +
       (aiN.done || aiN.live ? '<span class="pb-ai" title="Вариант ИИ: угадано из сыгранных · в лайве по текущему счёту">' +
         '<svg class="pb-ring" viewBox="0 0 32 32" width="30" height="30" aria-hidden="true"><circle cx="16" cy="16" r="12" class="rg-bg"/><circle cx="16" cy="16" r="12" class="rg-fg" style="--rg:' +
@@ -5843,6 +5844,7 @@
     var msg = pcsv.msg && Date.now() - (pcsv.msgAt || 0) < 10000 ? '<p class="pc-msg">' + escHtml(pcsv.msg) + '</p>' : "";
     if(!pcsv.rows.length){
       var pbE = document.getElementById("pbBest"); if(pbE) pbE.hidden = true;
+      var pbS0 = document.getElementById("pbSum"); if(pbS0) pbS0.hidden = true;
       box.innerHTML = '<div class="pc-empty"><span>Загрузи CSV своих вариантов на этот тираж или вставь ссылку на них — здесь появится весь купон и все варианты с угаданными по ходу матчей.</span>' +
         '<span class="pc-acts">' + PC_BTNS + '</span></div>' + PC_PASTE + msg;
       $("pcLoad").addEventListener("click", pcsvPick);
@@ -5908,6 +5910,13 @@
           '<span class="rk-bar" data-w="' + (n ? Math.round(q.b / n * 100) : 0) + '" data-pay="' + (n ? Math.round(PAY / n * 100) : 60) + '"><i></i><u></u></span></button>';
       });
       h += '</div></div></div>';
+    }
+    /* общая сумма всех загруженных наборов тиража — в панели просмотра */
+    var allRows = 0; pcsv.sets.forEach(function(x){ allRows += x.rows.length; });
+    var pbS = document.getElementById("pbSum");
+    if(pbS){
+      pbS.hidden = !allRows;
+      if(allRows) pbS.innerHTML = 'сумма <b>' + fmt(allRows * (Number(state.price) || 0)) + ' ₽</b>';
     }
     var pbB = document.getElementById("pbBest");
     if(pbB){

@@ -1724,7 +1724,7 @@ body.is-prev .row .pick.ai-pk{opacity:1; border-color:var(--brand-gold); color:#
 .prev-bar .pb-flt button[aria-pressed="true"]{border-color:var(--brand-gold); color:var(--ink); background:var(--surface-2)}
 .prev-bar .pb-flt button:disabled{opacity:.4; cursor:default}
 body.is-prev .row.pv-hide{display:none}
-.prev-bar #pbBest[hidden]{display:none}
+.prev-bar #pbBest[hidden], .prev-bar #pbSum[hidden]{display:none}
 
 /* ПРОБА: единый золотой стиль. Золото = итог и ИИ, красный = только лайв и гол. Чтобы откатить — удалить этот блок */
 :root{--gold-glow:0 0 8px rgba(201,162,75,.4)}
@@ -1733,7 +1733,7 @@ body.is-prev .row.ai-no{--stripe:#d0564b}
 body.is-prev .row.ai-ok{box-shadow:inset 3px 0 0 var(--stripe), inset 18px 0 22px -20px rgba(63,174,106,.45)}
 body.is-prev .row .pick.ai-pk{box-shadow:inset 0 0 0 2px var(--brand-gold), var(--gold-glow)}
 .prev-bar{box-shadow:var(--shadow), 0 0 14px -6px rgba(201,162,75,.5)}
-.prev-bar .pb-ai b, .prev-bar #pbBest b{color:var(--brand-gold); text-shadow:0 0 6px rgba(201,162,75,.4)}
+.prev-bar .pb-ai b, .prev-bar #pbBest b, .prev-bar #pbSum b{color:var(--brand-gold); text-shadow:0 0 6px rgba(201,162,75,.4)}
 
 @media (max-width:420px){
   .prev-bar .pb-flt{display:grid; grid-template-columns:repeat(2,minmax(0,1fr))}
