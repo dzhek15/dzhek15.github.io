@@ -2063,7 +2063,12 @@
     if(state.matches.length) lists.push(state.matches);
     if(state.prev && Array.isArray(state.prev.matches) && !prevDone()) lists.push(state.prev.matches);
     var cand = [], sports = {};
-    lists.forEach(function(l){ l.forEach(function(m){ if(maybeLive(m)){ cand.push(m); sports[fsFeedSport(m.league)] = true; } }); });
+    /* у матчей просматриваемого тиража времени начала нет — пока тираж свежий (двое суток), сверяем их с лентой по названиям */
+    var pvRecent = !!(state.prev && Date.now() - (Date.parse(state.prev.deadline) || state.prev.at || 0) < 48 * 3600000);
+    lists.forEach(function(l){ l.forEach(function(m){
+      var pv = state.prev && l === state.prev.matches;
+      if(maybeLive(m) || (pv && pvRecent && !m.res && !m.score && mStartMs(m) == null)){ cand.push(m); sports[fsFeedSport(m.league)] = true; }
+    }); });
     if(!cand.length) return;
     fsLiveBusy = true; fsLiveAt = Date.now();
     var keys = Object.keys(sports);
@@ -2075,8 +2080,14 @@
       fsLastMir = rs.some(function(g){ return g && g.mir; });
       cand.forEach(function(m){
         var f = fsLookup(m, by[fsFeedSport(m.league)] || []);
-        if(!f || (f.st !== "2" && f.st !== "3") || !/^\d+$/.test(f.hs || "") || !/^\d+$/.test(f.as || "")) return;
-        if(f.st === "3" && f.sc !== "3") return;      /* перенос, отмена и прочее — не итог */
+        if(!f || (f.st !== "2" && f.st !== "3")) return;
+        if(f.st === "3" && f.sc !== "3"){            /* перенос, отмена и прочее — не итог */
+          /* в просмотре тиража подписываем матч «перенесён»/«отменён»; в текущем купоне это делает checkFsVoids */
+          var vtag = FS_VOID_CODES[f.sc];
+          if(vtag && state.prev && state.prev.matches.indexOf(m) >= 0 && !m.res && m.fsVoid !== vtag){ m.fsVoid = vtag; changed = true; }
+          return;
+        }
+        if(!/^\d+$/.test(f.hs || "") || !/^\d+$/.test(f.as || "")) return;
         var grp = by[fsFeedSport(m.league)], mir = !!(grp && grp.mir);
         /* снимок из GitHub старше получаса — не верим, пусть остаётся только счёт из totobrief */
         if(mir && (!grp.ts || Date.now() - grp.ts > 30 * 60000)) return;
@@ -5329,8 +5340,10 @@
       tirazh: String(tirazh || ""), id: id || null, deadline: own.end || deadline || "", at: Date.now(),
       pool: own.pool || Number(pool) || 0, jack: own.jack || 0,
       matches: matches.map(function(m){
-        return { home: m.home, away: m.away, league: m.league || "", res: m.res || "", score: m.score || "",
-                 date: m.date || "", time: m.time || "" };
+        var o = { home: m.home, away: m.away, league: m.league || "", res: m.res || "", score: m.score || "",
+                  date: m.date || "", time: m.time || "" };
+        if(m.fsVoid) o.fsVoid = m.fsVoid;
+        return o;
       })
     };
   }
@@ -5471,11 +5484,9 @@
       if(ae) tmA.appendChild(ae); else if(ac) tmA.appendChild(mkFlag(ac, "tflag", m.away));
       tmA.appendChild(document.createTextNode(m.away));
       teams.appendChild(tmA);
-      if(m.res === VOID || m.res || m.score || m.fsVoid) teams.classList.add("has-sc");
+      if(m.res === VOID || m.res || m.score) teams.classList.add("has-sc");
       if(m.res === VOID){
         teams.appendChild(mkVoid());
-      } else if(!m.res && !m.score && m.fsVoid){
-        teams.appendChild(mkFsVoid(m));
       } else if(m.res || m.score){
         var sc = document.createElement("span");
         sc.className = "mscore" + (m.res ? "" : " live");
@@ -5523,7 +5534,10 @@
         if(mn2 && mn2.tick && li2.ph) tAttr = ' data-ac="' + li2.ph.ac + '" data-ao="' + escHtml(li2.ph.ao || "") + '" data-bx="' + escHtml(li2.ph.bx || "") + '" data-at="' + li2.ph.at + '" data-h="' + (li2.hockey ? 1 : 0) + '" data-s="1"';
         if(mn2 && mn2.n != null) row.style.setProperty("--p", Math.min(100, Math.round(mn2.n / mn2.tot * 100)) + "%");
       } else tt = m.time || "—";
+      var ppTag = !m.res && !m.score && m.fsVoid ? (m.fsVoid === "отменён" ? "ОТМЕНЁН" : "ПЕРЕНОС") : "";
+      if(ppTag) tt = ppTag;
       tcol.innerHTML = '<b class="tc-t' + (li2 && !fin2 ? " tc-live lv-min" : "") + (tt === "Full time" ? " tc-ft" : "") + (tt === "КОНЕЦ" ? " tc-end" : "") + '"'  + tAttr + '>' + (tt === "Full time" ? "Full<br>time" : escHtml(tt)) + '</b><i class="tc-n">' + (idx + 1) + '</i>';
+      if(ppTag){ var tcb = tcol.querySelector(".tc-t"); if(tcb) tcb.classList.add("tc-pp"); }
       row.insertBefore(tcol, num.nextSibling);
       if(li2 && !fin2) row.classList.add("st-live", "is-lv");
       if(fin2) row.classList.add("st-fin");
@@ -5633,6 +5647,22 @@
     }
     return out;
   }
+  /* набор ИИ: варианты, которые ИИ проставил по тиражу, собираются сами и идут в рейтинг с пометкой «ИИ».
+     В хранилище не пишется: каждый раз строится заново из ai.json / ai_hist.json */
+  function pcsvMine(){ return pcsv.sets.filter(function(x){ return !x.ai; }); }
+  function pcsvSyncAi(){
+    var p = state.prev; if(!p || pcsv.tir !== String(p.tirazh)) return;
+    var picks = [], i;
+    for(i = 0; i < p.matches.length; i++){ var r = aiPrevRec(p.tirazh, i); if(!r) return; picks.push(r.p); }
+    var sys = [picks.join(",")], k = -1;
+    for(i = 0; i < pcsv.sets.length; i++) if(pcsv.sets[i].ai){ k = i; break; }
+    if(k >= 0 && pcsv.sets[k].sys[0] === sys[0]) return;
+    var set = { name: "ИИ-разбор", ai: 1, link: 0, sys: sys, rows: pcsvExpand(sys) };
+    if(!set.rows.length) return;
+    if(k >= 0) pcsv.sets[k] = set; else pcsv.sets.push(set);
+    if(k < 0 && pcsv.sets.length === 1) pcsvUse(0);
+    else if(k >= 0 && pcsv.act === k) pcsvUse(k);
+  }
   /* сохранённые наборы других тиражей — кнопки, чтобы открыть их */
   function pcsvOthers(cur){
     var all = pcsvAll(), ks = Object.keys(all).filter(function(k){ return k !== cur && all[k] && ((all[k].sets && all[k].sets.length) || all[k].rows); });
@@ -5668,15 +5698,23 @@
     pcsvPut(tir);
     return { dup: false, name: set.link ? fmt(pcsvExpand(set.sys || []).length * (Number(state.price) || 0)) + " ₽" : nm };
   }
-  function pcsvAdd(set){
-    var sig = (set.sys || []).join("|") + "#" + set.rows.length;
+  function pcsvAdd(set, keepTwin){
+    var sig = (set.sys || []).join("|") + "#" + set.rows.length, twin = false;
     for(var i = 0; i < pcsv.sets.length; i++){
-      if(((pcsv.sets[i].sys || []).join("|") + "#" + pcsv.sets[i].rows.length) === sig){ pcsvUse(i); pcsvStore(); return { dup: true, of: pcsv.sets[i].name }; }
+      if(!pcsv.sets[i].ai && ((pcsv.sets[i].sys || []).join("|") + "#" + pcsv.sets[i].rows.length) === sig){
+        /* файл с тем же содержимым: из файлов берём отдельным набором (у него может быть другая ставка), из ссылок — нет */
+        if(!keepTwin){ pcsvUse(i); pcsvStore(); return { dup: true, of: pcsv.sets[i].name }; }
+        twin = true; break;
+      }
+    }
+    if(keepTwin){
+      var base = set.name, n = 1;
+      while(pcsv.sets.some(function(x){ return x.name === set.name; })) set.name = base + " (" + (++n) + ")";
     }
     pcsv.sets.push(set);
     pcsvUse(pcsv.sets.length - 1);
     pcsvStore();
-    return { dup: false };
+    return { dup: false, twin: twin };
   }
   /* Хранилище наборов: IndexedDB (по ключу на тираж, лимита в несколько МБ нет); localStorage — только
      старые данные, которые переносятся при первом запуске, и запасной путь, если IndexedDB недоступна.
@@ -5754,7 +5792,7 @@
             PCSV_MEM[k] = e; changed = true;
           });
           legacyKeys.forEach(function(k){ if(!got[k]) pcsvPut(k); });
-          if(changed && pcsv.tir != null && !(pcsv.sets && pcsv.sets.length)) pcsv.tir = null;
+          if(changed && pcsv.tir != null && !pcsvMine().length) pcsv.tir = null;
           if(changed){ try{ if(state.prev && $("prevCsv")) renderPrevCsv(); }catch(e){} }
         };
         rq.onerror = function(){};
@@ -5783,8 +5821,10 @@
   function pcsvStore(){
     var all = pcsvAll();
     /* храним только строки файла (с допами) — варианты разворачиваются при открытии; удаляются только кнопкой «Убрать» */
-    if(pcsv.sets.length) all[pcsv.tir] = { act: pcsv.act, at: Date.now(),
-      sets: pcsv.sets.map(function(st){ return { name: st.name, link: st.link || 0, sys: st.sys }; }) };
+    var mine = pcsvMine(), actM = 0;
+    pcsv.sets.forEach(function(st, q){ if(q < pcsv.act && !st.ai) actM++; });
+    if(mine.length) all[pcsv.tir] = { act: Math.min(actM, mine.length - 1), at: Date.now(),
+      sets: mine.map(function(st){ return { name: st.name, link: st.link || 0, sys: st.sys }; }) };
     else delete all[pcsv.tir];
     pcsvPut(pcsv.tir);
     return true;
@@ -5801,16 +5841,17 @@
         e.target.value = "";
         if(!files.length || !state.prev) return;
         pcsvEnsure(String(state.prev.tirazh));
-        var ok = 0, dup = 0, bad = [], dupN = [], k = 0;
+        var ok = 0, dup = 0, bad = [], dupN = [], twinN = 0, k = 0;
         var next = function(){
           if(k >= files.length){
             var kept = pcsvStore();
             pcsv.msgAt = Date.now();
             pcsv.msg = (ok ? (files.length > 1 ? "Загружено файлов: " + ok + ". " : "Загружено " + fmt(pcsv.rows.length) + " вариант(ов)" +
                           (pcsv.sys.length !== pcsv.rows.length ? " в " + fmt(pcsv.sys.length) + " строк(е) файла" : "") + ". ") : "") +
+              (twinN ? "Повторов отдельными наборами: " + twinN + ". " : "") +
               (dup ? "Уже были загружены (такое же содержимое): " + dup + " — " + dupN.slice(0, 5).join(", ") + (dupN.length > 5 ? " и ещё " + (dupN.length - 5) : "") + ". " : "") +
               (bad.length ? "Не на " + state.prev.matches.length + " матчей или пустой файл: " + bad.slice(0, 5).join(", ") + (bad.length > 5 ? " и ещё " + (bad.length - 5) : "") + ". " : "") +
-              "Всего наборов в тираже: " + pcsv.sets.length + ". " +
+              "Всего наборов в тираже: " + pcsvMine().length + ". " +
               (kept ? "" : "Файлы большие — сохранятся до перезагрузки страницы.");
             renderPrevCsv();
             try{ $("prevCsv").scrollIntoView({ behavior: "smooth", block: "start" }); }catch(err){}
@@ -5821,7 +5862,8 @@
             var res = parseCsvVariants(rd.result, state.prev.matches.length);
             if(!res.rows.length){ bad.push("«" + f.name + "»"); next(); return; }
             var a = pcsvAdd({ name: f.name, rows: res.rows.map(function(r){ return r.join(""); }),
-                              sys: res.pages.map(function(pg){ return pg.join(","); }) });
+                              sys: res.pages.map(function(pg){ return pg.join(","); }) }, true);
+            if(a.twin) twinN++;
             if(a.dup){ dup++; dupN.push("«" + f.name + "» = «" + (a.of || "?") + "»"); } else ok++;
             next();
           };
@@ -5885,8 +5927,8 @@
     });
   }
   function pcsvShareAll(){
-    var b = $("pcShareAll"); if(!b || !pcsv.sets.length) return;
-    var was = b.textContent, sets = pcsv.sets.slice(), tir = pcsv.tir;
+    var b = $("pcShareAll"); if(!b || !pcsvMine().length) return;
+    var was = b.textContent, sets = pcsvMine(), tir = pcsv.tir;
     var nVars = sets.reduce(function(a, st){ return a + st.rows.length; }, 0);
     b.disabled = true; b.textContent = "собираю…";
     var urlP = Promise.all(sets.map(function(st){
@@ -5936,6 +5978,7 @@
     var li = liveInfo(m);
     if(m.res === VOID) return '<span class="pc-tm">ОТМ</span>';
     if(m.res) return '<span class="pc-tm pc-ftm">Full time</span>';
+    if(m.fsVoid && !m.score) return '<span class="pc-tm pc-pp">' + (m.fsVoid === "отменён" ? "отменён" : "перенесён") + '</span>';
     if(li && li.end) return '<span class="pc-tm lv">КОНЕЦ</span>';
     if(li){
       var mn = liveMinute(li.ph, li.hockey, true), txt = mn && mn.t !== "" ? String(mn.t) : "LIVE";
@@ -5950,6 +5993,7 @@
     if(!(state.viewPrev && p)){ box.hidden = true; return; }
     box.hidden = false;
     pcsvEnsure(String(p.tirazh));
+    pcsvSyncAi();
     /* сообщение держим 10 с: фоновые обновления счёта перерисовывают блок */
     var msg = pcsv.msg && Date.now() - (pcsv.msgAt || 0) < 45000 ? '<p class="pc-msg">' + escHtml(pcsv.msg) + '</p>' : "";
     if(!pcsv.rows.length){
@@ -5980,8 +6024,8 @@
     var flt = pcsv.flt || "all";
     var h = '<div class="pc-head"><span class="pc-t">Мои варианты</span><span class="pc-f" title="' + escHtml(pcsvHead()) + '">' + escHtml(pcsvHead()) + '</span>' +
       '<span class="pc-acts">' + PC_BTNS + '<button type="button" class="pc-btn pc-share" id="pcShareAll" title="Одна ссылка на все загруженные наборы этого тиража — перешли её, и у получателя откроются все варианты">' +
-      (pcsv.sets.length > 1 ? 'Ссылка на все (' + pcsv.sets.length + ')' : 'Ссылка на варианты') + '</button>' +
-      '<button type="button" class="pc-btn ghost" id="pcDrop">Убрать</button></span></div>' + PC_PASTE + msg;
+      (pcsvMine().length > 1 ? 'Ссылка на все (' + pcsvMine().length + ')' : 'Ссылка на варианты') + '</button>' +
+      (pcsv.sets[pcsv.act] && pcsv.sets[pcsv.act].ai ? "" : '<button type="button" class="pc-btn ghost" id="pcDrop">Убрать</button>') + '</span></div>' + PC_PASTE + msg;
     var rkNow = null;
     if(pcsv.sets.length > 1){
       /* рейтинг наборов: завершённые матчи + идущие по текущему счёту; выше тот, у кого лучше результат */
@@ -6014,7 +6058,7 @@
         if(mv && Date.now() - mv.at < 90000) tr = '<u class="' + (mv.d > 0 ? "up" : "dn") + '">' + (mv.d > 0 ? "▲" : "▼") + Math.abs(mv.d) + '</u>';
         h += '<button type="button" role="tab" class="pc-rk' + (q.i === pcsv.act ? " on" : "") + (k < 3 && pe ? " m" + (k + 1) : "") + '" data-t="' + q.i + '" data-id="' + q.i + '" aria-pressed="' + (q.i === pcsv.act) + '" title="' + escHtml(st.link ? "Ссылка · " + pcsvLabel(st) : st.name) + ' · ' + fmt(st.rows.length) + ' вар.">' +
           '<span class="rk-p"><b>' + (k + 1) + '</b>' + tr + '</span>' +
-          '<span class="rk-n"><b>' + escHtml(pcsvLabel(st)) + '</b><small>' + (st.link ? "" : escHtml(st.name) + " · ") + fmt(st.rows.length) + ' вар.</small></span>' +
+          '<span class="rk-n"><b>' + escHtml(pcsvLabel(st)) + '</b><small>' + (st.ai ? '<em class="rk-ai">ИИ</em> ' : st.link ? "" : escHtml(st.name) + " · ") + fmt(st.rows.length) + ' вар.</small></span>' +
           '<span class="rk-v">' + (pe ? '<i class="cn" data-k="' + q.i + 'b">' + q.b + '</i><small> из ' + pe + '</small>' : '—') + '</span>' +
           '<span class="rk-v' + (q.w ? " ok" : "") + '"><i class="cn" data-k="' + q.i + 'w">' + fmt(q.w) + '</i></span><span class="rk-v"><i class="cn" data-k="' + q.i + 'a">' + fmt(q.a) + '</i></span>' +
           '<span class="rk-bar" data-w="' + (n ? Math.round(q.b / n * 100) : 0) + '" data-pay="' + (n ? Math.round(PAY / n * 100) : 60) + '"><i></i><u></u></span></button>';
@@ -6022,7 +6066,7 @@
       h += '</div></div></div>';
     }
     /* общая сумма всех загруженных наборов тиража — в панели просмотра */
-    var allRows = 0; pcsv.sets.forEach(function(x){ allRows += x.rows.length; });
+    var allRows = 0; pcsv.sets.forEach(function(x){ if(!x.ai) allRows += x.rows.length; });
     var pbS = document.getElementById("pbSum");
     if(pbS){
       pbS.hidden = !allRows;
@@ -6153,7 +6197,7 @@
     $("pcLoad").addEventListener("click", pcsvPick);
     pcPasteBind();
     $("pcShareAll").addEventListener("click", pcsvShareAll);
-    $("pcDrop").addEventListener("click", function(){
+    if($("pcDrop")) $("pcDrop").addEventListener("click", function(){
       pcsv.sets.splice(pcsv.act, 1);
       pcsvUse(Math.max(0, Math.min(pcsv.act, pcsv.sets.length - 1)));
       pcsvStore(); renderPrevCsv();

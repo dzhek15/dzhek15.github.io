@@ -46,7 +46,9 @@ def build(text, now, toks=None):
             continue
         live = kv.get("AB") == "2"
         done = kv.get("AB") == "3" and kv.get("AC") == "3" and now - int(kv.get("AD") or 0) < 4 * 3600
-        if not (live or done):
+        # перенесён (AC=4) или отменён (AC=5): держим сутки, сайт подписывает такой матч в просмотре тиража
+        void = kv.get("AB") == "3" and kv.get("AC") in ("4", "5") and abs(now - int(kv.get("AD") or 0)) < 36 * 3600
+        if not (live or done or void):
             continue
         if head and not keep_head:
             out.append(head); keep_head = True

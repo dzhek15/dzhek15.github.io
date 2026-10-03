@@ -1744,3 +1744,10 @@ body.is-prev .row .pick.ai-pk{box-shadow:inset 0 0 0 2px var(--brand-gold), var(
 
 .hist li.hist-more{justify-content:center; border-bottom:none; padding-bottom:0}
 .hist li.hist-more button{width:100%}
+
+/* матч перенесён или отменён (по данным Flashscore): спокойным серым, не красным */
+body.is-prev .row .tcol .tc-t.tc-pp{font-size:11px; font-weight:700; letter-spacing:.02em; color:var(--muted); text-align:center}
+.pc-tm.pc-pp{color:var(--muted); font-style:normal}
+/* пометка набора ИИ в рейтинге */
+.rk-ai{font-style:normal; font-weight:800; font-size:10px; letter-spacing:.04em; color:var(--brand-gold); border:1px solid currentColor; border-radius:4px; padding:0 4px; margin-right:2px}
+@media (max-width:340px){ .pc-rkh,.pc-rk{grid-template-columns:24px minmax(0,1fr) 48px 28px 38px; gap:2px; padding:0 5px} .rk-n b{font-size:12px; letter-spacing:-.02em} .rk-n small{font-size:10px} .rk-ai{font-size:9px; padding:0 3px} }
