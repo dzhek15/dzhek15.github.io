@@ -13,6 +13,9 @@ OUT = os.path.join(ROOT, "data", "api")
 FEED = "https://sweet-heart-f51d.dzhek15-api.workers.dev/?sport=%d&day=0"
 HDR = {"User-Agent": "Mozilla/5.0 (dzhek15 fslive)", "Origin": "https://dzhek15.github.io",
        "Referer": "https://dzhek15.github.io/"}
+# FSLIVE_FAST=1: только fs-now (матчи тиража, быстрый круг раз в минуту); FSLIVE_FORCE=1: писать файл всегда, чтобы обновить время снимка
+FAST = os.environ.get("FSLIVE_FAST") == "1"
+FORCE = os.environ.get("FSLIVE_FORCE") == "1"
 KEEP = ("AA", "AB", "AC", "AD", "AE", "AF", "AG", "AH", "AO", "BX", "OA", "OB", "PX", "PY", "WU", "WV")
 
 
@@ -27,7 +30,7 @@ def get(url):
     return None
 
 
-def build(text, now):
+def build(text, now, toks=None):
     out, head, keep_head = [], None, False
     for rec in text.split("¬~"):
         kv = {}
@@ -38,6 +41,8 @@ def build(text, now):
         if not kv.get("AA"):
             if kv.get("ZY") or kv.get("ZA"):
                 head = "ZY÷%s¬ZA÷%s" % (kv.get("ZY", ""), kv.get("ZA", "")); keep_head = False
+            continue
+        if toks is not None and not (norm_tokens(kv.get("AE", "")) & toks or norm_tokens(kv.get("AF", "")) & toks):
             continue
         live = kv.get("AB") == "2"
         done = kv.get("AB") == "3" and kv.get("AC") == "3" and now - int(kv.get("AD") or 0) < 4 * 3600
@@ -131,6 +136,18 @@ def write_draw(sport, now, toks):
     return True
 
 
+def write_feed(name, body, force):
+    path = os.path.join(OUT, name)
+    old = open(path, encoding="utf-8").read() if os.path.exists(path) else ""
+    # время снимка само по себе не повод для коммита: пишем, только если изменились матчи (или force)
+    strip = lambda t: re.sub(r"^ZT÷\d+", "", t)
+    if force or strip(old) != strip(body):
+        open(path, "w", encoding="utf-8").write(body)
+        print("fslive:", name, "обновлён,", len(body), "байт")
+    else:
+        print("fslive:", name, "без изменений")
+
+
 def main():
     now = int(time.time()); ok = False
     toks = draw_tokens()
@@ -138,20 +155,15 @@ def main():
         text = get(FEED % sport)
         if not text or "AA÷" not in text:
             print("fslive: лента", sport, "недоступна, файл не трогаю"); continue
-        recs = build(text, now)
-        body = "ZT÷%d" % now + "¬~" + "¬~".join(recs) + ("¬~" if recs else "")
-        path = os.path.join(OUT, "fs-%d.txt" % sport)
-        old = open(path, encoding="utf-8").read() if os.path.exists(path) else ""
-        # время снимка само по себе не повод для коммита: пишем, только если изменились матчи
-        strip = lambda s: re.sub(r"^ZT÷\d+", "", s)
-        if strip(old) != strip(body):
-            open(path, "w", encoding="utf-8").write(body)
-            print("fslive: спорт", sport, "обновлён,", len(recs), "записей,", len(body), "байт")
-        else:
-            print("fslive: спорт", sport, "без изменений")
-        ok = True
+        mk = lambda recs: "ZT÷%d" % now + "¬~" + "¬~".join(recs) + ("¬~" if recs else "")
+        # fs-now-<спорт>.txt — только матчи тиража: меняется редко (гол, фаза), поэтому коммитится каждую минуту
         if toks:
-            write_draw(sport, now, toks)
+            write_feed("fs-now-%d.txt" % sport, mk(build(text, now, toks)), FORCE)
+        if not FAST:
+            write_feed("fs-%d.txt" % sport, mk(build(text, now)), FORCE)
+            if toks:
+                write_draw(sport, now, toks)
+        ok = True
     return 0 if ok else 1
 
 

@@ -1,7 +1,7 @@
 name: keepalive
 
 # Страховка от пропусков расписания GitHub: одно долгое задание само снимает данные
-# (живые матчи — каждые 5 минут, зеркало totobrief/stavka и эмблемы — каждые 30 минут),
+# (живые матчи — каждую минуту, коммит только при изменении; зеркало totobrief/stavka и эмблемы — каждые 30 минут),
 # а в конце запускает себя заново. Расписание ниже только поднимает цепочку, если она оборвалась.
 # Обычные feed-mirror и fs-live остаются как есть.
 
@@ -34,27 +34,34 @@ jobs:
           end=$(( $(date +%s) + 335*60 ))
           n=0
           while [ "$(date +%s)" -lt "$end" ]; do
+            t0=$(date +%s)
             sync || true
             kind="fs-live"
-            python3 scripts/fslive.py || true
-            if [ $((n % 6)) -eq 0 ]; then
-              kind="feed"
-              python3 scripts/feed.py || true
-              python3 scripts/emblems.py || true
+            if [ $((n % 5)) -eq 0 ]; then
+              # раз в 5 минут: полный снимок (с файлами тиража), время снимка обновляется всегда
+              FSLIVE_FORCE=1 python3 scripts/fslive.py || true
+              if [ $((n % 30)) -eq 0 ]; then
+                kind="feed"
+                python3 scripts/feed.py || true
+                python3 scripts/emblems.py || true
+              fi
+            else
+              # остальные минуты: только живые матчи, коммит лишь если что-то изменилось (гол, фаза, новый матч)
+              FSLIVE_FAST=1 python3 scripts/fslive.py || true
             fi
             git add -A data/api icons/teams
             if ! git diff --cached --quiet; then
               git commit -q -m "$kind: $(date -u +'%Y-%m-%d %H:%M UTC') (keepalive)"
               for i in 1 2 3; do
-                git pull -q --rebase origin "${GITHUB_REF_NAME}" && git push -q && break
+                git pull -q --rebase origin "$B" && git push -q && break
                 git rebase --abort 2>/dev/null || true
-                sleep 5
+                sleep 3
               done
-              # не вышло — откатываемся к удалённому состоянию, данные снимутся заново на следующем круге
-              git fetch -q origin "${GITHUB_REF_NAME}" && git status -sb | head -1 | grep -q "ahead" && git reset -q --hard "origin/${GITHUB_REF_NAME}" || true
+              # не вышло — откат к удалённому состоянию, данные снимутся заново на следующем круге
+              git fetch -q origin "$B" && git status -sb | head -1 | grep -q "ahead" && git reset -q --hard "origin/$B" || true
             fi
             n=$((n+1))
-            sleep 300
+            d=$(( 60 - ($(date +%s) - t0) )); [ "$d" -gt 5 ] && sleep "$d" || sleep 5
           done
 
       - name: Запустить цепочку заново

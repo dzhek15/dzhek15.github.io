@@ -2028,14 +2028,25 @@
      без VPN) — снимок из GitHub (data/api/fs-<спорт>.txt, обновляется раз в 5 минут) */
   var fsWorkerDown = 0, fsLastMir = false;
   function fsGetLive(k){
+    var parseMir = function(t){
+      var g = fsParseFeed(t), z = /^ZT÷(\d+)/.exec(t || "");
+      g.mir = true; g.ts = z ? Number(z[1]) * 1000 : 0;
+      return g;
+    };
+    var getMir = function(url, ms){
+      var c2 = typeof AbortController === "function" ? new AbortController() : null;
+      var t2 = c2 ? setTimeout(function(){ c2.abort(); }, ms) : null;
+      return fetch(url, { cache: "no-store", signal: c2 ? c2.signal : undefined })
+        .then(function(r){ if(t2) clearTimeout(t2); if(!r.ok) throw new Error("http"); return r.text(); })
+        .then(parseMir);
+    };
+    /* fs-now — только матчи тиража (обновляется раз в минуту при изменениях), fs — все идущие матчи раз в 5 минут */
     var mirror = function(){
-      return fetch(C.MIRROR_PATH + "fs-" + FS_SPORT_ID[k] + ".txt?t=" + Math.floor(Date.now() / 60000), { cache: "no-store" })
-        .then(function(r){ return r.ok ? r.text() : null; })
-        .then(function(t){
-          var g = fsParseFeed(t), z = /^ZT÷(\d+)/.exec(t || "");
-          g.mir = true; g.ts = z ? Number(z[1]) * 1000 : 0;
-          return g;
-        }).catch(function(){ return []; });
+      var q = ".txt?t=" + Math.floor(Date.now() / 30000), sp = FS_SPORT_ID[k];
+      var full = function(){ return getMir(C.MIRROR_PATH + "fs-" + sp + q, 8000).catch(function(){ return []; }); };
+      return getMir(C.MIRROR_PATH + "fs-now-" + sp + q, 8000).then(function(g){
+        return (g && g.ts && Date.now() - g.ts < 30 * 60000) ? g : full();
+      }, full);
     };
     if(Date.now() - fsWorkerDown < 5 * 60000) return mirror();
     var ctl = typeof AbortController === "function" ? new AbortController() : null;
@@ -2047,7 +2058,7 @@
   }
   function fsLiveTick(){
     if(fsLiveBusy || document.hidden || typeof fetch !== "function") return;
-    if(Date.now() - fsLiveAt < (fsLastMir ? 55000 : FS_LIVE_EVERY) - 1500) return;
+    if(Date.now() - fsLiveAt < (fsLastMir ? 30000 : FS_LIVE_EVERY) - 1500) return;
     var lists = [];
     if(state.matches.length) lists.push(state.matches);
     if(state.prev && Array.isArray(state.prev.matches) && !prevDone()) lists.push(state.prev.matches);
@@ -2079,7 +2090,13 @@
         m.fsPh = { ac: f.sc, ao: f.ao, bx: f.bx, at: m.fsAt };
         if(oldAc !== f.sc) changed = true;
         /* из снимка берём только минуту и фазу: счёт у него может отставать от totobrief */
-        if(!mir && noteScore(m, sc)){ changed = true; if(state.prev && state.prev.matches.indexOf(m) >= 0) state.prev.at = Date.now(); }
+        /* снимок (не старше 12 минут) может только добавить гол: счёт растёт, но не убывает; отмену гола ждём от totobrief */
+        var up = false;
+        if(mir && grp.ts && Date.now() - grp.ts < 12 * 60000){
+          var sa = /(\d+)\D+(\d+)/.exec(m.score || ""), sb = /(\d+)\D+(\d+)/.exec(sc);
+          up = !!(sb && (!sa || (+sb[1] >= +sa[1] && +sb[2] >= +sa[2] && (+sb[1] + +sb[2]) > (+sa[1] + +sa[2]))));
+        }
+        if((!mir || up) && noteScore(m, sc)){ changed = true; if(state.prev && state.prev.matches.indexOf(m) >= 0) state.prev.at = Date.now(); }
       });
       fsLiveBusy = false;
       if(changed){ state.resAt = Date.now(); save(); if(!book) render(); }
@@ -5644,11 +5661,11 @@
     var all = pcsvAll(), e = all[tir] || { sets: [], act: 0 };
     if(!e.sets) e = { sets: e.rows ? [{ name: e.name || "Файл", sys: e.sys || e.rows }] : [], act: 0 };
     var sig = (set.sys || []).join("|");
-    for(var i = 0; i < e.sets.length; i++) if((e.sets[i].sys || []).join("|") === sig){ e.act = i; all[tir] = e; try{ localStorage.setItem(PCSV_KEY, JSON.stringify(all)); }catch(x){} return { dup: true, name: e.sets[i].name }; }
+    for(var i = 0; i < e.sets.length; i++) if((e.sets[i].sys || []).join("|") === sig){ e.act = i; all[tir] = e; pcsvPut(tir); return { dup: true, name: e.sets[i].name }; }
     var nm = set.link ? "Ссылка " + (e.sets.filter(function(x){ return x.link; }).length + 1) : set.name;
     e.sets.push({ name: nm, link: set.link || 0, sys: set.sys }); e.act = e.sets.length - 1; e.at = Date.now();
     all[tir] = e;
-    try{ localStorage.setItem(PCSV_KEY, JSON.stringify(all)); }catch(x){}
+    pcsvPut(tir);
     return { dup: false, name: set.link ? fmt(pcsvExpand(set.sys || []).length * (Number(state.price) || 0)) + " ₽" : nm };
   }
   function pcsvAdd(set){
@@ -5661,7 +5678,90 @@
     pcsvStore();
     return { dup: false };
   }
-  function pcsvAll(){ try{ return JSON.parse(localStorage.getItem(PCSV_KEY) || "{}") || {}; }catch(e){ return {}; } }
+  /* Хранилище наборов: IndexedDB (по ключу на тираж, лимита в несколько МБ нет); localStorage — только
+     старые данные, которые переносятся при первом запуске, и запасной путь, если IndexedDB недоступна.
+     Все чтения идут из памяти PCSV_MEM, запись — в фоне. */
+  var PCSV_MEM = null, PCSV_DB = null, PCSV_DBFAIL = false, PCSV_PEND = {}, PCSV_TIMER = 0;
+  function pcsvAll(){
+    if(!PCSV_MEM){
+      try{ PCSV_MEM = JSON.parse(localStorage.getItem(PCSV_KEY) || "{}") || {}; }catch(e){ PCSV_MEM = {}; }
+    }
+    return PCSV_MEM;
+  }
+  function pcsvDbOpen(cb){
+    if(PCSV_DB || PCSV_DBFAIL || !window.indexedDB){ if(!PCSV_DB) PCSV_DBFAIL = true; cb(PCSV_DB); return; }
+    var done = false, fin = function(db){ if(done) return; done = true; if(!db) PCSV_DBFAIL = true; PCSV_DB = db || null; cb(PCSV_DB); };
+    try{
+      var rq = indexedDB.open("dzhek-prevcsv", 1);
+      rq.onupgradeneeded = function(){ try{ rq.result.createObjectStore("sets"); }catch(e){} };
+      rq.onsuccess = function(){ fin(rq.result); };
+      rq.onerror = rq.onblocked = function(){ fin(null); };
+      setTimeout(function(){ fin(null); }, 4000);
+    }catch(e){ fin(null); }
+  }
+  function pcsvWarn(text){
+    pcsv.msg = text; pcsv.msgAt = Date.now();
+    try{ if(state.prev && $("prevCsv")) renderPrevCsv(); }catch(e){}
+  }
+  function pcsvFlush(){
+    PCSV_TIMER = 0;
+    var keys = Object.keys(PCSV_PEND); if(!keys.length) return;
+    PCSV_PEND = {};
+    var legacy = function(){
+      var okLs = false;
+      try{ localStorage.setItem(PCSV_KEY, JSON.stringify(pcsvAll())); okLs = true; }catch(e){}
+      if(!okLs) pcsvWarn("Наборы не сохранились в браузере (нет места) — останутся до перезагрузки страницы.");
+    };
+    pcsvDbOpen(function(db){
+      if(!db){ legacy(); return; }
+      try{
+        var tx = db.transaction("sets", "readwrite"), st = tx.objectStore("sets"), all = pcsvAll();
+        keys.forEach(function(k){
+          var e = all[k];
+          if(e && ((e.sets && e.sets.length) || e.rows)) st.put(e, k); else st.delete(k);
+        });
+        tx.oncomplete = function(){ try{ localStorage.removeItem(PCSV_KEY); }catch(e){} };
+        tx.onerror = tx.onabort = function(){
+          pcsvWarn("Не удалось сохранить наборы в браузере (" + ((tx.error && tx.error.name) || "ошибка") + ") — останутся до перезагрузки страницы.");
+        };
+      }catch(e){ legacy(); }
+    });
+  }
+  function pcsvPut(tir){
+    PCSV_PEND[String(tir)] = 1;
+    if(!PCSV_TIMER) PCSV_TIMER = setTimeout(pcsvFlush, 300);
+  }
+  /* подтянуть сохранённое из IndexedDB и слить со старым localStorage */
+  function pcsvLoadDb(){
+    try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist(); }catch(e){}
+    pcsvAll();
+    pcsvDbOpen(function(db){
+      var legacyKeys = Object.keys(PCSV_MEM);
+      if(!db) return;
+      try{
+        var rq = db.transaction("sets", "readonly").objectStore("sets").openCursor(), got = {};
+        rq.onsuccess = function(){
+          var cur = rq.result;
+          if(cur){ got[cur.key] = cur.value; cur.continue(); return; }
+          var changed = false;
+          Object.keys(got).forEach(function(k){
+            var mine = PCSV_MEM[k], e = got[k];
+            if(!e || !e.sets) return;
+            if(mine && mine.sets){
+              var have = {}; e.sets.forEach(function(x){ have[(x.sys || []).join("|")] = 1; });
+              mine.sets.forEach(function(x){ if(!have[(x.sys || []).join("|")]){ e.sets.push(x); pcsvPut(k); } });
+            }
+            PCSV_MEM[k] = e; changed = true;
+          });
+          legacyKeys.forEach(function(k){ if(!got[k]) pcsvPut(k); });
+          if(changed && pcsv.tir != null && !(pcsv.sets && pcsv.sets.length)) pcsv.tir = null;
+          if(changed){ try{ if(state.prev && $("prevCsv")) renderPrevCsv(); }catch(e){} }
+        };
+        rq.onerror = function(){};
+      }catch(e){}
+    });
+  }
+  pcsvLoadDb();
   /* у набора из ссылки вместо слова «Ссылка N» — сумма, на которую он сделан */
   function pcsvLabel(st){
     if(!st) return "";
@@ -5678,7 +5778,8 @@
     if(pcsv.sets.length) all[pcsv.tir] = { act: pcsv.act, at: Date.now(),
       sets: pcsv.sets.map(function(st){ return { name: st.name, link: st.link || 0, sys: st.sys }; }) };
     else delete all[pcsv.tir];
-    try{ localStorage.setItem(PCSV_KEY, JSON.stringify(all)); return true; }catch(e){ return false; }
+    pcsvPut(pcsv.tir);
+    return true;
   }
   function pcsvPick(){
     var inp = $("filePrevCsv");
@@ -7148,6 +7249,29 @@
     }
     return out;
   }
+  /* жадно набирает исходы в таблицу: каждый шаг — исход, который сильнее всего поднимает шанс на единицу роста числа вариантов;
+     останавливается, когда число вариантов (произведение) дошло бы до больше N */
+  function huntSystem(P, N){
+    var n = P.length, order = [], set = [], sum = [], size = 1;
+    for(var i = 0; i < n; i++){
+      var o = [0, 1, 2].sort(function(a, b){ return P[i][b] - P[i][a]; });
+      order.push(o); set.push([o[0]]); sum.push(Math.max(P[i][o[0]], 1e-9));
+    }
+    for(;;){
+      var bi = -1, bg = -1;
+      for(i = 0; i < n; i++){
+        var len = set[i].length; if(len >= 3) continue;
+        if(size / len * (len + 1) > N) continue;
+        var k = order[i][len], g = Math.log((sum[i] + P[i][k]) / sum[i]) / Math.log((len + 1) / len);
+        if(g > bg){ bg = g; bi = i; }
+      }
+      if(bi < 0) break;
+      var l2 = set[bi].length, k2 = order[bi][l2];
+      size = size / l2 * (l2 + 1); sum[bi] += P[bi][k2]; set[bi].push(k2);
+    }
+    var p = 1; for(i = 0; i < n; i++) p *= sum[i];
+    return { set: set, size: Math.round(size), p: p };
+  }
   function planHunt(N){
     var P = [], Q = [], bad = null;
     state.matches.forEach(function(m){
@@ -7171,20 +7295,17 @@
     lines.forEach(function(c){ p15 += Math.exp(c.lp); });
     for(var i = 0; i < 15; i++) share.push([0, 0, 0]);
     lines.forEach(function(c){ c.line.forEach(function(k, i){ share[i][k]++; }); });
-    /* для сравнения — система двойников и тройников примерно той же цены */
-    var sys = planByData(N), sysP = 1;
-    sys.rows.forEach(function(r){
-      if(!r.set.length){ sysP = 0; return; }
-      var hp = huntProbs(r.m); var s = 0; r.set.forEach(function(k){ s += hp ? hp[k] : 0; }); sysP *= s;
-    });
-    return { P: P, lines: lines, p15: p15, share: share, sysP: sysP, sysCombos: sys.combos };
+    /* таблица: самые вероятные исходы, которых хватает на N вариантов (произведение исходов по матчам не больше N) —
+       она же служит для сравнения: система двойников и тройников той же цены */
+    var tab = huntSystem(P, N);
+    return { P: P, lines: lines, p15: p15, share: share, sysP: tab.p, sysCombos: tab.size, tab: tab };
   }
-  /* проставить в таблицу все исходы, которые встречаются в строках охоты */
-  function huntToTable(lines){
+  /* проставить в таблицу самые вероятные исходы на N вариантов (tab.set — исходы по матчам) */
+  function huntToTable(tab){
     pushHistory("до «Охоты на 15»");
     state.matches.forEach(function(m, i){
       var pk = {"1": false, "X": false, "2": false};
-      lines.forEach(function(c){ pk[OUT[c.line[i]]] = true; });
+      tab.set[i].forEach(function(k){ pk[OUT[k]] = true; });
       m.picks = pk; m.mode = "free";
     });
     save(); render();
@@ -7224,7 +7345,7 @@
       + '</select></div>';
     var gain = plan.sysP > 0 ? plan.p15 / plan.sysP : 0;
     h += stratCards([["Цена купона", fmt(cost) + " ₽"], ["Шанс 15 из 15", stratChance(plan.p15)],
-      ["Система той же цены", plan.sysP > 0 ? stratChance(plan.sysP) : "—"]]);
+      ["Система в таблице", plan.sysP > 0 ? stratChance(plan.sysP) : "—"]]);
     if(gain > 0) h += '<p class="ev-sub dt-center">Строки дают в ' + gain.toFixed(2).replace(".", ",") + ' раза больше шанса, чем система двойников и тройников на ' + fmt(plan.sysCombos) + ' вариантов.</p>';
     h += '<table class="ev-tab ev-data-tab"><thead><tr><th>№</th><th>Матч</th><th class="dt-pr">1 · X · 2</th><th>В строках</th></tr></thead><tbody>';
     state.matches.forEach(function(m, i){
@@ -7246,14 +7367,14 @@
     $("huntSize").addEventListener("change", function(){ state.huntSize = Number(this.value) || 100; save(); showHunt(); });
     var hb = $("huntBasket");
     function tableNote(sys){
-      return " Таблица показывает все исходы строк (система на " + fmt(sys) + " вар.) — «Записать» не нажимай.";
+      return " В таблице самые вероятные исходы на " + fmt(sys) + " вар. (" + fmt(sys * price) + " ₽), а строки охоты — отдельно; «Записать» не нажимай.";
     }
     if(hb && canBasket) hb.addEventListener("click", function(){
       if(state.played.length + plan.lines.length > BASKET_MAX){
         say("В корзине уже " + fmt(state.played.length) + " вариантов, вместе с " + fmt(plan.lines.length) + " строками охоты выйдет больше " + fmt(BASKET_MAX) + ". Очисти корзину или скачай CSV.");
         return;
       }
-      var sys = huntToTable(plan.lines);
+      var sys = huntToTable(plan.tab);
       var r = huntCommit(plan.lines, price);
       say("«Охота на 15»: в корзину " + fmt(r.added) + " строк на " + fmt(r.added * price) + " ₽"
         + (r.dup ? ", повторов пропущено: " + fmt(r.dup) : "") + "." + tableNote(sys));
@@ -7261,7 +7382,7 @@
     $("huntCsv").addEventListener("click", function(){
       saveCsvFile(briefCsv(plan.lines.map(function(c){ return c.line; })),
         "ohota15_" + (state.tirazh || "tirazh") + "_" + plan.lines.length + ".csv");
-      var sys = huntToTable(plan.lines);
+      var sys = huntToTable(plan.tab);
       $("evBack").hidden = true;
       say("«Охота на 15»: " + fmt(plan.lines.length) + " строк на " + fmt(plan.lines.length * price) + " ₽ — в CSV." + tableNote(sys));
     });
