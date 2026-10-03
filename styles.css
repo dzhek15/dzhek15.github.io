@@ -1741,3 +1741,6 @@ body.is-prev .row .pick.ai-pk{box-shadow:inset 0 0 0 2px var(--brand-gold), var(
 }
 
 :root:not([data-compact="1"]) body.is-prev .row .tc-t.tc-end{font-size:12px; line-height:1.15; font-weight:700; letter-spacing:.03em; color:#ffb4ab}
+
+.hist li.hist-more{justify-content:center; border-bottom:none; padding-bottom:0}
+.hist li.hist-more button{width:100%}

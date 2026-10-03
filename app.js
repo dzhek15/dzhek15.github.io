@@ -269,13 +269,13 @@
     clearTimeout(UJ.pt);
     try{
       var keep = UJ.KEEP, str = "";
-      for(var tries = 0; tries < 4; tries++){
-        var b = UJ.back.slice(-keep), f = UJ.fwd.slice(-keep), need = {}, e = {};
+      for(var tries = 0; tries < 7; tries++){
+        var b = keep ? UJ.back.slice(-keep) : [], f = keep ? UJ.fwd.slice(-keep) : [], need = {}, e = {};
         b.concat(f).forEach(function(s){ s.p.forEach(function(u){ need[u] = 1; }); });
         Object.keys(need).forEach(function(u){ if(UJ.ent[u]) e[u] = UJ.ent[u]; });
         str = JSON.stringify({ b: b, f: f, e: e });
-        if(str.length < 1400000) break;
-        keep = Math.max(3, Math.floor(keep / 2));
+        if(str.length < 700000) break;
+        keep = Math.floor(keep / 2);   /* огромная корзина: в память браузера уходит меньше шагов, в сессии остаются все */
       }
       localStorage.setItem(UJ_KEY, str);
       /* словарь вариантов чистим от тех, на кого никто не ссылается */
@@ -1304,7 +1304,7 @@
       });
       added++;
     });
-    if(state.played.length > 400) state.played.length = 400;
+    if(state.played.length > BASKET_MAX) state.played.length = BASKET_MAX;
     save(); render();
     $("evBack").hidden = true;
     say("Положено в корзину: " + fmt(added) + " строк(и) на " + fmt(added * price) + " ₽" +
@@ -3054,6 +3054,7 @@
   }
 
   var histArmed = -1, histTimer = null;
+  var HIST_SHOW = 200;   /* сколько вариантов корзины рисуем разом: тысячи строк DOM тормозили бы страницу */
   var clearArmed = 0, clearTimer = null;
   /* одинаковые купоны в корзине: оригинал — самый ранний, остальные помечаются «повтор» */
   function histDups(){
@@ -3071,7 +3072,7 @@
     var sigs = {}, coupons = 0, seen = {}, lines = 0;
     plan.take.forEach(function(v){
       if(v.sig){ if(sigs[v.sig]) coupons++; sigs[v.sig] = 1; }
-      var rows = enumerate(v.snap);
+      var rows = enumerate(vSnap(v));
       if(rows === null || rows === "toobig") return;
       for(var r = 0; r < rows.length; r++){ var k = rows[r].join(""); if(seen[k]) lines++; else seen[k] = 1; }
     });
@@ -3107,7 +3108,8 @@
       clearArmed = 0; clearTimeout(clearTimer);
       (cb.querySelector(".lbl") || cb).textContent = "Очистить корзину"; cb.classList.remove("danger");
     }
-    state.played.forEach(function(h, i){
+    var shown = Math.min(state.played.length, HIST_SHOW);
+    for(var i = 0; i < shown; i++){ (function(h, i){
       var li = document.createElement("li");
       if(h.sel === false) li.classList.add("is-off");
       if(dups.mark[i] != null) li.classList.add("is-dup");
@@ -3180,13 +3182,24 @@
       left.style.flex = "1 1 auto"; left.style.minWidth = "0";
       li.appendChild(left); li.appendChild(acts);
       ul.appendChild(li);
-    });
+    })(state.played[i], i); }
+    if(shown < state.played.length){
+      var more = document.createElement("li");
+      more.className = "hist-more";
+      var mb = document.createElement("button");
+      mb.type = "button"; mb.className = "btn-ev";
+      mb.textContent = "Ещё " + fmt(Math.min(200, state.played.length - shown)) + " · осталось " + fmt(state.played.length - shown);
+      mb.title = "В файл и в сводку уходят все варианты, а не только показанные";
+      mb.addEventListener("click", function(){ HIST_SHOW += 200; renderHistory(); });
+      more.appendChild(mb); ul.appendChild(more);
+    }
   }
 
   function restore(h){
     pushHistory("до возврата");
+    var hs = vSnap(h) || [];
     state.matches.forEach(function(m, i){
-      var s = h.snap[i];
+      var s = hs[i];
       if(!s) return;
       m.picks = {"1":s.picks["1"], "X":s.picks["X"], "2":s.picks["2"]};
       m.mode = s.mode;
@@ -3305,7 +3318,7 @@
         return {picks:{"1":m.picks["1"],"X":m.picks["X"],"2":m.picks["2"]}, mode:m.mode, pool:(m.pool || OUT).slice()};
       })
     });
-    if(state.played.length > 400) state.played.length = 400;
+    if(state.played.length > BASKET_MAX) state.played.length = BASKET_MAX;
     save(); render();
     var note = $("rollNote");
     note.classList.add("done");
@@ -3954,26 +3967,23 @@
     return p;
   }
   /* строки «Брифа» — в корзину, как броски и прокрутки */
-  var BASKET_MAX = 400;
+  var BASKET_MAX = 12000;   /* строки охоты/брифа хранятся сжато (без snap), поэтому влезает 10 000 */
   function briefToBasket(lines, g){
     var price = briefPrice();
     var stamp = new Date().toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit"});
-    var seen = {}, added = 0, dup = 0;
+    var seen = {}, add = [], dup = 0;
     state.played.forEach(function(v){ if(v.sig) seen[v.sig] = true; });
     lines.forEach(function(L, n){
-      var snap = state.matches.map(function(m, j){
-        var pk = {"1": false, "X": false, "2": false}; pk[OUT[L[j]]] = true;
-        return { picks: pk, mode: "free", pool: (m.pool || OUT).slice() };
-      });
       var sig = L.map(function(k){ return OUT[k]; }).join(" ");
       if(seen[sig]){ dup++; return; }
-      seen[sig] = true; state.rolls++; state.spent += price;
-      state.played.unshift({ at: stamp, label: "бриф " + g + " · " + (n + 1) + "/" + lines.length, sig: sig, combos: 1, cost: price, snap: snap });
-      added++;
+      seen[sig] = true;
+      add.push({ at: stamp, label: "бриф " + g + " · " + (n + 1) + "/" + lines.length, sig: sig, combos: 1, cost: price });
     });
+    state.rolls += add.length; state.spent += add.length * price;
+    state.played = add.reverse().concat(state.played);
     if(state.played.length > BASKET_MAX) state.played.length = BASKET_MAX;
     save(); render();
-    return { added: added, dup: dup };
+    return { added: add.length, dup: dup };
   }
 
   function briefCsv(lines){
@@ -5223,7 +5233,7 @@
       if(Array.isArray(r.pool) && r.pool.length) m.pool = r.pool.slice();
       n++;
     });
-    if(n){ state.played = (c.played || []).slice(); state.spent = c.spent || 0; state.rolls = c.rolls || 0; }
+    if(n){ state.played = (c.played || []).slice(); state.spent = c.spent || 0; state.rolls = c.rolls || 0; c.played = []; }   /* копию корзины не держим дважды: при уходе с тиража она запишется заново */
     return n > 0;
   }
   function matchesFromInfo(info){
@@ -6323,12 +6333,29 @@
   /* Формат Балтбета: без заголовка и BOM, разделитель ";",
      первое поле — цена строки, дальше по одному исходу на матч, перевод строки "\n". */
   /* сколько строк даст один сохранённый вариант */
+  /* у однострочных вариантов (охота, бриф) копии купона нет — исходы берём из подписи «1 X 2 …» */
+  function vSnap(v){
+    if(!v) return null;
+    if(Array.isArray(v.snap)) return v.snap;
+    if(!v.sig) return null;
+    var a = String(v.sig).split(" ");
+    if(a.length !== state.matches.length) return null;
+    var out = [];
+    for(var j = 0; j < a.length; j++){
+      if(OUT.indexOf(a[j]) < 0) return null;
+      var pk = {"1": false, "X": false, "2": false}; pk[a[j]] = true;
+      out.push({ picks: pk, mode: "free", pool: OUT.slice() });
+    }
+    return out;
+  }
   function variantCombos(v){
-    if(!v || !Array.isArray(v.snap)) return 0;
+    if(v && !v.snap && v.combos === 1 && v.sig) return 1;   /* быстрый путь для тысяч однострочных вариантов */
+    var vs = vSnap(v);
+    if(!vs) return 0;
     var n = 1;
-    for(var i=0;i<v.snap.length;i++){
+    for(var i=0;i<vs.length;i++){
       var c = 0;
-      for(var k=0;k<3;k++) if(v.snap[i].picks[OUT[k]]) c++;
+      for(var k=0;k<3;k++) if(vs[i].picks[OUT[k]]) c++;
       if(c === 0) return 0;
       n *= c;
     }
@@ -6340,7 +6367,8 @@
     var need = state.matches.length;
     var take = [], skipped = 0, off = 0, total = 0;
     state.played.forEach(function(v){
-      if(!Array.isArray(v.snap) || v.snap.length !== need || variantCombos(v) === 0){ skipped++; return; }
+      var vs0 = v.snap ? v.snap : null;
+      if(vs0 ? (!Array.isArray(vs0) || vs0.length !== need || variantCombos(v) === 0) : (!v.sig || String(v.sig).split(" ").length !== need)){ skipped++; return; }
       if(v.sel === false){ off++; return; }        /* галочка снята — в файл не идёт */
       take.push(v); total += variantCombos(v);
     });
@@ -6355,7 +6383,7 @@
     if(plan.take.length){                       /* выгружаем все сыгранные варианты, от первого к последнему */
       if(plan.total > MAX_CSV) return null;
       for(var i=0;i<plan.take.length;i++){
-        var rows = enumerate(plan.take[i].snap);
+        var rows = enumerate(vSnap(plan.take[i]));
         if(rows === null || rows === "toobig") continue;
         for(var r=0;r<rows.length;r++) lines.push(String(price) + ";" + rows[r].join(";"));
       }
@@ -6400,7 +6428,7 @@
     else {
       var plan = csvPlan();
       for(var i = 0; i < plan.take.length; i++){
-        var row = mk(plan.take[i].snap);
+        var row = mk(vSnap(plan.take[i]));
         if(row) lines.push(row);
       }
       src = "корзина";
@@ -7155,23 +7183,21 @@
   }
   function huntCommit(lines, price){
     var stamp = new Date().toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit"});
-    var seen = {}, added = 0, dup = 0;
+    var seen = {}, add = [], dup = 0;
     state.played.forEach(function(v){ if(v.sig) seen[v.sig] = true; });
     lines.forEach(function(c, n){
-      var snap = state.matches.map(function(m, j){
-        var pk = {"1": false, "X": false, "2": false}; pk[OUT[c.line[j]]] = true;
-        return { picks: pk, mode: "free", pool: (m.pool || OUT).slice() };
-      });
       var sig = c.line.map(function(k){ return OUT[k]; }).join(" ");
       if(seen[sig]){ dup++; return; }
-      seen[sig] = true; state.rolls++; state.spent += price;
-      state.played.unshift({ at: stamp, label: "охота " + (n + 1) + "/" + lines.length, sig: sig, combos: 1, cost: price, snap: snap });
-      added++;
+      seen[sig] = true;
+      /* без копии купона (snap): 10 000 строк иначе не поместились бы в память браузера */
+      add.push({ at: stamp, label: "охота " + (n + 1) + "/" + lines.length, sig: sig, combos: 1, cost: price });
     });
-    if(state.played.length > 400) state.played.length = 400;
+    state.rolls += add.length; state.spent += add.length * price;
+    state.played = add.reverse().concat(state.played);      /* порядок тот же, что у прежних одиночных добавлений: последняя строка сверху */
+    if(state.played.length > BASKET_MAX) state.played.length = BASKET_MAX;
     save(); render();
     $("evBack").hidden = true;
-    return { added: added, dup: dup };
+    return { added: add.length, dup: dup };
   }
   function showHunt(){
     var box = stratGuard("Стратегия «Охота на 15»"); if(!box) return;
@@ -7200,11 +7226,11 @@
         + '<td class="nw mono dt-pr">' + pr + '</td><td class="dt-share"><span class="dt-pick">' + parts.join(" · ") + '</span></td></tr>';
     });
     h += '</tbody></table>';
-    var canBasket = plan.lines.length <= 400;
+    var canBasket = plan.lines.length <= BASKET_MAX;
     h += '<div class="ev-data-go ev-data-go2">'
-      + '<button type="button" id="huntBasket" class="btn-ev"' + (canBasket ? '' : ' disabled title="В корзину помещается до 400 строк — используй CSV"') + '>В корзину</button>'
+      + '<button type="button" id="huntBasket" class="btn-ev"' + (canBasket ? '' : ' disabled title="В корзину помещается до ' + fmt(BASKET_MAX) + ' строк — используй CSV"') + '>В корзину</button>'
       + '<button type="button" id="huntCsv" class="btn-ev">Скачать CSV</button></div>';
-    if(!canBasket) h += '<p class="ev-note dt-center">Больше 400 строк корзина не вмещает — такой купон выгружается сразу в CSV.</p>';
+    if(!canBasket) h += '<p class="ev-note dt-center">Больше ' + fmt(BASKET_MAX) + ' строк корзина не вмещает — такой купон выгружается сразу в CSV.</p>';
     h += '<p class="ev-note">Выигрыш не гарантирован: даже 10 000 строк дают около полупроцента шанса. Контора оценивает матчи точно, поэтому шанс растёт в основном с числом строк.</p>';
     box.innerHTML = h;
     $("evBack").hidden = false;
@@ -7214,6 +7240,10 @@
       return " Таблица показывает все исходы строк (система на " + fmt(sys) + " вар.) — «Записать» не нажимай.";
     }
     if(hb && canBasket) hb.addEventListener("click", function(){
+      if(state.played.length + plan.lines.length > BASKET_MAX){
+        say("В корзине уже " + fmt(state.played.length) + " вариантов, вместе с " + fmt(plan.lines.length) + " строками охоты выйдет больше " + fmt(BASKET_MAX) + ". Очисти корзину или скачай CSV.");
+        return;
+      }
       var sys = huntToTable(plan.lines);
       var r = huntCommit(plan.lines, price);
       say("«Охота на 15»: в корзину " + fmt(r.added) + " строк на " + fmt(r.added * price) + " ₽"
