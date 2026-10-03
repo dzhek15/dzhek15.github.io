@@ -1,0 +1,64 @@
+name: keepalive
+
+# Страховка от пропусков расписания GitHub: одно долгое задание само снимает данные
+# (живые матчи — каждые 5 минут, зеркало totobrief/stavka и эмблемы — каждые 30 минут),
+# а в конце запускает себя заново. Расписание ниже только поднимает цепочку, если она оборвалась.
+# Обычные feed-mirror и fs-live остаются как есть.
+
+on:
+  schedule:
+    - cron: "23 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: keepalive
+  cancel-in-progress: false
+
+jobs:
+  loop:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+
+      - name: Цикл снятия данных
+        run: |
+          git config user.name "feed-mirror"
+          git config user.email "feed-mirror@users.noreply.github.com"
+          B="${GITHUB_REF_NAME}"
+          sync() { git fetch -q origin "$B" && git reset -q --hard "origin/$B"; }
+          end=$(( $(date +%s) + 335*60 ))
+          n=0
+          while [ "$(date +%s)" -lt "$end" ]; do
+            sync || true
+            kind="fs-live"
+            python3 scripts/fslive.py || true
+            if [ $((n % 6)) -eq 0 ]; then
+              kind="feed"
+              python3 scripts/feed.py || true
+              python3 scripts/emblems.py || true
+            fi
+            git add -A data/api icons/teams
+            if ! git diff --cached --quiet; then
+              git commit -q -m "$kind: $(date -u +'%Y-%m-%d %H:%M UTC') (keepalive)"
+              for i in 1 2 3; do
+                git pull -q --rebase origin "${GITHUB_REF_NAME}" && git push -q && break
+                git rebase --abort 2>/dev/null || true
+                sleep 5
+              done
+              # не вышло — откатываемся к удалённому состоянию, данные снимутся заново на следующем круге
+              git fetch -q origin "${GITHUB_REF_NAME}" && git status -sb | head -1 | grep -q "ahead" && git reset -q --hard "origin/${GITHUB_REF_NAME}" || true
+            fi
+            n=$((n+1))
+            sleep 300
+          done
+
+      - name: Запустить цепочку заново
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run keepalive.yml --repo "$GITHUB_REPOSITORY" --ref "$GITHUB_REF_NAME"
