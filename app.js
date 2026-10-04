@@ -5088,11 +5088,15 @@
       var st = r[0] || {}, nw = r[1], si = r[2], gh = r[3] && r[3].workflow_runs && r[3].workflow_runs[0];
       var rows = [];
       /* уровень: 0 — норма, 1 — запаздывает, 2 — проблема */
-      if(gh){
-        var ok = gh.conclusion === "success" || gh.status !== "completed";
-        var lv = !ok ? 2 : ageMin(gh.created_at) > 90 ? 2 : ageMin(gh.created_at) > 45 ? 1 : 0;
-        rows.push({ n: "Автообновление на GitHub", d: "каждые 30 минут", at: gh.created_at, lv: lv,
-          s: !ok ? "последний запуск с ошибкой" : gh.status !== "completed" ? "идёт сейчас" : lv ? "давно не запускалось" : "работает" });
+      /* расписание feed.yml GitHub выполняет с большими пропусками (часами), а данные снимает цепочка keepalive:
+         если зеркало (status.json) обновлялось недавно, автообновление работает, а время берём из зеркала */
+      var mirFresh = ageMin(st.updated_at) <= 45;
+      if(gh || mirFresh){
+        var ok = mirFresh || gh.conclusion === "success" || gh.status !== "completed";
+        var gat = mirFresh ? st.updated_at : gh.created_at;
+        var lv = !ok ? 2 : ageMin(gat) > 90 ? 2 : ageMin(gat) > 45 ? 1 : 0;
+        rows.push({ n: "Автообновление на GitHub", d: "каждые 30 минут", at: gat, lv: lv,
+          s: !ok ? "последний запуск с ошибкой" : (!mirFresh && gh.status !== "completed") ? "идёт сейчас" : lv ? "давно не запускалось" : "работает" });
       } else {
         rows.push({ n: "Автообновление на GitHub", d: "каждые 30 минут", at: null, lv: 1, s: "GitHub не ответил — проверить не удалось" });
       }
