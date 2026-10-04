@@ -11,6 +11,8 @@
   --warn:#8A5A12; --warn-bg:#F7ECD8;
   --shadow:0 1px 0 rgba(19,26,27,.06), 0 6px 18px -12px rgba(19,26,27,.35);
   --r:4px;
+  /* золото плохо читается на светлой теме: текст и выбор ИИ — стальной синий из палитры */
+  --gold-ink:#3E5C76; --gold-tsh:none; --ai-pk-bd:#3E5C76; --ai-pk-ink:#FFFFFF; --ai-pk-bg:#3E5C76; --ai-pk-glow:0 0 0 0 transparent;
 
   /* лёгкое сияние на фоне страницы — нейтральная тень сверху (не золото — на серо-салатовом фоне
      золотой подсвет смотрелся мутно), сталь в углу */
@@ -29,7 +31,7 @@
     --surface:#182126; --surface-2:#1E282E; --surface-3:#26333A;
     --ink:#E3EBEA; --muted:#8FA1A2; --rule:#2A363C; --rule-strong:#3B4A51;
     --accent:#8EB3D4; --accent-ink:#0F1518;
-    --brand-dark:#120d0a; --brand-gold:#c9a24b;
+    --brand-dark:#120d0a; --brand-gold:#c9a24b; --gold-ink:#c9a24b; --gold-tsh:0 0 6px rgba(201,162,75,.4); --ai-pk-bd:#c9a24b; --ai-pk-ink:#f6dc92; --ai-pk-bg:color-mix(in srgb, #c9a24b 24%, transparent); --ai-pk-glow:0 0 8px rgba(201,162,75,.4);
     --o1:#69A8E4; --ox:#9BADAD; --o2:#E88374;
     --o1-soft:#15293C; --ox-soft:#222D31; --o2-soft:#3A2320;
     --hot:#E88374; --hot-soft:#3A2320; --cold:#5FC496;
@@ -42,7 +44,7 @@
   }
 }
 :root[data-theme="dark"]{
-  --brand-dark:#120d0a; --brand-gold:#c9a24b;
+  --brand-dark:#120d0a; --brand-gold:#c9a24b; --gold-ink:#c9a24b; --gold-tsh:0 0 6px rgba(201,162,75,.4); --ai-pk-bd:#c9a24b; --ai-pk-ink:#f6dc92; --ai-pk-bg:color-mix(in srgb, #c9a24b 24%, transparent); --ai-pk-glow:0 0 8px rgba(201,162,75,.4);
   --bg:#0F1518; --on-bg:#E3EBEA; --on-bg-muted:#8FA1A2;
   --surface:#182126; --surface-2:#1E282E; --surface-3:#26333A;
   --ink:#E3EBEA; --muted:#8FA1A2; --rule:#2A363C; --rule-strong:#3B4A51;
@@ -144,13 +146,13 @@ h1,h2,h3{font-family:"Chivo","IBM Plex Sans",system-ui,sans-serif; margin:0; tex
   display:inline-flex; align-items:center; justify-content:center}
 .tir-nav button:hover:not(:disabled){background:var(--surface-2); border-color:var(--accent); color:var(--accent)}
 .tir-nav button:disabled{opacity:.28; cursor:default}
-body.is-prev #tirazhName{color:var(--brand-gold)}
+body.is-prev #tirazhName{color:var(--gold-ink)}
 .prev-bar{margin:0 0 10px; padding:9px 13px; border:1px solid var(--brand-gold); border-radius:var(--r);
   background:var(--surface); box-shadow:var(--shadow); display:flex; flex-wrap:wrap; gap:6px 14px; align-items:center;
   font-size:13px; color:var(--muted)}
 .prev-bar b{color:var(--ink); font-family:"IBM Plex Mono",monospace; font-weight:600}
-.prev-bar .pb-t{color:var(--brand-gold); font-family:"Chivo",sans-serif; font-weight:800; font-size:14px; letter-spacing:.02em}
-.prev-bar .pb-back{margin-left:auto; border:1px solid var(--brand-gold); color:var(--brand-gold); background:transparent;
+.prev-bar .pb-t{color:var(--gold-ink); font-family:"Chivo",sans-serif; font-weight:800; font-size:14px; letter-spacing:.02em}
+.prev-bar .pb-back{margin-left:auto; border:1px solid var(--brand-gold); color:var(--gold-ink); background:transparent;
   border-radius:var(--r); padding:5px 11px; font:600 12px "IBM Plex Sans",sans-serif; cursor:pointer}
 .prev-bar .pb-back:hover{background:var(--surface-2)}
 body.is-prev .console-top, body.is-prev .roll, body.is-prev .keep-bar, body.is-prev .book-bar, body.is-prev #rollNote,
@@ -740,7 +742,7 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 .pick.in-pool{border-style:dashed; border-width:2px; background:transparent; font-weight:600;
   border-color:var(--o1); color:var(--o1)}
 :root[data-theme="dark"] .pick[aria-pressed="true"]{background:var(--brand-gold); border-color:var(--brand-gold); color:var(--brand-dark)}
-:root[data-theme="dark"] .pick.in-pool{border-color:var(--brand-gold); color:var(--brand-gold)}
+:root[data-theme="dark"] .pick.in-pool{border-color:var(--brand-gold); color:var(--gold-ink)}
 .pick.off-pool{opacity:.3; border-style:dotted}
 .pick{transition:background-color .13s linear, border-color .13s linear, color .13s linear}
 @keyframes pickPop{0%{transform:scale(.7); opacity:.3} 55%{transform:scale(1.07)} 100%{transform:scale(1); opacity:1}}
@@ -1005,9 +1007,9 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 /* ---------- составы и новости ---------- */
 .nw-btn{margin-left:10px; padding:1px 7px; border:1px solid var(--rule-strong); border-radius:3px; background:transparent;
   font:600 11px/1.5 "IBM Plex Sans",sans-serif; letter-spacing:.03em; color:var(--muted); cursor:pointer; vertical-align:1px}
-.nw-btn:hover{color:var(--brand-gold); border-color:var(--brand-gold)}
+.nw-btn:hover{color:var(--gold-ink); border-color:var(--brand-gold)}
 .num-nw{cursor:pointer}
-.num-nw:hover{color:var(--brand-gold)}
+.num-nw:hover{color:var(--gold-ink)}
 .nw-links{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:2px 0 14px}
 .nw-link{display:flex; flex-direction:column; gap:2px; padding:9px 11px; border:1px solid var(--rule-strong); border-radius:var(--r);
   background:var(--surface-2); color:var(--ink); text-decoration:none; font:600 13px/1.3 "IBM Plex Sans",sans-serif; text-align:left; cursor:pointer}
@@ -1088,10 +1090,10 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 .ai-txt{margin:0 0 8px; font-size:14.5px; line-height:1.5; color:var(--ink)}
 .ai-src{margin:0 0 12px; font-size:12px; color:var(--muted)}
 .ai-src a{color:var(--muted)}
-.ai-src a:hover{color:var(--brand-gold)}
+.ai-src a:hover{color:var(--gold-ink)}
 #nwAi .ai-txt{font-size:13.5px}
 .ai-pick{margin:0 0 8px; font-size:14px; color:var(--muted)}
-.ai-pick b{color:var(--brand-gold); font-family:"IBM Plex Mono",monospace; font-size:16px; margin-left:2px}
+.ai-pick b{color:var(--gold-ink); font-family:"IBM Plex Mono",monospace; font-size:16px; margin-left:2px}
 .ai-pick .nw-btn{margin-left:6px}
 #aiGo{margin-top:14px}
 .nw-btn.ai-btn:disabled{opacity:.4; cursor:not-allowed}
@@ -1109,13 +1111,13 @@ footer{margin-top:26px; font-size:12.5px; color:var(--muted); border-top:1px sol
 .ai-pick b.ai-kel{color:var(--ink)}
 .ai-vs{display:inline-block; margin-left:10px; padding:1px 8px; border-radius:10px; font-size:12px; border:1px solid var(--rule-strong); color:var(--muted); vertical-align:1px}
 .ai-vs-same{color:var(--muted)}
-.ai-vs-add,.ai-vs-del{color:var(--brand-gold); border-color:var(--brand-gold)}
+.ai-vs-add,.ai-vs-del{color:var(--gold-ink); border-color:var(--brand-gold)}
 .ai-vs-diff{color:#E8453C; border-color:#E8453C}
 .ai-cmp{display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin:0 0 10px}
 .ai-c{display:flex; flex-direction:column; align-items:center; gap:2px; padding:6px 4px; border:1px solid var(--rule-strong); border-radius:6px; position:relative}
 .ai-c i{font-style:normal; font-size:11px; color:var(--muted)}
 .ai-c b{font-family:"IBM Plex Mono",monospace; font-size:14px; color:var(--ink)}
-.ai-c .ai-eq{position:absolute; top:3px; right:6px; font-style:normal; font-size:11px; color:var(--brand-gold)}
+.ai-c .ai-eq{position:absolute; top:3px; right:6px; font-style:normal; font-size:11px; color:var(--gold-ink)}
 .ai-more{margin:4px 0 0; text-align:center}
 /* ИИ в ряду режимов и на компьютере: рандом · фикс · ИИ · FS */
 .meta .nw-btn.ai-btn{display:none}
@@ -1132,7 +1134,7 @@ body.is-prev .row .pick.mine-hit{outline-color:var(--brand-gold)}
 .pc-btn.ghost{border-color:var(--rule-strong); color:var(--muted)}
 .pc-msg{margin:8px 0 0; font-size:12px; color:var(--muted); text-align:center}
 .pc-head{display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:6px 12px}
-.pc-t{color:var(--brand-gold); font:800 14px "Chivo",sans-serif; letter-spacing:.02em}
+.pc-t{color:var(--gold-ink); font:800 14px "Chivo",sans-serif; letter-spacing:.02em}
 .pc-f{font-size:12px; color:var(--muted); max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .pc-acts{display:inline-flex; gap:6px}
 .pc-acts .pc-btn{padding:5px 11px; font-size:12px}
@@ -1141,7 +1143,7 @@ body.is-prev .row .pick.mine-hit{outline-color:var(--brand-gold)}
 .pc-cards div{border:1px solid var(--rule); border-radius:var(--r); padding:7px 4px; text-align:center; background:var(--surface-2)}
 .pc-cards span{display:block; font-size:11px; color:var(--muted); line-height:1.2}
 .pc-cards b{display:block; margin-top:2px; font:600 15px "IBM Plex Mono",monospace}
-.pc-sub{display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:6px 12px; margin:14px 0 8px; font:700 13px "Chivo",sans-serif; color:var(--brand-gold); letter-spacing:.02em}
+.pc-sub{display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:6px 12px; margin:14px 0 8px; font:700 13px "Chivo",sans-serif; color:var(--gold-ink); letter-spacing:.02em}
 .pc-sort{display:inline-flex; border:1px solid var(--rule-strong); border-radius:var(--r); overflow:hidden}
 .pc-sort button{border:0; background:transparent; color:var(--muted); padding:4px 10px; font:600 12px "IBM Plex Sans",sans-serif; cursor:pointer}
 .pc-sort button[aria-pressed="true"]{background:var(--surface-3); color:var(--ink)}
@@ -1174,7 +1176,7 @@ body.is-prev .row .pick.mine-hit{outline-color:var(--brand-gold)}
 .pc-vh span{font-size:10px; color:var(--muted); font-weight:500; line-height:18px}
 .pc-pager{display:flex; align-items:center; justify-content:center; gap:6px; margin-top:12px}
 .pc-pager button{width:32px; height:32px; border:1px solid var(--rule-strong); border-radius:50%; background:transparent; color:var(--ink); font:700 16px/1 "IBM Plex Mono",monospace; cursor:pointer}
-.pc-pager button:hover:not(:disabled){border-color:var(--brand-gold); color:var(--brand-gold)}
+.pc-pager button:hover:not(:disabled){border-color:var(--brand-gold); color:var(--gold-ink)}
 .pc-pager button:disabled{opacity:.3; cursor:default}
 .pc-pager span{min-width:70px; text-align:center; font:500 13px "IBM Plex Mono",monospace; color:var(--muted)}
 .pc-pager b{color:var(--ink)}
@@ -1235,7 +1237,7 @@ body.is-prev .row .pick.mine-hit{outline-color:var(--brand-gold)}
 .acc tbody th, .acc tfoot th{font-family:"IBM Plex Mono",monospace; font-weight:500; color:var(--ink)}
 .acc td b{display:block; font-family:"IBM Plex Mono",monospace; font-size:15px; color:var(--ink)}
 .acc td small{display:block; font-size:10.5px; color:var(--muted); white-space:nowrap}
-.acc td.acc-best b{color:var(--brand-gold)}
+.acc td.acc-best b{color:var(--gold-ink)}
 .acc td.acc-na{color:var(--muted)}
 .acc tfoot th, .acc tfoot td{border-bottom:0; border-top:1px solid var(--rule-strong)}
 @media (max-width:360px){ .acc{font-size:12px} .acc th, .acc td{padding:5px 2px} .acc td small{font-size:9.5px} }
@@ -1450,7 +1452,7 @@ body.is-prev .row .pick.mine-hit{outline-color:var(--brand-gold)}
 @media (prefers-reduced-motion:reduce){ .hist-del.danger{animation:none} }
 
 /* ИИ в просмотре тиража: исходы варианта ИИ и отметка по ходу матча */
-body.is-prev .row .pick.ai-pk{box-shadow:inset 0 0 0 2px var(--brand-gold, #c9a227)}
+body.is-prev .row .pick.ai-pk{box-shadow:inset 0 0 0 2px var(--ai-pk-bd, #c9a227)}
 .ai-live{display:inline-block; margin-left:8px; padding:0 5px; border-radius:3px; font:700 11px/16px "IBM Plex Mono",monospace;
   vertical-align:middle; border:1px solid var(--rule-strong); color:var(--muted); white-space:nowrap}
 .ai-live.ai-ok{color:#3fae6a; border-color:#3fae6a}
@@ -1487,8 +1489,8 @@ body.is-prev .row{box-shadow:inset 3px 0 0 var(--stripe,transparent)}
 body.is-prev .row.ai-ok{--stripe:#3fae6a}
 body.is-prev .row.ai-no{--stripe:#d0564b}
 body.is-prev .row.goal{--stripe:#e0483e}
-body.is-prev .row .pick.ai-pk{opacity:1; border-color:var(--brand-gold); color:#f6dc92;
-  background:color-mix(in srgb, var(--brand-gold) 24%, transparent)}
+body.is-prev .row .pick.ai-pk{opacity:1; border-color:var(--ai-pk-bd); color:var(--ai-pk-ink);
+  background:var(--ai-pk-bg)}
 .st-line{display:none}
 /* кольцо точности ИИ в шапке просмотра */
 .pb-ring{vertical-align:middle; margin-right:6px}
@@ -1512,7 +1514,7 @@ body.is-prev .row .pick.ai-pk{opacity:1; border-color:var(--brand-gold); color:#
 @keyframes pvIn{from{opacity:0; transform:translateY(-6px)} to{opacity:1; transform:none}}
 /* телефон и планшет: компактные строки, детали раскрываются по тапу */
 @media (max-width:820px){
-  .prev-bar .pb-exp{display:inline-flex; align-items:center; margin-left:auto; border:1px solid var(--brand-gold); color:var(--brand-gold); background:transparent; border-radius:3px; padding:3px 9px; font:inherit; font-size:12px; cursor:pointer}
+  .prev-bar .pb-exp{display:inline-flex; align-items:center; margin-left:auto; border:1px solid var(--brand-gold); color:var(--gold-ink); background:transparent; border-radius:3px; padding:3px 9px; font:inherit; font-size:12px; cursor:pointer}
   .prev-bar .pb-exp + .pb-back{margin-left:0}
   :root:not([data-compact="1"]) body.is-prev .row{grid-template-columns:54px minmax(0,1fr); column-gap:10px; row-gap:0; padding:12px 14px 12px 10px; text-align:left; cursor:pointer; -webkit-tap-highlight-color:transparent}
   :root:not([data-compact="1"]) body.is-prev .row .num{display:none}
@@ -1581,7 +1583,7 @@ body.is-prev .row .pick.ai-pk{opacity:1; border-color:var(--brand-gold); color:#
 .pc-cards>div.bump{animation:pcBump .9s ease-out}
 @keyframes pcBump{0%{transform:scale(1)} 25%{transform:scale(1.08); border-color:var(--brand-gold); background:var(--surface-3)} 100%{transform:scale(1)}}
 .pc-cr.wi-able{cursor:pointer; border-radius:var(--r)}
-.pc-cr.wi-able .pc-n{color:var(--brand-gold)}
+.pc-cr.wi-able .pc-n{color:var(--gold-ink)}
 .pc-cr.wi-on{background:var(--surface-2)}
 .pc-wi{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; padding:8px; margin:2px 0 6px; border:1px solid var(--brand-gold); border-radius:var(--r); background:var(--surface-2); animation:wiIn .25s ease-out}
 @keyframes wiIn{from{opacity:0; transform:translateY(-4px)}}
@@ -1613,7 +1615,7 @@ body.is-prev .row .pick.ai-pk{opacity:1; border-color:var(--brand-gold); color:#
 .pc-tm .lv-min{min-width:0; font-weight:700}
 .pc-tm .lv-min:empty{display:inline}
 
-:root:not([data-compact="1"]) body.is-prev .row .tc-t.tc-ft{font-size:12px; line-height:1.15; font-weight:600; text-align:center; color:var(--brand-gold); text-shadow:0 0 6px rgba(201,162,75,.4); letter-spacing:.02em}
+:root:not([data-compact="1"]) body.is-prev .row .tc-t.tc-ft{font-size:12px; line-height:1.15; font-weight:600; text-align:center; color:var(--gold-ink); text-shadow:var(--gold-tsh); letter-spacing:.02em}
 
 /* рейтинг наборов */
 .pc-rkt{max-width:560px; margin:0 auto; border:1px solid var(--rule-strong); border-radius:var(--r); background:var(--surface-2); overflow:hidden}
@@ -1652,7 +1654,7 @@ body.is-prev .row .pick.ai-pk{opacity:1; border-color:var(--brand-gold); color:#
   background:linear-gradient(180deg, color-mix(in srgb,var(--brand-gold) 10%, var(--surface-2)), var(--surface-2) 60%);
   box-shadow:0 0 0 1px color-mix(in srgb,var(--brand-gold) 25%, transparent), 0 10px 28px rgba(0,0,0,.35), 0 0 26px color-mix(in srgb,var(--brand-gold) 14%, transparent)}
 .pc-rkttl{display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:2px}
-.pc-rkx{font:800 15px "Chivo",sans-serif; letter-spacing:.08em; text-transform:uppercase; color:var(--brand-gold)}
+.pc-rkx{font:800 15px "Chivo",sans-serif; letter-spacing:.08em; text-transform:uppercase; color:var(--gold-ink)}
 .pc-rkx::before,.pc-rkx::after{content:""; display:inline-block; width:18px; height:1px; background:currentColor; vertical-align:middle; margin:0 8px; opacity:.6}
 .pc-rklive{display:inline-flex; align-items:center; gap:5px; padding:2px 8px; border:1px solid #e0483e; border-radius:999px; font:700 10px/1.4 "IBM Plex Mono",monospace; letter-spacing:.06em; color:#ffb4ab; background:rgba(224,72,62,.12)}
 .pc-rkw .pc-rkt{border-color:var(--rule-strong); background:rgba(0,0,0,.18)}
@@ -1680,7 +1682,7 @@ body.is-prev .row .pick.ai-pk{opacity:1; border-color:var(--brand-gold); color:#
 
 /* ПК: тот же порядок, что на телефоне — время слева, счёт у правого края названий, детали раскрываются */
 @media (min-width:821px){
-  .prev-bar .pb-exp{display:inline-flex; align-items:center; margin-left:auto; border:1px solid var(--brand-gold); color:var(--brand-gold); background:transparent; border-radius:3px; padding:3px 11px; font:inherit; font-size:12px; cursor:pointer}
+  .prev-bar .pb-exp{display:inline-flex; align-items:center; margin-left:auto; border:1px solid var(--brand-gold); color:var(--gold-ink); background:transparent; border-radius:3px; padding:3px 11px; font:inherit; font-size:12px; cursor:pointer}
   .prev-bar .pb-exp:hover{background:var(--surface-2)}
   .prev-bar .pb-exp + .pb-back{margin-left:0}
   :root:not([data-compact="1"]) body.is-prev .row{--h:64px; grid-template-columns:76px minmax(0,1fr) repeat(3,54px) 112px; column-gap:12px; row-gap:0; padding:10px 14px 10px 10px; text-align:left; cursor:pointer; align-items:start}
@@ -1689,7 +1691,7 @@ body.is-prev .row .pick.ai-pk{opacity:1; border-color:var(--brand-gold); color:#
   :root:not([data-compact="1"]) body.is-prev .row .tcol{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; grid-column:1; grid-row:1; min-width:0; height:var(--h)}
   :root:not([data-compact="1"]) body.is-prev .row .tc-t{display:block; min-width:0; font:700 16px/1.1 "IBM Plex Mono",monospace; color:var(--ink); white-space:nowrap}
   :root:not([data-compact="1"]) body.is-prev .row .tc-t.tc-live{color:#ff7a6e}
-  :root:not([data-compact="1"]) body.is-prev .row .tc-t.tc-ft{font-size:12px; line-height:1.15; font-weight:600; text-align:center; color:var(--brand-gold); text-shadow:0 0 6px rgba(201,162,75,.4); letter-spacing:.02em}
+  :root:not([data-compact="1"]) body.is-prev .row .tc-t.tc-ft{font-size:12px; line-height:1.15; font-weight:600; text-align:center; color:var(--gold-ink); text-shadow:var(--gold-tsh); letter-spacing:.02em}
   :root:not([data-compact="1"]) body.is-prev .row .tc-n{display:flex; align-items:center; gap:3px; font-style:normal; font-size:11px; color:var(--muted)}
   :root:not([data-compact="1"]) body.is-prev .row .tc-n::after{content:"\25BE"; display:inline-block; transition:transform .2s}
   :root:not([data-compact="1"]) body.is-prev .row.open .tc-n::after{transform:rotate(180deg)}
@@ -1728,7 +1730,7 @@ body.is-prev .row .pick.ai-pk{opacity:1; border-color:var(--brand-gold); color:#
   :root:not([data-compact="1"]) body.is-prev .row.open .picks-m{max-width:420px; margin-left:auto; margin-right:auto; width:100%}
 }
 
-.pc-sr .pc-tm.pc-ftm{color:var(--brand-gold); text-shadow:0 0 6px rgba(201,162,75,.4)}
+.pc-sr .pc-tm.pc-ftm{color:var(--gold-ink); text-shadow:var(--gold-tsh)}
 
 /* фильтр матчей в просмотре тиража */
 .prev-bar .pb-flt{flex:0 0 100%; display:flex; flex-wrap:wrap; gap:6px; padding-top:8px; margin-top:2px; border-top:1px solid var(--rule)}
@@ -1745,9 +1747,9 @@ body.is-prev .row.pv-hide{display:none}
 body.is-prev .row.ai-ok{--stripe:#3fae6a}
 body.is-prev .row.ai-no{--stripe:#d0564b}
 body.is-prev .row.ai-ok{box-shadow:inset 3px 0 0 var(--stripe), inset 18px 0 22px -20px rgba(63,174,106,.45)}
-body.is-prev .row .pick.ai-pk{box-shadow:inset 0 0 0 2px var(--brand-gold), var(--gold-glow)}
+body.is-prev .row .pick.ai-pk{box-shadow:inset 0 0 0 2px var(--ai-pk-bd), var(--ai-pk-glow)}
 .prev-bar{box-shadow:var(--shadow), 0 0 14px -6px rgba(201,162,75,.5)}
-.prev-bar .pb-ai b, .prev-bar #pbBest b, .prev-bar #pbSum b{color:var(--brand-gold); text-shadow:0 0 6px rgba(201,162,75,.4)}
+.prev-bar .pb-ai b, .prev-bar #pbBest b, .prev-bar #pbSum b{color:var(--gold-ink); text-shadow:var(--gold-tsh)}
 
 @media (max-width:420px){
   .prev-bar .pb-flt{display:grid; grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -1763,13 +1765,13 @@ body.is-prev .row .pick.ai-pk{box-shadow:inset 0 0 0 2px var(--brand-gold), var(
 body.is-prev .row .tcol .tc-t.tc-pp{font-size:11px; font-weight:700; letter-spacing:.02em; color:var(--muted); text-align:center}
 .pc-tm.pc-pp{color:var(--muted); font-style:normal}
 /* пометка набора ИИ в рейтинге */
-.rk-ai{font-style:normal; font-weight:800; font-size:10px; letter-spacing:.04em; color:var(--brand-gold); border:1px solid currentColor; border-radius:4px; padding:0 4px; margin-right:2px}
+.rk-ai{font-style:normal; font-weight:800; font-size:10px; letter-spacing:.04em; color:var(--gold-ink); border:1px solid currentColor; border-radius:4px; padding:0 4px; margin-right:2px}
 @media (max-width:340px){ .pc-rkh,.pc-rk{grid-template-columns:24px minmax(0,1fr) 48px 28px 38px; gap:2px; padding:0 5px} .rk-n b{font-size:12px; letter-spacing:-.02em} .rk-n small{font-size:10px} .rk-ai{font-size:9px; padding:0 3px} }
 
 /* напоминалка: названия команд в активном тираже нажимаются, там история их матчей в тото */
 .tm-hint{display:flex; align-items:center; justify-content:center; padding:7px 10px 9px; font-size:12px; line-height:1.25; color:var(--muted); text-align:center}
 .tm-in{display:flex; align-items:center; justify-content:center; gap:7px; min-width:0}
-.tm-hint svg{flex:none; color:var(--brand-gold)}
+.tm-hint svg{flex:none; color:var(--gold-ink)}
 /* маленькая зелёная стрелка вниз: вместо пульсации по ней плавно проходит блик */
 .tm-arr{flex:none; width:9px; height:12px; background:linear-gradient(115deg,#2f8f55 0 38%,#8be3ad 50%,#2f8f55 62% 100%) 0 0/260% 100%;
   -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 12'%3E%3Cpath d='M3.4 0h2.2v6.4H9L4.5 12 0 6.4h3.4z'/%3E%3C/svg%3E") center/100% 100% no-repeat;
