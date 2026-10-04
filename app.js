@@ -750,6 +750,109 @@
     return { lines: lines, U: U, rows: lines.length, m: m, r: r, ms: Date.now() - t0, w15: wt ? w15 : null, w14: wt ? w14 : null };
   }
 
+  /* BRIEF_CHANCE_BEGIN
+     «Максимум шанса»: без гарантии. Из строк купона жадно берём те, чей шар (сама строка и все,
+     что отличаются от неё одним матчем — это 14 из 15) закрывает больше всего ещё не закрытой
+     вероятности. Вероятность считается по всему пространству 3^15, а не только внутри купона:
+     соседи за пределами купона тоже дают 14. Любой префикс списка — готовая система на меньшее
+     число строк. P — вероятности исходов по матчам (или null → поровну). */
+  function briefChance(sets, P, Kmax, budgetMs){
+    budgetMs = budgetMs || 25000;
+    var n = sets.length, i, o, t0 = Date.now();
+    var pw = [], p3 = [1];
+    for(i = 0; i < n; i++){
+      var pr = (P && P[i]) ? P[i] : [1/3, 1/3, 1/3], S = pr[0] + pr[1] + pr[2];
+      pw.push([Math.max(pr[0] / S, 1e-6), Math.max(pr[1] / S, 1e-6), Math.max(pr[2] / S, 1e-6)]);
+      p3.push(p3[i] * 3);
+    }
+    var U = 1; sets.forEach(function(st){ U *= st.length; });
+    var code = new Int32Array(U), wr = new Float64Array(U), x, rest, c, w, d;
+    for(x = 0; x < U; x++){
+      rest = x; c = 0; w = 1;
+      for(i = 0; i < n; i++){
+        var L = sets[i].length; d = rest % L; rest = (rest - d) / L;
+        o = sets[i][d]; c += o * p3[i]; w *= pw[i][o];
+      }
+      code[x] = c; wr[x] = w;
+    }
+    var covered = new Uint8Array(p3[n]);
+    function gain(x){
+      var c = code[x], g = covered[c] ? 0 : wr[x], w = wr[x], i, o, d, y;
+      for(i = 0; i < n; i++){
+        d = Math.floor(c / p3[i]) % 3;
+        for(o = 0; o < 3; o++){
+          if(o === d) continue;
+          y = c + (o - d) * p3[i];
+          if(!covered[y]) g += w * pw[i][o] / pw[i][d];
+        }
+      }
+      return g;
+    }
+    function mark(x){
+      var c = code[x], w = wr[x], i, o, d, y, add = 0;
+      if(!covered[c]){ covered[c] = 1; add += w; }
+      for(i = 0; i < n; i++){
+        d = Math.floor(c / p3[i]) % 3;
+        for(o = 0; o < 3; o++){
+          if(o === d) continue;
+          y = c + (o - d) * p3[i];
+          if(!covered[y]){ covered[y] = 1; add += w * pw[i][o] / pw[i][d]; }
+        }
+      }
+      return add;
+    }
+    var hx = new Int32Array(U + 1), hg = new Float64Array(U + 1), hs = new Int32Array(U + 1), hn = 0;
+    function better(a, b){ return hg[a] > hg[b] || (hg[a] === hg[b] && hx[a] < hx[b]); }
+    function swap(a, b){
+      var t = hx[a]; hx[a] = hx[b]; hx[b] = t;
+      t = hg[a]; hg[a] = hg[b]; hg[b] = t;
+      t = hs[a]; hs[a] = hs[b]; hs[b] = t;
+    }
+    function push(x, g, st){
+      hn++; hx[hn] = x; hg[hn] = g; hs[hn] = st;
+      var c = hn;
+      while(c > 1 && better(c, c >> 1)){ swap(c, c >> 1); c >>= 1; }
+    }
+    function pop(){
+      var tx = hx[1], tg = hg[1], ts = hs[1];
+      hx[1] = hx[hn]; hg[1] = hg[hn]; hs[1] = hs[hn]; hn--;
+      var c = 1;
+      for(;;){
+        var l = c << 1, r = l + 1, b = c;
+        if(l <= hn && better(l, b)) b = l;
+        if(r <= hn && better(r, b)) b = r;
+        if(b === c) break;
+        swap(b, c); c = b;
+      }
+      return { x: tx, g: tg, st: ts };
+    }
+    for(x = 0; x < U; x++) push(x, gain(x), 0);
+    Kmax = Math.min(Kmax || U, U);
+    var picks = [], cum14 = [], cum15 = [], c14 = 0, c15 = 0, gen = 0;
+    while(picks.length < Kmax && hn > 0){
+      if((gen & 15) === 0 && Date.now() - t0 > budgetMs) return { slow: true, U: U, ms: Date.now() - t0 };
+      var top = pop(), g, take = false;
+      if(top.st === gen) take = true;
+      else {
+        g = gain(top.x);
+        if(g <= 1e-18) continue;
+        if(hn === 0 || g >= hg[1]){ take = true; top.g = g; }
+        else push(top.x, g, gen);
+      }
+      if(!take) continue;
+      c14 += mark(top.x); c15 += wr[top.x];
+      picks.push(top.x); cum14.push(c14); cum15.push(c15);
+      gen++;
+    }
+    var lines = picks.map(function(x){
+      var rest = x, row = new Array(n), i, d, L;
+      for(i = 0; i < n; i++){ L = sets[i].length; d = rest % L; rest = (rest - d) / L; row[i] = sets[i][d]; }
+      return row;
+    });
+    return { lines: lines, rows: lines.length, U: U, cum14: cum14, cum15: cum15, ms: Date.now() - t0 };
+  }
+  /* BRIEF_CHANCE_END */
+
   /* потолки: выше первого предупреждаем о долгом счёте, выше второго не беремся вовсе */
   var BRIEF_CAP_U = C.BRIEF_CAP_U, BRIEF_WARN_WORK = C.BRIEF_WARN_WORK, BRIEF_MAX_WORK = C.BRIEF_MAX_WORK;
 
@@ -1884,27 +1987,173 @@
       if(changed){ save(); render(); }
     }).catch(function(){ fsLogoBusy = false; });
   }
+  /* ---------- отладка просмотра ----------
+     Включается адресом ?debug=1 (запоминается в браузере) или пятью быстрыми тапами по логотипу; ?debug=0 выключает.
+     Пишет журнал: откуда пришёл счёт и принят ли он, ответы ленты и totobrief с задержкой, время перерисовок,
+     долгие задачи (зависания) и ошибки. Панель — кнопка «отладка» внизу справа, журнал копируется одной кнопкой. */
+  var DBG = { on: false, buf: [], max: 500, t0: Date.now(), feed: {}, api: {}, rn: 0, rsum: 0, rmax: 0, slow: 0, lt: 0, ltmax: 0, errs: 0, open: false, el: null };
+  try{
+    var dq = /[?&]debug=(\w+)/.exec(location.search || "");
+    if(dq && dq[1] !== "0") localStorage.setItem("dz_dbg", "1");
+    else if(dq) localStorage.removeItem("dz_dbg");
+    DBG.on = localStorage.getItem("dz_dbg") === "1";
+  }catch(e){}
+  function dbgTag(m){ return fsClean(m.home || "") + " — " + fsClean(m.away || ""); }
+  function dbgTime(t){
+    var d = new Date(t), two = function(x){ return (x < 10 ? "0" : "") + x; };
+    return two(d.getHours()) + ":" + two(d.getMinutes()) + ":" + two(d.getSeconds());
+  }
+  function dbgLog(kind, msg){
+    if(!DBG.on) return;
+    DBG.buf.push({ t: Date.now(), k: kind, m: msg });
+    if(DBG.buf.length > DBG.max) DBG.buf.splice(0, DBG.buf.length - DBG.max);
+    if(DBG.open) dbgSoon();
+  }
+  var dbgPend = 0;
+  function dbgSoon(){ if(dbgPend) return; dbgPend = setTimeout(function(){ dbgPend = 0; dbgPaint(); }, 400); }
+  function dbgText(){
+    var o = ["Журнал отладки ДЖЕК 15 · " + new Date().toISOString() + " · " + navigator.userAgent, dbgStatus().replace(/<[^>]+>/g, "").replace(/\s+/g, " ")];
+    DBG.buf.forEach(function(x){ o.push(dbgTime(x.t) + " " + x.k + " " + x.m); });
+    var p = state.prev && state.viewPrev ? state.prev : null;
+    if(p) p.matches.forEach(function(m, i){ o.push("м" + (i + 1) + " " + dbgTag(m) + " | " + (m.score || "—") + " | res " + (m.res || "—") + " | src " + (SRC_NAME[m.scSrc] || "—") + " | gmax " + (m.gmax ? m.gmax.join(":") : "—") + " | fsAt " + (m.fsAt ? Math.round((Date.now() - m.fsAt) / 1000) + "с назад" : "—") + (m.fsMir ? " (снимок)" : "")); });
+    return o.join("\n");
+  }
+  function dbgStatus(){
+    var ago = function(t){ return t ? Math.round((Date.now() - t) / 1000) + " с" : "—"; };
+    var w = fsWorkerDown && Date.now() - fsWorkerDown < 2 * 60000 ? "не отвечает " + ago(fsWorkerDown) + " назад, идём через снимок" : "ок";
+    var fk = Object.keys(DBG.feed).map(function(k){ var f = DBG.feed[k]; return k + ": " + f.src + " " + f.ms + " мс" + (f.age != null ? ", снимку " + f.age + " с" : "") + ", " + ago(f.at) + " назад"; }).join("; ") || "ещё не опрашивали";
+    var ak = Object.keys(DBG.api).map(function(k){ var f = DBG.api[k]; return k + " " + f.ms + " мс" + (f.err ? " ОШИБКА" : "") + ", " + ago(f.at) + " назад"; }).join("; ") || "—";
+    return "<b>Лента (worker):</b> " + w + "<br><b>Последние опросы ленты:</b> " + fk + "<br><b>totobrief:</b> " + ak +
+      "<br><b>Перерисовок:</b> " + DBG.rn + ", среднее " + (DBG.rn ? Math.round(DBG.rsum / DBG.rn) : 0) + " мс, максимум " + Math.round(DBG.rmax) + " мс, медленных (&gt;80 мс) " + DBG.slow +
+      "<br><b>Зависаний (&gt;100 мс):</b> " + DBG.lt + (DBG.lt ? ", самое долгое " + Math.round(DBG.ltmax) + " мс" : "") + " · <b>ошибок:</b> " + DBG.errs;
+  }
+  function dbgPaint(){
+    if(!DBG.el) return;
+    var st = DBG.el.querySelector(".dbg-st"), lg = DBG.el.querySelector(".dbg-log"), mt = DBG.el.querySelector(".dbg-m");
+    st.innerHTML = dbgStatus();
+    var p = state.prev && state.viewPrev ? state.prev : null, h = "";
+    if(p) p.matches.forEach(function(m, i){
+      h += "<tr><td>" + (i + 1) + "</td><td>" + escHtml(fsClean(m.home)) + " — " + escHtml(fsClean(m.away)) + "</td><td><b>" + escHtml(m.score ? String(m.score).replace(/\s+/g, "") : "—") + "</b></td><td>" + (SRC_NAME[m.scSrc] || "—") + "</td><td>" + (m.res ? "итог" : (liveInfo(m) ? "идёт" : "")) + "</td></tr>";
+    });
+    mt.innerHTML = h ? "<table><thead><tr><th>#</th><th>Матч</th><th>Счёт</th><th>Откуда</th><th></th></tr></thead><tbody>" + h + "</tbody></table>" : "<p>Откройте просмотр прошлого тиража — здесь появятся его матчи.</p>";
+    var out = "";
+    for(var i = DBG.buf.length - 1; i >= 0 && i > DBG.buf.length - 160; i--){
+      var x = DBG.buf[i];
+      out += '<div class="dbg-l k-' + x.k + '"><i>' + dbgTime(x.t) + "</i> <b>" + x.k + "</b> " + escHtml(x.m) + "</div>";
+    }
+    lg.innerHTML = out || "<p>Журнал пуст.</p>";
+  }
+  function dbgUi(){
+    if(!DBG.on || DBG.btn) return;
+    var b = document.createElement("button");
+    b.type = "button"; b.id = "dbgBtn"; b.textContent = "отладка"; DBG.btn = b;
+    b.addEventListener("click", function(){
+      if(!DBG.el){
+        var el = document.createElement("div"); el.id = "dbgPanel";
+        el.innerHTML = '<div class="dbg-h"><b>Отладка</b><span><button type="button" data-a="copy">Копировать</button><button type="button" data-a="clear">Очистить</button><button type="button" data-a="off">Выкл.</button><button type="button" data-a="x" aria-label="Закрыть">×</button></span></div>' +
+          '<div class="dbg-body"><div class="dbg-st"></div><div class="dbg-m"></div><div class="dbg-log"></div></div>';
+        document.body.appendChild(el); DBG.el = el;
+        el.addEventListener("click", function(e){
+          var a = e.target && e.target.getAttribute && e.target.getAttribute("data-a"); if(!a) return;
+          if(a === "x"){ DBG.open = false; el.hidden = true; }
+          else if(a === "clear"){ DBG.buf = []; dbgPaint(); }
+          else if(a === "off"){ try{ localStorage.removeItem("dz_dbg"); }catch(x){} location.search = location.search.replace(/[?&]debug=\w+/, "").replace(/^&/, "?"); }
+          else if(a === "copy"){
+            var t = dbgText(), done = function(){ e.target.textContent = "Скопировано"; setTimeout(function(){ e.target.textContent = "Копировать"; }, 1500); };
+            if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done, function(){ dbgFallback(t); done(); });
+            else { dbgFallback(t); done(); }
+          }
+        });
+      }
+      DBG.open = !DBG.open; DBG.el.hidden = !DBG.open; if(DBG.open) dbgPaint();
+    });
+    document.body.appendChild(b);
+    window.__dbg = DBG; DBG.hook = { noteScore: noteScore, state: state, render: render, renderSoon: renderSoon, SRC: { TB: SRC_TB, MIR: SRC_MIR, FEED: SRC_FEED } };
+    if(window.PerformanceObserver){
+      try{
+        new PerformanceObserver(function(l){ l.getEntries().forEach(function(e){ DBG.lt++; if(e.duration > DBG.ltmax) DBG.ltmax = e.duration; dbgLog("долго", Math.round(e.duration) + " мс без реакции страницы"); }); }).observe({ entryTypes: ["longtask"] });
+      }catch(e){}
+    }
+    window.addEventListener("error", function(e){ DBG.errs++; dbgLog("err", (e.message || "ошибка") + " @" + (e.lineno || "")); });
+    window.addEventListener("unhandledrejection", function(e){ DBG.errs++; dbgLog("err", "promise: " + (e.reason && e.reason.message || e.reason)); });
+    document.addEventListener("visibilitychange", function(){ dbgLog("вкладка", document.hidden ? "ушла в фон" : "снова на экране"); });
+    dbgLog("старт", "отладка включена · v " + ((document.querySelector('script[src*="app.js"]') || {}).src || "").replace(/^.*\?/, ""));
+  }
+  function dbgFallback(t){
+    var ta = document.createElement("textarea"); ta.value = t; ta.style.cssText = "position:fixed;left:-999px;top:0"; document.body.appendChild(ta);
+    ta.select(); try{ document.execCommand("copy"); }catch(e){} ta.remove();
+  }
+  /* пять быстрых тапов по логотипу включают отладку (для телефона, где нет адресной строки) */
+  (function(){
+    var taps = [];
+    document.addEventListener("click", function(e){
+      var lg = e.target && e.target.closest && e.target.closest("svg.logo, .logo"); if(!lg) return;
+      var n = Date.now(); taps = taps.filter(function(t){ return n - t < 3000; }); taps.push(n);
+      if(taps.length >= 5){ taps = []; try{ localStorage.setItem("dz_dbg", "1"); }catch(x){} DBG.on = true; dbgUi(); if(DBG.btn) DBG.btn.click(); }
+    });
+    if(DBG.on) setTimeout(dbgUi, 0);
+  })();
+  /* перерисовки фоновых источников склеиваем: несколько ответов подряд — одна отрисовка */
+  var rsT = 0, rsWhy = "";
+  function renderSoon(why){
+    rsWhy = rsWhy ? (rsWhy.indexOf(why) < 0 ? rsWhy + "+" + why : rsWhy) : why;
+    if(rsT) return;
+    rsT = setTimeout(function(){ rsT = 0; var w = rsWhy; rsWhy = ""; dbgLog("рисуем", "причина: " + w); try{ render(); }catch(e){ DBG.errs++; dbgLog("err", "render: " + (e && e.message)); } }, 150);
+  }
   /* ---------- быстрый счёт из ленты Flashscore ----------
      totobrief отдаёт счёт с задержкой, лента Flashscore — почти сразу. Пока матч идёт, счёт
      берём из ленты (каждые 15 секунд); итог матча и исход по-прежнему только от totobrief.
      Свежий счёт из ленты не затирается более старым от totobrief, пока тот не подведёт итог. */
   var FS_LIVE_EVERY = 15000, FS_KEEP = 5 * 60000;
+  /* Источники счёта по надёжности: totobrief отстаёт, снимок из GitHub отстаёт меньше, лента Flashscore — самый свежий.
+     Счёт не должен «качаться»: более слабый или более старый источник не откатывает уже принятый счёт (иначе
+     гол пропадал и появлялся заново, а вместе с ним прыгали места наборов). Откат принимаем только от равного
+     или более сильного источника с не более старыми данными — так отмена гола (VAR) всё равно доходит. */
+  var SRC_TB = 1, SRC_MIR = 2, SRC_FEED = 3, SRC_NAME = { 1: "totobrief", 2: "снимок", 3: "лента" };
+  function scPair(x){ var r = /(\d+)\D+(\d+)/.exec(x || ""); return r ? [+r[1], +r[2]] : null; }
   function mergeScore(m, sc){
-    if(!m.res && !m.fsMir && m.fsAt && Date.now() - m.fsAt < FS_KEEP && m.score) return;
-    noteScore(m, sc); if(m.res){ delete m.fsAt; delete m.fsPh; }
+    noteScore(m, sc, SRC_TB, Date.now());
+    if(m.res){ delete m.fsAt; delete m.fsPh; }
   }
-  /* новый счёт: если число голов выросло — запоминаем гол (кто забил и когда) для подсветки на минуту */
-  var GOAL_MS = 60000;
-  function noteScore(m, sc){
-    var old = m.score || "";
-    if(old === sc){ if(sc) m.scAt = Date.now(); return false; }
-    var a = /(\d+)\D+(\d+)/.exec(old), b = /(\d+)\D+(\d+)/.exec(sc);
-    if(a && b && !m.res && Date.now() - (m.scAt || 0) < 10 * 60000 && (+b[1] > +a[1] || +b[2] > +a[2])){
-      m.goalAt = Date.now(); m.goalSide = +b[1] > +a[1] ? "h" : "a";
-      try{ goalToast(m, sc); }catch(e){}
-      setTimeout(function(){ try{ if(!book) render(); }catch(e){} }, GOAL_MS + 300);
+  /* новый счёт: если гол выше всех виденных ранее (m.gmax) — запоминаем гол (кто забил и когда) для подсветки на минуту.
+     incOnly — источник может только подтверждать и повышать счёт (снимок GitHub) */
+  var GOAL_MS = 60000, HOLD_MS = 8 * 60000;
+  function noteScore(m, sc, src, t, incOnly){
+    src = src || SRC_TB; t = t || Date.now();
+    var now = Date.now(), old = m.score || "", a = scPair(old), b = scPair(sc);
+    var tag = dbgTag(m);
+    if(!b){
+      if(old && !m.res){ if(sc) dbgLog("score", tag + ": «" + sc + "» от " + SRC_NAME[src] + " — не счёт, пропущено"); return false; }
+      if(old === sc) return false;
+      m.score = sc; m.scAt = now; return true;
     }
-    m.score = sc; m.scAt = Date.now();
+    if(a && a[0] === b[0] && a[1] === b[1]){                /* тот же счёт — только подтверждение */
+      m.scAt = now;
+      if(src > 1){ m.scSrc = Math.max(m.scSrc || 0, src); m.scHi = now; m.scT = Math.max(m.scT || 0, t); }
+      if(!m.gmax) m.gmax = a.slice();
+      return false;
+    }
+    var down = !!a && (b[0] < a[0] || b[1] < a[1]);
+    if(down && !m.res){
+      var why = "";
+      if(incOnly) why = "источник только повышает";
+      else if(src === SRC_TB && (m.scSrc || 0) > 1 && now - (m.scHi || 0) < HOLD_MS) why = "totobrief отстаёт от ленты";
+      else if(src < (m.scSrc || 0) && now - (m.scAt || 0) < 10 * 60000) why = "слабее источника счёта (" + SRC_NAME[m.scSrc] + ")";
+      else if(t < (m.scT || 0)) why = "данные старее принятых";
+      if(why){ dbgLog("rej", tag + ": " + old + " → " + sc + " от " + SRC_NAME[src] + " отклонено: " + why); return false; }
+      m.gmax = b.slice();                                   /* честный откат (отмена гола) — счётчик голов сбрасываем */
+      dbgLog("score", tag + ": откат " + old + " → " + sc + " (" + SRC_NAME[src] + ")");
+    }
+    var g = m.gmax || (a ? a.slice() : b.slice()), goal = false;
+    if(!down && !m.res && a && (b[0] > g[0] || b[1] > g[1]) && now - (m.scAt || 0) < 10 * 60000){
+      goal = true; m.goalAt = now; m.goalSide = b[0] > g[0] ? "h" : "a";
+      try{ goalToast(m, sc); }catch(e){}
+      setTimeout(function(){ try{ if(!book) renderSoon("гол"); }catch(e){} }, GOAL_MS + 300);
+    }
+    if(!down){ g = [Math.max(g[0], b[0]), Math.max(g[1], b[1])]; m.gmax = g; }
+    else if(!m.gmax) m.gmax = b.slice();
+    dbgLog(goal ? "goal" : "score", tag + ": " + (old || "—") + " → " + sc + " · " + SRC_NAME[src] + (goal ? " · ГОЛ" : (a && !down && !(b[0] > g[0] || b[1] > g[1]) ? "" : "")));
+    m.score = sc; m.scAt = now; m.scT = t; m.scSrc = src; if(src > 1) m.scHi = now;
     return true;
   }
   /* всплывающее уведомление о голе: сверху, 7 секунд, коротко вибрирует на телефоне */
@@ -2028,6 +2277,15 @@
      без VPN) — снимок из GitHub (data/api/fs-<спорт>.txt, обновляется раз в 5 минут) */
   var fsWorkerDown = 0, fsLastMir = false;
   function fsGetLive(k){
+    var t0 = Date.now();
+    return fsGetLive0(k).then(function(g){
+      var mir = !!(g && g.mir), age = mir && g.ts ? Math.round((Date.now() - g.ts) / 1000) : null;
+      DBG.feed[k] = { src: mir ? "снимок GitHub" : "worker", ms: Date.now() - t0, age: age, at: Date.now() };
+      dbgLog("лента", k + ": " + (mir ? "снимок GitHub" : "worker") + ", " + (Date.now() - t0) + " мс, матчей " + (g ? g.length : 0) + (age != null ? ", снимку " + age + " с" : ""));
+      return g;
+    });
+  }
+  function fsGetLive0(k){
     var parseMir = function(t){
       var g = fsParseFeed(t), z = /^ZT÷(\d+)/.exec(t || "");
       g.mir = true; g.ts = z ? Number(z[1]) * 1000 : 0;
@@ -2048,13 +2306,13 @@
         return (g && g.ts && Date.now() - g.ts < 30 * 60000) ? g : full();
       }, full);
     };
-    if(Date.now() - fsWorkerDown < 5 * 60000) return mirror();
+    if(Date.now() - fsWorkerDown < 2 * 60000) return mirror();
     var ctl = typeof AbortController === "function" ? new AbortController() : null;
     var tm = ctl ? setTimeout(function(){ ctl.abort(); }, 6000) : null;
     return fetch(FS_FEED_HOST + FS_SPORT_ID[k] + "&day=0&_=" + Date.now(), { cache: "no-store", signal: ctl ? ctl.signal : undefined })
       .then(function(r){ if(tm) clearTimeout(tm); if(!r.ok) throw new Error("http"); return r.text(); })
       .then(fsParseFeed)
-      .catch(function(){ if(tm) clearTimeout(tm); fsWorkerDown = Date.now(); return mirror(); });
+      .catch(function(e){ if(tm) clearTimeout(tm); fsWorkerDown = Date.now(); dbgLog("err", "worker ленты: " + (e && e.message || e) + " → идём через снимок GitHub на 2 минуты"); return mirror(); });
   }
   function fsLiveTick(){
     if(fsLiveBusy || document.hidden || typeof fetch !== "function") return;
@@ -2070,7 +2328,7 @@
       if(maybeLive(m) || (pv && pvRecent && !m.res && !m.score && mStartMs(m) == null)){ cand.push(m); sports[fsFeedSport(m.league)] = true; }
     }); });
     if(!cand.length) return;
-    fsLiveBusy = true; fsLiveAt = Date.now();
+    fsLiveBusy = true; fsLiveAt = Date.now(); var tk0 = Date.now();
     var keys = Object.keys(sports);
     Promise.all(keys.map(function(k){
       return fsGetLive(k);
@@ -2095,23 +2353,23 @@
         m.fsAt = mir ? grp.ts : Date.now(); m.fsMir = mir;
         if(f.st === "3"){
           if(!m.fsEnd){ m.fsEnd = m.fsAt; changed = true; }
-          if(!mir && noteScore(m, sc)) changed = true;
+          if(!mir && noteScore(m, sc, SRC_FEED, Date.now())) changed = true;
           return;
         }
         m.fsPh = { ac: f.sc, ao: f.ao, bx: f.bx, at: m.fsAt };
         if(oldAc !== f.sc) changed = true;
-        /* из снимка берём только минуту и фазу: счёт у него может отставать от totobrief */
-        /* снимок (не старше 12 минут) может только добавить гол: счёт растёт, но не убывает; отмену гола ждём от totobrief */
-        var up = false;
-        if(mir && grp.ts && Date.now() - grp.ts < 12 * 60000){
-          var sa = /(\d+)\D+(\d+)/.exec(m.score || ""), sb = /(\d+)\D+(\d+)/.exec(sc);
-          up = !!(sb && (!sa || (+sb[1] >= +sa[1] && +sb[2] >= +sa[2] && (+sb[1] + +sb[2]) > (+sa[1] + +sa[2]))));
+        /* лента — счёт как есть; снимок из GitHub может отставать, поэтому от него берём фазу и минуту,
+           а счёт только повышаем или подтверждаем (отмену гола ждём от ленты или totobrief) */
+        if(!mir){
+          if(noteScore(m, sc, SRC_FEED, Date.now())){ changed = true; if(state.prev && state.prev.matches.indexOf(m) >= 0) state.prev.at = Date.now(); }
+        } else if(grp.ts && Date.now() - grp.ts < 12 * 60000){
+          if(noteScore(m, sc, SRC_MIR, grp.ts, true)){ changed = true; if(state.prev && state.prev.matches.indexOf(m) >= 0) state.prev.at = Date.now(); }
         }
-        if((!mir || up) && noteScore(m, sc)){ changed = true; if(state.prev && state.prev.matches.indexOf(m) >= 0) state.prev.at = Date.now(); }
       });
       fsLiveBusy = false;
-      if(changed){ state.resAt = Date.now(); save(); if(!book) render(); }
-    }).catch(function(){ fsLiveBusy = false; });
+      dbgLog("tick", "лента: матчей-кандидатов " + cand.length + (changed ? ", есть изменения" : ", без изменений") + " · " + (Date.now() - tk0) + " мс");
+      if(changed){ state.resAt = Date.now(); save(); if(!book) renderSoon("лента"); }
+    }).catch(function(e){ fsLiveBusy = false; dbgLog("err", "лента: " + (e && e.message || e)); });
   }
   setInterval(fsLiveTick, 5000);
   function attachFsTimes(){
@@ -2722,7 +2980,13 @@
     t.addEventListener("click", function(){ showTeam(name, opp); });
     return t;
   }
-  function render(){ renderCore(); ujSoon(); }
+  function render(){
+    var t0 = performance.now();
+    renderCore(); ujSoon();
+    if(typeof DBG !== "object") return;
+    var d = performance.now() - t0; DBG.rn++; DBG.rsum += d; if(d > DBG.rmax) DBG.rmax = d;
+    if(d > 80){ DBG.slow++; dbgLog("медленно", "перерисовка " + Math.round(d) + " мс"); }
+  }
   function renderCore(){
     ensureShape();
     syncTirNav();
@@ -4022,7 +4286,8 @@
   function briefProbs(){
     return state.matches.map(function(m){ return (m.pct && m.pct.bk) ? calProb(m.pct.bk) : null; });
   }
-  function briefWeighted(){ return state.briefMode !== "even"; }
+  function briefModeNow(){ return state.briefMode === "even" || state.briefMode === "chance" ? state.briefMode : "w"; }
+  function briefWeighted(){ return briefModeNow() === "w"; }
   /* шанс, что все 15 исходов окажутся внутри купона */
   function briefInside(sets, P){
     var p = 1;
@@ -4111,7 +4376,91 @@
                 (work > BRIEF_WARN_WORK ? ("считать примерно " + Math.max(1, Math.round(work / 4e6)) + " с") : "не посчитано") +
                 '</td><td class="brief-save"></td><td class="nw"><button type="button" class="gap-set brief-go" data-g="' + g + '">собрать</button></td>';
     }
-    return '<tr><td>' + g + ' из 15</td>' + cells + '</tr>';
+    return '<tr><td>' + g + '<span class="bt-of"> из 15</span></td>' + cells + '</tr>';
+  }
+
+  /* «Максимум шанса»: один прогон жадного подбора, а строки для каждого бюджета — его префиксы */
+  var BRIEF_CHANCE_SHARES = [0.05, 0.1, 0.15, 0.2, 0.3, 0.5], BRIEF_CHANCE_SYNC = 20000;
+  function showBriefChance(sets, U, price, h){
+    var cache = briefCache(sets), P = briefProbs(), res = cache.chance;
+    var noLine = P.some(function(x){ return !x; });
+    function mount(){
+      $("evBody").innerHTML = h; $("evBack").hidden = false;
+      [].slice.call($("evBody").querySelectorAll(".brief-mode-b")).forEach(function(b){
+        b.addEventListener("click", function(){ state.briefMode = b.getAttribute("data-m"); save(); showBrief(); });
+      });
+    }
+    if(!res && U > BRIEF_CAP_U){
+      h += '<p class="ev-warn">Вселенная ' + fmt(U) + ' строк — слишком большой перебор. Убери часть двоек и троек.</p>';
+      mount(); return;
+    }
+    if(!res && U > BRIEF_CHANCE_SYNC){
+      h += '<p class="ev-note">Купон большой (' + fmt(U) + ' строк), расчёт займёт несколько секунд.</p>' +
+           '<p class="ev-note"><button type="button" class="gap-set" id="briefChanceGo">собрать</button></p>';
+      mount();
+      $("briefChanceGo").addEventListener("click", function(){
+        this.textContent = "считаю…"; this.disabled = true;
+        setTimeout(function(){
+          cache.chance = briefChance(sets, P, Math.min(Math.ceil(U * 0.5), BASKET_MAX), 30000);
+          showBrief();
+        }, 30);
+      });
+      return;
+    }
+    if(!res){ res = cache.chance = briefChance(sets, P, Math.min(Math.ceil(U * 0.5), BASKET_MAX), 20000); }
+    if(res.slow){
+      h += '<p class="ev-warn">Не уложился за ' + Math.round(res.ms / 1000) + ' с. Убери часть двоек и троек.</p>';
+      delete cache.chance; mount(); return;
+    }
+    h += '<p class="ev-note">Гарантии нет: если часть исходов не угадана, система может не дать и 14. ' +
+         'Зато при той же цене шанс на 14 и 15 выше, чем у гарантийной системы. Шансы считаются по линии конторы ' +
+         'и показаны на весь тираж, а не при условии попадания в купон.' +
+         (noLine ? ' По матчам без линии конторы исходы приняты равновероятными, шанс там ориентировочный.' : '') + '</p>';
+    h += '<table class="ev-tab brief-tab"><thead><tr><th>Доля</th><th>Строк</th><th>Цена</th><th>Дешевле</th><th></th></tr></thead><tbody>';
+    var seen = {};
+    BRIEF_CHANCE_SHARES.forEach(function(sh){
+      var K = Math.max(1, Math.min(res.rows, Math.round(U * sh)));
+      if(seen[K]) return; seen[K] = true;
+      var c15 = res.cum15[K - 1], c14 = res.cum14[K - 1];
+      h += '<tr><td>' + Math.round(sh * 100) + '%</td><td><b>' + fmt(K) + '</b>' +
+           '<div class="brief-ch">15: ' + stratChance(c15) + '</div><div class="brief-ch">14+: ' + stratChance(c14) + '</div></td>' +
+           '<td>' + fmt(K * price) + ' ₽</td><td class="brief-save">−' + (100 * (1 - K / U)).toFixed(0) + '%</td>' +
+           '<td class="nw"><button type="button" class="gap-set brief-cart" data-k="' + K + '">в корзину</button>' +
+           ' <button type="button" class="gap-set brief-csv" data-k="' + K + '">CSV</button>' +
+           ' <button type="button" class="gap-set brief-prev" data-k="' + K + '">строки</button></td></tr>';
+    });
+    h += '</tbody></table><p class="ev-note">Строки отсортированы по важности: любой набор из первых строк — готовая система на меньшую сумму.</p>' +
+         '<div id="briefPrev"></div>';
+    mount();
+    var pick = function(b){ return res.lines.slice(0, Number(b.getAttribute("data-k"))); };
+    [].slice.call($("evBody").querySelectorAll(".brief-cart")).forEach(function(b){
+      b.addEventListener("click", function(){
+        var L = pick(b);
+        if(L.length > BASKET_MAX){
+          $("briefPrev").innerHTML = '<p class="ev-warn">В корзину помещается до ' + BASKET_MAX + ' строк, а здесь ' + fmt(L.length) + '. Скачай CSV.</p>';
+          return;
+        }
+        var r = briefToBasket(L, "шанс");
+        $("evBack").hidden = true;
+        say("«Бриф» максимум шанса: в корзину добавлено " + fmt(r.added) + " строк" + (r.dup ? ", " + r.dup + " уже были" : "") +
+            " на " + fmt(r.added * briefPrice()) + " ₽. В CSV уйдут только отмеченные галочкой.");
+      });
+    });
+    [].slice.call($("evBody").querySelectorAll(".brief-csv")).forEach(function(b){
+      b.addEventListener("click", function(){
+        var L = pick(b);
+        saveCsvFile(briefCsv(L), "brief_" + (state.tirazh || "tirazh") + "_chance_" + L.length + ".csv");
+      });
+    });
+    [].slice.call($("evBody").querySelectorAll(".brief-prev")).forEach(function(b){
+      b.addEventListener("click", function(){
+        var L = pick(b);
+        var head = L.slice(0, 20).map(function(R, i){ return (i + 1) + ". " + R.map(function(j){ return OUT[j]; }).join(""); }).join("\n");
+        $("briefPrev").innerHTML = '<h3>Первые строки системы (' + fmt(L.length) + ')</h3>' +
+          '<pre class="brief-pre">' + head + (L.length > 20 ? "\n… и ещё " + fmt(L.length - 20) + " строк" : "") + '</pre>';
+        $("briefPrev").scrollIntoView({behavior:"smooth", block:"nearest"});
+      });
+    });
   }
 
   function showBrief(){
@@ -4132,7 +4481,10 @@
     var tri = sizes.filter(function(x){ return x === 3; }).length;
     var price = briefPrice();
 
-    var h = '<p class="ev-lead">Бриф-система — это часть строк купона вместо всех. ' +
+    var h = briefModeNow() === "chance"
+      ? '<p class="ev-lead">Бриф-система — это часть строк купона вместо всех. В режиме «Максимум шанса» гарантии нет: ' +
+        'строки выбираются так, чтобы при заданной цене как можно вероятнее попасть на 15 или хотя бы на 14 из 15.</p>'
+      : '<p class="ev-lead">Бриф-система — это часть строк купона вместо всех. ' +
       'Обещание такое: какой бы исход внутри твоего купона ни выпал, хотя бы одна строка системы угадает ' +
       'не меньше заявленного. Платишь меньше, а взамен отказываешься от верхних категорий: гарантия 14 ' +
       'означает, что пятнадцать из пятнадцати ты возьмёшь только случайно, а не по построению.</p>';
@@ -4144,14 +4496,17 @@
       $("evBody").innerHTML = h; $("evBack").hidden = false; return;
     }
 
-    var wOn = briefWeighted();
+    var bm = briefModeNow(), wOn = bm === "w";
     h += '<div class="brief-mode" role="group" aria-label="Как строить систему">' +
          '<button type="button" class="gap-set brief-mode-b" data-m="w" aria-pressed="' + wOn + '">С учётом вероятностей</button>' +
-         '<button type="button" class="gap-set brief-mode-b" data-m="even" aria-pressed="' + !wOn + '">Все исходы поровну</button></div>' +
+         '<button type="button" class="gap-set brief-mode-b" data-m="even" aria-pressed="' + (bm === "even") + '">Все исходы поровну</button>' +
+         '<button type="button" class="gap-set brief-mode-b" data-m="chance" aria-pressed="' + (bm === "chance") + '">Максимум шанса</button></div>';
+    if(bm === "chance"){ showBriefChance(sets, U, price, h); return; }
+    h +=
          '<p class="ev-note">' + (wOn ? 'Жадный подбор в первую очередь закрывает вероятные по линии конторы сочетания. Гарантия та же. Обычно разница небольшая: сравни строки и шансы в обоих режимах и бери, что выгоднее.'
                                       : 'Классическое покрытие: все исходы купона равноправны.') + '</p>';
-    h += '<table class="ev-tab brief-tab"><thead><tr><th>Гарантия</th><th>Строк</th><th>Цена</th><th>Дешевле</th><th></th></tr></thead><tbody>';
-    h += '<tr><td>15 из 15</td><td><b>' + fmt(U) + '</b></td><td>' + fmt(U * price) + ' ₽</td><td class="brief-save">—</td>' +
+    h += '<table class="ev-tab brief-tab"><thead><tr><th><span class="bt-of">Гарантия</span><span class="bt-sh">Из 15</span></th><th>Строк</th><th>Цена</th><th>Дешевле</th><th></th></tr></thead><tbody>';
+    h += '<tr><td>15<span class="bt-of"> из 15</span></td><td><b>' + fmt(U) + '</b></td><td>' + fmt(U * price) + ' ₽</td><td class="brief-save">—</td>' +
          '<td class="nw">полное покрытие</td></tr>';
     for(var g = 14; g >= 9; g--) h += briefRow(g, sets, sizes, U);
     h += '</tbody></table>';
@@ -5204,6 +5559,7 @@
     return [parts[0].trim(), parts.slice(1).join(" - ").trim()];
   }
 
+  function curSig(){ return state.matches.map(function(m){ return (m.res || "") + "|" + (m.score || "") + "|" + JSON.stringify(m.pct || 0) + "|" + JSON.stringify(m.kf || 0); }).join(";"); }
   /* тот же тираж: обновляем только доли игроков и коэффициенты, ничего не стирая */
   function refreshPct(info){
     var evs = (info.events || []).slice().sort(function(a,b){ return (a.order||0) - (b.order||0); });
@@ -5213,6 +5569,7 @@
       t = splitTeams(evs[i].name);
       if(!t || t[0] !== state.matches[i].home || t[1] !== state.matches[i].away) return false;
     }
+    var psig0 = curSig();
     for(i = 0; i < evs.length; i++){
       var q = evs[i].quotes || {}, m = state.matches[i];
       var np = mkPct(q); if(np) m.pct = np;
@@ -5224,6 +5581,8 @@
     state.resAt = Date.now();          /* когда данные с totobrief пришли в последний раз */
     if(info.id) state.tirazhId = info.id;
     save();
+    var pch = psig0 !== curSig();
+    if(!pch && !book && UJ.silent){ dbgLog("totobrief", "текущий тираж: без изменений, перерисовку пропускаем"); renderKickoff(); return true; }
     if(book) bookShow(); else render();   /* bookShow сам вызывает render и пересчитывает «по факту угадано» */
     return true;
   }
@@ -5390,6 +5749,7 @@
       })
     };
   }
+  function prevSig(p){ return p.matches.map(function(m){ return (m.res || "") + "|" + (m.score || "") + "|" + (m.fsVoid || ""); }).join(";"); }
   function prevDone(){
     return !!(state.prev && state.prev.matches.every(function(m){ return m.res; }));
   }
@@ -5397,6 +5757,7 @@
   function refreshPrev(){
     var p = state.prev;
     if(!p || !p.id || typeof fetch !== "function" || prevDone()) return;
+    var tr0 = Date.now();
     apiFetch("drawing-info/" + p.id)
       .then(function(r){ return r.ok ? r.json() : null; })
       .then(function(j){
@@ -5404,15 +5765,19 @@
         var info = j.data || j;
         var evs = (info.events || []).slice().sort(function(a,b){ return (a.order||0) - (b.order||0); });
         if(evs.length !== p.matches.length) return;
+        var sig0 = prevSig(p);
         evs.forEach(function(e, i){
           p.matches[i].res = evRes(e, info);
           mergeScore(p.matches[i], e.score || "");
         });
         p.at = Date.now();
         save();
-        if(state.viewPrev) render();
+        var ch = sig0 !== prevSig(p);
+        dbgLog("totobrief", "прошлый тираж: " + (Date.now() - tr0) + " мс, " + (ch ? "есть изменения" : "без изменений"));
+        DBG.api["прошлый"] = { ms: Date.now() - tr0, at: Date.now() };
+        if(state.viewPrev && ch) renderSoon("totobrief");
       })
-      .catch(function(){});
+      .catch(function(e){ DBG.api["прошлый"] = { ms: Date.now() - tr0, at: Date.now(), err: 1 }; dbgLog("err", "totobrief (прошлый тираж): " + (e && e.message || e)); });
   }
   /* при первом запуске после обновления прошлого тиража ещё нет — подтягиваем его по номеру */
   function seedPrev(){
@@ -5543,6 +5908,8 @@
         }
         teams.appendChild(sc);
       }
+      /* телефон и планшет: кнопка Flashscore стоит прямо у счёта, а не прячется в раскрытой строке */
+      var fsNear = mkFs(m); fsNear.classList.add("fs-near"); teams.appendChild(fsNear);
       var aiRec = aiPrevRec(p.tirazh, idx), aiEl = mkAiLive(aiRec, m);
       if(aiEl){
         teams.appendChild(aiEl);
@@ -5627,6 +5994,7 @@
       (live ? '<span>идёт <b>' + live + '</b></span>' : '') +
       (p.matches.length - done - live - voids > 0 ? '<span>ждём <b>' + (p.matches.length - done - live - voids) + '</b></span>' : '') +
       '<span id="pbBest" hidden>лучший набор <b></b></span>' +
+      '<span id="pbMiss" class="pb-miss" hidden></span>' +
       '<span id="pbSum" hidden title="Сумма всех загруженных наборов этого тиража">сумма <b></b></span>' +
       (voids ? '<span title="засчитан угаданным для любой ставки">отменён <b>' + voids + '</b></span>' : '') +
       (aiN.done || aiN.live ? '<span class="pb-ai" title="Вариант ИИ: угадано из сыгранных · в лайве по текущему счёту">' +
@@ -6044,6 +6412,59 @@
     }
     return '<span class="pc-tm">' + escHtml((pcDay(m) ? pcDay(m) + " " : "") + (m.time || "—")) + '</span>';
   }
+  /* ---------- мои исходы в таблице просмотра ----------
+     По активному набору считаем, какие исходы пользователь ставил в каждом матче (объединение по строкам набора).
+     Затем легко подсвечиваем: свои исходы на кнопках, метку «Мой … ✓/✗» у матча и сыгранный исход пунктиром,
+     если он не был покрыт, — чтобы сразу видеть, где ошибся. Живой счёт считается так же, как у метки ИИ. */
+  var pcCvMap = typeof WeakMap === "function" ? new WeakMap() : null;
+  function pcsvCover(){
+    var st = pcsv.sets[pcsv.act], p = state.prev;
+    if(!st || st.ai || !st.rows || !st.rows.length || !p) return null;
+    var n = p.matches.length, c = pcCvMap && pcCvMap.get(st.rows);
+    if(c && c.length === n) return c;
+    var seen = [], j, i, rows = st.rows;
+    for(j = 0; j < n; j++) seen.push({});
+    for(i = 0; i < rows.length; i++){ var r = rows[i]; for(j = 0; j < n; j++) seen[j][r.charAt(j)] = 1; }
+    c = seen.map(function(o){ return OUT.filter(function(x){ return o[x]; }).join(""); });
+    if(pcCvMap) pcCvMap.set(st.rows, c);
+    return c;
+  }
+  function pvMarkMine(){
+    var p = state.prev; if(!(state.viewPrev && p)) return;
+    var cov = pcsvCover(), doms = rowsEl.querySelectorAll(".row"), miss = [], st = pcsv.sets[pcsv.act];
+    [].slice.call(doms).forEach(function(row, idx){
+      row.classList.remove("my-ok", "my-no");
+      [].slice.call(row.querySelectorAll(".my-live")).forEach(function(e){ e.remove(); });
+      [].slice.call(row.querySelectorAll(".pick.my-pk")).forEach(function(b){ b.classList.remove("my-pk"); b.removeAttribute("data-my"); });
+      var stl0 = row.querySelector(".st-line"); if(stl0 && !stl0.firstChild) stl0.remove();
+      var m = p.matches[idx], mine = cov && cov[idx]; if(!m || !mine) return;
+      [].slice.call(row.querySelectorAll(".picks-m .pick")).forEach(function(b){ if(mine.indexOf(b.textContent) >= 0) b.classList.add("my-pk"); });
+      var lo = liveOutcome(m); if(!lo) return;
+      var ok = mine.indexOf(lo.o) >= 0;
+      row.classList.add(ok ? "my-ok" : "my-no");
+      if(!lo.live && !ok) miss.push(idx + 1);
+      var mk = function(){
+        var el = document.createElement("span");
+        el.className = "ai-live my-live " + (ok ? "ai-ok" : "ai-no") + (lo.live ? " is-live" : "");
+        el.textContent = "Мой " + mine + " " + (ok ? "✓" : "✗");
+        el.title = "Ваш набор «" + (st ? pcsvLabel(st) : "") + "»: " + mine + (lo.live ? ", по текущему счёту " : ", итог ") + lo.o + (ok ? " — угадан" : " — мимо");
+        return el;
+      };
+      var teams = row.querySelector(".teams"); if(teams) teams.appendChild(mk());
+      var fix = row.querySelector(".fix");
+      if(fix){
+        var stl = fix.querySelector(".st-line");
+        if(!stl){ stl = document.createElement("div"); stl.className = "st-line"; fix.appendChild(stl); }
+        stl.appendChild(mk());
+      }
+    });
+    var pm = document.getElementById("pbMiss");
+    if(pm){
+      pm.hidden = !miss.length;
+      if(miss.length) pm.innerHTML = 'мимо <b>№' + miss.slice(0, 5).join(", №") + (miss.length > 5 ? " +" + (miss.length - 5) : "") + '</b>';
+      pm.title = "Матчи, где сыгранный исход не покрыт вашим набором";
+    }
+  }
   function renderPrevCsv(){
     var box = $("prevCsv"); if(!box) return;
     var p = state.prev;
@@ -6051,6 +6472,7 @@
     box.hidden = false;
     pcsvEnsure(String(p.tirazh));
     pcsvSyncAi();
+    pvMarkMine();
     /* сообщение держим 10 с: фоновые обновления счёта перерисовывают блок */
     var msg = pcsv.msg && Date.now() - (pcsv.msgAt || 0) < 45000 ? '<p class="pc-msg">' + escHtml(pcsv.msg) + '</p>' : "";
     if(!pcsv.rows.length){
@@ -6250,6 +6672,9 @@
       '<span><b>' + (pcsv.page + 1) + '</b> / ' + pages + '</span>' +
       '<button type="button" data-g="' + (pcsv.page + 1) + '" aria-label="Дальше"' + (pcsv.page < pages - 1 ? '' : ' disabled') + '>&#8250;</button>' +
       '<button type="button" data-g="' + (pages - 1) + '" aria-label="В конец"' + (pcsv.page < pages - 1 ? '' : ' disabled') + '>&#187;</button></div>';
+    /* где строки рейтинга были на экране прямо сейчас (с учётом ещё идущей анимации) — от этого и поедем */
+    var oldVis = {}, ob = box.querySelector(".pc-rkb");
+    if(ob){ var obt = ob.getBoundingClientRect().top; [].slice.call(box.querySelectorAll(".pc-rk")).forEach(function(r){ oldVis[r.getAttribute("data-id")] = r.getBoundingClientRect().top - obt; }); }
     box.innerHTML = h;
     $("pcLoad").addEventListener("click", pcsvPick);
     pcPasteBind();
@@ -6294,19 +6719,22 @@
       if(nw.length && state.viewPrev) varToast(PAY + "+", false, "Вышли в " + PAY + "+: " + lst(nw));
       else if(nd.length && state.viewPrev) varToast("МИМО", true, "Выбыли из борьбы: " + lst(nd));
     }
-    /* плавная перестановка наборов (FLIP): строки едут со старого места на новое */
+    /* плавная перестановка наборов (FLIP): строки едут со старого места на новое. Едем от того места, где строка
+       видна сейчас, поэтому новая перерисовка посреди движения не обрывает анимацию, а подхватывает её */
     if(rkNow){
-      var rk2 = pcsv.rk, rb = box.querySelector(".pc-rkb");
+      var rk2 = pcsv.rk, rb = box.querySelector(".pc-rkb"), rbt = rb ? rb.getBoundingClientRect().top : 0;
+      var calm = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
       [].slice.call(box.querySelectorAll(".pc-rk")).forEach(function(r){
-        var id = r.getAttribute("data-id"), top = r.offsetTop, o = rk2.pos[id];
-        if(o && o.top !== top){
-          var up = o.top > top;
-          r.style.transition = "none"; r.style.transform = "translateY(" + (o.top - top) + "px)"; r.style.zIndex = up ? 2 : 1;
-          void r.offsetWidth;
-          r.style.transition = "transform .9s cubic-bezier(.22,.8,.25,1)"; r.style.transform = "";
-          r.classList.add(up ? "go-up" : "go-dn");
+        var id = r.getAttribute("data-id"), nt = r.getBoundingClientRect().top - rbt, o = rk2.pos[id], ov = oldVis[id];
+        var place = rkNow.map(function(q){ return String(q.i); }).indexOf(id) + 1;
+        if(ov != null && Math.abs(ov - nt) > 1.5 && !calm && r.animate){
+          var up = ov > nt;
+          r.style.zIndex = up ? 2 : 1;
+          var an = r.animate([{ transform: "translateY(" + (ov - nt) + "px)" }, { transform: "translateY(0)" }], { duration: 900, easing: "cubic-bezier(.22,.8,.25,1)" });
+          an.onfinish = an.oncancel = function(){ r.style.zIndex = ""; };
+          if(o && o.place !== place){ r.classList.add(up ? "go-up" : "go-dn"); dbgLog("места", "набор " + (Number(id) + 1) + ": " + o.place + " → " + place); }
         }
-        rk2.pos[id] = { top: top, place: rkNow.map(function(q){ return String(q.i); }).indexOf(id) + 1 };
+        rk2.pos[id] = { place: place };
         /* полоска «угадано из матчей» плавно растёт/падает, галочка — порог выплат */
         var bar = r.querySelector(".rk-bar"), fi = bar && bar.firstChild;
         if(bar){
@@ -6392,9 +6820,8 @@
     var btn = $("btnFetch");
     var lbl = btn.querySelector(".lbl") || btn;
     btn.disabled = true;
-    btn.classList.add("is-loading");
-    var was = lbl.textContent;
-    lbl.textContent = "Загружаю…";
+    var was = lbl.textContent, tp0 = Date.now();
+    if(!silent){ btn.classList.add("is-loading"); lbl.textContent = "Загружаю…"; }   /* фоновый опрос кнопку не трогает: без миганий и сдвигов */
     var firstRows = null;
     /* одна страница выгрузки — 50 тиражей; если ищем конкретный номер, идём глубже */
     function grab(page){
@@ -6466,6 +6893,7 @@
       })
       .then(function(res){
         btn.disabled = false; btn.classList.remove("is-loading"); lbl.textContent = was;
+        DBG.api["текущий"] = { ms: Date.now() - tp0, at: Date.now() }; dbgLog("totobrief", "опрос тиража: " + (Date.now() - tp0) + " мс");
         if(res && res.changed){
           say("На totobrief появился тираж №" + res.changed + ", а открыт №" + state.tirazh +
               ". Нажми «Обновить тираж», чтобы перейти на него — купон и корзина этого тиража сохранятся, к ним можно вернуться.");
@@ -6484,6 +6912,7 @@
       })
       .catch(function(err){
         btn.disabled = false; btn.classList.remove("is-loading"); lbl.textContent = was;
+        DBG.api["текущий"] = { ms: Date.now() - tp0, at: Date.now(), err: 1 }; dbgLog("err", "опрос тиража: " + (err && err.message || err));
         tryPending();
         if(!silent) say("Не удалось забрать тираж ни с totobrief, ни из зеркала: " + (err && err.message ? err.message : err) +
                         ". На странице-артефакте запросы наружу запрещены — автоподтяжка работает только в размещённой версии.");
