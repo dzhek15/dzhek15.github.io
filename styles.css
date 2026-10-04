@@ -700,6 +700,7 @@ select{font:inherit; color:var(--ink); background:var(--surface); border:1px sol
 .vrd.trap{background:var(--hot-soft); color:var(--hot)}
 .vrd.val{background:var(--o1-soft); color:var(--o1)}
 .vrd.neut{color:var(--muted)}
+.vrd.edge{opacity:.6}
 .ev-tab td.brief-no{color:var(--muted); font-family:"Inter",system-ui,sans-serif; font-size:12px; text-align:right}
 .brief-pre{font-family:"IBM Plex Mono",monospace; font-size:12px; line-height:1.55; white-space:pre;
   overflow-x:auto; background:var(--ox-soft); padding:10px 12px; border-radius:var(--r); margin-top:6px}
