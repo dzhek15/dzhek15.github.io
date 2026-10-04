@@ -5994,7 +5994,6 @@
       (live ? '<span>идёт <b>' + live + '</b></span>' : '') +
       (p.matches.length - done - live - voids > 0 ? '<span>ждём <b>' + (p.matches.length - done - live - voids) + '</b></span>' : '') +
       '<span id="pbBest" hidden>лучший набор <b></b></span>' +
-      '<span id="pbMiss" class="pb-miss" hidden></span>' +
       '<span id="pbSum" hidden title="Сумма всех загруженных наборов этого тиража">сумма <b></b></span>' +
       (voids ? '<span title="засчитан угаданным для любой ставки">отменён <b>' + voids + '</b></span>' : '') +
       (aiN.done || aiN.live ? '<span class="pb-ai" title="Вариант ИИ: угадано из сыгранных · в лайве по текущему счёту">' +
@@ -6412,59 +6411,6 @@
     }
     return '<span class="pc-tm">' + escHtml((pcDay(m) ? pcDay(m) + " " : "") + (m.time || "—")) + '</span>';
   }
-  /* ---------- мои исходы в таблице просмотра ----------
-     По активному набору считаем, какие исходы пользователь ставил в каждом матче (объединение по строкам набора).
-     Затем легко подсвечиваем: свои исходы на кнопках, метку «Мой … ✓/✗» у матча и сыгранный исход пунктиром,
-     если он не был покрыт, — чтобы сразу видеть, где ошибся. Живой счёт считается так же, как у метки ИИ. */
-  var pcCvMap = typeof WeakMap === "function" ? new WeakMap() : null;
-  function pcsvCover(){
-    var st = pcsv.sets[pcsv.act], p = state.prev;
-    if(!st || st.ai || !st.rows || !st.rows.length || !p) return null;
-    var n = p.matches.length, c = pcCvMap && pcCvMap.get(st.rows);
-    if(c && c.length === n) return c;
-    var seen = [], j, i, rows = st.rows;
-    for(j = 0; j < n; j++) seen.push({});
-    for(i = 0; i < rows.length; i++){ var r = rows[i]; for(j = 0; j < n; j++) seen[j][r.charAt(j)] = 1; }
-    c = seen.map(function(o){ return OUT.filter(function(x){ return o[x]; }).join(""); });
-    if(pcCvMap) pcCvMap.set(st.rows, c);
-    return c;
-  }
-  function pvMarkMine(){
-    var p = state.prev; if(!(state.viewPrev && p)) return;
-    var cov = pcsvCover(), doms = rowsEl.querySelectorAll(".row"), miss = [], st = pcsv.sets[pcsv.act];
-    [].slice.call(doms).forEach(function(row, idx){
-      row.classList.remove("my-ok", "my-no");
-      [].slice.call(row.querySelectorAll(".my-live")).forEach(function(e){ e.remove(); });
-      [].slice.call(row.querySelectorAll(".pick.my-pk")).forEach(function(b){ b.classList.remove("my-pk"); b.removeAttribute("data-my"); });
-      var stl0 = row.querySelector(".st-line"); if(stl0 && !stl0.firstChild) stl0.remove();
-      var m = p.matches[idx], mine = cov && cov[idx]; if(!m || !mine) return;
-      [].slice.call(row.querySelectorAll(".picks-m .pick")).forEach(function(b){ if(mine.indexOf(b.textContent) >= 0) b.classList.add("my-pk"); });
-      var lo = liveOutcome(m); if(!lo) return;
-      var ok = mine.indexOf(lo.o) >= 0;
-      row.classList.add(ok ? "my-ok" : "my-no");
-      if(!lo.live && !ok) miss.push(idx + 1);
-      var mk = function(){
-        var el = document.createElement("span");
-        el.className = "ai-live my-live " + (ok ? "ai-ok" : "ai-no") + (lo.live ? " is-live" : "");
-        el.textContent = "Мой " + mine + " " + (ok ? "✓" : "✗");
-        el.title = "Ваш набор «" + (st ? pcsvLabel(st) : "") + "»: " + mine + (lo.live ? ", по текущему счёту " : ", итог ") + lo.o + (ok ? " — угадан" : " — мимо");
-        return el;
-      };
-      var teams = row.querySelector(".teams"); if(teams) teams.appendChild(mk());
-      var fix = row.querySelector(".fix");
-      if(fix){
-        var stl = fix.querySelector(".st-line");
-        if(!stl){ stl = document.createElement("div"); stl.className = "st-line"; fix.appendChild(stl); }
-        stl.appendChild(mk());
-      }
-    });
-    var pm = document.getElementById("pbMiss");
-    if(pm){
-      pm.hidden = !miss.length;
-      if(miss.length) pm.innerHTML = 'мимо <b>№' + miss.slice(0, 5).join(", №") + (miss.length > 5 ? " +" + (miss.length - 5) : "") + '</b>';
-      pm.title = "Матчи, где сыгранный исход не покрыт вашим набором";
-    }
-  }
   function renderPrevCsv(){
     var box = $("prevCsv"); if(!box) return;
     var p = state.prev;
@@ -6472,7 +6418,6 @@
     box.hidden = false;
     pcsvEnsure(String(p.tirazh));
     pcsvSyncAi();
-    pvMarkMine();
     /* сообщение держим 10 с: фоновые обновления счёта перерисовывают блок */
     var msg = pcsv.msg && Date.now() - (pcsv.msgAt || 0) < 45000 ? '<p class="pc-msg">' + escHtml(pcsv.msg) + '</p>' : "";
     if(!pcsv.rows.length){
@@ -6577,7 +6522,10 @@
       h += '</div><p class="pc-lnote">Варианты, угадавшие ' + PAY + ' и больше матчей</p>';
     }
     /* весь купон: сколько вариантов стоит на каждый исход */
-    h += '<div class="pc-sub">Весь купон</div><div class="pc-cov">';
+    var unc = [];
+    ms.forEach(function(m, j){ if(res[j] && res[j] !== VOID && !rows.some(function(r){ return r.charAt(j) === res[j]; })) unc.push(j + 1); });
+    h += '<div class="pc-sub">Весь купон</div>' + (played ? '<p class="pc-lnote pc-key"><span class="k-on">белым</span> — ваши исходы, <span class="k-hit">зелёная рамка</span> — зашёл, <span class="k-bad">красным</span> — не зашёл' +
+      (unc.length ? '. Исход не был в купоне: <b>№' + unc.slice(0, 6).join(", №") + (unc.length > 6 ? " +" + (unc.length - 6) : "") + '</b>' : '') + '</p>' : '') + '<div class="pc-cov">';
     ms.forEach(function(m, j){
       var c = { "1": 0, "X": 0, "2": 0 };
       rows.forEach(function(r){ var o = r.charAt(j); if(c[o] != null) c[o]++; });
@@ -6586,7 +6534,7 @@
       h += '<div class="pc-cr' + (wiOk ? " wi-able" + (pcsv.what === j ? " wi-on" : "") : "") + '"' + (wiOk ? ' data-w="' + j + '" title="Тап — что будет с вариантами при каждом исходе"' : '') + '><span class="pc-n">' + (j + 1) + '</span><span class="pc-m"><i><b>' + escHtml(m.home) + '</b><u> — </u><b>' + escHtml(m.away) + '</b></i>' +
         '<span class="pc-sr">' + (sc ? '<em class="' + (m.res ? "" : "live") + '">' + escHtml(sc) + '</em>' : '') + pcTime(m) + '</span></span>';
       OUT.forEach(function(o){
-        var cls = "pc-o" + (c[o] ? " on" : "") + (res[j] === VOID ? (c[o] ? " hit" : "") : res[j] === o ? (c[o] ? " hit" : " hole") : (res[j] && c[o] ? " miss" : ""));
+        var cls = "pc-o" + (c[o] ? " on" : "") + (res[j] === VOID ? (c[o] ? " hit" : "") : res[j] === o ? (c[o] ? " hit" : " hole") : (res[j] && c[o] ? " miss" + (res[j] && !c[res[j]] ? " bad" : "") : ""));
         h += '<span class="' + cls + '" title="' + o + ': ' + fmt(c[o]) + ' вар.">' + o + (sysL.length === 1 ? '' : '<small>' + (c[o] ? (c[o] === total ? "все" : fmt(c[o])) : "·") + '</small>') + '</span>';
       });
       h += '</div>';
