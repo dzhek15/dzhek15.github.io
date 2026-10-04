@@ -5669,14 +5669,28 @@
   /* набор ИИ: варианты, которые ИИ проставил по тиражу, собираются сами и идут в рейтинг с пометкой «ИИ».
      В хранилище не пишется: каждый раз строится заново из ai.json / ai_hist.json */
   function pcsvMine(){ return pcsv.sets.filter(function(x){ return !x.ai; }); }
+  /* Бриф ИИ на 14 из 15: готовые строки лежат в ai.json (br, пока тираж текущий) или в ai_arch.json (br, после смены).
+     Строка — 15 символов исходов, например "X21X..." */
+  function aiPrevBrief(no){
+    var j = ai.data, b = null;
+    if(j && String(j.number) === String(no) && Array.isArray(j.br) && j.br.length) b = j.br;
+    else { var ar = aiArch.data && aiArch.data[String(no)]; if(ar && Array.isArray(ar.br) && ar.br.length) b = ar.br; }
+    return b && b.every(function(x){ return /^[1X2]{15}$/.test(String(x).replace(/,/g, "")); }) ? b : null;
+  }
   function pcsvSyncAi(){
     var p = state.prev; if(!p || pcsv.tir !== String(p.tirazh)) return;
-    var picks = [], i;
-    for(i = 0; i < p.matches.length; i++){ var r = aiPrevRec(p.tirazh, i); if(!r) return; picks.push(r.p); }
-    var sys = [picks.join(",")], k = -1;
+    var picks = [], i, sys, nm = "ИИ-разбор", br = aiPrevBrief(p.tirazh);
+    if(br){
+      /* строки брифа идут как есть: каждая — один вариант, поэтому в набор попадают именно они, а не весь купон */
+      sys = br.map(function(x){ return x.replace(/,/g, "").split("").join(","); }); nm = "ИИ-бриф";
+    } else {
+      for(i = 0; i < p.matches.length; i++){ var r = aiPrevRec(p.tirazh, i); if(!r) return; picks.push(r.p); }
+      sys = [picks.join(",")];
+    }
+    var k = -1, sig = sys.join("|");
     for(i = 0; i < pcsv.sets.length; i++) if(pcsv.sets[i].ai){ k = i; break; }
-    if(k >= 0 && pcsv.sets[k].sys[0] === sys[0]) return;
-    var set = { name: "ИИ-разбор", ai: 1, link: 0, sys: sys, rows: pcsvExpand(sys) };
+    if(k >= 0 && (pcsv.sets[k].sys || []).join("|") === sig) return;
+    var set = { name: nm, ai: 1, link: 0, sys: sys, rows: pcsvExpand(sys) };
     if(!set.rows.length) return;
     if(k >= 0) pcsv.sets[k] = set; else pcsv.sets.push(set);
     if(k < 0 && pcsv.sets.length === 1) pcsvUse(0);
