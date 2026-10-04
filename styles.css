@@ -1753,14 +1753,24 @@ body.is-prev .row .tcol .tc-t.tc-pp{font-size:11px; font-weight:700; letter-spac
 @media (max-width:340px){ .pc-rkh,.pc-rk{grid-template-columns:24px minmax(0,1fr) 48px 28px 38px; gap:2px; padding:0 5px} .rk-n b{font-size:12px; letter-spacing:-.02em} .rk-n small{font-size:10px} .rk-ai{font-size:9px; padding:0 3px} }
 
 /* напоминалка: названия команд в активном тираже нажимаются, там история их матчей в тото */
-.tm-hint{display:flex; align-items:center; justify-content:center; gap:7px; padding:7px 10px 9px; font-size:12px; line-height:1.25; color:var(--muted); text-align:center}
+.tm-hint{display:flex; align-items:center; justify-content:center; padding:7px 10px 9px; font-size:12px; line-height:1.25; color:var(--muted); text-align:center}
+.tm-in{display:flex; align-items:center; justify-content:center; gap:7px; min-width:0}
 .tm-hint svg{flex:none; color:var(--brand-gold)}
-/* красно-чёрная пульсирующая стрелка вниз рядом с подсказкой */
-.tm-hint svg.tm-arr{width:14px; height:18px; color:inherit; filter:drop-shadow(0 0 1.5px rgba(255,255,255,.55)); animation:tmArr 1.1s ease-in-out infinite; transform-origin:50% 50%}
-@keyframes tmArr{0%,100%{transform:translateY(-2px) scale(1); opacity:.85} 50%{transform:translateY(3px) scale(1.12); opacity:1}}
-@media (prefers-reduced-motion:reduce){ .tm-hint svg.tm-arr{animation:none} }
+/* маленькая зелёная стрелка вниз: вместо пульсации по ней плавно проходит блик */
+.tm-arr{flex:none; width:9px; height:12px; background:linear-gradient(115deg,#2f8f55 0 38%,#8be3ad 50%,#2f8f55 62% 100%) 0 0/260% 100%;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 12'%3E%3Cpath d='M3.4 0h2.2v6.4H9L4.5 12 0 6.4h3.4z'/%3E%3C/svg%3E") center/100% 100% no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 12'%3E%3Cpath d='M3.4 0h2.2v6.4H9L4.5 12 0 6.4h3.4z'/%3E%3C/svg%3E") center/100% 100% no-repeat;
+  animation:tmShine 2.6s ease-in-out infinite}
+@keyframes tmShine{0%{background-position:100% 0} 60%,100%{background-position:0 0}}
+@media (prefers-reduced-motion:reduce){ .tm-arr{animation:none; background:#3fae6a} }
+/* на ПК подсказка стоит строго над словом «Событие»: те же колонки, что у шапки таблицы */
+@media (min-width:821px){
+  .tm-hint{display:grid; grid-template-columns:26px minmax(0,1fr) repeat(3,54px) 236px; column-gap:9px; padding:7px 13px 9px}
+  .tm-hint .tm-in{grid-column:2; white-space:nowrap}
+  [data-compact="1"] .tm-hint{grid-template-columns:22px minmax(0,1fr) repeat(3,46px) 74px; column-gap:7px; padding:5px 10px 6px}
+}
 body.is-prev .tm-hint{display:none}
 body:not(.is-prev) .row .teams .tm{text-decoration:underline dotted; text-decoration-color:rgba(201,162,75,.55); text-decoration-thickness:1px; text-underline-offset:4px}
 body:not(.is-prev) .row .teams .tm:hover{text-decoration-color:var(--accent)}
-@media (max-width:400px){ .tm-hint{font-size:11px; gap:6px; padding:6px 6px 8px} }
-@media (max-width:340px){ .tm-hint{font-size:10px; gap:5px; padding:6px 4px 8px} .tm-hint svg.tm-arr{width:12px; height:16px} }
+@media (max-width:400px){ .tm-hint{font-size:11px; padding:6px 6px 8px} .tm-in{gap:6px} }
+@media (max-width:340px){ .tm-hint{font-size:10px; padding:6px 4px 8px} .tm-in{gap:5px} }
