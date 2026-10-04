@@ -12,7 +12,7 @@
   --shadow:0 1px 0 rgba(19,26,27,.06), 0 6px 18px -12px rgba(19,26,27,.35);
   --r:4px;
   /* золото плохо читается на светлой теме: текст и выбор ИИ — стальной синий из палитры */
-  --gold-ink:#3E5C76; --gold-tsh:none; --ai-pk-bd:#3E5C76; --ai-pk-ink:#FFFFFF; --ai-pk-bg:#3E5C76; --ai-pk-glow:0 0 0 0 transparent;
+  --gold-ink:#3E5C76; --gold-tsh:none; --ai-pk-bd:#1D5FA6; --ai-pk-ink:#FFFFFF; --ai-pk-bg:#1D5FA6; --ai-pk-glow:inset 0 -2px 0 rgba(0,0,0,.18);
 
   /* лёгкое сияние на фоне страницы — нейтральная тень сверху (не золото — на серо-салатовом фоне
      золотой подсвет смотрелся мутно), сталь в углу */
@@ -1853,7 +1853,7 @@ body:not(.is-prev) .row .teams .tm:hover{text-decoration-color:var(--accent)}
 :root[data-theme="light"] body.is-prev .row{border-bottom-color:var(--rule)}
 :root[data-theme="light"] body.is-prev .row .pick{opacity:.85; color:var(--ink); border-color:var(--rule-strong); background:var(--surface)}
 :root[data-theme="light"] body.is-prev .row .pick.won{opacity:1}
-:root[data-theme="light"] body.is-prev .row .pick.ai-pk{opacity:1; background:var(--ai-pk-bg); color:var(--ai-pk-ink); border-color:#0A0F10}
+:root[data-theme="light"] body.is-prev .row .pick.ai-pk{opacity:1; background:var(--ai-pk-bg); color:var(--ai-pk-ink); border-color:var(--ai-pk-bd); box-shadow:inset 0 -2px 0 rgba(0,0,0,.18)}
 /* золотые рамки — чёрным контуром, золото остаётся внутренней каймой */
 :root[data-theme="light"] .prev-bar,
 :root[data-theme="light"] .pcsv,
@@ -1919,3 +1919,129 @@ body:not(.is-prev) .row .teams .tm:hover{text-decoration-color:var(--accent)}
 :root[data-theme="light"] .pc-key .k-bad,:root[data-theme="light"] .pc-key b{color:#B3261E; font-weight:700}
 :root[data-theme="light"] .pc-cr .pc-n{color:#0A0F10; font-weight:800}
 :root[data-theme="light"] .pc-flt button:disabled,:root[data-theme="light"] .prev-bar .pb-flt button:disabled{opacity:.75}
+
+/* счёт: современный цифровой шрифт, ведущая сторона ярче, у лайва мягкое свечение */
+.mscore:not(.void){font-family:"Oxanium","IBM Plex Mono",monospace; font-weight:800; font-variant-numeric:tabular-nums lining-nums; letter-spacing:.01em}
+.mscore .tr{color:color-mix(in srgb, currentColor 58%, transparent); font-weight:700}
+.mscore.live .sh:not(.tr),.mscore.live .sa:not(.tr){text-shadow:0 0 12px color-mix(in srgb, currentColor 55%, transparent)}
+:root[data-theme="light"] .mscore.live .sh,:root[data-theme="light"] .mscore.live .sa{text-shadow:none}
+:root[data-theme="light"] .mscore .tr{color:color-mix(in srgb, currentColor 62%, #fff)}
+:root:not([data-compact="1"]) body.is-prev .row .teams .mscore .sh,
+:root:not([data-compact="1"]) body.is-prev .row .teams .mscore .sa{font-size:27px; line-height:1.05}
+@media (max-width:360px){ :root:not([data-compact="1"]) body.is-prev .row .teams .mscore .sh, :root:not([data-compact="1"]) body.is-prev .row .teams .mscore .sa{font-size:24px} }
+@media (max-width:340px){ :root:not([data-compact="1"]) body.is-prev .row .teams .mscore .sh, :root:not([data-compact="1"]) body.is-prev .row .teams .mscore .sa{font-size:22px} }
+
+/* ИИ ✓/✗ → плюс и минус, нарисованные штрихами */
+.ai-live .pm{display:inline-block; position:relative; width:9px; height:9px; vertical-align:-1px; margin-left:2px}
+.ai-live .pm::before,.ai-live .pm::after{content:""; position:absolute; background:currentColor; border-radius:2px}
+.ai-live .pm::before{left:0; right:0; top:50%; height:2px; margin-top:-1px}
+.ai-live.ai-ok .pm::after{top:0; bottom:0; left:50%; width:2px; margin-left:-1px}
+.ai-live.ai-no .pm::after{display:none}
+/* панель «ИИ варианты» над таблицей просмотра */
+.aitbl-bar{display:none}
+body.is-prev .aitbl-bar{display:flex; align-items:center; gap:10px; margin:0 0 8px; padding:8px 8px 8px 14px; background:var(--brand-dark); border:1.5px solid var(--brand-gold); border-radius:6px; min-height:42px}
+.aitbl-t{font:800 14px/1 "Chivo",sans-serif; letter-spacing:.06em; text-transform:uppercase; color:var(--brand-gold); white-space:nowrap}
+.aitbl-s{flex:1; min-width:0; font-size:11px; color:#a9a39a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.aitbl-bar button{display:inline-flex; align-items:center; gap:6px; flex:none; height:28px; padding:0 10px; background:transparent; color:var(--brand-gold); border:1px solid var(--brand-gold); border-radius:4px; font:700 12px "IBM Plex Sans",sans-serif; cursor:pointer}
+.aitbl-bar button:hover{background:#2a221c}
+.aitbl-bar button svg{transition:transform .2s}
+body.aitbl-off .aitbl-bar button svg{transform:rotate(180deg)}
+body.is-prev.aitbl-off #coupon{display:none}
+body.is-prev #coupon{margin-top:0}
+@media (max-width:420px){ .aitbl-s{display:none} .aitbl-bar{padding-left:12px} .aitbl-bar button{margin-left:auto} }
+/* FS в купоне слева от исходов */
+.pc-fs{display:flex; align-items:center; justify-content:center; width:30px; height:26px; padding:0; background:var(--brand-dark); border:1px solid var(--brand-gold); border-radius:4px; cursor:pointer}
+.pc-fs .fs-mark{font:800 11px/1 "Chivo",sans-serif; letter-spacing:.06em; color:var(--brand-gold)}
+.pc-fs .fs-mark i{font-style:normal; color:#E8453C}
+.pc-fs:hover{background:#2a221c; box-shadow:0 0 0 1px var(--brand-gold) inset}
+.pc-cr{grid-template-columns:22px minmax(0,1fr) 30px repeat(3,46px)}
+@media (max-width:560px){ .pc-cr{grid-template-columns:18px minmax(0,1fr) 28px repeat(3,38px)} .pc-fs{width:28px} }
+
+/* ===== рейтинг наборов, купон и варианты: основные таблицы просмотра — крупнее и кликабельнее ===== */
+.pcsv button,.pc-rk,.pc-cr.wi-able,.pc-vr[data-vk],.pc-lb{-webkit-tap-highlight-color:transparent; touch-action:manipulation}
+.pcsv :focus-visible{outline:2px solid var(--brand-gold); outline-offset:2px}
+/* рейтинг */
+.pc-rkw .pc-rk{height:62px; transition:background .15s}
+.pc-rkw .pc-rk:active{background:color-mix(in srgb,var(--brand-gold) 18%, transparent)}
+.pc-rkh{height:30px; font-size:11px}
+.rk-n b{font:800 17px/1.1 "Oxanium","IBM Plex Mono",monospace; letter-spacing:.01em}
+.rk-n small{font-size:12.5px}
+.rk-v{font:800 17px/1 "Oxanium","IBM Plex Mono",monospace; font-variant-numeric:tabular-nums}
+.rk-v small{font-size:11px}
+.pc-rkw .rk-p b{width:30px; height:30px; font:800 15px/1 "Oxanium","IBM Plex Sans",sans-serif}
+.pc-rknote{font-size:12.5px}
+/* карточки и лесенка */
+.pc-cards b{font:800 18px/1.1 "Oxanium","IBM Plex Mono",monospace; font-variant-numeric:tabular-nums}
+.pc-cards span{font-size:12px}
+.pc-lb{min-height:96px}
+.pc-lb b{font:800 15px/1 "Oxanium","IBM Plex Mono",monospace}
+.pc-lb span{font:700 13px/1 "Oxanium","IBM Plex Mono",monospace}
+/* весь купон */
+.pc-cov{gap:4px; max-width:720px}
+.pc-cr{min-height:44px; padding:2px 0; border-radius:var(--r); transition:background .15s}
+.pc-cr.wi-able:hover{background:var(--surface-2)}
+.pc-cr.wi-able:active{background:var(--surface-3)}
+.pc-m{font-size:14.5px; line-height:1.25}
+.pc-n{font:700 14px "Oxanium","IBM Plex Mono",monospace}
+.pc-o{height:40px; font:800 16px/1 "Oxanium","IBM Plex Mono",monospace}
+.pc-o small{font:600 11px/1.2 "Oxanium","IBM Plex Mono",monospace}
+.pc-fs{height:30px; width:34px}
+.pc-cr{grid-template-columns:24px minmax(0,1fr) 34px repeat(3,48px)}
+.pc-lnote{font-size:12.5px}
+.pc-sub{font-size:15px}
+/* фильтры и вкладки */
+.pc-flt button,.pc-tabs button,.pc-view button{min-height:36px; font-size:13px; padding-left:13px; padding-right:13px}
+.pc-btn{min-height:38px; font-size:14px}
+.pc-pager button{min-width:42px; min-height:38px; font-size:16px}
+/* варианты */
+.pc-vars{gap:3px}
+.pc-vr{grid-template-columns:38px repeat(var(--n),minmax(17px,1fr)) 44px; gap:2px}
+.pc-vr span{font:700 13.5px/28px "Oxanium","IBM Plex Mono",monospace; font-variant-numeric:tabular-nums}
+.pc-vr span:first-child{font-size:12px; font-weight:600}
+.pc-vr span.m2{font-size:11px}
+.pc-vr span.m3{font-size:9px}
+.pc-vh span{font:600 11px/20px "IBM Plex Mono",monospace}
+.pc-vr[data-vk]{cursor:pointer; border-radius:var(--r); transition:background .12s}
+.pc-vr[data-vk]:hover{background:color-mix(in srgb,var(--ink) 7%, transparent)}
+.pc-vr[data-vk]:active{background:color-mix(in srgb,var(--ink) 12%, transparent)}
+.pc-vr.open{background:color-mix(in srgb,var(--brand-gold) 14%, transparent); box-shadow:0 0 0 1px var(--brand-gold)}
+.pc-vd{margin:0 0 6px; padding:10px 12px; background:var(--surface-2); border:1px solid var(--rule-strong); border-left:3px solid var(--brand-gold); border-radius:var(--r); font-size:13.5px; color:var(--ink); animation:pcBump .25s ease-out}
+.pc-vs{display:flex; flex-wrap:wrap; gap:4px 14px; align-items:baseline}
+.pc-vs>b{font:800 15px "Chivo",sans-serif}
+.pc-vs span{color:var(--muted)} .pc-vs span b{color:var(--ink); font-family:"Oxanium","IBM Plex Mono",monospace}
+.pc-vl{margin:8px 0 3px; font-weight:700; font-size:12.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em}
+.pc-vl.ok{color:var(--cold); text-transform:none; font-size:13.5px}
+.pc-vm{margin:0; padding:0; list-style:none; display:grid; gap:3px}
+.pc-vm li{line-height:1.3}
+.pc-vm b{font-family:"Oxanium","IBM Plex Mono",monospace}
+.pc-vcp{margin-top:10px; width:100%}
+.pc-vcp.ok{border-color:var(--cold); color:var(--cold)}
+@media (max-width:560px){
+  .pc-cr{grid-template-columns:20px minmax(0,1fr) 32px repeat(3,40px); gap:3px}
+  .pc-m{font-size:13.5px}
+  .pc-o{height:40px; font-size:16px}
+  .pc-vr{grid-template-columns:28px repeat(var(--n),minmax(15px,1fr)) 34px; gap:1px}
+  .pc-vr span{font-size:12.5px; line-height:28px}
+  .pc-vr span:first-child{font-size:11px}
+  .pc-vr span.m2{font-size:10px}
+  .pc-rkw .pc-rk{height:64px}
+  .rk-n b{font-size:16px} .rk-v{font-size:16px}
+}
+@media (max-width:360px){
+  .pc-cr{grid-template-columns:16px minmax(0,1fr) 30px repeat(3,36px); gap:2px}
+  .pc-m{font-size:13px} .pc-fs{width:30px}
+  .rk-n b{font-size:15px} .rk-v{font-size:15px}
+}
+/* светлая тема: плотнее */
+:root[data-theme="light"] .pc-cr.wi-able:hover{background:#EEF1F3}
+:root[data-theme="light"] .pc-vr[data-vk]:hover{background:#EEF1F3}
+:root[data-theme="light"] .pc-vr.open{background:#FBF3DC; box-shadow:0 0 0 1.5px #0A0F10}
+:root[data-theme="light"] .pc-vd{background:#fff; border-color:#4D5B59; border-left-color:#0A0F10}
+:root[data-theme="light"] .pc-vl.ok{color:#0F6A36}
+@media (max-width:560px){ .pc-vh span{font-size:10px; letter-spacing:-.05em} }
+/* варианты всегда помещаются по ширине: колонки сжимаются, а не уезжают в прокрутку */
+.pc-vr{grid-template-columns:38px repeat(var(--n),minmax(0,1fr)) 44px}
+.pc-vr span{min-width:0; overflow:hidden}
+.pc-vars{overflow-x:visible}
+@media (max-width:560px){ .pc-vr{grid-template-columns:26px repeat(var(--n),minmax(0,1fr)) 32px} }
+@media (max-width:360px){ .pc-vr{grid-template-columns:22px repeat(var(--n),minmax(0,1fr)) 28px} .pc-vr span{font-size:12px} .pc-vr span.m2{font-size:9.5px; letter-spacing:-.08em} .pc-vh span{font-size:9px} }

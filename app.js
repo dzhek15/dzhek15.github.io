@@ -2196,7 +2196,8 @@
     if(!r){ sc.textContent = t; return; }
     var g = goalOn(m);
     /* каждая цифра в своём span: на телефоне в просмотре счёт встаёт столбиком у края */
-    sc.innerHTML = '<span class="sh' + (g && m.goalSide === "h" ? " g-hit" : "") + '">' + r[1] + '</span><span class="sc-c">:</span><span class="sa' + (g && m.goalSide === "a" ? " g-hit" : "") + '">' + r[2] + '</span>';
+    var dh = Number(r[1]) - Number(r[2]);   /* ведущая сторона — ярче, отстающая — приглушена */
+    sc.innerHTML = '<span class="sh' + (dh < 0 ? " tr" : "") + (g && m.goalSide === "h" ? " g-hit" : "") + '">' + r[1] + '</span><span class="sc-c">:</span><span class="sa' + (dh > 0 ? " tr" : "") + (g && m.goalSide === "a" ? " g-hit" : "") + '">' + r[2] + '</span>';
   }
   /* минута матча по данным ленты: футбол — от начала тайма, хоккей — минута периода из ленты */
   function liveMinute(ph, hockey, short){
@@ -2503,6 +2504,27 @@
     b.addEventListener("click", function(){ openFs(m); });
     return b;
   }
+
+  /* таблица «ИИ варианты» в просмотре: сворачивается кнопкой, выбор помнится */
+  (function(){
+    var bar = document.getElementById("aiTblBar"), btn = document.getElementById("aiTblBtn");
+    if(!bar || !btn) return;
+    var KEY = "dz_aitbl_off";
+    function apply(off){
+      document.body.classList.toggle("aitbl-off", off);
+      btn.setAttribute("aria-expanded", off ? "false" : "true");
+      btn.querySelector("span").textContent = off ? "Развернуть" : "Свернуть";
+    }
+    var off0 = false;
+    try{ off0 = localStorage.getItem(KEY) === "1"; }catch(e){}
+    apply(off0);
+    btn.addEventListener("click", function(){
+      var off = !document.body.classList.contains("aitbl-off");
+      apply(off);
+      try{ localStorage.setItem(KEY, off ? "1" : "0"); }catch(e){}
+    });
+  })();
+
   /* ---------- Составы и новости по матчу ----------
      Заголовки собирает GitHub Actions из Google News раз в 2 часа (data/api/news.json),
      ссылки собираются из названий команд — работают для любой лиги. */
@@ -2816,7 +2838,7 @@
     var ok = rec.p.indexOf(lo.o) >= 0;
     var el = document.createElement("span");
     el.className = "ai-live " + (ok ? "ai-ok" : "ai-no") + (lo.live ? " is-live" : "");
-    el.textContent = "ИИ " + (ok ? "✓" : "✗");
+    el.innerHTML = 'ИИ <i class="pm" aria-hidden="true"></i>';
     el.title = "Вариант ИИ " + rec.p + (lo.live ? ": по текущему счёту " : ": итог ") + (ok ? "угадан" : "не угадан");
     return el;
   }
@@ -6533,6 +6555,7 @@
       var wiOk = !m.res && m.res !== VOID;
       h += '<div class="pc-cr' + (wiOk ? " wi-able" + (pcsv.what === j ? " wi-on" : "") : "") + '"' + (wiOk ? ' data-w="' + j + '" title="Тап — что будет с вариантами при каждом исходе"' : '') + '><span class="pc-n">' + (j + 1) + '</span><span class="pc-m"><i><b>' + escHtml(m.home) + '</b><u> — </u><b>' + escHtml(m.away) + '</b></i>' +
         '<span class="pc-sr">' + (sc ? '<em class="' + (m.res ? "" : "live") + '">' + escHtml(sc) + '</em>' : '') + pcTime(m) + '</span></span>';
+      h += '<button type="button" class="pc-fs" data-fs="' + j + '" title="Открыть матч на Flashscore" aria-label="Открыть на Flashscore: ' + escHtml(m.home) + ' — ' + escHtml(m.away) + '"><b class="fs-mark">F<i>S</i></b></button>';
       OUT.forEach(function(o){
         var cls = "pc-o" + (c[o] ? " on" : "") + (res[j] === VOID ? (c[o] ? " hit" : "") : res[j] === o ? (c[o] ? " hit" : " hole") : (res[j] && c[o] ? " miss" + (res[j] && !c[res[j]] ? " bad" : "") : ""));
         h += '<span class="' + cls + '" title="' + o + ': ' + fmt(c[o]) + ' вар.">' + o + (sysL.length === 1 ? '' : '<small>' + (c[o] ? (c[o] === total ? "все" : fmt(c[o])) : "·") + '</small>') + '</span>';
@@ -6604,14 +6627,27 @@
     for(var j = 0; j < n; j++) h += '<span>' + (j + 1) + '</span>';
     h += '<span>угад.</span></div>';
     part.forEach(function(x){
-      var r = src[x.i];
-      h += '<div class="pc-vr' + (x.h >= 9 ? " win" : "") + (n - x.miss < 9 ? " dead" : "") + '"><span>' + (x.i + 1) + '</span>';
+      var r = src[x.i], vkey = view + ":" + x.i, vop = pcsv.vopen === vkey;
+      h += '<div class="pc-vr' + (x.h >= 9 ? " win" : "") + (n - x.miss < 9 ? " dead" : "") + (vop ? " open" : "") + '" data-vk="' + vkey + '" role="button" tabindex="0" aria-expanded="' + vop + '" title="Тап — разбор варианта"><span>' + (x.i + 1) + '</span>';
       for(var j = 0; j < n; j++){
         var o = view === "sys" ? r[j] : r.charAt(j), cls = !res[j] ? "" : (res[j] === VOID || o.indexOf(res[j]) >= 0) ? "hit" : "miss";
         if(o.length > 1) cls += " m" + o.length;
         h += '<span class="' + cls + '" data-j="' + (j + 1) + '">' + o + '</span>';
       }
       h += '<span class="pc-h"' + (x.v ? ' title="' + fmt(x.v) + ' вар. в строке"' : '') + '>' + x.h + '</span></div>';
+      if(vop){
+        var vm = [], vw = [], vcp = "";
+        for(var q = 0; q < n; q++){
+          var oq = view === "sys" ? r[q] : r.charAt(q);
+          vcp += oq.length > 1 ? "(" + oq + ")" : oq;
+          if(res[q]){ if(res[q] !== VOID && oq.indexOf(res[q]) < 0) vm.push('<li><b>№' + (q + 1) + '</b> ' + escHtml(ms[q].home) + ' — ' + escHtml(ms[q].away) + ': у вас <b>' + oq + '</b>, вышло <b>' + res[q] + '</b></li>'); }
+          else vw.push(q + 1);
+        }
+        h += '<div class="pc-vd"><div class="pc-vs"><b>' + (view === "sys" ? "Строка " : "Вариант ") + (x.i + 1) + '</b><span>угадано <b>' + x.h + '</b> из ' + played + '</span><span>максимум <b>' + (n - x.miss) + '</b></span>' + (x.v > 1 ? '<span>вариантов в строке <b>' + fmt(x.v) + '</b></span>' : '') + '</div>' +
+          (vm.length ? '<p class="pc-vl">Не зашли</p><ul class="pc-vm">' + vm.join("") + '</ul>' : '<p class="pc-vl ok">' + (played ? "Ошибок пока нет" : "Матчи ещё не сыграны") + '</p>') +
+          (vw.length ? '<p class="pc-vl">Ещё не решено: <b>№' + vw.join(", №") + '</b></p>' : '') +
+          '<button type="button" class="pc-btn pc-vcp" data-cp="' + escHtml(vcp) + '">Скопировать вариант</button></div>';
+      }
     });
     if(!part.length) h += '<div class="pc-none">Нет вариантов по этому фильтру</div>';
     h += '</div>';
@@ -6704,6 +6740,28 @@
         });
       });
     }
+    [].slice.call(box.querySelectorAll(".pc-vr[data-vk]")).forEach(function(r){
+      function tg(){ var k = r.getAttribute("data-vk"); pcsv.vopen = pcsv.vopen === k ? null : k; renderPrevCsv(); }
+      r.addEventListener("click", tg);
+      r.addEventListener("keydown", function(e){ if(e.key === "Enter" || e.key === " "){ e.preventDefault(); tg(); } });
+    });
+    [].slice.call(box.querySelectorAll(".pc-vcp")).forEach(function(b){
+      b.addEventListener("click", function(e){
+        e.stopPropagation();
+        var t = b.getAttribute("data-cp") || "";
+        function fb(){ var ta = document.createElement("textarea"); ta.value = t; ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta); ta.select(); try{ document.execCommand("copy"); }catch(x){} document.body.removeChild(ta); }
+        if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).catch(fb); else fb();
+        b.textContent = "Скопировано"; b.classList.add("ok");
+        setTimeout(function(){ if(b.isConnected){ b.textContent = "Скопировать вариант"; b.classList.remove("ok"); } }, 1600);
+      });
+    });
+    [].slice.call(box.querySelectorAll(".pc-cr.wi-able")).forEach(function(r){
+      r.setAttribute("role", "button"); r.setAttribute("tabindex", "0");
+      r.addEventListener("keydown", function(e){ if((e.key === "Enter" || e.key === " ") && e.target === r){ e.preventDefault(); r.click(); } });
+    });
+    [].slice.call(box.querySelectorAll(".pc-fs")).forEach(function(b){
+      b.addEventListener("click", function(e){ e.stopPropagation(); var m = ms[Number(b.getAttribute("data-fs"))]; if(m) openFs(m); });
+    });
     [].slice.call(box.querySelectorAll(".pc-rk")).forEach(function(b){
       b.addEventListener("click", function(){ pcsvUse(Number(b.getAttribute("data-t")) || 0); pcsvStore(); renderPrevCsv(); });
     });
