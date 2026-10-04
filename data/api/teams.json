@@ -59,8 +59,14 @@
 ],
 "id": 3840
 },
+"богота": {
+"f": "x23x3Y5k-8dHhJecc.png"
+},
 "бостон ривер": {
 "f": "tCs8eX7k-pOoSyvxr.png"
+},
+"браун адроге": {
+"f": "zgxltWUH-INQSOKGE.png"
 },
 "бреда": {
 "c": [
@@ -120,8 +126,14 @@
 ],
 "id": 199
 },
+"депортес киндио": {
+"f": "hnMl4qS0-Eam1BfjK.png"
+},
 "депортиво майпу": {
 "f": "zHqEmw86-YVz5bmme.png"
+},
+"депортиво мерло": {
+"f": "UXlpx17k-jRV1V0Hu.png"
 },
 "динамо минск": {
 "f": "Q5LavxT0-nexJVvF1.png"
@@ -214,8 +226,14 @@
 "мальорка": {
 "f": "WKsw8cne-rmDEjevK.png"
 },
+"монтевидео сити торке": {
+"f": "YD3L0x6k-hOX9sHW0.png"
+},
 "монтевидео уондерерс": {
 "f": "GxuaZV9N-zFwegNb8.png"
+},
+"насиональ монтевидео": {
+"f": "bZ1tooDN-xErFNzEn.png"
 },
 "новара": {
 "f": "nTi4zziT-IehoPOFd.png"
@@ -232,6 +250,9 @@
 "#000000"
 ],
 "id": 457
+},
+"орсомарсо": {
+"f": "nJOU79BN-OQvTHdKn.png"
 },
 "реал овьедо": {
 "c": [
@@ -383,6 +404,9 @@
 "#1f15eb"
 ],
 "id": 9692
+},
+"энвигадо": {
+"f": "461l7eCN-2XZjQRJG.png"
 },
 "эшторил(23)": {
 "f": "EuicW7oe-WEIjXBWa.png"
