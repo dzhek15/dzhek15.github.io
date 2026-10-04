@@ -6524,7 +6524,7 @@
     /* весь купон: сколько вариантов стоит на каждый исход */
     var unc = [];
     ms.forEach(function(m, j){ if(res[j] && res[j] !== VOID && !rows.some(function(r){ return r.charAt(j) === res[j]; })) unc.push(j + 1); });
-    h += '<div class="pc-sub">Весь купон</div>' + (played ? '<p class="pc-lnote pc-key"><span class="k-on">белым</span> — ваши исходы, <span class="k-hit">зелёная рамка</span> — зашёл, <span class="k-bad">красным</span> — не зашёл' +
+    h += '<div class="pc-sub">Весь купон</div>' + (played ? '<p class="pc-lnote pc-key"><span class="k-on">белым</span> — ваши исходы, <span class="k-hit">зелёной заливкой</span> — зашёл, <span class="k-bad">красный контур</span> — не зашёл' +
       (unc.length ? '. Исход не был в купоне: <b>№' + unc.slice(0, 6).join(", №") + (unc.length > 6 ? " +" + (unc.length - 6) : "") + '</b>' : '') + '</p>' : '') + '<div class="pc-cov">';
     ms.forEach(function(m, j){
       var c = { "1": 0, "X": 0, "2": 0 };

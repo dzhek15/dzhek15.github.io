@@ -1838,11 +1838,10 @@ body:not(.is-prev) .row .teams .tm:hover{text-decoration-color:var(--accent)}
 
 /* «Весь купон» в просмотре: свои исходы белым, зашедшие — зелёной рамкой, не зашедшие — красным */
 .pc-o.on{opacity:1; color:var(--ink); background:color-mix(in srgb, var(--ink) 17%, transparent); border-color:color-mix(in srgb, var(--ink) 75%, transparent)}
-.pc-o.on.hit{border:2px solid var(--cold); color:var(--ink)}
-.pc-o.on.miss{opacity:1; color:#e5675c; border-color:#d0564b; background:rgba(208,86,75,.10)}
-.pc-o.on.miss.bad{background:rgba(208,86,75,.22); border-width:2px}
+.pc-o.on.hit{border:2px solid #3fae6a; background:color-mix(in srgb, #3fae6a 38%, transparent); color:var(--ink)}
+.pc-o.on.miss{opacity:1; color:#e5675c; border:2px solid #d0564b; background:transparent}
 .pc-key{text-align:center; margin:2px auto 8px}
 .pc-key .k-on{color:var(--ink); border-bottom:2px solid var(--ink)}
-.pc-key .k-hit{color:var(--cold)}
+.pc-key .k-hit{color:#3fae6a}
 .pc-key .k-bad{color:#e5675c}
 .pc-key b{color:#e5675c}
