@@ -1847,3 +1847,75 @@ body:not(.is-prev) .row .teams .tm:hover{text-decoration-color:var(--accent)}
 .pc-key .k-hit{color:#3fae6a}
 .pc-key .k-bad{color:#e5675c}
 .pc-key b{color:#e5675c}
+
+/* ===== светлая тема, режим просмотра: больше контраста, чёрный контур вместо золота ===== */
+:root[data-theme="light"] body.is-prev{--ink:#0A0F10; --muted:#34403F; --rule:#8A9895; --rule-strong:#4D5B59; --gold-ink:#2C4A64}
+:root[data-theme="light"] body.is-prev .row{border-bottom-color:var(--rule)}
+:root[data-theme="light"] body.is-prev .row .pick{opacity:.85; color:var(--ink); border-color:var(--rule-strong); background:var(--surface)}
+:root[data-theme="light"] body.is-prev .row .pick.won{opacity:1}
+:root[data-theme="light"] body.is-prev .row .pick.ai-pk{opacity:1; background:var(--ai-pk-bg); color:var(--ai-pk-ink); border-color:#0A0F10}
+/* золотые рамки — чёрным контуром, золото остаётся внутренней каймой */
+:root[data-theme="light"] .prev-bar,
+:root[data-theme="light"] .pcsv,
+:root[data-theme="light"] .pc-wi,
+:root[data-theme="light"] .pc-rkw{border-color:#0A0F10; border-width:1.5px}
+:root[data-theme="light"] .prev-bar,
+:root[data-theme="light"] .pcsv{box-shadow:var(--shadow), inset 0 0 0 2px rgba(201,162,75,.5)}
+:root[data-theme="light"] .pc-rkw{background:var(--surface); box-shadow:inset 0 0 0 2px rgba(201,162,75,.5), 0 6px 16px -10px rgba(10,15,16,.5)}
+:root[data-theme="light"] .pc-btn,
+:root[data-theme="light"] .prev-bar .pb-exp,
+:root[data-theme="light"] .prev-bar .pb-back,
+:root[data-theme="light"] .prev-bar .pb-flt button[aria-pressed="true"],
+:root[data-theme="light"] .pc-flt button[aria-pressed="true"],
+:root[data-theme="light"] .pc-tabs button[aria-pressed="true"]{border-color:#0A0F10; color:#0A0F10; font-weight:700}
+:root[data-theme="light"] .prev-bar .pb-flt button,
+:root[data-theme="light"] .pc-flt button,
+:root[data-theme="light"] .pc-tabs button{border-color:var(--rule-strong); color:var(--ink)}
+/* рейтинг наборов */
+:root[data-theme="light"] .pc-rkw .pc-rkt{background:#fff; border-color:#0A0F10}
+:root[data-theme="light"] .pc-rkh{color:var(--muted); font-size:11px; border-bottom-color:var(--rule-strong)}
+:root[data-theme="light"] .pc-rkw .pc-rk{border-bottom-color:var(--rule)}
+:root[data-theme="light"] .pc-rkw .pc-rk.on{background:#EEF1F3; border-left-color:#0A0F10}
+:root[data-theme="light"] .pc-rkw .pc-rk:hover{background:#F3F5F6}
+:root[data-theme="light"] .pc-rkw .rk-p b{border:1.5px solid #0A0F10; background:#fff; color:#0A0F10}
+:root[data-theme="light"] .pc-rkw .pc-rk.m1 .rk-p b{background:radial-gradient(circle at 30% 30%,#f6dc86,#c9992c); color:#0A0F10; box-shadow:none; animation:none}
+:root[data-theme="light"] .pc-rkw .pc-rk.m2 .rk-p b{background:radial-gradient(circle at 30% 30%,#fff,#aeb6bf); color:#0A0F10}
+:root[data-theme="light"] .pc-rkw .pc-rk.m3 .rk-p b{background:radial-gradient(circle at 30% 30%,#f0c4a0,#c0793d); color:#0A0F10}
+:root[data-theme="light"] .pc-rkw .pc-rk.m1::after{display:none}
+:root[data-theme="light"] .pc-rkx{color:#0A0F10}
+/* LIVE и минуты: глубокий красный вместо пастельного */
+:root[data-theme="light"] .lv-chip{border-color:#B3261E; color:#B3261E; background:rgba(179,38,30,.08)}
+:root[data-theme="light"] .lv-min{color:#B3261E}
+:root[data-theme="light"] .lv-chip.lv-goal{background:#B3261E; border-color:#B3261E; color:#fff}
+:root[data-theme="light"] .lv-chip.lv-goal .lv-min{color:#fff}
+:root[data-theme="light"] .lv-dot{background:#B3261E}
+:root[data-theme="light"] .pc-rklive{border-color:#B3261E; color:#B3261E; background:rgba(179,38,30,.08); font-weight:800}
+:root[data-theme="light"][data-compact] body.is-prev .row .tc-t.tc-live,
+:root[data-theme="light"]:not([data-compact="1"]) body.is-prev .row .tc-t.tc-live{color:#B3261E; font-weight:800}
+:root[data-theme="light"]:not([data-compact="1"]) body.is-prev .row .tc-t.tc-end{color:#B3261E}
+:root[data-theme="light"]:not([data-compact="1"]) body.is-prev .row .tc-t.tc-ft{color:#1F3A52; font-weight:800}
+/* «Сколько угадали» */
+:root[data-theme="light"] .pc-lb{border:1.5px solid var(--rule-strong); background:#fff}
+:root[data-theme="light"] .pc-lb u{background:#4D5B59}
+:root[data-theme="light"] .pc-lb.pay u{background:#1F8A4C}
+:root[data-theme="light"] .pc-lb.pay b{color:#0F6A36}
+:root[data-theme="light"] .pc-lb b{font-size:14px}
+:root[data-theme="light"] .pc-lb span{color:#0A0F10; font-size:13px}
+:root[data-theme="light"] .pc-lb.zero{opacity:.8}
+:root[data-theme="light"] .pc-lb.zero b{color:var(--muted)}
+:root[data-theme="light"] .pc-lb[aria-pressed="true"]{border-color:#0A0F10; background:#E9EDEF}
+:root[data-theme="light"] .pc-lnote{font-size:12px; color:var(--muted)}
+:root[data-theme="light"] .pc-sub{font-size:14px; color:#1F3A52}
+/* сводка, купон, варианты */
+:root[data-theme="light"] .pc-cards > div{border-color:var(--rule-strong); background:#fff}
+:root[data-theme="light"] .pc-cards span{color:var(--muted); font-size:12px}
+:root[data-theme="light"] .pc-o{opacity:.85; border-color:var(--rule-strong); color:var(--muted)}
+:root[data-theme="light"] .pc-o.on{color:var(--ink); background:#E3E8EA; border-color:#0A0F10}
+:root[data-theme="light"] .pc-o.on.hit{border-color:#1F8A4C; background:#BFE6CD}
+:root[data-theme="light"] .pc-o.on.miss{border-color:#B3261E; color:#B3261E; background:#fff}
+:root[data-theme="light"] .pc-o.hole{border-color:#B3261E; color:#B3261E; opacity:1}
+:root[data-theme="light"] .pc-o small{font-size:11px}
+:root[data-theme="light"] .pc-key .k-hit{color:#0F6A36; font-weight:700}
+:root[data-theme="light"] .pc-key .k-bad,:root[data-theme="light"] .pc-key b{color:#B3261E; font-weight:700}
+:root[data-theme="light"] .pc-cr .pc-n{color:#0A0F10; font-weight:800}
+:root[data-theme="light"] .pc-flt button:disabled,:root[data-theme="light"] .prev-bar .pb-flt button:disabled{opacity:.75}
