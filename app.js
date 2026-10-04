@@ -1639,7 +1639,7 @@
      первая попавшаяся команда: лучше не найти, чем перепутать (было — уводило не туда). */
   /* хоккей в тираже определяем по названию лиги — от этого зависит, каким sport-id
      запрашивать фид Flashscore (см. FS_SPORT_ID ниже) */
-  var FS_NONFOOTBALL = /КХЛ|НХЛ|ВХЛ|МХЛ|хокке/i;
+  var FS_NONFOOTBALL = /КХЛ|НХЛ|ВХЛ|МХЛ|хокке|hockey|\b(?:NHL|KHL|AHL|VHL|MHL|SHL)\b/i;
   /* континент/регион (еврокубки, «Мир. ЧМ» и т.п.) — это не страна, у клуба такой
      defaultCountry не бывает; если считать это страной, фильтр по стране отбраковывает
      даже точное совпадение (так ловился «Интер Милан(ж) — Хеккен(ж)», Лига Чемпионов) */
@@ -2306,7 +2306,7 @@
     return '<p class="ai-txt">' + escHtml(r.t) + '</p>' + (blk ? '<div class="ai-blks">' + blk + '</div>' : '') +
       (src ? '<p class="ai-src">Источники: ' + src + '</p>' : '') +
       (full ? '<p class="ev-note">Разбор написан ИИ по открытым источникам' +
-        (ai.data && ai.data.at ? ' (' + new Date(ai.data.at).toLocaleString("ru-RU", {day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit", timeZone:"Europe/Moscow"}) + ' МСК)' : '') +
+        ((r.at || (ai.data && ai.data.at)) ? ' (' + new Date(r.at || ai.data.at).toLocaleString("ru-RU", {day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit", timeZone:"Europe/Moscow"}) + ' МСК)' : '') +
         '. Это мнение, а не гарантия; составы за час до игры могут всё поменять.</p>' : '');
   }
   /* вариант ИИ: строка исходов «1», «1X», «12»… на каждый матч */
@@ -2515,9 +2515,24 @@
       .catch(function(){ aiHist.loading = null; return aiHist.data; });
     return aiHist.loading;
   }
+  /* архив полных разборов прошлых тиражей: data/api/ai_arch.json {"<номер>": {at, m:[…]}} — чтобы
+     после записи нового разбора текст прошлого не пропадал (нужен для разбора ошибок) */
+  var aiArch = { data: null, at: 0, loading: null };
+  function loadAiArch(){
+    if(aiArch.data && Date.now() - aiArch.at < 10 * 60000) return Promise.resolve(aiArch.data);
+    if(aiArch.loading) return aiArch.loading;
+    if(typeof fetch !== "function") return Promise.resolve(null);
+    aiArch.loading = fetch(MIRROR + "ai_arch.json?t=" + Math.floor(Date.now() / 600000))
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){ aiArch.loading = null; if(j){ aiArch.data = j; aiArch.at = Date.now(); } return aiArch.data; })
+      .catch(function(){ aiArch.loading = null; return aiArch.data; });
+    return aiArch.loading;
+  }
   function aiPrevRec(no, idx){
     var j = ai.data;
     if(j && String(j.number) === String(no) && j.m && j.m[idx] && j.m[idx].p) return j.m[idx];
+    var ar = aiArch.data && aiArch.data[String(no)];
+    if(ar && ar.m && ar.m[idx] && ar.m[idx].p){ var rr = {}; for(var k in ar.m[idx]) rr[k] = ar.m[idx][k]; rr.at = ar.at; return rr; }
     var h = aiHist.data && aiHist.data[String(no)];
     var p = Array.isArray(h) ? h[idx] : null;
     return /^[1X2]{1,3}$/.test(String(p || "")) ? { p: String(p) } : null;
@@ -2526,7 +2541,7 @@
   function aiPrevEnsure(no){
     if(aiPrevAsked === String(no)) return;
     aiPrevAsked = String(no);
-    Promise.all([loadAi(), loadAiHist()]).then(function(){
+    Promise.all([loadAi(), loadAiHist(), loadAiArch()]).then(function(){
       if(state.viewPrev && state.prev && String(state.prev.tirazh) === String(no)) render();
     });
   }
@@ -2556,7 +2571,7 @@
       st = ' <span class="ai-live ' + (ok ? "ai-ok" : "ai-no") + '">' + (lo.live ? "сейчас " : "итог ") + (ok ? "угадан" : "мимо") + '</span>';
     } else if(r) st = ' <span class="ai-live">матч не начался</span>';
     $("evBody").innerHTML = '<div id="aiBox">' + (r ? '<p class="ai-pick">Вариант ИИ: <b>' + escHtml(r.p) + '</b>' + st + '</p>' +
-        (r.t ? aiHtml(r, true) : '<p class="ev-note">Текст разбора к этому тиражу уже убран, остался только вариант.</p>')
+        (r.t ? aiHtml(r, true) : '<p class="ev-note">Полный текст разбора к этому тиражу не сохранён, остался только вариант.</p>')
       : '<p class="ev-warn">Разбора ИИ по этому тиражу нет.</p>') + '</div>' +
       '<div class="blend-go"><button type="button" class="btn-ev" id="aiNews">Новости и составы</button>' +
       '<button type="button" class="btn-ev" id="aiAcc">Точность по тиражам</button></div>';
