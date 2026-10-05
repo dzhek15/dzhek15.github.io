@@ -6521,13 +6521,16 @@
       });
       var pe = er.filter(Boolean).length, liveN = er.filter(function(x, j){ return x && !res[j]; }).length;
       var sc = pcsv.sets.map(function(set, i){
-        var bst = 0, w = 0, al = 0, sum = 0;
+        var bst = 0, w = 0, al = 0, sum = 0, fin = 0;
         set.rows.forEach(function(r){
-          var hh = 0, mm = 0;
-          for(var j = 0; j < n; j++) if(er[j]){ if(er[j] === VOID || r.charAt(j) === er[j]) hh++; else mm++; }
-          if(hh > bst) bst = hh; if(hh >= PAY) w++; if(n - mm >= PAY) al++; sum += hh;
+          var hh = 0, mm = 0, mf = 0;
+          for(var j = 0; j < n; j++){
+            if(er[j]){ if(er[j] === VOID || r.charAt(j) === er[j]) hh++; else mm++; }
+            if(res[j] && res[j] !== VOID && r.charAt(j) !== res[j]) mf++;   /* только подведённые итоги: выбыл насовсем */
+          }
+          if(hh > bst) bst = hh; if(hh >= PAY) w++; if(n - mm >= PAY) al++; if(n - mf >= PAY) fin++; sum += hh;
         });
-        return { i: i, b: bst, w: w, a: al, avg: set.rows.length ? sum / set.rows.length : 0 };
+        return { i: i, b: bst, w: w, a: al, out: set.rows.length > 0 && played > 0 && !fin, avg: set.rows.length ? sum / set.rows.length : 0 };
       });
       if(pe) sc.sort(function(x, y){ return (y.b - x.b) || (y.w - x.w) || (y.avg - x.avg) || (y.a - x.a) || (x.i - y.i); });
       var rk = pcsv.rk && pcsv.rk.tir === pcsv.tir ? pcsv.rk : (pcsv.rk = { tir: pcsv.tir, pos: {}, mv: {} });
@@ -6537,14 +6540,15 @@
       });
       rkNow = sc;
       h += '<div class="pc-rkw"><div class="pc-rkttl"><span class="pc-rkx">Рейтинг наборов</span>' + (liveN ? '<span class="pc-rklive"><i class="lv-dot"></i>LIVE · ' + liveN + '</span>' : '') + '</div>' +
-        '<p class="pc-lnote pc-rknote">Считаются сыгранные матчи' + (liveN ? ' и идущие по текущему счёту' : '') + '. Тап по набору открывает его.</p>' +
+        '<p class="pc-lnote pc-rknote">Считаются сыгранные матчи' + (liveN ? ' и идущие по текущему счёту' : '') + '. Тап по набору открывает его.' +
+        (sc.some(function(q){ return q.out; }) ? '<br><span class="rk-x" aria-hidden="true">\u00d7</span> \u2014 набор выбыл: после сыгранных матчей ни один его вариант уже не наберёт ' + PAY + '+.' : '') + '</p>' +
         '<div class="pc-rkt" role="tablist"><div class="pc-rkh"><span>#</span><span>Набор</span><span>Лучший</span><span>9+</span><span>Живых</span></div><div class="pc-rkb">';
       sc.forEach(function(q, k){
         var st = pcsv.sets[q.i], mv = rk.mv[q.i], tr = "";
         if(mv && Date.now() - mv.at < 90000) tr = '<u class="' + (mv.d > 0 ? "up" : "dn") + '">' + (mv.d > 0 ? "▲" : "▼") + Math.abs(mv.d) + '</u>';
-        h += '<button type="button" role="tab" class="pc-rk' + (q.i === pcsv.act ? " on" : "") + (k < 3 && pe ? " m" + (k + 1) : "") + '" data-t="' + q.i + '" data-id="' + q.i + '" aria-pressed="' + (q.i === pcsv.act) + '" title="' + escHtml(st.link ? "Ссылка · " + pcsvLabel(st) : st.name) + ' · ' + fmt(st.rows.length) + ' вар.">' +
+        h += '<button type="button" role="tab" class="pc-rk' + (q.out ? " out" : "") + (q.i === pcsv.act ? " on" : "") + (k < 3 && pe ? " m" + (k + 1) : "") + '" data-t="' + q.i + '" data-id="' + q.i + '" aria-pressed="' + (q.i === pcsv.act) + '" title="' + escHtml(st.link ? "Ссылка · " + pcsvLabel(st) : st.name) + ' · ' + fmt(st.rows.length) + ' вар.">' +
           '<span class="rk-p"><b>' + (k + 1) + '</b>' + tr + '</span>' +
-          '<span class="rk-n"><b>' + escHtml(pcsvLabel(st)) + '</b><small>' + (st.ai ? '<em class="rk-ai">ИИ</em> ' : st.link ? "" : escHtml(st.name) + " · ") + fmt(st.rows.length) + ' вар.</small></span>' +
+          '<span class="rk-n"><b>' + escHtml(pcsvLabel(st)) + '</b><small>' + (q.out ? '<span class="rk-x" title="Набор выбыл: ни один вариант уже не наберёт ' + PAY + '+">\u00d7</span> ' : '') + (st.ai ? '<em class="rk-ai">ИИ</em> ' : st.link ? "" : escHtml(st.name) + " · ") + fmt(st.rows.length) + ' вар.</small></span>' +
           '<span class="rk-v">' + (pe ? '<i class="cn" data-k="' + q.i + 'b">' + q.b + '</i><small> из ' + pe + '</small>' : '—') + '</span>' +
           '<span class="rk-v' + (q.w ? " ok" : "") + '"><i class="cn" data-k="' + q.i + 'w">' + fmt(q.w) + '</i></span><span class="rk-v"><i class="cn" data-k="' + q.i + 'a">' + fmt(q.a) + '</i></span>' +
           '<span class="rk-bar" data-w="' + (n ? Math.round(q.b / n * 100) : 0) + '" data-pay="' + (n ? Math.round(PAY / n * 100) : 60) + '"><i></i><u></u></span></button>';
@@ -6571,6 +6575,7 @@
       '<div data-k="now9"><span>9+ сейчас</span><b>' + fmt(now9) + '</b></div>' +
       '<div data-k="can9"><span>Могут 9+</span><b>' + fmt(can9) + '</b></div>' +
       '<div data-k="can15"><span>Без ошибок</span><b>' + fmt(can15) + '</b></div></div>';
+    if(played && total && !can9) h += '<p class="pc-lnote pc-outnote"><span class="rk-x" aria-hidden="true">\u00d7</span> Набор выбыл: после сыгранных матчей ни один вариант уже не наберёт ' + PAY + '+.</p>';
     /* лесенка: сколько вариантов угадали k матчей; тап — показать только их */
     if(played){
       var lv = [], lo = 0, mx = 1;

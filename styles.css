@@ -2103,3 +2103,10 @@ body.is-prev #coupon{margin-top:0}
 .ai-pick-closed{display:flex; align-items:center; gap:8px; min-height:28px}
 .ai-reveal{font:inherit; font-size:12px; line-height:1; padding:6px 12px; border-radius:14px; border:1px solid var(--rule-strong); background:transparent; color:var(--gold-ink); cursor:pointer}
 .ai-reveal:hover{border-color:var(--brand-gold)}
+
+/* набор выбыл: ни один вариант уже не наберёт 9+ */
+.rk-x{display:inline-block; box-sizing:border-box; width:15px; height:15px; border:1.5px solid var(--hot); border-radius:50%; color:var(--hot); font:700 13px/11px "IBM Plex Mono",monospace; text-align:center; margin-right:3px; vertical-align:-3px}
+.pc-rk.out .rk-n>b{opacity:.6}
+.pc-rk.out .rk-bar{opacity:.4}
+.pc-outnote{margin:6px 0 0; color:var(--hot)}
+.pc-outnote .rk-x{margin-right:4px}
