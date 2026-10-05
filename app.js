@@ -6428,14 +6428,14 @@
   }
   function pcTime(m){
     var li = liveInfo(m);
-    if(m.res === VOID) return '<span class="pc-tm">ОТМ</span>';
-    if(m.res) return '<span class="pc-tm pc-ftm">Full time</span>';
-    if(m.fsVoid && !m.score) return '<span class="pc-tm pc-pp">' + (m.fsVoid === "отменён" ? "отмена" : "перенос") + '</span>';
-    if(li && li.end) return '<span class="pc-tm lv">КОНЕЦ</span>';
+    if(m.res === VOID) return '<span class="pc-tm pc-tx">ОТМ</span>';
+    if(m.res) return '<span class="pc-tm pc-tx pc-ftm">Full time</span>';
+    if(m.fsVoid && !m.score) return '<span class="pc-tm pc-tx pc-pp">' + (m.fsVoid === "отменён" ? "отмена" : "перенос") + '</span>';
+    if(li && li.end) return '<span class="pc-tm pc-tx lv">КОНЕЦ</span>';
     if(li){
       var mn = liveMinute(li.ph, li.hockey, true), txt = mn && mn.t !== "" ? String(mn.t) : "LIVE";
       var at = mn && mn.tick && li.ph ? ' data-ac="' + li.ph.ac + '" data-ao="' + escHtml(li.ph.ao || "") + '" data-bx="' + escHtml(li.ph.bx || "") + '" data-at="' + li.ph.at + '" data-h="' + (li.hockey ? 1 : 0) + '" data-s="1"' : "";
-      return '<span class="pc-tm lv"><i class="lv-dot"></i><b class="lv-min"' + at + '>' + escHtml(txt) + '</b></span>';
+      return '<span class="pc-tm lv' + (txt === "LIVE" ? ' pc-tx' : '') + '"><i class="lv-dot"></i><b class="lv-min"' + at + '>' + escHtml(txt) + '</b></span>';
     }
     return '<span class="pc-tm">' + escHtml((pcDay(m) ? pcDay(m) + " " : "") + (m.time || "—")) + '</span>';
   }
@@ -6557,11 +6557,12 @@
     ms.forEach(function(m, j){
       var c = { "1": 0, "X": 0, "2": 0 };
       rows.forEach(function(r){ var o = r.charAt(j); if(c[o] != null) c[o]++; });
-      var sc = m.res === VOID ? "отменён" : (m.score ? String(m.score).replace(/\s+/g, "") : "");
+      var sc = m.res === VOID ? "" : (m.score ? String(m.score).replace(/\s+/g, "") : "");
       var wiOk = !m.res && m.res !== VOID;
       h += '<div class="pc-cr' + (wiOk ? " wi-able" + (pcsv.what === j ? " wi-on" : "") : "") + '"' + (wiOk ? ' data-w="' + j + '" title="Тап — что будет с вариантами при каждом исходе"' : '') + '><span class="pc-n">' + (j + 1) + '</span><span class="pc-m"><i><b>' + escHtml(m.home) + '</b><u> — </u><b>' + escHtml(m.away) + '</b></i></span>';
-      var liN = !m.res && liveInfo(m);
-      h += '<span class="pc-st' + (sc ? ' has-sc' : '') + (liN && !liN.end ? ' is-lv' : '') + '">' + (sc ? '<em class="' + (m.res ? "" : "live") + '">' + escHtml(sc) + '</em>' : '') + pcTime(m) + '</span>';
+      var liN = !m.res && liveInfo(m), lvc = liN && !liN.end ? ' is-lv' : '';
+      h += '<span class="pc-sc' + (sc ? '' : ' no') + lvc + '">' + (sc ? '<em class="' + (m.res ? "" : "live") + '">' + escHtml(sc) + '</em>' : '–') + '</span>' +
+        '<span class="pc-tc' + lvc + '">' + pcTime(m) + '</span>';
       h += '<button type="button" class="pc-fs" data-fs="' + j + '" title="Открыть матч на Flashscore" aria-label="Открыть на Flashscore: ' + escHtml(m.home) + ' — ' + escHtml(m.away) + '"><b class="fs-mark">F<i>S</i></b></button>';
       OUT.forEach(function(o){
         var cls = "pc-o" + (c[o] ? " on" : "") + (res[j] === VOID ? (c[o] ? " hit" : "") : res[j] === o ? (c[o] ? " hit" : " hole") : (res[j] && c[o] ? " miss" + (res[j] && !c[res[j]] ? " bad" : "") : ""));
