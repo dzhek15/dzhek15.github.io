@@ -6430,7 +6430,7 @@
     var li = liveInfo(m);
     if(m.res === VOID) return '<span class="pc-tm">ОТМ</span>';
     if(m.res) return '<span class="pc-tm pc-ftm">Full time</span>';
-    if(m.fsVoid && !m.score) return '<span class="pc-tm pc-pp">' + (m.fsVoid === "отменён" ? "отменён" : "перенесён") + '</span>';
+    if(m.fsVoid && !m.score) return '<span class="pc-tm pc-pp">' + (m.fsVoid === "отменён" ? "отмена" : "перенос") + '</span>';
     if(li && li.end) return '<span class="pc-tm lv">КОНЕЦ</span>';
     if(li){
       var mn = liveMinute(li.ph, li.hockey, true), txt = mn && mn.t !== "" ? String(mn.t) : "LIVE";
@@ -6559,8 +6559,9 @@
       rows.forEach(function(r){ var o = r.charAt(j); if(c[o] != null) c[o]++; });
       var sc = m.res === VOID ? "отменён" : (m.score ? String(m.score).replace(/\s+/g, "") : "");
       var wiOk = !m.res && m.res !== VOID;
-      h += '<div class="pc-cr' + (wiOk ? " wi-able" + (pcsv.what === j ? " wi-on" : "") : "") + '"' + (wiOk ? ' data-w="' + j + '" title="Тап — что будет с вариантами при каждом исходе"' : '') + '><span class="pc-n">' + (j + 1) + '</span><span class="pc-m"><i><b>' + escHtml(m.home) + '</b><u> — </u><b>' + escHtml(m.away) + '</b></i>' +
-        '<span class="pc-sr">' + (sc ? '<em class="' + (m.res ? "" : "live") + '">' + escHtml(sc) + '</em>' : '') + pcTime(m) + '</span></span>';
+      h += '<div class="pc-cr' + (wiOk ? " wi-able" + (pcsv.what === j ? " wi-on" : "") : "") + '"' + (wiOk ? ' data-w="' + j + '" title="Тап — что будет с вариантами при каждом исходе"' : '') + '><span class="pc-n">' + (j + 1) + '</span><span class="pc-m"><i><b>' + escHtml(m.home) + '</b><u> — </u><b>' + escHtml(m.away) + '</b></i></span>';
+      var liN = !m.res && liveInfo(m);
+      h += '<span class="pc-st' + (sc ? ' has-sc' : '') + (liN && !liN.end ? ' is-lv' : '') + '">' + (sc ? '<em class="' + (m.res ? "" : "live") + '">' + escHtml(sc) + '</em>' : '') + pcTime(m) + '</span>';
       h += '<button type="button" class="pc-fs" data-fs="' + j + '" title="Открыть матч на Flashscore" aria-label="Открыть на Flashscore: ' + escHtml(m.home) + ' — ' + escHtml(m.away) + '"><b class="fs-mark">F<i>S</i></b></button>';
       OUT.forEach(function(o){
         var cls = "pc-o" + (c[o] ? " on" : "") + (res[j] === VOID ? (c[o] ? " hit" : "") : res[j] === o ? (c[o] ? " hit" : " hole") : (res[j] && c[o] ? " miss" + (res[j] && !c[res[j]] ? " bad" : "") : ""));

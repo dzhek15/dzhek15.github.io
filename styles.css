@@ -2045,3 +2045,48 @@ body.is-prev #coupon{margin-top:0}
 .pc-vars{overflow-x:visible}
 @media (max-width:560px){ .pc-vr{grid-template-columns:26px repeat(var(--n),minmax(0,1fr)) 32px} }
 @media (max-width:360px){ .pc-vr{grid-template-columns:22px repeat(var(--n),minmax(0,1fr)) 28px} .pc-vr span{font-size:12px} .pc-vr span.m2{font-size:9.5px; letter-spacing:-.08em} .pc-vh span{font-size:9px} }
+
+/* «Весь купон»: счёт и ход матча ровным столбиком слева от FS */
+.pc-st{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; height:40px; min-width:0; box-sizing:border-box; padding:0 2px; text-align:center; line-height:1; font-variant-numeric:tabular-nums; background:var(--surface-2); border:1px solid var(--rule); border-radius:var(--r)}
+.pc-st em{font:800 21px/1 "Oxanium","IBM Plex Mono",monospace; font-style:normal; letter-spacing:.01em; color:var(--ink); background:none; border:0; padding:0}
+.pc-st em.live{color:var(--warn)}
+.pc-st .pc-tm{justify-content:center; gap:4px; font:700 11px/1 "Oxanium","IBM Plex Mono",monospace; letter-spacing:.02em}
+.pc-st:not(.has-sc) .pc-tm{font-size:15px; color:var(--ink); letter-spacing:.02em}
+.pc-st:not(.has-sc) .pc-tm.lv{color:#ffb4ab}
+.pc-st:not(.has-sc) .pc-tm.pc-ftm{color:var(--gold-ink); font-size:11px}
+.pc-st:not(.has-sc) .pc-tm.pc-pp,.pc-st:not(.has-sc) .pc-tm.lv:not(:has(.lv-dot)){font-size:11px}
+.pc-st.is-lv{border-color:rgba(255,140,128,.55)}
+.pc-cov .pc-cr{grid-template-columns:24px minmax(0,1fr) 66px 34px repeat(3,48px); gap:5px}
+@media (max-width:560px){ .pc-cov .pc-cr{grid-template-columns:20px minmax(0,1fr) 54px 32px repeat(3,40px); gap:3px} .pc-st em{font-size:19px} .pc-st:not(.has-sc) .pc-tm{font-size:14px} }
+@media (max-width:360px){ .pc-cov .pc-cr{grid-template-columns:16px minmax(0,1fr) 46px 28px repeat(3,34px); gap:2px} .pc-st em{font-size:17px} .pc-st .pc-tm{font-size:10px} .pc-st:not(.has-sc) .pc-tm{font-size:13px} .pc-cov .pc-fs{width:28px} .pc-cov .pc-o{font-size:15px} }
+:root[data-theme="light"] .pc-st{background:#fff; border-color:#4D5B59}
+:root[data-theme="light"] .pc-st:not(.has-sc) .pc-tm{color:#0A0F10}
+:root[data-theme="light"] .pc-st:not(.has-sc) .pc-tm.lv,:root[data-theme="light"] .pc-st .pc-tm.lv{color:#B3261E}
+:root[data-theme="light"] .pc-st.is-lv{border-color:#B3261E}
+
+@media (max-width:560px){
+  .pc-cov .pc-cr{min-height:48px}
+  .pc-cov .pc-m{display:block; font-size:12.5px; line-height:1.16}
+  .pc-cov .pc-m i{display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; line-clamp:3; white-space:normal; overflow:hidden; text-overflow:clip; max-width:100%; line-height:1.16}
+  .pc-cov .pc-m i b{display:inline; overflow:visible; white-space:normal; text-overflow:clip}
+  .pc-cov .pc-m i u{display:inline}
+  .pc-st .pc-tm.pc-pp{font-size:10px; letter-spacing:0}
+}
+@media (max-width:360px){ .pc-cov .pc-m{font-size:12px} }
+@media (max-width:560px){
+  .pc-cov .pc-cr{grid-template-columns:18px minmax(0,1fr) 50px 28px repeat(3,36px); gap:3px}
+  .pc-cov .pc-fs{width:28px}
+  .pc-cov .pc-o{font-size:15px}
+  .pc-cov .pc-m i{overflow-wrap:anywhere; hyphens:auto}
+  .pc-st .pc-tm{font-size:10.5px}
+}
+@media (max-width:360px){
+  .pc-cov .pc-cr{grid-template-columns:16px minmax(0,1fr) 44px 26px repeat(3,32px); gap:2px}
+  .pc-cov .pc-fs{width:26px}
+  .pc-cov .pc-o{font-size:14px}
+  .pc-st em{font-size:16px}
+  .pc-st .pc-tm{font-size:9.5px}
+  .pc-st:not(.has-sc) .pc-tm{font-size:13px}
+}
+@media (max-width:560px){ .pc-cov .pc-cr{height:52px; min-height:52px; box-sizing:border-box} }
+@media (max-width:360px){ .pc-st .pc-tm.pc-pp{font-size:8.5px; letter-spacing:-.02em} .pc-cov .pc-cr{height:54px; min-height:54px} }
