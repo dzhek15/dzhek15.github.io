@@ -49,6 +49,12 @@
 ],
 "id": 3846
 },
+"бамбер бридж": {
+"f": "MD0qUEA6-r7aWsxVk.png"
+},
+"бедфорд таун": {
+"f": "xWM4CmRq-2eETkRai.png"
+},
 "белграно": {
 "f": "htqgPrT0-jXvNrLYt.png"
 },
@@ -213,6 +219,9 @@
 ],
 "id": 537
 },
+"летерхед": {
+"f": "MLVdD7U0-A7dHJstO.png"
+},
 "локомотив ярославль": {
 "f": "d2XBiSjC-bcMBxKZi.png"
 },
@@ -222,6 +231,9 @@
 "#000003"
 ],
 "id": 3453
+},
+"маклсфилд таун": {
+"f": "YNfQpCiT-rZPjZPfl.png"
 },
 "мальорка": {
 "f": "WKsw8cne-rmDEjevK.png"
@@ -305,6 +317,9 @@
 "серро монтевидео": {
 "f": "tl6sskT0-dUH9C2gd.png"
 },
+"скарборо атлетик": {
+"f": "x2TELSme-Acopjvte.png"
+},
 "специя": {
 "f": "08qns8VH-SEcuqyiS.png"
 },
@@ -340,12 +355,21 @@
 ],
 "id": 16498
 },
+"уингейт энд финчли": {
+"f": "YcfjAdS0-IJlrPRxF.png"
+},
 "унион туарга": {
 "c": [
 "#039127",
 "#feee51"
 ],
 "id": 14806
+},
+"уоркингтон": {
+"f": "M98O1gjT-2PBXgRPe.png"
+},
+"уоррингтон таун": {
+"f": "EqWSRriC-dUDxzbGu.png"
 },
 "финн харпс": {
 "c": [
@@ -373,6 +397,9 @@
 },
 "хувентуд лп": {
 "f": "Ewu5CRlC-WIGOXbOL.png"
+},
+"чатем таун": {
+"f": "2DNFAXS0-vZlrO7BD.png"
 },
 "челтнем таун": {
 "c": [
@@ -404,6 +431,9 @@
 "#1f15eb"
 ],
 "id": 9692
+},
+"эмли": {
+"f": "OhOZ9Ele-4xODXnII.png"
 },
 "энвигадо": {
 "f": "461l7eCN-2XZjQRJG.png"
