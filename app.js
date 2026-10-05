@@ -2300,18 +2300,22 @@
       g.mir = true; g.ts = z ? Number(z[1]) * 1000 : 0;
       return g;
     };
-    var getMir = function(url, ms){
+    var getMir1 = function(url, ms){
       var c2 = typeof AbortController === "function" ? new AbortController() : null;
       var t2 = c2 ? setTimeout(function(){ c2.abort(); }, ms) : null;
       return fetch(url, { cache: "no-store", signal: c2 ? c2.signal : undefined })
         .then(function(r){ if(t2) clearTimeout(t2); if(!r.ok) throw new Error("http"); return r.text(); })
         .then(parseMir);
     };
+    /* свежие снимки лежат в отдельной ветке live (raw.githubusercontent.com): коммиты каждую минуту не мешают сборкам Pages; если ветка не открылась — прежний путь на сайте */
+    var getMir = function(file, ms){
+      return getMir1(C.LIVE_PATH + file, Math.min(ms, 5000)).catch(function(){ return getMir1(C.MIRROR_PATH + file, ms); });
+    };
     /* fs-now — только матчи тиража (обновляется раз в минуту при изменениях), fs — все идущие матчи раз в 5 минут */
     var mirror = function(){
       var q = ".txt?t=" + Math.floor(Date.now() / 30000), sp = FS_SPORT_ID[k];
-      var full = function(){ return getMir(C.MIRROR_PATH + "fs-" + sp + q, 8000).catch(function(){ return []; }); };
-      return getMir(C.MIRROR_PATH + "fs-now-" + sp + q, 8000).then(function(g){
+      var full = function(){ return getMir("fs-" + sp + q, 8000).catch(function(){ return []; }); };
+      return getMir("fs-now-" + sp + q, 8000).then(function(g){
         return (g && g.ts && Date.now() - g.ts < 30 * 60000) ? g : full();
       }, full);
     };
@@ -2495,7 +2499,10 @@
   function fsDrawMirror(k){
     var c = FS_DRAW[k];
     if(c && Date.now() - c.at < 5 * 60000) return c.p;
-    var p = fetch(C.MIRROR_PATH + "fs-draw-" + FS_SPORT_ID[k] + ".txt?t=" + Math.floor(Date.now() / 300000), { cache: "no-store" })
+    var fn = "fs-draw-" + FS_SPORT_ID[k] + ".txt?t=" + Math.floor(Date.now() / 300000);
+    var p = fetch(C.LIVE_PATH + fn, { cache: "no-store" })
+      .then(function(r){ if(!r.ok) throw new Error("http"); return r; })
+      .catch(function(){ return fetch(C.MIRROR_PATH + fn, { cache: "no-store" }); })
       .then(function(r){ return r.ok ? r.text() : null; })
       .then(fsParseFeed)
       .catch(function(){ return []; });

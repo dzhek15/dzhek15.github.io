@@ -3,6 +3,7 @@ name: keepalive
 # Страховка от пропусков расписания GitHub: одно долгое задание само снимает данные
 # (живые матчи — каждую минуту, коммит только при изменении; зеркало totobrief/stavka и эмблемы — каждые 30 минут),
 # а в конце запускает себя заново. Расписание ниже только поднимает цепочку, если она оборвалась.
+# Снимки Flashscore (fs-*.txt) пишутся в отдельную ветку live, чтобы коммиты каждую минуту не отменяли сборки Pages.
 # Обычные feed-mirror и fs-live остаются как есть.
 
 on:
@@ -31,11 +32,25 @@ jobs:
           git config user.email "feed-mirror@users.noreply.github.com"
           B="${GITHUB_REF_NAME}"
           sync() { git fetch -q origin "$B" && git reset -q --hard "origin/$B"; }
+          # ветка live: один коммит, перезаписывается (amend + force), история не растёт
+          echo "live-wt/" >> .git/info/exclude
+          git fetch -q origin live
+          git worktree add -q -f --detach live-wt origin/live
+          export FSLIVE_OUT="$PWD/live-wt/data/api"
+          sync_live() { git -C live-wt fetch -q origin live && git -C live-wt reset -q --hard origin/live; }
+          push_live() {
+            git -C live-wt add -A data/api
+            if ! git -C live-wt diff --cached --quiet; then
+              git -C live-wt commit -q --amend -m "live: $(date -u +'%Y-%m-%d %H:%M UTC')"
+              git -C live-wt push -q -f origin HEAD:live || true
+            fi
+          }
           end=$(( $(date +%s) + 335*60 ))
           n=0
           while [ "$(date +%s)" -lt "$end" ]; do
             t0=$(date +%s)
             sync || true
+            sync_live || true
             kind="fs-live"
             if [ $((n % 5)) -eq 0 ]; then
               # раз в 5 минут: полный снимок (с файлами тиража), время снимка обновляется всегда
@@ -50,6 +65,7 @@ jobs:
               # остальные минуты: только живые матчи, коммит лишь если что-то изменилось (гол, фаза, новый матч)
               FSLIVE_FAST=1 python3 scripts/fslive.py || true
             fi
+            push_live
             git add -A data/api icons/teams
             if ! git diff --cached --quiet; then
               git commit -q -m "$kind: $(date -u +'%Y-%m-%d %H:%M UTC') (keepalive)"

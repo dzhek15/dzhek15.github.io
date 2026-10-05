@@ -1,6 +1,6 @@
 name: fs-live
 
-# Снимок идущих матчей Flashscore → data/api/fs-1.txt и fs-4.txt.
+# Снимок идущих матчей Flashscore → ветка live, data/api/fs-1.txt и fs-4.txt.
 # Запасной путь для сайта, если Cloudflare Worker у посетителя не открывается (например, без VPN).
 # Запускается каждые 5 минут и вручную.
 
@@ -23,21 +23,24 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
 
-      - name: Снять живые матчи
-        run: python3 scripts/fslive.py
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        with:
+          ref: live
+          path: live-wt
+          fetch-depth: 1
 
-      - name: Закоммитить, если что-то изменилось
+      - name: Снять живые матчи
+        run: FSLIVE_OUT="$PWD/live-wt/data/api" python3 scripts/fslive.py
+
+      - name: Записать в ветку live, если что-то изменилось
         run: |
+          cd live-wt
           git config user.name "feed-mirror"
           git config user.email "feed-mirror@users.noreply.github.com"
-          git add data/api/fs-1.txt data/api/fs-4.txt data/api/fs-draw-1.txt data/api/fs-draw-4.txt
+          git add -A data/api
           if git diff --cached --quiet; then
             echo "изменений нет"
             exit 0
           fi
-          git commit -m "fs-live: $(date -u +'%H:%M UTC')"
-          for i in 1 2 3; do
-            git pull --rebase --autostash origin "${GITHUB_REF_NAME}" && git push && exit 0
-            sleep 5
-          done
-          exit 1
+          git commit -q --amend -m "live: $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git push -q -f origin HEAD:live

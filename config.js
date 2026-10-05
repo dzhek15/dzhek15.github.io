@@ -53,6 +53,7 @@ window.CONFIG = {
   /* ---------- API и зеркало ---------- */
   API_BASE: "https://totobrief.com/api/v1/community/",
   MIRROR_PATH: "data/api/",
+  LIVE_PATH: "https://raw.githubusercontent.com/dzhek15/dzhek15.github.io/live/data/api/",   /* снимки Flashscore: отдельная ветка live */
 
   /* ---------- автообновление ---------- */
   LIVE_EVERY_MS: 30 * 1000,   /* счёт идущих матчей — раз в 30 секунд */

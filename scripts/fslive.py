@@ -10,6 +10,8 @@ import os, re, sys, time, urllib.request
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "data", "api")
+# FSLIVE_OUT: куда писать снимки (ветка live); читать тираж по-прежнему из OUT основной ветки
+WOUT = os.environ.get("FSLIVE_OUT") or OUT
 FEED = "https://sweet-heart-f51d.dzhek15-api.workers.dev/?sport=%d&day=0"
 HDR = {"User-Agent": "Mozilla/5.0 (dzhek15 fslive)", "Origin": "https://dzhek15.github.io",
        "Referer": "https://dzhek15.github.io/"}
@@ -111,7 +113,8 @@ def write_draw(sport, now, toks):
         text = get((FEED % sport).replace("day=0", "day=%d" % day))
         if text and "AA÷" in text:
             found.update(build_draw(text, toks))
-    path = os.path.join(OUT, "fs-draw-%d.txt" % sport)
+    os.makedirs(WOUT, exist_ok=True)
+    path = os.path.join(WOUT, "fs-draw-%d.txt" % sport)
     old = open(path, encoding="utf-8").read() if os.path.exists(path) else ""
     # прежние записи не теряем: матч прошлого тиража уже исчез из ленты, а ссылка на него нужна
     prev = {}
@@ -139,7 +142,8 @@ def write_draw(sport, now, toks):
 
 
 def write_feed(name, body, force):
-    path = os.path.join(OUT, name)
+    os.makedirs(WOUT, exist_ok=True)
+    path = os.path.join(WOUT, name)
     old = open(path, encoding="utf-8").read() if os.path.exists(path) else ""
     # время снимка само по себе не повод для коммита: пишем, только если изменились матчи (или force)
     strip = lambda t: re.sub(r"^ZT÷\d+", "", t)
