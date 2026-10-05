@@ -2098,3 +2098,8 @@ body.is-prev #coupon{margin-top:0}
 :root[data-theme="light"] .pc-o.on.miss{background:#fff; box-shadow:none}
 :root[data-theme="light"] .pc-o.hole{background:#fff}
 :root[data-theme="light"] .pc-key .k-on{color:#0A0F10; background:#D3E1EE; border-bottom:2px solid #4C7396; padding:0 4px; border-radius:2px}
+
+/* вариант ИИ скрыт до нажатия */
+.ai-pick-closed{display:flex; align-items:center; gap:8px; min-height:28px}
+.ai-reveal{font:inherit; font-size:12px; line-height:1; padding:6px 12px; border-radius:14px; border:1px solid var(--rule-strong); background:transparent; color:var(--gold-ink); cursor:pointer}
+.ai-reveal:hover{border-color:var(--brand-gold)}

@@ -2716,6 +2716,21 @@
     });
   }
   var AI_SN = [["gap", "Расхождения"], ["sim", "Симуляция"], ["kel", "Келли"]];
+  /* вариант ИИ скрыт, пока не нажать «показать»: чтобы не отвлекал от фактов разбора */
+  function aiGate(inner){
+    return '<div class="ai-gate"><p class="ai-pick ai-pick-closed">Вариант ИИ: <button type="button" class="ai-reveal">показать</button></p>' +
+      '<div class="ai-real" hidden>' + inner + '</div></div>';
+  }
+  function aiGateBind(box, cb){
+    var g = box && box.querySelector(".ai-gate"); if(!g) return;
+    var b = g.querySelector(".ai-reveal"); if(!b) return;
+    b.addEventListener("click", function(){
+      var c = g.querySelector(".ai-pick-closed"), r = g.querySelector(".ai-real");
+      if(c) c.hidden = true;
+      if(r) r.hidden = false;
+      if(cb) cb();
+    });
+  }
   function aiPickLine(r, idx){
     if(!r || !r.p) return "";
     var v = aiStrats(), P = r.p.split(""), cells = "", any = false, union = {};
@@ -2858,7 +2873,7 @@
       var ok = r.p.indexOf(lo.o) >= 0;
       st = ' <span class="ai-live ' + (ok ? "ai-ok" : "ai-no") + '">' + (lo.live ? "сейчас " : "итог ") + (ok ? "угадан" : "мимо") + '</span>';
     } else if(r) st = ' <span class="ai-live">матч не начался</span>';
-    $("evBody").innerHTML = '<div id="aiBox">' + (r ? '<p class="ai-pick">Вариант ИИ: <b>' + escHtml(r.p) + '</b>' + st + '</p>' +
+    $("evBody").innerHTML = '<div id="aiBox">' + (r ? aiGate('<p class="ai-pick">Вариант ИИ: <b>' + escHtml(r.p) + '</b>' + st + '</p>') +
         (r.t ? aiHtml(r, true) : '<p class="ev-note">Полный текст разбора к этому тиражу не сохранён, остался только вариант.</p>')
       : '<p class="ev-warn">Разбора ИИ по этому тиражу нет.</p>') + '</div>' +
       '<div class="blend-go"><button type="button" class="btn-ev" id="aiNews">Новости и составы</button>' +
@@ -2866,6 +2881,7 @@
     $("evBack").hidden = false;
     $("aiNews").addEventListener("click", function(){ showNews(m, idx, true); });
     $("aiAcc").addEventListener("click", function(){ showAcc(function(){ showAiPrev(m, idx, no); }); });
+    aiGateBind($("aiBox"));
   }
   function mkAiPrev(m, idx, no, mode){
     var b = document.createElement("button");
@@ -2894,14 +2910,17 @@
         return;
       }
       var all = aiPlan(j);
-      el.innerHTML = aiPickLine(r, idx) + aiHtml(r, true) + aiKellySummary(j);
+      el.innerHTML = (r.p ? aiGate(aiPickLine(r, idx)) : "") + aiHtml(r, true);
       if(r.p){
-        var go = $("aiGo");
-        go.insertAdjacentHTML("afterbegin",
-          '<button type="button" class="btn-ev" id="aiOne">Поставить ' + escHtml(r.p) + ' в матч</button>' +
-          (all ? '<button type="button" class="btn-ev" id="aiAll">Весь купон ИИ · ' + fmt(all.combos) + ' вар.</button>' : ''));
-        $("aiOne").addEventListener("click", function(){ aiApply(j, [idx]); });
-        if(all) $("aiAll").addEventListener("click", function(){ aiApply(j, null); });
+        aiGateBind(el, function(){
+          var go = $("aiGo"); if(!go || $("aiOne")) return;
+          go.insertAdjacentHTML("afterbegin",
+            '<button type="button" class="btn-ev" id="aiOne">Поставить ' + escHtml(r.p) + ' в матч</button>' +
+            (all ? '<button type="button" class="btn-ev" id="aiAll">Весь купон ИИ · ' + fmt(all.combos) + ' вар.</button>' : ''));
+          $("aiOne").addEventListener("click", function(){ aiApply(j, [idx]); });
+          if(all) $("aiAll").addEventListener("click", function(){ aiApply(j, null); });
+          el.insertAdjacentHTML("beforeend", aiKellySummary(j));
+        });
       }
     });
   }
