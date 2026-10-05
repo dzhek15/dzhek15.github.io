@@ -4304,7 +4304,7 @@
   }
 
   function briefPrice(){ return Number(state.price) > 0 ? Number(state.price) : 30; }
-  /* имя CSV «Бриф <вид>, <N> строк - <сумма>р»: вид = вер-ть, число гарантии или МАХ 15 */
+  /* имя CSV «Бриф <режим>, <N> строк - <сумма>р»: режим = вер-ть (с учётом вероятностей), исход (все исходы поровну), МАХ 15 (максимум шанса) */
   function briefFileName(kind, rows){
     return "Бриф " + kind + ", " + rows + " строк - " + (rows * briefPrice()) + "р.csv";
   }
@@ -4475,7 +4475,7 @@
     [].slice.call($("evBody").querySelectorAll(".brief-csv")).forEach(function(b){
       b.addEventListener("click", function(){
         var L = pick(b);
-        saveCsvFile(briefCsv(L), briefFileName("вер-ть", L.length));
+        saveCsvFile(briefCsv(L), briefFileName("МАХ 15", L.length));
       });
     });
     [].slice.call($("evBody").querySelectorAll(".brief-prev")).forEach(function(b){
@@ -4575,7 +4575,7 @@
       b.addEventListener("click", function(){
         var g = Number(b.getAttribute("data-g")), res = briefCache(sets)["g" + g + (briefWeighted() ? "w" : "")];
         if(!res || !res.lines) return;
-        saveCsvFile(briefCsv(res.lines), briefFileName(g >= 15 ? "МАХ 15" : String(g), res.rows));
+        saveCsvFile(briefCsv(res.lines), briefFileName(briefWeighted() ? "вер-ть" : "исход", res.rows));
       });
     });
     [].slice.call($("evBody").querySelectorAll(".brief-prev")).forEach(function(b){
