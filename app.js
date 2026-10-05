@@ -2117,7 +2117,7 @@
   }
   /* новый счёт: если гол выше всех виденных ранее (m.gmax) — запоминаем гол (кто забил и когда) для подсветки на минуту.
      incOnly — источник может только подтверждать и повышать счёт (снимок GitHub) */
-  var GOAL_MS = 60000, HOLD_MS = 8 * 60000;
+  var GOAL_MS = 60000, ROLLBACK_MS = 100000;
   function noteScore(m, sc, src, t, incOnly){
     src = src || SRC_TB; t = t || Date.now();
     var now = Date.now(), old = m.score || "", a = scPair(old), b = scPair(sc);
@@ -2129,18 +2129,26 @@
     }
     if(a && a[0] === b[0] && a[1] === b[1]){                /* тот же счёт — только подтверждение */
       m.scAt = now;
+      if(m.dn) delete m.dn;
       if(src > 1){ m.scSrc = Math.max(m.scSrc || 0, src); m.scHi = now; m.scT = Math.max(m.scT || 0, t); }
       if(!m.gmax) m.gmax = a.slice();
       return false;
     }
     var down = !!a && (b[0] < a[0] || b[1] < a[1]);
+    if(!down && m.dn) delete m.dn;                           /* любой источник снова не ниже принятого — ожидание отката сбрасываем */
     if(down && !m.res){
       var why = "";
       if(incOnly) why = "источник только повышает";
-      else if(src === SRC_TB && (m.scSrc || 0) > 1 && now - (m.scHi || 0) < HOLD_MS) why = "totobrief отстаёт от ленты";
-      else if(src < (m.scSrc || 0) && now - (m.scAt || 0) < 10 * 60000) why = "слабее источника счёта (" + SRC_NAME[m.scSrc] + ")";
-      else if(t < (m.scT || 0)) why = "данные старее принятых";
+      else if(t < (m.scT || 0) && src <= (m.scSrc || 0)) why = "данные старее принятых";
+      else {
+        /* Счёт только растёт. Источники отстают друг от друга (totobrief и лента то опережают, то нет), поэтому
+           «меньший» счёт от одного из них — чаще всего отставание, а не отмена гола. Откат принимаем, только если
+           меньший счёт держится без перерыва ROLLBACK_MS и никто за это время не показал принятый или больший счёт. */
+        if(!m.dn || m.dn.sc !== sc){ m.dn = { sc: sc, t0: now }; why = "ждём подтверждения отката (источники отстают друг от друга)"; }
+        else if(now - m.dn.t0 < ROLLBACK_MS) why = "меньший счёт держится " + Math.round((now - m.dn.t0) / 1000) + " с из " + Math.round(ROLLBACK_MS / 1000);
+      }
       if(why){ dbgLog("rej", tag + ": " + old + " → " + sc + " от " + SRC_NAME[src] + " отклонено: " + why); return false; }
+      delete m.dn;
       m.gmax = b.slice();                                   /* честный откат (отмена гола) — счётчик голов сбрасываем */
       dbgLog("score", tag + ": откат " + old + " → " + sc + " (" + SRC_NAME[src] + ")");
     }
