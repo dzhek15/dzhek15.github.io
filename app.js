@@ -4305,6 +4305,8 @@
 
   function briefPrice(){ return Number(state.price) > 0 ? Number(state.price) : 30; }
   /* имя CSV «Бриф <режим>, <N> строк - <сумма>р»: режим = вер-ть (с учётом вероятностей), исход (все исходы поровну), МАХ 15 (максимум шанса) */
+  /* имя CSV из кнопок выгрузки: «по 1 купону, 140 строк - 4200р» и «допы, 12 строк - 4200р» */
+  function csvNameSum(kind, rows, sum){ return kind + ", " + rows + " строк - " + sum + "р.csv"; }
   function briefFileName(kind, rows){
     return "Бриф " + kind + ", " + rows + " строк - " + (rows * briefPrice()) + "р.csv";
   }
@@ -5237,16 +5239,16 @@
         return f.join(";");
       }).join("\n") + "\n";
       return { csv: fixed,
-               name: /\.csv$/i.test(book.name) ? book.name : nm + ".csv",
+               name: csvNameSum("допы", fixed.replace(/\n+$/, "").split("\n").length, book.rows.length * price),
                what: "файл " + book.name + " как есть (строк " + fmt(book.lines || 0) + ", вариантов " + fmt(book.rows.length) + ")" };
     }
     if(sys && book.pages && book.pages.length){
       var pl = book.pages.map(function(r){ return String(price) + ";" + r.join(";"); });
-      return { csv: pl.join("\n") + "\n", name: nm + "_sys_" + pl.length + ".csv",
+      return { csv: pl.join("\n") + "\n", name: csvNameSum("допы", pl.length, book.rows.length * price),
                what: "системой: строк " + fmt(pl.length) + ", вариантов " + fmt(book.rows.length) };
     }
     var lines = book.rows.map(function(r){ return String(price) + ";" + r.join(";"); });
-    return { csv: lines.join("\n") + "\n", name: nm + "_" + lines.length + "v.csv",
+    return { csv: lines.join("\n") + "\n", name: csvNameSum("по 1 купону", lines.length, lines.length * price),
              what: fmt(lines.length) + " вариант(ов) из файла, по одному в строке, " + fmt(lines.length * price) + " ₽" };
   }
 
@@ -7164,7 +7166,7 @@
       return;
     }
     var combos = out.src === "купон" ? (tally().combos || 0) : csvPlan().total;
-    var name = "export_sys_" + out.rows + "_" + (combos * out.price) + ".csv";
+    var name = csvNameSum("допы", out.rows, combos * out.price);
     saveCsvFile(out.csv, name);
     var note = "Файл " + name + " — выгружен " +
       (out.src === "купон" ? "КУПОН с экрана" : "корзина (купон не заполнен)") +
@@ -7190,7 +7192,7 @@
     }
     var combos = out.src === "купон" ? (tally().combos || 0) : csvPlan().total;
     var total = combos * out.price;
-    var name = "export_sys_" + out.rows + "_" + total + ".csv";
+    var name = csvNameSum("допы", out.rows, total);
     var what = (out.src === "купон" ? "купон с экрана" : "корзина") + ": вариантов " + out.rows +
       ", комбинаций " + fmt(combos) + ", итого " + fmt(total) + " ₽";
     var extra = (out.src === "купон" && state.played.length)
@@ -7221,7 +7223,7 @@
     var csv = buildCsv();
     if(!csv){ $("expNote").textContent = "Нечего выгружать — купон пустой."; return; }
     var rowsN = csv.replace(/\n+$/,"").split("\n").length;
-    var name = "export_random_" + rowsN + "_" + (rowsN * (Number(state.price)||0)) + ".csv";
+    var name = csvNameSum("по 1 купону", rowsN, rowsN * briefPrice());
     saveCsvFile(csv, name);
   });
 
@@ -7234,7 +7236,7 @@
     var csv = buildCsv();
     if(!csv){ $("expNote").textContent = "Нечего отправлять — купон пустой."; return; }
     var rowsN = csv.replace(/\n+$/,"").split("\n").length;
-    var name = "export_random_" + rowsN + "_" + (rowsN * (Number(state.price)||0)) + ".csv";
+    var name = csvNameSum("по 1 купону", rowsN, rowsN * briefPrice());
 
     var file = null;
     try{ file = new File([csv], name, {type:"text/csv"}); }catch(e){}
