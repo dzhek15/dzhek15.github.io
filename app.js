@@ -4304,6 +4304,10 @@
   }
 
   function briefPrice(){ return Number(state.price) > 0 ? Number(state.price) : 30; }
+  /* имя CSV «Бриф <вид>, <N> строк - <сумма>р»: вид = вер-ть, число гарантии или МАХ 15 */
+  function briefFileName(kind, rows){
+    return "Бриф " + kind + ", " + rows + " строк - " + (rows * briefPrice()) + "р.csv";
+  }
   /* вероятности исходов для «Брифа»: линия конторы с поправкой по истории */
   function briefProbs(){
     return state.matches.map(function(m){ return (m.pct && m.pct.bk) ? calProb(m.pct.bk) : null; });
@@ -4471,7 +4475,7 @@
     [].slice.call($("evBody").querySelectorAll(".brief-csv")).forEach(function(b){
       b.addEventListener("click", function(){
         var L = pick(b);
-        saveCsvFile(briefCsv(L), "brief_" + (state.tirazh || "tirazh") + "_chance_" + L.length + ".csv");
+        saveCsvFile(briefCsv(L), briefFileName("вер-ть", L.length));
       });
     });
     [].slice.call($("evBody").querySelectorAll(".brief-prev")).forEach(function(b){
@@ -4571,7 +4575,7 @@
       b.addEventListener("click", function(){
         var g = Number(b.getAttribute("data-g")), res = briefCache(sets)["g" + g + (briefWeighted() ? "w" : "")];
         if(!res || !res.lines) return;
-        saveCsvFile(briefCsv(res.lines), "brief_" + (state.tirazh || "tirazh") + "_g" + g + "_" + res.rows + ".csv");
+        saveCsvFile(briefCsv(res.lines), briefFileName(g >= 15 ? "МАХ 15" : String(g), res.rows));
       });
     });
     [].slice.call($("evBody").querySelectorAll(".brief-prev")).forEach(function(b){
