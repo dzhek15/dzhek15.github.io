@@ -2090,3 +2090,11 @@ body.is-prev #coupon{margin-top:0}
   .pc-tc .pc-tm{font-size:15px}
   .pc-tc .pc-tm.pc-tx{font-size:9.5px; letter-spacing:0}
 }
+/* светлая тема: выбранные исходы купона — мягкий сине-стальной тон вместо серого */
+:root[data-theme="light"] .pc-o.on{color:#0A0F10; background:#D3E1EE; border-color:#4C7396; box-shadow:inset 0 -2px 0 rgba(76,115,150,.28)}
+:root[data-theme="light"] .pc-o.on small{color:#2C4A64; font-weight:700}
+:root[data-theme="light"] .pc-o:not(.on){background:#fff; border-color:#B7C2C8; opacity:1; color:#7A8890}
+:root[data-theme="light"] .pc-o.on.hit{box-shadow:none}
+:root[data-theme="light"] .pc-o.on.miss{background:#fff; box-shadow:none}
+:root[data-theme="light"] .pc-o.hole{background:#fff}
+:root[data-theme="light"] .pc-key .k-on{color:#0A0F10; background:#D3E1EE; border-bottom:2px solid #4C7396; padding:0 4px; border-radius:2px}
