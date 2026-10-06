@@ -5061,6 +5061,19 @@
     else cb(null);
   }
 
+  /* короткие ссылки: набор лежит на сервере под кодом, в адресе только #s=код */
+  function shortPut(tir, packed){
+    if(typeof fetch !== "function" || !C.SHORT_HOST) return Promise.reject(new Error("no"));
+    return fetch(C.SHORT_HOST, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ t: String(tir || ""), d: packed }) })
+      .then(function(r){ if(!r.ok) throw new Error("http"); return r.json(); })
+      .then(function(j){ if(!j || !j.id) throw new Error("id"); return j.id; });
+  }
+  function shortGet(id){
+    if(typeof fetch !== "function" || !C.SHORT_HOST) return Promise.reject(new Error("no"));
+    return fetch(C.SHORT_HOST + "?id=" + encodeURIComponent(id))
+      .then(function(r){ if(!r.ok) throw new Error(r.status === 404 ? "gone" : "http"); return r.json(); })
+      .then(function(j){ if(!j || !j.t || !j.d) throw new Error("bad"); return j; });
+  }
   var pendingBook = (function(){
     var h = String(location.hash || "");
     var ms = h.match(/^#vs=([^-]*)-([A-Za-z0-9\-_.]+)$/);
@@ -5132,7 +5145,21 @@
     });
   }
 
-  function tryPending(){ tryPendingLink(); tryPendingBook(); }
+  var pullDone = false;               /* свежий тираж уже подтянут (или не вышло) — можно разбирать ссылку */
+  function tryPending(){ pullDone = true; tryPendingLink(); tryPendingBook(); }
+  /* адрес вида #s=код: достаём набор с сервера и дальше работаем как со ссылкой #vs= */
+  (function(){
+    var m = String(location.hash || "").match(/^#s=([A-Za-z0-9_-]{6,16})$/);
+    if(!m) return;
+    shortGet(m[1]).then(function(j){
+      var parts = String(j.d).split(".").filter(Boolean);
+      pendingBook = { tirazh: String(j.t), multi: parts };
+      if(pullDone) tryPending();          /* иначе ссылку разберёт тот, кто закончит подтяжку тиража */
+    }, function(e){
+      say(e && e.message === "gone" ? "Короткая ссылка устарела или не найдена: наборы хранятся 90 дней." : "Не получилось открыть короткую ссылку: сервер не ответил. Попробуй ещё раз позже.");
+    });
+  })();
+
   function prevBookOpen(p, tries){
     var isPrev = !!(state.prev && String(state.prev.tirazh) === String(p.tirazh));
     /* прошлый тираж ещё подгружается фоном — ждём до ~15 с */
@@ -6427,6 +6454,7 @@
   var PC_PASTE = '<form class="pc-paste" id="pcPaste" autocomplete="off" hidden><input type="text" id="pcUrl" inputmode="url" autocapitalize="off" spellcheck="false" placeholder="Вставь ссылку" aria-label="Ссылка на варианты">' +
     '<button type="submit" class="pc-btn">Открыть</button></form>';
   var PC_BTNS = '<button type="button" class="pc-btn" id="pcLoad">Загрузить CSV</button><button type="button" class="pc-btn" id="pcLinkBtn">Загрузить ссылку</button>';
+  var pcPasteBusy = false;
   function pcPasteBind(){
     var f = $("pcPaste"); if(!f) return;
     $("pcLinkBtn").addEventListener("click", function(){
@@ -6436,7 +6464,7 @@
         /* если браузер даёт прочитать буфер — подставляем ссылку сразу */
         try{
           if(navigator.clipboard && navigator.clipboard.readText) navigator.clipboard.readText().then(function(t){
-            if(/#vs?=[^-\s]*-[A-Za-z0-9\-_.]+/.test(t || "") && !inp.value) inp.value = String(t).trim();
+            if((/#vs?=[^-\s]*-[A-Za-z0-9\-_.]+/.test(t || "") || /#s=[A-Za-z0-9_-]{6,16}/.test(t || "")) && !inp.value) inp.value = String(t).trim();
           }, function(){});
         }catch(e){}
       }
@@ -6444,6 +6472,22 @@
     f.addEventListener("submit", function(e){
       e.preventDefault();
       var v = String($("pcUrl").value || "").trim();
+      /* короткие ссылки #s=код сначала превращаем в обычные #vs= (набор берём с сервера) */
+      var sIds = v.match(/#s=[A-Za-z0-9_-]{6,16}/g);
+      if(sIds && !pcPasteBusy){
+        pcPasteBusy = true;
+        var rest = v.replace(/#s=[A-Za-z0-9_-]{6,16}/g, " ");
+        Promise.all(sIds.map(function(x){
+          return shortGet(x.slice(3)).then(function(j){ return "#vs=" + encodeURIComponent(j.t) + "-" + j.d; }, function(){ return ""; });
+        })).then(function(list){
+          pcPasteBusy = false;
+          var ok = list.filter(Boolean);
+          if(!ok.length){ pcsv.msgAt = Date.now(); pcsv.msg = "Короткая ссылка устарела или не найдена: наборы хранятся 90 дней."; renderPrevCsv(); return; }
+          $("pcUrl").value = (rest.trim() + " " + ok.join(" ")).trim();
+          $("pcPaste").dispatchEvent(new Event("submit", { cancelable: true }));
+        });
+        return;
+      }
       /* можно вставить сразу несколько ссылок — через пробел или с новой строки */
       var re = /#v=([^-&#\s]*)-([A-Za-z0-9\-_]+)/g, m, list = [], other = 0;
       var reS = /#vs=([^-&#\s]*)-([A-Za-z0-9\-_.]+)/g, ms2;
@@ -6486,7 +6530,10 @@
         varsEncode(st.rows, function(p){ if(p) res(p); else rej(new Error("pack")); }, pages.length ? pages : null);
       });
     })).then(function(list){
-      return location.origin + location.pathname + "#vs=" + encodeURIComponent(tir || "") + "-" + list.join(".");
+      var packed = list.join("."), base = location.origin + location.pathname;
+      var longUrl = base + "#vs=" + encodeURIComponent(tir || "") + "-" + packed;
+      /* длинный адрес заменяем коротким #s=код; не вышло — отдаём длинный, как раньше */
+      return shortPut(tir, packed).then(function(id){ return base + "#s=" + id; }, function(){ return longUrl; });
     });
     var wrote = null;
     if(window.ClipboardItem && navigator.clipboard && navigator.clipboard.write){
@@ -6504,8 +6551,8 @@
         return;
       }
       var ok = function(){
-        fin("Ссылка скопирована: " + fmt(sets.length) + " набор(ов), " + fmt(nVars) + " вариант(ов), тираж №" + tir +
-          ". Кто откроет — увидит все наборы вкладками в просмотре тиража." + (url.length > 3500 ? " Адрес длинный — в Telegram может не влезть одним сообщением." : ""));
+        fin((url.indexOf("#s=") > 0 ? "Короткая ссылка скопирована: " : "Ссылка скопирована: ") + fmt(sets.length) + " набор(ов), " + fmt(nVars) + " вариант(ов), тираж №" + tir +
+          ". Кто откроет — увидит все наборы вкладками в просмотре тиража." + (url.indexOf("#s=") > 0 ? " Хранится 90 дней." : (url.length > 3500 ? " Адрес длинный — в Telegram может не влезть одним сообщением." : "")));
       };
       var manual = function(){
         fin("Скопировать автоматически не вышло — ссылка в окне, скопируй её оттуда.");

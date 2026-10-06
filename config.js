@@ -46,6 +46,9 @@ window.CONFIG = {
      приз в 6,8% тиражей; при 5 п.п. — ~2,9 замены, приз в 10,1%. */
   LOSS_CAP: 0.05,            /* максимум потери вероятности за одну замену */
 
+  /* ---------- Короткие ссылки на варианты ---------- */
+  SHORT_HOST: "https://dzhek15-links.dzhek15-api.workers.dev/",
+
   /* ---------- Flashscore ---------- */
   FS_FEED_HOST: "https://sweet-heart-f51d.dzhek15-api.workers.dev/?sport=",
   FS_SPORT_ID: { football: 1, hockey: 4 },
