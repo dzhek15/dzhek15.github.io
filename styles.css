@@ -1218,11 +1218,34 @@ body.is-prev .row .pick.mine-hit{outline-color:var(--brand-gold)}
 #btnDedup{border-color:var(--hot); color:var(--hot)}
 #expNote.warn{color:var(--hot)}
 @media (max-width:600px){ .hist-panel .panel-head{flex-wrap:wrap} .hist-head-acts{width:100%; justify-content:center} }
-.ai-blks{display:grid; gap:10px; margin:4px 0 10px; text-align:left}
-.ai-blk{border-left:2px solid var(--rule); padding:2px 0 2px 10px}
-.ai-blk-h{margin:0 0 3px; font-size:12px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--muted)}
-.ai-blk p{margin:0 0 4px; font-size:14px; line-height:1.5; color:var(--ink)}
+.ai-blks{display:grid; gap:12px; margin:8px 0 12px; text-align:left}
+.ai-lead{margin:0 0 4px; padding:10px 12px; border:1px solid var(--rule-strong); border-left:4px solid var(--gold-ink); border-radius:8px; background:color-mix(in srgb, var(--gold-ink) 9%, transparent); font-size:15px; line-height:1.5; font-weight:500; overflow-wrap:anywhere}
+.ai-blk{--c:var(--muted); border:1px solid var(--rule-strong); border-left:4px solid var(--c); border-radius:10px; padding:10px 12px 12px; background:color-mix(in srgb, var(--c) 6%, transparent); min-width:0}
+.ai-k-main{--c:var(--gold-ink)}
+.ai-k-human{--c:#4a8fd0}
+.ai-k-risk{--c:#d0564b}
+.ai-blk-h{margin:0 0 8px; font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:color-mix(in srgb, var(--c) 72%, var(--ink))}
+.ai-blk p{margin:0 0 6px; font-size:14px; line-height:1.55; color:var(--ink); overflow-wrap:anywhere}
 .ai-blk p:last-child{margin-bottom:0}
+.ai-k-main p{font-size:15px; font-weight:500}
+.ai-sec{--c:var(--muted); margin:0 0 8px; padding:8px 10px 9px; border-left:3px solid var(--c); border-radius:0 8px 8px 0; background:color-mix(in srgb, var(--c) 9%, transparent); min-width:0}
+.ai-sec:last-child{margin-bottom:0}
+.ai-sec p{margin:0; font-size:14px; line-height:1.55}
+.ai-lb{display:flex; align-items:center; gap:6px; margin:0 0 4px; font-size:11px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:color-mix(in srgb, var(--c) 70%, var(--ink))}
+.ai-lb::before{content:""; flex:none; width:7px; height:7px; border-radius:50%; background:var(--c)}
+.ai-s-past{--c:#4a8fd0}
+.ai-s-next{--c:#1fa39a}
+.ai-s-cup{--c:#c9a24b}
+.ai-s-stake{--c:#e07b39}
+.ai-s-lineup{--c:#d0564b}
+.ai-s-coach{--c:#9072d0}
+.ai-s-hid{--c:#3fae6a; background:color-mix(in srgb, var(--c) 15%, transparent)}
+.ai-sc{display:inline; padding:1px 5px; border-radius:4px; border:1px solid var(--rule-strong); background:color-mix(in srgb, var(--ink) 9%, transparent); font:600 .92em/1.45 "IBM Plex Mono",monospace; white-space:nowrap}
+.ai-nb{white-space:nowrap}
+.ai-dt{font-weight:700; white-space:nowrap}
+.ai-nm{font-weight:700; white-space:nowrap}
+.ai-q{color:color-mix(in srgb, var(--gold-ink) 80%, var(--ink)); font-weight:500}
+.ai-par{color:var(--muted); font-size:.9em}
 /* корзина на узких телефонах: кнопки уходят под текст, текст получает всю ширину */
 @media (max-width:420px){
   .hist li{display:grid; grid-template-columns:auto minmax(0,1fr); column-gap:10px; row-gap:8px; align-items:center}

@@ -2590,15 +2590,40 @@
   function aiFor(j, idx){
     return (j && String(j.number) === String(state.tirazh) && j.m && j.m[idx]) || null;
   }
+  /* оформление текста разбора: счета, даты, очки, цитаты, роли в скобках */
+  var AI_SEC = { "Прошлые игры": "past", "Следующие игры": "next", "Кубок": "cup", "На кону": "stake", "Составы и отсутствующие": "lineup", "Тренеры и настроение": "coach", "Неочевидная деталь": "hid" };
+  function aiBlkKind(h){
+    h = String(h || "");
+    return h.indexOf("решает") >= 0 ? "main" : h.indexOf("Цена") >= 0 ? "risk" : h.indexOf("Человеческий") >= 0 ? "human" : "other";
+  }
+  function aiFmt(s){
+    s = s.replace(/«[^»]*»/g, function(m){ return '<span class="ai-q">' + m + '</span>'; });
+    s = s.replace(/\((?!\d)[^():]*\)/g, function(m){ return '<span class="ai-par">' + m + '</span>'; });
+    s = s.replace(/(^|[^\d:+])(\d{1,2}:\d{1,2})(?![\d:])(\s?МСК)?/g, function(m, pre, sc, msk){
+      if(msk) return m;
+      return pre === "(" ? '<span class="ai-nb">(<span class="ai-sc">' + sc + '</span></span>' : pre + '<span class="ai-sc">' + sc + '</span>';
+    });
+    s = s.replace(/(\d{1,2}(?:[–-]\d{1,2})?\s(?:января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря))/g, '<span class="ai-dt">$1</span>');
+    s = s.replace(/(\d+\s(?:очк[а-я]*))/g, '<span class="ai-nm">$1</span>');
+    return s;
+  }
+  function aiPara(x){
+    var m = /^(Прошлые игры|Следующие игры|Кубок|На кону|Составы и отсутствующие|Тренеры и настроение|Неочевидная деталь):\s*([\s\S]*)$/.exec(x);
+    if(m && AI_SEC[m[1]]){
+      return '<div class="ai-sec ai-s-' + AI_SEC[m[1]] + '"><span class="ai-lb">' + escHtml(m[1]) + '</span><p>' + aiFmt(escHtml(m[2].charAt(0).toUpperCase() + m[2].slice(1))) + '</p></div>';
+    }
+    return '<p>' + aiFmt(escHtml(x)) + '</p>';
+  }
   function aiHtml(r, full){
     var src = (r.s || []).map(function(x){
       return '<a target="_blank" rel="noopener noreferrer" href="' + escHtml(x.u) + '">' + escHtml(x.n) + '</a>';
     }).join(" · ");
     var blk = (full && Array.isArray(r.b)) ? r.b.filter(function(b){ return b && b.t; }).map(function(b){
-      return '<div class="ai-blk">' + (b.h ? '<h4 class="ai-blk-h">' + escHtml(b.h) + '</h4>' : '') +
-        String(b.t).split(/\n+/).map(function(x){ return '<p>' + escHtml(x) + '</p>'; }).join("") + '</div>';
+      var kind = aiBlkKind(b.h);
+      return '<div class="ai-blk ai-k-' + kind + '">' + (b.h ? '<h4 class="ai-blk-h">' + escHtml(b.h) + '</h4>' : '') +
+        String(b.t).split(/\n+/).map(aiPara).join("") + '</div>';
     }).join("") : "";
-    return '<p class="ai-txt">' + escHtml(r.t) + '</p>' + (blk ? '<div class="ai-blks">' + blk + '</div>' : '') +
+    return '<p class="ai-txt' + (full ? ' ai-lead' : '') + '">' + (full ? aiFmt(escHtml(r.t)) : escHtml(r.t)) + '</p>' + (blk ? '<div class="ai-blks">' + blk + '</div>' : '') +
       (src ? '<p class="ai-src">Источники: ' + src + '</p>' : '') +
       (full ? '<p class="ev-note">Разбор написан ИИ по открытым источникам' +
         ((r.at || (ai.data && ai.data.at)) ? ' (' + new Date(r.at || ai.data.at).toLocaleString("ru-RU", {day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit", timeZone:"Europe/Moscow"}) + ' МСК)' : '') +
