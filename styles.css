@@ -1558,7 +1558,8 @@ body.is-prev .row .pick.ai-pk{opacity:1; border-color:var(--ai-pk-bd); color:var
   :root:not([data-compact="1"]) body.is-prev .row .teams .ai-live{display:none}
   :root:not([data-compact="1"]) body.is-prev .row.open .st-line{display:flex; order:3; flex-wrap:wrap; align-items:center; gap:8px; margin-top:10px}
   :root:not([data-compact="1"]) body.is-prev .row.open .picks-m{display:grid; grid-column:1 / -1; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:14px}
-  :root:not([data-compact="1"]) body.is-prev .row.open .modes{display:flex; grid-column:1 / -1; justify-content:center; gap:8px; margin-top:12px}
+  /* кнопка «ИИ» теперь стоит рядом с FS у команд — копия в раскрытой строке не нужна */
+  :root:not([data-compact="1"]) body.is-prev .row.open .modes{display:none}
   :root:not([data-compact="1"]) body.is-prev .row.open.anim .meta,
   :root:not([data-compact="1"]) body.is-prev .row.open.anim .st-line,
   :root:not([data-compact="1"]) body.is-prev .row.open.anim .picks-m,
