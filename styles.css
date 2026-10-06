@@ -1218,34 +1218,34 @@ body.is-prev .row .pick.mine-hit{outline-color:var(--brand-gold)}
 #btnDedup{border-color:var(--hot); color:var(--hot)}
 #expNote.warn{color:var(--hot)}
 @media (max-width:600px){ .hist-panel .panel-head{flex-wrap:wrap} .hist-head-acts{width:100%; justify-content:center} }
-.ai-blks{display:grid; gap:12px; margin:8px 0 12px; text-align:left}
-.ai-lead{margin:0 0 4px; padding:10px 12px; border:1px solid var(--rule-strong); border-left:4px solid var(--gold-ink); border-radius:8px; background:color-mix(in srgb, var(--gold-ink) 9%, transparent); font-size:15px; line-height:1.5; font-weight:500; overflow-wrap:anywhere}
-.ai-blk{--c:var(--muted); border:1px solid var(--rule-strong); border-left:4px solid var(--c); border-radius:10px; padding:10px 12px 12px; background:color-mix(in srgb, var(--c) 6%, transparent); min-width:0}
-.ai-k-main{--c:var(--gold-ink)}
-.ai-k-human{--c:#4a8fd0}
-.ai-k-risk{--c:#d0564b}
-.ai-blk-h{margin:0 0 8px; font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:color-mix(in srgb, var(--c) 72%, var(--ink))}
-.ai-blk p{margin:0 0 6px; font-size:14px; line-height:1.55; color:var(--ink); overflow-wrap:anywhere}
+/* разбор ИИ в стиле старой газеты */
+.ai-paper{--ink:#1D1A15; --muted:#5E5446; --rule:#B9AB8C; --rule-strong:#8D7F63; --np-red:#8E2A1E;
+  position:relative; margin:6px 5px 14px; padding:14px 14px 12px; text-align:left; color:#1D1A15;
+  background:radial-gradient(120% 90% at 50% 40%, transparent 55%, rgba(120,90,40,.18) 100%), var(--bg-grain), #F1E8D4;
+  border:1px solid #1D1A15; border-radius:0; box-shadow:0 0 0 4px #F1E8D4, 0 0 0 5px #1D1A15; min-width:0}
+.ai-paper .ai-txt{margin:0 0 14px; padding:8px 0 9px; border-top:3px double #1D1A15; border-bottom:1px solid #1D1A15; font:700 15.5px/1.45 "PT Serif",Georgia,serif; color:#1D1A15; overflow-wrap:anywhere}
+.ai-blks{display:grid; gap:18px; margin:0 0 12px; text-align:left}
+.ai-blk{border:0; padding:0; background:none; min-width:0}
+.ai-blk-h{margin:0 0 9px; padding:6px 0 5px; border-top:3px double #1D1A15; border-bottom:1px solid #1D1A15; text-align:center; font:700 14px/1.2 "Old Standard TT",Georgia,serif; letter-spacing:.14em; text-transform:uppercase; color:#1D1A15}
+.ai-k-risk .ai-blk-h{color:#8E2A1E}
+.ai-blk p{margin:0 0 8px; font:400 14.5px/1.58 "PT Serif",Georgia,serif; color:#1D1A15; overflow-wrap:anywhere}
 .ai-blk p:last-child{margin-bottom:0}
-.ai-k-main p{font-size:15px; font-weight:500}
-.ai-sec{--c:var(--muted); margin:0 0 8px; padding:8px 10px 9px; border-left:3px solid var(--c); border-radius:0 8px 8px 0; background:color-mix(in srgb, var(--c) 9%, transparent); min-width:0}
+.ai-k-main p{font-size:15px}
+.ai-sec{margin:0 0 12px; padding:0; border:0; background:none; min-width:0}
 .ai-sec:last-child{margin-bottom:0}
-.ai-sec p{margin:0; font-size:14px; line-height:1.55}
-.ai-lb{display:flex; align-items:center; gap:6px; margin:0 0 4px; font-size:11px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:color-mix(in srgb, var(--c) 70%, var(--ink))}
-.ai-lb::before{content:""; flex:none; width:7px; height:7px; border-radius:50%; background:var(--c)}
-.ai-s-past{--c:#4a8fd0}
-.ai-s-next{--c:#1fa39a}
-.ai-s-cup{--c:#c9a24b}
-.ai-s-stake{--c:#e07b39}
-.ai-s-lineup{--c:#d0564b}
-.ai-s-coach{--c:#9072d0}
-.ai-s-hid{--c:#3fae6a; background:color-mix(in srgb, var(--c) 15%, transparent)}
-.ai-sc{display:inline; padding:1px 5px; border-radius:4px; border:1px solid var(--rule-strong); background:color-mix(in srgb, var(--ink) 9%, transparent); font:600 .92em/1.45 "IBM Plex Mono",monospace; white-space:nowrap}
+.ai-sec p{margin:0}
+.ai-lb{display:block; margin:0 0 5px; padding:0 0 2px; border-bottom:1px solid #8D7F63; font:700 12px/1.3 "Old Standard TT",Georgia,serif; letter-spacing:.12em; text-transform:uppercase; color:#1D1A15}
+.ai-s-hid{padding:7px 10px 9px; border-left:3px solid #8E2A1E; background:rgba(142,42,30,.07)}
+.ai-s-hid .ai-lb{color:#8E2A1E; border-bottom-color:rgba(142,42,30,.45)}
+.ai-sc{display:inline; padding:0 3px; border:0; border-radius:0; background:rgba(29,26,21,.1); font:700 .92em/1.45 "IBM Plex Mono",monospace; white-space:nowrap}
 .ai-nb{white-space:nowrap}
 .ai-dt{font-weight:700; white-space:nowrap}
 .ai-nm{font-weight:700; white-space:nowrap}
-.ai-q{color:color-mix(in srgb, var(--gold-ink) 80%, var(--ink)); font-weight:500}
-.ai-par{color:var(--muted); font-size:.9em}
+.ai-q{font-style:italic; color:#1D1A15}
+.ai-par{color:#5E5446; font-size:.9em}
+.ai-paper .ai-src{margin:0; padding-top:8px; border-top:1px dotted #8D7F63; font:italic 400 12px/1.45 "PT Serif",Georgia,serif; color:#5E5446}
+.ai-paper .ai-src a{color:#5E5446; text-decoration:underline}
+.ai-paper .ai-src a:hover{color:#8E2A1E}
 /* корзина на узких телефонах: кнопки уходят под текст, текст получает всю ширину */
 @media (max-width:420px){
   .hist li{display:grid; grid-template-columns:auto minmax(0,1fr); column-gap:10px; row-gap:8px; align-items:center}
@@ -2142,3 +2142,4 @@ body.is-prev #coupon{margin-top:0}
 @media (max-width:380px){ .aitbl-v .f{display:none} .aitbl-v .s{display:inline} }
 @media (max-width:430px){ .rk-vt .f{display:none} .rk-vt .s{display:inline} }
 @media (max-width:340px){ .rk-vt{font-size:9px; padding:0 2px; letter-spacing:0} .aitbl-bar{gap:6px; padding-left:10px; padding-right:6px} .aitbl-t{font-size:12px; letter-spacing:.03em} .aitbl-bar button{padding:0 7px; gap:4px; font-size:11px} .aitbl-bar button svg{display:none} .pc-rkh,.pc-rk{grid-template-columns:22px minmax(0,1fr) 44px 26px 36px} .pc-rkh{font-size:9px; letter-spacing:0} }
+@media (max-width:360px){ .ai-paper{padding:12px 11px 10px} .ai-paper .ai-txt{font-size:14.5px} .ai-blk p{font-size:14px} .ai-k-main p{font-size:14.5px} .ai-blk-h{letter-spacing:.1em} }

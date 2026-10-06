@@ -2623,8 +2623,8 @@
       return '<div class="ai-blk ai-k-' + kind + '">' + (b.h ? '<h4 class="ai-blk-h">' + escHtml(b.h) + '</h4>' : '') +
         String(b.t).split(/\n+/).map(aiPara).join("") + '</div>';
     }).join("") : "";
-    return '<p class="ai-txt' + (full ? ' ai-lead' : '') + '">' + (full ? aiFmt(escHtml(r.t)) : escHtml(r.t)) + '</p>' + (blk ? '<div class="ai-blks">' + blk + '</div>' : '') +
-      (src ? '<p class="ai-src">Источники: ' + src + '</p>' : '') +
+    return (full ? '<div class="ai-paper">' : '') + '<p class="ai-txt' + (full ? ' ai-lead' : '') + '">' + (full ? aiFmt(escHtml(r.t)) : escHtml(r.t)) + '</p>' + (blk ? '<div class="ai-blks">' + blk + '</div>' : '') +
+      (src ? '<p class="ai-src">Источники: ' + src + '</p>' : '') + (full ? '</div>' : '') +
       (full ? '<p class="ev-note">Разбор написан ИИ по открытым источникам' +
         ((r.at || (ai.data && ai.data.at)) ? ' (' + new Date(r.at || ai.data.at).toLocaleString("ru-RU", {day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit", timeZone:"Europe/Moscow"}) + ' МСК)' : '') +
         '. Это мнение, а не гарантия; составы за час до игры могут всё поменять.</p>' : '');
