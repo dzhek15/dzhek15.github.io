@@ -1836,13 +1836,19 @@ body:not(.is-prev) .row .teams .tm:hover{text-decoration-color:var(--accent)}
 
 /* кнопка FS у счёта (телефон и планшет, просмотр тиража); на ПК её дублирует кнопка в столбце действий */
 .mode.fs-near{display:none}
+.near-btns{display:none}
 @media (max-width:820px){
   :root:not([data-compact="1"]) body.is-prev .row .teams{grid-template-columns:minmax(0,1fr) auto 30px; column-gap:10px}
   :root:not([data-compact="1"]) body.is-prev .row .teams .mscore .sh,
   :root:not([data-compact="1"]) body.is-prev .row .teams .mscore .sa{grid-column:3}
   :root:not([data-compact="1"]) body.is-prev .row .teams .mscore.void{grid-column:1 / -1}
   :root:not([data-compact="1"]) body.is-prev .row .teams .mode.fs-near{display:inline-flex; grid-column:2; grid-row:1 / span 2; align-self:center; justify-self:end; height:28px; min-width:32px; padding:0 6px; justify-content:center; border-radius:6px}
+  :root:not([data-compact="1"]) body.is-prev .row .teams .near-btns{display:inline-flex; align-items:center; gap:6px; grid-column:2; grid-row:1 / span 2; align-self:center; justify-self:end}
+  :root:not([data-compact="1"]) body.is-prev .row .teams .near-btns .mode.ai-near{display:inline-flex; align-items:center; justify-content:center; height:28px; min-width:32px; padding:0 6px; border-radius:6px}
   :root:not([data-compact="1"]) body.is-prev .row .modes .mode.srch{display:none}
+}
+@media (max-width:420px){
+  :root:not([data-compact="1"]) body.is-prev .row .teams .near-btns{flex-direction:column; gap:4px}
 }
 @media (max-width:360px){
   :root:not([data-compact="1"]) body.is-prev .row{grid-template-columns:44px minmax(0,1fr); column-gap:8px; padding:12px 10px 12px 6px}
@@ -1852,6 +1858,8 @@ body:not(.is-prev) .row .teams .tm:hover{text-decoration-color:var(--accent)}
   :root:not([data-compact="1"]) body.is-prev .row .teams .mscore .sh,
   :root:not([data-compact="1"]) body.is-prev .row .teams .mscore .sa{font-size:22px; min-width:1ch}
   :root:not([data-compact="1"]) body.is-prev .row .teams .mode.fs-near{min-width:28px; height:26px; padding:0 4px}
+  :root:not([data-compact="1"]) body.is-prev .row .teams .near-btns{flex-direction:column; gap:4px}
+  :root:not([data-compact="1"]) body.is-prev .row .teams .near-btns .mode.ai-near{min-width:28px; height:26px; padding:0 4px}
 }
 @media (max-width:340px){
   :root:not([data-compact="1"]) body.is-prev .row .teams{grid-template-columns:minmax(0,1fr) auto 20px; column-gap:6px; font-size:16px}
@@ -1859,6 +1867,7 @@ body:not(.is-prev) .row .teams .tm:hover{text-decoration-color:var(--accent)}
   :root:not([data-compact="1"]) body.is-prev .row .teams .mscore .sh,
   :root:not([data-compact="1"]) body.is-prev .row .teams .mscore .sa{font-size:21px}
   :root:not([data-compact="1"]) body.is-prev .row .teams .mode.fs-near{min-width:26px; padding:0 3px}
+  :root:not([data-compact="1"]) body.is-prev .row .teams .near-btns .mode.ai-near{min-width:26px; padding:0 3px}
 }
 
 /* «Весь купон» в просмотре: свои исходы белым, зашедшие — зелёной рамкой, не зашедшие — красным */

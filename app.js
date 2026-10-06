@@ -6046,7 +6046,11 @@
         teams.appendChild(sc);
       }
       /* телефон и планшет: кнопка Flashscore стоит прямо у счёта, а не прячется в раскрытой строке */
-      var fsNear = mkFs(m); fsNear.classList.add("fs-near"); teams.appendChild(fsNear);
+      var fsNear = mkFs(m); fsNear.classList.add("fs-near");
+      /* рядом с FS — кнопка «ИИ» (разбор матча), чтобы читать аналитику, пока идёт игра */
+      var nearW = document.createElement("span"); nearW.className = "near-btns";
+      if(aiPrevRec(p.tirazh, idx)){ var aiNear = mkAiPrev(m, idx, p.tirazh, true); aiNear.classList.add("ai-near"); nearW.appendChild(aiNear); }
+      nearW.appendChild(fsNear); teams.appendChild(nearW);
       var aiRec = aiPrevRec(p.tirazh, idx), aiEl = mkAiLive(aiRec, m);
       if(aiEl){
         teams.appendChild(aiEl);
