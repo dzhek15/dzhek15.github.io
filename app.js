@@ -2838,6 +2838,29 @@
       .catch(function(){ aiArch.loading = null; return aiArch.data; });
     return aiArch.loading;
   }
+  /* виртуальные купоны стратегий (data/api/virt.json {"<тираж>": {name, sets, n, pin, z}}): считаются до дедлайна и не меняются,
+     в просмотре идут в рейтинг с пометкой «виртуальный» — на деньги не ставятся, нужны для отслеживания */
+  var virt = { data: null, at: 0, loading: null };
+  function loadVirt(){
+    if(virt.data && Date.now() - virt.at < 10 * 60000) return Promise.resolve(virt.data);
+    if(virt.loading) return virt.loading;
+    if(typeof fetch !== "function") return Promise.resolve(null);
+    virt.loading = fetch(MIRROR + "virt.json?t=" + Math.floor(Date.now() / 600000))
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){ virt.loading = null; if(j){ virt.data = j; virt.at = Date.now(); } return virt.data; })
+      .catch(function(){ virt.loading = null; return virt.data; });
+    return virt.loading;
+  }
+  /* 5 знаков base36 на строку: число исходов в троичной записи (1=0, X=1, 2=2) */
+  function virtRows(z){
+    var out = [], i, j, v, s;
+    for(i = 0; i + 5 <= z.length; i += 5){
+      v = parseInt(z.substr(i, 5), 36); s = "";
+      for(j = 0; j < 15; j++){ s = "1X2".charAt(v % 3) + s; v = Math.floor(v / 3); }
+      out.push(s);
+    }
+    return out;
+  }
   function aiPrevRec(no, idx){
     var j = ai.data;
     if(j && String(j.number) === String(no) && j.m && j.m[idx] && j.m[idx].p) return j.m[idx];
@@ -2851,7 +2874,7 @@
   function aiPrevEnsure(no){
     if(aiPrevAsked === String(no)) return;
     aiPrevAsked = String(no);
-    Promise.all([loadAi(), loadAiHist(), loadAiArch()]).then(function(){
+    Promise.all([loadAi(), loadAiHist(), loadAiArch(), loadVirt()]).then(function(){
       if(state.viewPrev && state.prev && String(state.prev.tirazh) === String(no)) render();
     });
   }
@@ -6132,22 +6155,36 @@
   }
   function pcsvSyncAi(){
     var p = state.prev; if(!p || pcsv.tir !== String(p.tirazh)) return;
-    var picks = [], i, sys, nm = "ИИ-разбор", br = aiPrevBrief(p.tirazh);
+    var picks = [], i, sys, nm = "ИИ-разбор · виртуальный", br = aiPrevBrief(p.tirazh);
     if(br){
       /* строки брифа идут как есть: каждая — один вариант, поэтому в набор попадают именно они, а не весь купон */
-      sys = br.map(function(x){ return x.replace(/,/g, "").split("").join(","); }); nm = "ИИ-бриф";
+      sys = br.map(function(x){ return x.replace(/,/g, "").split("").join(","); }); nm = "ИИ-бриф · виртуальный";
     } else {
       for(i = 0; i < p.matches.length; i++){ var r = aiPrevRec(p.tirazh, i); if(!r) return; picks.push(r.p); }
       sys = [picks.join(",")];
     }
     var k = -1, sig = sys.join("|");
-    for(i = 0; i < pcsv.sets.length; i++) if(pcsv.sets[i].ai){ k = i; break; }
+    for(i = 0; i < pcsv.sets.length; i++) if(pcsv.sets[i].ai && !pcsv.sets[i].virt){ k = i; break; }
     if(k >= 0 && (pcsv.sets[k].sys || []).join("|") === sig) return;
-    var set = { name: nm, ai: 1, link: 0, sys: sys, rows: pcsvExpand(sys) };
+    var set = { name: nm, ai: 1, virtai: 1, link: 0, sys: sys, rows: pcsvExpand(sys) };
     if(!set.rows.length) return;
     if(k >= 0) pcsv.sets[k] = set; else pcsv.sets.push(set);
     if(k < 0 && pcsv.sets.length === 1) pcsvUse(0);
     else if(k >= 0 && pcsv.act === k) pcsvUse(k);
+  }
+  /* виртуальный набор стратегии «Охота на 15 · бриф 14 из 15»: строки готовы заранее (virt.json), в хранилище не пишутся */
+  function pcsvSyncVirt(){
+    var p = state.prev; if(!p || pcsv.tir !== String(p.tirazh)) return;
+    var rec = virt.data && virt.data[String(p.tirazh)]; if(!rec || !rec.z) return;
+    var k = -1, i;
+    for(i = 0; i < pcsv.sets.length; i++) if(pcsv.sets[i].virt){ k = i; break; }
+    if(k >= 0 && pcsv.sets[k].sig === rec.at + "|" + rec.n) return;
+    var rows = virtRows(rec.z);
+    if(!rows.length) return;
+    var set = { name: (rec.name || "Охота на 15") + " · виртуальный", ai: 1, virt: 1, link: 0, sig: rec.at + "|" + rec.n, pin: rec.pin,
+                sys: rows.map(function(x){ return x.split("").join(","); }), rows: rows };
+    if(k >= 0) pcsv.sets[k] = set; else pcsv.sets.push(set);
+    if(k >= 0 && pcsv.act === k) pcsvUse(k);
   }
   /* сохранённые наборы других тиражей — кнопки, чтобы открыть их */
   function pcsvOthers(cur){
@@ -6295,6 +6332,7 @@
     }catch(e){}
   })();
   /* у набора из ссылки вместо слова «Ссылка N» — сумма, на которую он сделан */
+  var RK_VT = '<em class="rk-vt" title="Виртуальный набор: на деньги не ставится, нужен для отслеживания"><span class="f">виртуальный</span><span class="s">вирт.</span></em> ';
   function pcsvLabel(st){
     if(!st) return "";
     return fmt(st.rows.length * (Number(state.price) || 0)) + " ₽";
@@ -6480,6 +6518,7 @@
     box.hidden = false;
     pcsvEnsure(String(p.tirazh));
     pcsvSyncAi();
+    pcsvSyncVirt();
     /* сообщение держим 10 с: фоновые обновления счёта перерисовывают блок */
     var msg = pcsv.msg && Date.now() - (pcsv.msgAt || 0) < 45000 ? '<p class="pc-msg">' + escHtml(pcsv.msg) + '</p>' : "";
     if(!pcsv.rows.length){
@@ -6541,6 +6580,7 @@
       rkNow = sc;
       h += '<div class="pc-rkw"><div class="pc-rkttl"><span class="pc-rkx">Рейтинг наборов</span>' + (liveN ? '<span class="pc-rklive"><i class="lv-dot"></i>LIVE · ' + liveN + '</span>' : '') + '</div>' +
         '<p class="pc-lnote pc-rknote">Считаются сыгранные матчи' + (liveN ? ' и идущие по текущему счёту' : '') + '. Тап по набору открывает его.' +
+        (pcsv.sets.some(function(x){ return x.ai; }) ? '<br>' + RK_VT + '\u2014 набор не ставится на деньги, он нужен для отслеживания.' : '') +
         (sc.some(function(q){ return q.out; }) ? '<br><span class="rk-x" aria-hidden="true">\u00d7</span> \u2014 набор выбыл: после сыгранных матчей ни один его вариант уже не наберёт ' + PAY + '+.' : '') + '</p>' +
         '<div class="pc-rkt" role="tablist"><div class="pc-rkh"><span>#</span><span>Набор</span><span>Лучший</span><span>9+</span><span>Живых</span></div><div class="pc-rkb">';
       sc.forEach(function(q, k){
@@ -6548,7 +6588,7 @@
         if(mv && Date.now() - mv.at < 90000) tr = '<u class="' + (mv.d > 0 ? "up" : "dn") + '">' + (mv.d > 0 ? "▲" : "▼") + Math.abs(mv.d) + '</u>';
         h += '<button type="button" role="tab" class="pc-rk' + (q.out ? " out" : "") + (q.i === pcsv.act ? " on" : "") + (k < 3 && pe ? " m" + (k + 1) : "") + '" data-t="' + q.i + '" data-id="' + q.i + '" aria-pressed="' + (q.i === pcsv.act) + '" title="' + escHtml(st.link ? "Ссылка · " + pcsvLabel(st) : st.name) + ' · ' + fmt(st.rows.length) + ' вар.">' +
           '<span class="rk-p"><b>' + (k + 1) + '</b>' + tr + '</span>' +
-          '<span class="rk-n"><b>' + escHtml(pcsvLabel(st)) + '</b><small>' + (q.out ? '<span class="rk-x" title="Набор выбыл: ни один вариант уже не наберёт ' + PAY + '+">\u00d7</span> ' : '') + (st.ai ? '<em class="rk-ai">ИИ</em> ' : st.link ? "" : escHtml(st.name) + " · ") + fmt(st.rows.length) + ' вар.</small></span>' +
+          '<span class="rk-n"><b>' + escHtml(pcsvLabel(st)) + '</b><small>' + (q.out ? '<span class="rk-x" title="Набор выбыл: ни один вариант уже не наберёт ' + PAY + '+">\u00d7</span> ' : '') + (st.virt ? '<em class="rk-ai rk-hunt">Охота</em>' + RK_VT : st.ai ? '<em class="rk-ai">ИИ</em>' + RK_VT : st.link ? "" : escHtml(st.name) + " · ") + '<span class="rk-cnt">' + fmt(st.rows.length) + ' вар.</span></small></span>' +
           '<span class="rk-v">' + (pe ? '<i class="cn" data-k="' + q.i + 'b">' + q.b + '</i><small> из ' + pe + '</small>' : '—') + '</span>' +
           '<span class="rk-v' + (q.w ? " ok" : "") + '"><i class="cn" data-k="' + q.i + 'w">' + fmt(q.w) + '</i></span><span class="rk-v"><i class="cn" data-k="' + q.i + 'a">' + fmt(q.a) + '</i></span>' +
           '<span class="rk-bar" data-w="' + (n ? Math.round(q.b / n * 100) : 0) + '" data-pay="' + (n ? Math.round(PAY / n * 100) : 60) + '"><i></i><u></u></span></button>';
