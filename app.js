@@ -3434,6 +3434,8 @@
     try{ updateCsvPrev(); }catch(e){}
 
     var havePct = state.matches.some(function(m){ return m.pct; });
+    var pvMs = (state.viewPrev && state.prev) ? state.prev.matches : null;
+    var havePvPct = !!pvMs && pvMs.some(function(m){ return m.pct; }), havePvKf = !!pvMs && pvMs.some(function(m){ return m.kf; });
     $("btnMost").disabled = !havePct || spinning;
     $("btnLeast").disabled = !havePct || spinning;
     $("btnMid").disabled = !havePct || spinning;
@@ -3445,13 +3447,13 @@
       ? "В каждом матче поставить исход, который выбрало меньше всего игроков"
       : "Нет процентов — сначала «Обновить тираж»";
     var pb = $("btnPct");
-    pb.hidden = false; pb.disabled = !havePct;
+    pb.hidden = false; pb.disabled = pvMs ? !havePvPct : !havePct;
     pb.setAttribute("aria-pressed", state.showPct ? "true" : "false");
     pb.textContent = state.showPct ? "Скрыть проценты" : "Показать проценты";
     pb.title = state.showPct
       ? "Убрать доли игроков и конторы из строк"
       : "Показать под каждым исходом долю игроков и оценку конторы";
-    var haveKf = state.matches.some(function(m){ return m.kf; });
+    var haveKf = pvMs ? havePvKf : state.matches.some(function(m){ return m.kf; });
     var kb = $("btnKf");
     kb.hidden = false; kb.disabled = !haveKf;
     kb.setAttribute("aria-pressed", state.showKf ? "true" : "false");
@@ -3459,7 +3461,7 @@
     kb.title = state.showKf
       ? "Убрать коэффициенты конторы из строк"
       : "Показать под каждым исходом коэффициент конторы из того же тиража";
-    $("pctLegend").hidden = !((havePct && state.showPct) || (haveKf && state.showKf));
+    $("pctLegend").hidden = !(((pvMs ? havePvPct : havePct) && state.showPct) || (haveKf && state.showKf));
     /* ручка влияет только на стрелки, а стрелки живут вместе с процентами —
        прячем её, пока проценты выключены, иначе выглядит как неработающая */
     renderKickoff();
@@ -5882,6 +5884,9 @@
         var o = { home: m.home, away: m.away, league: m.league || "", res: m.res || "", score: m.score || "",
                   date: m.date || "", time: m.time || "" };
         if(m.fsVoid) o.fsVoid = m.fsVoid;
+        /* доли игроков и конторы и коэффициенты на момент закрытия — для раскрытой строки в просмотре */
+        if(m.pct) o.pct = m.pct;
+        if(m.kf) o.kf = m.kf;
         return o;
       })
     };
@@ -5920,6 +5925,11 @@
   function seedPrev(){
     if(!state.tirazh || typeof fetch !== "function") return;
     var wantN = Number(state.tirazh) - 1;
+    /* снимок без процентов и кэфов (сделан до их сохранения) — один раз дополняем из API */
+    if(state.prev && !state.prev.matches.some(function(m){ return m.pct || m.kf; })){
+      var pn = Number(state.prev.tirazh);
+      if(isFinite(pn) && pn > 0){ prevLoad(pn, !!state.viewPrev); return; }
+    }
     if(state.prev && Number(state.prev.tirazh) === wantN) return;
     if(!isFinite(wantN) || wantN <= 0) return;
     prevLoad(wantN, false);
@@ -5941,12 +5951,23 @@
             evs.forEach(function(e){
               var t = splitTeams(e.name);
               if(!t) return;
+              var qq = e.quotes || {};
               list.push({ home: t[0], away: t[1], league: e.championship || "",
-                          res: evRes(e, info), score: e.score || "" });
+                          res: evRes(e, info), score: e.score || "",
+                          pct: mkPct(qq), kf: (qq.norm_win_1 != null) ? [qq.norm_win_1, qq.norm_draw, qq.norm_win_2] : null });
             });
             if(!list.length){ if(fail) fail(); return; }
             if(!open && Number(state.tirazh) - 1 !== Number(d.number)) return;   /* пока тянули, тираж уже сменился */
-            if(state.prev && String(state.prev.tirazh) === String(d.number)){ if(open) enterPrev(); return; }
+            if(state.prev && String(state.prev.tirazh) === String(d.number)){
+              /* снимок сделан раньше без долей и кэфов — дополняем, ничего не стирая */
+              var pmM = state.prev.matches, fillN = 0;
+              if(pmM.length === list.length) pmM.forEach(function(pm, i){
+                if(!pm.pct && list[i].pct && pm.home === list[i].home){ pm.pct = list[i].pct; fillN++; }
+                if(!pm.kf && list[i].kf && pm.home === list[i].home){ pm.kf = list[i].kf; fillN++; }
+              });
+              if(fillN){ save(); if(open) enterPrev(); else render(); return; }
+              if(open) enterPrev(); return;
+            }
             state.prev = snapPrev(d.number, d.id, d.ended_at || "", list, d.pool_sum);
             save();
             if(open) enterPrev(); else render();
@@ -5999,6 +6020,12 @@
   function renderPrevView(){
     var p = state.prev;
     rowsEl.innerHTML = "";
+    /* кнопки «Показать проценты / кэфы» в просмотре живут по данным самого просмотренного тиража */
+    var pvPb = $("btnPct"), pvKb = $("btnKf"), pvHasP = p.matches.some(function(m){ return m.pct; }), pvHasK = p.matches.some(function(m){ return m.kf; });
+    pvPb.hidden = false; pvPb.disabled = !pvHasP; pvPb.setAttribute("aria-pressed", state.showPct ? "true" : "false");
+    pvPb.textContent = state.showPct ? "Скрыть проценты" : "Показать проценты";
+    pvKb.hidden = false; pvKb.disabled = !pvHasK; pvKb.setAttribute("aria-pressed", state.showKf ? "true" : "false");
+    pvKb.textContent = state.showKf ? "Скрыть кэфы" : "Показать кэфы";
     aiPrevEnsure(p.tirazh);
     var aiN = { done: 0, hit: 0, live: 0, liveHit: 0 };
     /* просмотр прошлого тиража — только счёт и итоги, без своего купона */
@@ -6116,6 +6143,26 @@
         if(m.res === o) b.classList.add("won");
         if(aiRec && aiRec.p.indexOf(o) >= 0){ b.classList.add("ai-pk"); b.title = "в варианте ИИ"; }
         cell.appendChild(b);
+        var oi = OUT.indexOf(o), hit = m.res === o;
+        if(hit) cell.classList.add("hit");
+        /* проценты (игроки / контора) и кэфы на момент закрытия тиража; зашедший исход подсвечен */
+        if(state.showPct && m.pct && m.pct.pool){
+          var ppl = Number(m.pct.pool[oi]), pbk = m.pct.bk ? Number(m.pct.bk[oi]) : null;
+          var pAll = m.pct.pool.map(Number), pTop = Math.max.apply(null, pAll), pLow = Math.min.apply(null, pAll);
+          var pc = document.createElement("div");
+          pc.className = "pct-col" + (ppl === pTop && pTop !== pLow ? " lead" : (ppl === pLow && pTop !== pLow ? " rare" : "")) + (hit ? " hit" : "");
+          pc.title = "Игроки " + ppl + "%" + (pbk === null || !isFinite(pbk) ? "" : " · контора " + pbk + "%") + " на момент закрытия" + (hit ? " · исход зашёл" : "");
+          pc.innerHTML = "<b>" + ppl + "</b><i>" + (pbk === null || !isFinite(pbk) ? "\u2014" : pbk) + "</i>";
+          cell.appendChild(pc);
+        }
+        if(state.showKf && m.kf){
+          var kv2 = Number(m.kf[oi]), ks2 = m.kf.map(Number).filter(function(x){ return isFinite(x) && x > 0; }).sort(function(x, y){ return x - y; });
+          var kc = document.createElement("div");
+          kc.className = "kf-col" + (ks2.length === 3 && ks2[1] - ks2[0] > 0.001 && kv2 === ks2[0] ? " fav" : (ks2.length === 3 && ks2[2] - ks2[1] > 0.001 && kv2 === ks2[2] ? " dog" : "")) + (hit ? " hit" : "");
+          kc.textContent = (kv2 && isFinite(kv2)) ? kv2.toFixed(2) : "\u2014";
+          kc.title = "Коэффициент конторы на момент закрытия" + (hit ? " · исход зашёл" : "");
+          cell.appendChild(kc);
+        }
         picksWrap.appendChild(cell);
       });
       row.appendChild(picksWrap);

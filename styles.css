@@ -2152,3 +2152,7 @@ body.is-prev #coupon{margin-top:0}
 @media (max-width:430px){ .rk-vt .f{display:none} .rk-vt .s{display:inline} }
 @media (max-width:340px){ .rk-vt{font-size:9px; padding:0 2px; letter-spacing:0} .aitbl-bar{gap:6px; padding-left:10px; padding-right:6px} .aitbl-t{font-size:12px; letter-spacing:.03em} .aitbl-bar button{padding:0 7px; gap:4px; font-size:11px} .aitbl-bar button svg{display:none} .pc-rkh,.pc-rk{grid-template-columns:22px minmax(0,1fr) 44px 26px 36px} .pc-rkh{font-size:9px; letter-spacing:0} }
 @media (max-width:360px){ .ai-paper{padding:12px 11px 10px} .ai-paper .ai-txt{font-size:14.5px} .ai-blk p{font-size:14px} .ai-k-main p{font-size:14.5px} .ai-blk-h{letter-spacing:.1em} }
+
+/* просмотр тиража: проценты и кэфы под исходом, зашедший исход подсвечен */
+body.is-prev .pct-col.hit,body.is-prev .kf-col.hit{background:color-mix(in srgb, var(--cold) 22%, transparent); border-radius:4px; padding:3px 4px; box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--cold) 70%, transparent)}
+body.is-prev .pct-col.hit b,body.is-prev .kf-col.hit{color:var(--ink); font-weight:700}
