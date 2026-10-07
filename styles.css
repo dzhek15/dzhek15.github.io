@@ -2165,3 +2165,8 @@ body.is-prev .pct-col.hit b,body.is-prev .kf-col.hit{color:var(--ink); font-weig
 .wait-note .wn-x{flex:none; height:28px; padding:0 10px; background:transparent; color:var(--brand-gold); border:1px solid var(--brand-gold); border-radius:4px; font:inherit; font-size:12px; cursor:pointer}
 
 .pb-nst{display:inline-block; margin-left:8px; padding:2px 8px; border:1px solid var(--brand-gold); border-radius:4px; color:var(--brand-gold); font-size:12px; white-space:nowrap}
+
+/* переключатель тиражей в панели просмотра */
+.prev-bar .pb-nav{flex:1 0 100%; display:flex; gap:8px}
+.prev-bar .pb-nav button{flex:1 1 0; min-width:0; height:34px; padding:0 8px; border:1px solid var(--brand-gold); border-radius:6px; background:transparent; color:var(--gold-ink); font:inherit; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap}
+.prev-bar .pb-nav button:hover{background:var(--surface-2)}

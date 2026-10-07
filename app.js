@@ -4088,12 +4088,8 @@
   });
 
   $("tirazhName").addEventListener("input", function(e){ state.tirazh = e.target.value; save(); });
-  $("btnTirPrev").addEventListener("click", function(){
-    if(state.viewPrev && state.prev) viewNavTo(Number(state.prev.tirazh) - 1); else enterPrev();
-  });
-  $("btnTirNext").addEventListener("click", function(){
-    if(state.viewPrev && state.prev) viewNavTo(Number(state.prev.tirazh) + 1); else leavePrev();
-  });
+  $("btnTirPrev").addEventListener("click", enterPrev);
+  $("btnTirNext").addEventListener("click", leavePrev);
   $("tirazhName").value = state.tirazh || "";
   /* ---------- Окно «Расхождения с толпой» ----------
      Считаем, насколько доли игроков расходятся с оценкой конторы. Мера — сумма
@@ -6244,8 +6240,14 @@
       (p.at ? '<span>обновлено <b>' + new Date(p.at).toTimeString().slice(0,5) + '</b></span>' : '') +
       '<button type="button" class="pb-exp" id="btnPrevExp">Раскрыть все</button>' +
       '<button type="button" class="pb-back" id="btnPrevBack">К текущему тиражу &#8250;</button>' +
+      '<span class="pb-nav" role="group" aria-label="Тираж в просмотре">' +
+        '<button type="button" id="pbNavL">&#8249; №' + (Number(p.tirazh) - 1) + '</button>' +
+        (Number(p.tirazh) < Number(state.tirazh) ? '<button type="button" id="pbNavR">№' + (Number(p.tirazh) + 1) + ' &#8250;</button>' : '') +
+      '</span>' +
       '<div class="pb-flt" id="pvFlt" role="group" aria-label="Фильтр матчей" hidden></div>';
     bar.hidden = false;
+    $("pbNavL").addEventListener("click", function(){ viewNavTo(Number(p.tirazh) - 1); });
+    if($("pbNavR")) $("pbNavR").addEventListener("click", function(){ viewNavTo(Number(p.tirazh) + 1); });
     if(pvFltTir !== String(p.tirazh)){ pvFlt = "all"; pvFltTir = String(p.tirazh); }
     pvFltRender();
     $("pvFlt").addEventListener("click", function(ev){
@@ -6276,12 +6278,22 @@
     pcsv.act = st ? i : 0; pcsv.page = 0; pcsv.flt = "all"; pcsv.what = null;
     pcsv.name = st ? st.name : ""; pcsv.rows = st ? st.rows : []; pcsv.sys = st ? (st.sys || []) : [];
   }
+  /* набор CSV один на все тиражи: хранится под одним ключом и считается по тому тиражу, который открыт.
+     Прежние наборы по отдельным тиражам при первом запуске стираются. */
+  var PCSV_W = "w";
   function pcsvEnsure(tir){
-    if(pcsv.tir === tir) return;
-    var saved = pcsvAll()[tir] || null, sets = [];
+    tir = String(tir);
+    if(pcsv.loaded){
+      if(pcsv.tir !== tir){
+        pcsv.tir = tir;
+        pcsv.sets = pcsv.sets.filter(function(x){ return !x.ai; });   /* наборы ИИ строятся заново под каждый тираж */
+        pcsvUse(Math.max(0, Math.min(pcsv.act, pcsv.sets.length - 1)));
+      }
+      return;
+    }
+    var saved = pcsvAll()[PCSV_W] || null, sets = [];
     if(saved && saved.sets) sets = saved.sets.map(function(st){ return { name: st.name, link: st.link || 0, sys: st.sys || [], rows: st.rows || pcsvExpand(st.sys || []) }; });
-    else if(saved && saved.rows) sets = [{ name: saved.name || "Файл", rows: saved.rows, sys: saved.sys || saved.rows }];
-    pcsv = { tir: tir, sets: sets, act: 0, page: 0, sort: pcsv.sort || "hits", view: pcsv.view, msg: pcsv.msg, msgAt: pcsv.msgAt };
+    pcsv = { tir: tir, loaded: true, sets: sets, act: 0, page: 0, sort: pcsv.sort || "hits", view: pcsv.view, msg: pcsv.msg, msgAt: pcsv.msgAt };
     pcsvUse(saved && saved.act < sets.length ? saved.act : 0);
   }
   function pcsvExpand(sys){
@@ -6342,15 +6354,7 @@
     if(k >= 0 && pcsv.act === k) pcsvUse(k);
   }
   /* сохранённые наборы других тиражей — кнопки, чтобы открыть их */
-  function pcsvOthers(cur){
-    var all = pcsvAll(), ks = Object.keys(all).filter(function(k){ return k !== cur && all[k] && ((all[k].sets && all[k].sets.length) || all[k].rows); });
-    if(!ks.length) return "";
-    ks.sort(function(a, b){ return Number(b) - Number(a); });
-    return '<div class="pc-others"><span>Сохранено в других тиражах:</span>' + ks.map(function(k){
-      var n = all[k].sets ? all[k].sets.length : 1;
-      return '<button type="button" class="pc-btn ghost" data-tir="' + escHtml(k) + '">№' + escHtml(k) + ' · ' + n + '</button>';
-    }).join("") + '</div>';
-  }
+  function pcsvOthers(cur){ return ""; }
   function pcsvOthersBind(box){
     [].slice.call(box.querySelectorAll(".pc-others button")).forEach(function(b){
       b.addEventListener("click", function(){
@@ -6362,19 +6366,9 @@
   }
   /* добавить набор к любому тиражу: к открытому — сразу, к другому — в сохранённые */
   function pcsvAddTo(tir, set){
-    if(pcsv.tir === tir){
-      if(set.link) set.name = "Ссылка " + (pcsv.sets.filter(function(x){ return x.link; }).length + 1);
-      var r = pcsvAdd(set); return { dup: r.dup, name: pcsvLabel(pcsv.sets[pcsv.act]) || pcsv.name };
-    }
-    var all = pcsvAll(), e = all[tir] || { sets: [], act: 0 };
-    if(!e.sets) e = { sets: e.rows ? [{ name: e.name || "Файл", sys: e.sys || e.rows }] : [], act: 0 };
-    var sig = (set.sys || []).join("|");
-    for(var i = 0; i < e.sets.length; i++) if((e.sets[i].sys || []).join("|") === sig){ e.act = i; all[tir] = e; pcsvPut(tir); return { dup: true, name: e.sets[i].name }; }
-    var nm = set.link ? "Ссылка " + (e.sets.filter(function(x){ return x.link; }).length + 1) : set.name;
-    e.sets.push({ name: nm, link: set.link || 0, sys: set.sys }); e.act = e.sets.length - 1; e.at = Date.now();
-    all[tir] = e;
-    pcsvPut(tir);
-    return { dup: false, name: set.link ? fmt(pcsvExpand(set.sys || []).length * (Number(state.price) || 0)) + " ₽" : nm };
+    pcsvEnsure(String(tir));
+    if(set.link) set.name = "Ссылка " + (pcsv.sets.filter(function(x){ return x.link; }).length + 1);
+    var r = pcsvAdd(set); return { dup: r.dup, name: pcsvLabel(pcsv.sets[pcsv.act]) || pcsv.name };
   }
   function pcsvAdd(set, keepTwin){
     var sig = (set.sys || []).join("|") + "#" + set.rows.length, twin = false;
@@ -6470,13 +6464,20 @@
             PCSV_MEM[k] = e; changed = true;
           });
           legacyKeys.forEach(function(k){ if(!got[k]) pcsvPut(k); });
-          if(changed && pcsv.tir != null && !pcsvMine().length) pcsv.tir = null;
+          pcsvPurgeOld();
+          if(changed && pcsv.tir != null && !pcsvMine().length){ pcsv.tir = null; pcsv.loaded = false; }
           if(changed){ try{ if(state.prev && $("prevCsv")) renderPrevCsv(); }catch(e){} }
         };
         rq.onerror = function(){};
       }catch(e){}
     });
   }
+  /* наборы по отдельным тиражам (старый формат) удаляются: остаётся только общий набор */
+  function pcsvPurgeOld(){
+    var all = pcsvAll();
+    Object.keys(all).forEach(function(k){ if(k !== PCSV_W){ delete all[k]; pcsvPut(k); } });
+  }
+  pcsvPurgeOld();
   pcsvLoadDb();
   /* подпись сборки внизу — по версии скрипта, чтобы видеть, какая версия реально открыта */
   (function(){
@@ -6502,10 +6503,10 @@
     /* храним только строки файла (с допами) — варианты разворачиваются при открытии; удаляются только кнопкой «Убрать» */
     var mine = pcsvMine(), actM = 0;
     pcsv.sets.forEach(function(st, q){ if(q < pcsv.act && !st.ai) actM++; });
-    if(mine.length) all[pcsv.tir] = { act: Math.min(actM, mine.length - 1), at: Date.now(),
+    if(mine.length) all[PCSV_W] = { act: Math.min(actM, mine.length - 1), at: Date.now(),
       sets: mine.map(function(st){ return { name: st.name, link: st.link || 0, sys: st.sys }; }) };
-    else delete all[pcsv.tir];
-    pcsvPut(pcsv.tir);
+    else delete all[PCSV_W];
+    pcsvPut(PCSV_W);
     return true;
   }
   function pcsvPick(){
@@ -7067,14 +7068,9 @@
     save(); render(); renderKickoff();
     if(wasCur) setTimeout(seedPrev, 200);
   }
-  /* стрелки в просмотре: листаем тиражи назад и вперёд, вплоть до текущего ещё не начавшегося.
-     Загруженные наборы едут вместе с пользователем: те же CSV видны в каждом тираже. */
+  /* отдельные кнопки в панели просмотра: листаем тиражи назад и вперёд, вплоть до текущего ещё не начавшегося.
+     Набор CSV один на всех тиражах: те же варианты считаются по каждому тиражу. */
   var navBusy = 0;
-  function carryTo(tir){
-    var src = pcsv.tir != null ? pcsvMine() : [];
-    if(!src.length || String(pcsv.tir) === String(tir)) return;
-    src.forEach(function(s){ pcsvAddTo(String(tir), { name: s.name, link: 0, sys: s.sys }); });
-  }
   /* ссылка на наборы текущего тиража, который ещё не начался: открываем просмотр этого тиража с наборами */
   function openMultiCur(tir, payloads){
     var N = state.matches.length || 15, k = 0, added = 0;
@@ -7109,7 +7105,7 @@
     if(!(n > 0) || !isFinite(cur)) return;
     if(navBusy && Date.now() - navBusy < 6000) return;
     if(n > cur){ leavePrev(); return; }
-    carryTo(String(n)); pcsv.msg = "";
+    pcsv.msg = "";
     if(n === cur){ enterCurView(); return; }
     navBusy = Date.now();
     prevLoad(n, true, function(){ navBusy = 0; say("Тираж №" + n + " подгрузить не удалось: его нет в списке тиражей. Наборы сохранены и откроются, когда он загрузится."); });
@@ -7117,7 +7113,7 @@
   function syncTirNav(){
     var inPrev = !!(state.viewPrev && state.prev);
     document.body.classList.toggle("is-prev", inPrev);
-    $("btnTirPrev").disabled = !state.prev;
+    $("btnTirPrev").disabled = !state.prev || inPrev;
     $("btnTirNext").disabled = !inPrev;
     $("tirazhName").value = inPrev ? state.prev.tirazh : (state.tirazh || "");
     if(!inPrev){ $("prevBar").hidden = true; if($("prevCsv")) $("prevCsv").hidden = true; }
