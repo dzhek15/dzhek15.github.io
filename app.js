@@ -97,6 +97,7 @@
   state.showKf  = !!state.showKf;
   /* один шаг назад: предыдущий тираж хранится целиком для просмотра, купон он не трогает */
   if(!state.prev || !Array.isArray(state.prev.matches) || !state.prev.matches.length) state.prev = null;
+  if(state.prev && state.prev.cur && !state.viewPrev) state.prev = null;   /* снимок текущего тиража живёт только пока открыт его просмотр */
   state.viewPrev = !!(state.viewPrev && state.prev);
   /* ссылки на наборы тиража, который ещё не начался: ждут старта и сами открываются в просмотре */
   if(!state.waitSets || !state.waitSets.tirazh || !Array.isArray(state.waitSets.payloads) || !state.waitSets.payloads.length) state.waitSets = null;
@@ -3096,7 +3097,17 @@
   function renderCore(){
     ensureShape();
     syncTirNav();
-    if(state.viewPrev && state.prev){ renderPrevView(); return; }
+    if(state.viewPrev && state.prev){
+      var pcur = state.prev;
+      if(pcur.cur){
+        /* просмотр ещё не начавшегося тиража: матчи берём из текущего купона, он обновляется сам */
+        if(String(pcur.tirazh) === String(state.tirazh)){
+          var snCur = snapPrev(state.tirazh, state.tirazhId, state.deadline, state.matches, state.poolSum);
+          snCur.cur = true; snCur.at = pcur.at; state.prev = snCur;
+        } else delete pcur.cur;   /* тираж начался: снимок стал обычным прошлым тиражом */
+      }
+      renderPrevView(); return;
+    }
     rowsEl.innerHTML = "";
     state.matches.forEach(function(m, idx){
       var n = countPicks(m);
@@ -4077,8 +4088,12 @@
   });
 
   $("tirazhName").addEventListener("input", function(e){ state.tirazh = e.target.value; save(); });
-  $("btnTirPrev").addEventListener("click", enterPrev);
-  $("btnTirNext").addEventListener("click", leavePrev);
+  $("btnTirPrev").addEventListener("click", function(){
+    if(state.viewPrev && state.prev) viewNavTo(Number(state.prev.tirazh) - 1); else enterPrev();
+  });
+  $("btnTirNext").addEventListener("click", function(){
+    if(state.viewPrev && state.prev) viewNavTo(Number(state.prev.tirazh) + 1); else leavePrev();
+  });
   $("tirazhName").value = state.tirazh || "";
   /* ---------- Окно «Расхождения с толпой» ----------
      Считаем, насколько доли игроков расходятся с оценкой конторы. Мера — сумма
@@ -5128,8 +5143,9 @@
     if(p.multi){
       pendingBook = null;
       if(p.tirazh && Number(p.tirazh) < Number(state.tirazh)){ openMultiPrev(p.tirazh, p.multi, 0); return; }
-      if(p.multi.length === 1){ pendingBook = { tirazh: p.tirazh, payload: p.multi[0] }; tryPendingBook(); return; }
-      if(p.tirazh && Number(p.tirazh) >= Number(state.tirazh)){
+      if(p.tirazh && Number(p.tirazh) === Number(state.tirazh)){ openMultiCur(p.tirazh, p.multi); return; }
+      if(p.multi.length === 1 && !p.tirazh){ pendingBook = { tirazh: p.tirazh, payload: p.multi[0] }; tryPendingBook(); return; }
+      if(p.tirazh && Number(p.tirazh) > Number(state.tirazh)){
         /* запоминаем наборы: как только тираж начнётся, они откроются в просмотре сами */
         var wsOld = (state.waitSets && String(state.waitSets.tirazh) === String(p.tirazh)) ? state.waitSets.payloads : [];
         var wsAll = wsOld.slice();
@@ -5933,7 +5949,7 @@
   /* счёт и итоги прошлого тиража — тем же ответом drawing-info */
   function refreshPrev(){
     var p = state.prev;
-    if(!p || !p.id || typeof fetch !== "function" || prevDone()) return;
+    if(!p || p.cur || !p.id || typeof fetch !== "function" || prevDone()) return;
     var tr0 = Date.now();
     apiFetch("drawing-info/" + p.id)
       .then(function(r){ return r.ok ? r.json() : null; })
@@ -5960,6 +5976,7 @@
   function seedPrev(){
     if(!state.tirazh || typeof fetch !== "function") return;
     var wantN = Number(state.tirazh) - 1;
+    if(state.viewPrev && state.prev) return;      /* просмотр открыт — его тираж не подменяем */
     /* снимок без процентов и кэфов (сделан до их сохранения) — один раз дополняем из API */
     if(state.prev && !state.prev.matches.some(function(m){ return m.pct || m.kf; })){
       var pn = Number(state.prev.tirazh);
@@ -6111,9 +6128,9 @@
       var fsNear = mkFs(m); fsNear.classList.add("fs-near");
       /* рядом с FS — кнопка «ИИ» (разбор матча), чтобы читать аналитику, пока идёт игра */
       var nearW = document.createElement("span"); nearW.className = "near-btns";
-      if(aiPrevRec(p.tirazh, idx)){ var aiNear = mkAiPrev(m, idx, p.tirazh, true); aiNear.classList.add("ai-near"); nearW.appendChild(aiNear); }
+      if(!p.cur && aiPrevRec(p.tirazh, idx)){ var aiNear = mkAiPrev(m, idx, p.tirazh, true); aiNear.classList.add("ai-near"); nearW.appendChild(aiNear); }
       nearW.appendChild(fsNear); teams.appendChild(nearW);
-      var aiRec = aiPrevRec(p.tirazh, idx), aiEl = mkAiLive(aiRec, m);
+      var aiRec = p.cur ? null : aiPrevRec(p.tirazh, idx), aiEl = mkAiLive(aiRec, m);
       if(aiEl){
         teams.appendChild(aiEl);
         var lo = liveOutcome(m), okk = aiRec.p.indexOf(lo.o) >= 0;
@@ -6125,7 +6142,7 @@
       var code = cont.hit ? ((hc || ac) ? null : cont.flag) : flagCode(m.league);
       if(code) meta.appendChild(mkFlag(code, "flag"));
       meta.appendChild(document.createTextNode([m.date, m.time, m.league].filter(Boolean).join("  ·  ")));
-      meta.appendChild(mkAiPrev(m, idx, p.tirazh, false));
+      if(!p.cur) meta.appendChild(mkAiPrev(m, idx, p.tirazh, false));
       liveDecor(m, row, meta);
       /* телефон: значок LIVE и метка ИИ стоят в одной строке под командами (копии, оригиналы там скрыты) */
       var stl = document.createElement("div"); stl.className = "st-line";
@@ -6204,7 +6221,7 @@
       var modes = document.createElement("div");
       modes.className = "modes";
       modes.appendChild(mkFs(m));
-      modes.appendChild(mkAiPrev(m, idx, p.tirazh, true));
+      if(!p.cur) modes.appendChild(mkAiPrev(m, idx, p.tirazh, true));
       row.appendChild(modes);
       rowsEl.appendChild(row);
     });
@@ -6212,7 +6229,7 @@
     var live = p.matches.filter(function(m){ return !m.res && m.score; }).length;
     var voids = p.matches.filter(function(m){ return m.res === VOID; }).length;
     var bar = $("prevBar");
-    bar.innerHTML = '<span class="pb-t">Просмотр тиража ' + escHtml(p.tirazh) + '</span>' +
+    bar.innerHTML = '<span class="pb-t">Просмотр тиража ' + escHtml(p.tirazh) + '</span>' + (p.cur ? '<span class="pb-nst">ещё не начался</span>' : '') +
       '<span>сыграно <b>' + done + '</b> из ' + p.matches.length + '</span>' +
       (live ? '<span>идёт <b>' + live + '</b></span>' : '') +
       (p.matches.length - done - live - voids > 0 ? '<span>ждём <b>' + (p.matches.length - done - live - voids) + '</b></span>' : '') +
@@ -6292,7 +6309,7 @@
     return b && b.every(function(x){ return /^[1X2]{15}$/.test(String(x).replace(/,/g, "")); }) ? b : null;
   }
   function pcsvSyncAi(){
-    var p = state.prev; if(!p || pcsv.tir !== String(p.tirazh)) return;
+    var p = state.prev; if(!p || p.cur || pcsv.tir !== String(p.tirazh)) return;
     var picks = [], i, sys, nm = "ИИ-разбор · виртуальный", br = aiPrevBrief(p.tirazh);
     if(br){
       /* строки брифа идут как есть: каждая — один вариант, поэтому в набор попадают именно они, а не весь купон */
@@ -6312,7 +6329,7 @@
   }
   /* виртуальный набор стратегии «Охота на 15 · бриф 14 из 15»: строки готовы заранее (virt.json), в хранилище не пишутся */
   function pcsvSyncVirt(){
-    var p = state.prev; if(!p || pcsv.tir !== String(p.tirazh)) return;
+    var p = state.prev; if(!p || p.cur || pcsv.tir !== String(p.tirazh)) return;
     var rec = virt.data && virt.data[String(p.tirazh)]; if(!rec || !rec.z) return;
     var k = -1, i;
     for(i = 0; i < pcsv.sets.length; i++) if(pcsv.sets[i].virt){ k = i; break; }
@@ -7020,7 +7037,7 @@
   function escHtml(x){ return String(x).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
   function enterPrev(){
     if(!state.prev) return;
-    state.viewPrev = true; save(); render(); renderKickoff(); refreshPrev(); attachPrevTimes(); attachFsLogos();
+    navBusy = 0; state.viewPrev = true; save(); render(); renderKickoff(); refreshPrev(); attachPrevTimes(); attachFsLogos();
   }
   /* время начала у прошлого тиража: берём из снимка, а чего нет — из фида Flashscore
      (он отдаёт только сегодня и завтра, поэтому вчерашние матчи дозаполнятся, пока они в фиде) */
@@ -7044,12 +7061,63 @@
     }).catch(function(){});
   }
   function leavePrev(){
-    state.viewPrev = false; save(); render(); renderKickoff();
+    var wasCur = !!(state.prev && state.prev.cur);
+    state.viewPrev = false;
+    if(wasCur) state.prev = null;          /* снимок текущего тиража уходит, прошлый тираж подтянется заново */
+    save(); render(); renderKickoff();
+    if(wasCur) setTimeout(seedPrev, 200);
+  }
+  /* стрелки в просмотре: листаем тиражи назад и вперёд, вплоть до текущего ещё не начавшегося.
+     Загруженные наборы едут вместе с пользователем: те же CSV видны в каждом тираже. */
+  var navBusy = 0;
+  function carryTo(tir){
+    var src = pcsv.tir != null ? pcsvMine() : [];
+    if(!src.length || String(pcsv.tir) === String(tir)) return;
+    src.forEach(function(s){ pcsvAddTo(String(tir), { name: s.name, link: 0, sys: s.sys }); });
+  }
+  /* ссылка на наборы текущего тиража, который ещё не начался: открываем просмотр этого тиража с наборами */
+  function openMultiCur(tir, payloads){
+    var N = state.matches.length || 15, k = 0, added = 0;
+    var step = function(){
+      if(k >= payloads.length){
+        try{ history.replaceState(null, "", location.pathname + location.search); }catch(e){}
+        enterCurView();
+        pcsv.msgAt = Date.now();
+        pcsv.msg = "Из ссылки открыто наборов: " + added + ". Тираж №" + tir + " ещё не начался: когда он начнётся, наборы останутся в просмотре.";
+        renderPrevCsv();
+        return;
+      }
+      varsDecode(payloads[k++], N, function(rows, pages){
+        if(rows){
+          pcsvAddTo(String(tir), { link: 1, rows: rows.map(function(r){ return r.join(""); }),
+                                   sys: (pages || rows).map(function(pg){ return pg.join(","); }) });
+          added++;
+        }
+        step();
+      });
+    };
+    step();
+  }
+  function enterCurView(){
+    if(!state.matches.length) return;
+    var sn = snapPrev(state.tirazh, state.tirazhId, state.deadline, state.matches, state.poolSum);
+    sn.cur = true; state.prev = sn; state.viewPrev = true;
+    save(); render(); renderKickoff();
+  }
+  function viewNavTo(n){
+    n = Number(n); var cur = Number(state.tirazh);
+    if(!(n > 0) || !isFinite(cur)) return;
+    if(navBusy && Date.now() - navBusy < 6000) return;
+    if(n > cur){ leavePrev(); return; }
+    carryTo(String(n)); pcsv.msg = "";
+    if(n === cur){ enterCurView(); return; }
+    navBusy = Date.now();
+    prevLoad(n, true, function(){ navBusy = 0; say("Тираж №" + n + " подгрузить не удалось: его нет в списке тиражей. Наборы сохранены и откроются, когда он загрузится."); });
   }
   function syncTirNav(){
     var inPrev = !!(state.viewPrev && state.prev);
     document.body.classList.toggle("is-prev", inPrev);
-    $("btnTirPrev").disabled = !state.prev || inPrev;
+    $("btnTirPrev").disabled = !state.prev;
     $("btnTirNext").disabled = !inPrev;
     $("tirazhName").value = inPrev ? state.prev.tirazh : (state.tirazh || "");
     if(!inPrev){ $("prevBar").hidden = true; if($("prevCsv")) $("prevCsv").hidden = true; }

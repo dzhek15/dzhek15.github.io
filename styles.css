@@ -2163,3 +2163,5 @@ body.is-prev .pct-col.hit b,body.is-prev .kf-col.hit{color:var(--ink); font-weig
 .wait-note[hidden]{display:none}
 .wait-note .wn-t{flex:1; min-width:0}
 .wait-note .wn-x{flex:none; height:28px; padding:0 10px; background:transparent; color:var(--brand-gold); border:1px solid var(--brand-gold); border-radius:4px; font:inherit; font-size:12px; cursor:pointer}
+
+.pb-nst{display:inline-block; margin-left:8px; padding:2px 8px; border:1px solid var(--brand-gold); border-radius:4px; color:var(--brand-gold); font-size:12px; white-space:nowrap}
