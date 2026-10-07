@@ -417,8 +417,7 @@
       }
       vEl.textContent = word;
       $("tkValNote").innerHTML = "суперприз " + r.toFixed(2).replace(".", ",") +
-        " от фонда" + (rTyp > 0 ? ", обычно " + rTyp.toFixed(2).replace(".", ",") : "") +
-        ' · <i class="tk-why">что это значит</i>';
+        " от фонда" + (rTyp > 0 ? ", обычно " + rTyp.toFixed(2).replace(".", ",") : "");
     } else { vw.hidden = false; $("tkVal").textContent = "—"; $("tkVal").classList.remove("good", "bad"); $("tkValNote").innerHTML = "&nbsp;"; }
 
     /* на телефоне плитки лежат сеткой 2×2: нечётную последнюю растягиваем на всю ширину,

@@ -2204,61 +2204,44 @@ body.is-prev .pct-col.hit b,body.is-prev .kf-col.hit{color:var(--ink); font-weig
 .prev-bar .pb-tabs button[aria-selected="true"] b{color:var(--gold-ink)}
 .prev-bar .pb-tabs.t3 button small{font-size:9.5px; letter-spacing:.04em}
 
-/* инфоблок: теперь только кнопка «Тиражи» и «Ценность тиража»; подпись «Тираж №» и пул из него убраны */
-.ticket label[for="tirazhName"], .ticket .tir-nav, #tkFundWrap{display:none !important}
-.ticket{position:relative; border:1px solid var(--brand-gold); border-radius:10px; overflow:hidden;
-  background:linear-gradient(180deg, rgba(212,175,90,.10) 0%, rgba(212,175,90,0) 38%), var(--surface);
-  box-shadow:inset 0 0 0 3px var(--surface), inset 0 0 0 4px rgba(212,175,90,.38), var(--shadow)}
-.ticket::before, .ticket::after{content:""; position:absolute; left:18%; right:18%; height:1px; pointer-events:none;
-  background:linear-gradient(90deg, transparent, var(--brand-gold), transparent)}
-.ticket::before{top:7px} .ticket::after{bottom:7px}
-.ticket .tk{position:relative; justify-content:center; border-right:0}
-.ticket .tk:first-child{padding:16px 18px 12px}
-.ticket .tk:first-child::after{content:"\25C6"; position:absolute; left:50%; bottom:-6px; transform:translateX(-50%); z-index:2; font-size:9px; line-height:1;
-  color:var(--brand-gold); background:var(--surface); padding:0 7px}
-.ticket .tk-btn{border-top:1px solid rgba(212,175,90,.35)}
-.tir-pages{height:42px; max-width:230px; margin-top:0; border-width:1.5px; font-size:14px;
-  outline:1px solid rgba(212,175,90,.55); outline-offset:4px}
-@media (max-width:560px){
-  .ticket{grid-template-columns:1fr; gap:0}
-  .ticket .tk:first-child, .ticket .tk:last-child{grid-column:1 / -1}
-  .ticket .tk{background:transparent}
-  .ticket .tk:first-child{border-bottom:0}
-}
+/* инфоблок v3: компактная кнопка «Тиражи» и отдельной строкой под ней «Ценность тиража» */
+.ticket label[for="tirazhName"], .ticket .tir-nav, #tkFundWrap, .ticket::before, .ticket::after{display:none !important}
+.ticket{display:flex !important; flex-direction:column; align-items:center; justify-content:center; gap:10px;
+  padding:0; border:0; border-radius:0; background:transparent; box-shadow:none; overflow:visible}
+.ticket .tk, .ticket .tk:first-child, .ticket .tk:last-child{flex:0 0 auto; min-width:0; padding:0; border:0; background:transparent; grid-column:auto !important}
+.ticket .tk:first-child{width:auto}
 
-/* инфоблок v2: две одинаковые кнопки — «Тиражи» и «Ценность тиража»; прежнюю рамку-оформление убираем */
-.ticket{display:flex !important; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:16px 14px;
-  background:var(--surface); border:1px solid var(--rule-strong); border-radius:10px; box-shadow:var(--shadow)}
-.ticket::before, .ticket::after, .ticket .tk:first-child::after{display:none !important}
-.ticket .tk, .ticket .tk:first-child, .ticket .tk:last-child{flex:0 0 auto; width:min(100%, 300px); min-width:0; padding:0; border:0; background:transparent; grid-column:auto !important}
-.ticket .tk-btn{border-top:0}
-@media (min-width:561px){
-  .ticket{flex-direction:row; gap:28px}
-  .ticket .tk, .ticket .tk:first-child, .ticket .tk:last-child{width:280px}
-}
-.tir-pages{width:100%; max-width:none; height:46px; margin:0}
+.tir-pages{position:relative; overflow:hidden; display:inline-flex; align-items:center; justify-content:center; gap:10px;
+  width:auto; min-width:190px; max-width:none; height:42px; margin:0; padding:0 26px; cursor:pointer;
+  border:1.5px solid var(--brand-gold); border-radius:999px; font-family:"Chivo",sans-serif; font-weight:800; font-size:14px; letter-spacing:.24em; text-indent:.24em;
+  color:#1a1408; background:linear-gradient(180deg, #e8c775 0%, #c9a24e 100%);
+  box-shadow:0 2px 10px rgba(212,175,90,.28), inset 0 1px 0 rgba(255,255,255,.45); outline:0}
+.tir-pages:hover{background:linear-gradient(180deg, #f0d284 0%, #d2ab57 100%)}
+.tir-pages[aria-pressed="true"]{background:transparent; color:var(--gold-ink); box-shadow:none}
+.tir-pages .tp-ic{flex:none; width:16px; height:16px; position:relative; z-index:1}
+.tir-pages .tp-t{position:relative; z-index:1}
+.tir-pages .tp-dot{display:none}
 .tir-pages:active, #tkValWrap:active{transform:scale(.97)}
 .tir-pages, #tkValWrap{transition:transform .12s ease, background .15s ease}
-.tir-pages:focus-visible, #tkValWrap:focus-visible{outline:2px solid var(--brand-gold); outline-offset:4px}
-#tkValWrap{position:relative; overflow:hidden; cursor:pointer; align-items:center; justify-content:center; gap:2px; padding:9px 12px 8px !important;
-  border:1.5px solid var(--brand-gold) !important; border-radius:6px; text-align:center;
-  background:linear-gradient(180deg, rgba(212,175,90,.22), rgba(212,175,90,.06)) !important;
-  outline:1px solid rgba(212,175,90,.55); outline-offset:4px}
-#tkValWrap:hover{background:linear-gradient(180deg, rgba(212,175,90,.34), rgba(212,175,90,.12)) !important}
-#tkValWrap .k{position:relative; z-index:1; font-size:11px; letter-spacing:.14em; color:var(--gold-ink)}
-#tkValWrap .v{position:relative; z-index:1; font-family:"Chivo",sans-serif; font-weight:800; font-size:21px; letter-spacing:.06em; text-transform:uppercase; color:var(--gold-ink)}
-#tkValWrap .v.good{color:#5fd49a} #tkValWrap .v.bad{color:#ef8a7c}
-#tkValWrap .tk-note{position:relative; z-index:1; margin:0; font-size:11px; color:var(--muted)}
-#tkValWrap::after{content:""; position:absolute; top:0; bottom:0; left:-60%; width:40%; pointer-events:none; transform:skewX(-18deg);
-  background:linear-gradient(100deg, transparent, rgba(255,236,170,.45), transparent)}
+.tir-pages:focus-visible, #tkValWrap:focus-visible{outline:2px solid var(--brand-gold); outline-offset:3px}
 @media (prefers-reduced-motion: no-preference){
-  #tkValWrap{animation:tpGlow 2.8s ease-in-out 1.2s infinite}
-  #tkValWrap::after{animation:tpSweep 3.4s ease-in-out 1.6s infinite}
+  .tir-pages{animation:tpGlow 2.8s ease-in-out infinite}
 }
 
-/* обе кнопки инфоблока — одного размера */
-.tir-pages, #tkValWrap{box-sizing:border-box; width:100% !important; height:96px !important; min-height:96px; max-height:96px}
-.tir-pages{font-size:16px}
-#tkValWrap{padding:8px 12px !important; justify-content:center}
-#tkValWrap{width:min(100%, 300px) !important}
-@media (min-width:561px){ #tkValWrap{width:280px !important} }
+#tkValWrap{position:relative; overflow:hidden; cursor:pointer; box-sizing:border-box;
+  display:flex !important; flex-direction:row !important; align-items:center; justify-content:center; flex-wrap:nowrap; gap:10px; text-align:center;
+  width:min(100%, 520px) !important; height:36px !important; min-height:0; max-height:none; padding:0 14px !important;
+  border:1px solid var(--brand-gold) !important; border-radius:8px; outline:0;
+  background:linear-gradient(180deg, rgba(212,175,90,.16), rgba(212,175,90,.05)) !important}
+#tkValWrap:hover{background:linear-gradient(180deg, rgba(212,175,90,.28), rgba(212,175,90,.10)) !important}
+#tkValWrap .k{flex:none; font-size:10.5px; letter-spacing:.12em; color:var(--gold-ink); white-space:nowrap}
+#tkValWrap .v{flex:none; font-family:"Chivo",sans-serif; font-weight:800; font-size:15px; letter-spacing:.06em; text-transform:uppercase; color:var(--gold-ink); white-space:nowrap}
+#tkValWrap .v.good{color:#5fd49a} #tkValWrap .v.bad{color:#ef8a7c}
+#tkValWrap .tk-note{flex:0 1 auto; min-width:0; margin:0; font-size:11px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+#tkValWrap::after{content:"?"; flex:none; width:16px; height:16px; line-height:15px; text-align:center; font-size:11px; font-weight:700;
+  border:1px solid var(--brand-gold); border-radius:50%; color:var(--gold-ink); position:static; background:none; transform:none; animation:none}
+@media (max-width:640px){ #tkValWrap .tk-note{display:none} }
+#tkValWrap .tk-note{line-height:1.2; align-self:center; padding:0; position:relative; top:1px}
+:root[data-theme="light"] #tkValWrap .v.bad{color:#c4513f}
+:root[data-theme="light"] #tkValWrap .v.good{color:#1c8f5a}
+:root[data-theme="light"] #tkValWrap .k, :root[data-theme="light"] #tkValWrap .v:not(.good):not(.bad){color:#3d5266}
