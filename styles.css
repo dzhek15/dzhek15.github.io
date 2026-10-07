@@ -2255,3 +2255,10 @@ body.is-prev .pct-col.hit b,body.is-prev .kf-col.hit{color:var(--ink); font-weig
   #tkValWrap{animation:tpGlow 2.8s ease-in-out 1.2s infinite}
   #tkValWrap::after{animation:tpSweep 3.4s ease-in-out 1.6s infinite}
 }
+
+/* обе кнопки инфоблока — одного размера */
+.tir-pages, #tkValWrap{box-sizing:border-box; width:100% !important; height:96px !important; min-height:96px; max-height:96px}
+.tir-pages{font-size:16px}
+#tkValWrap{padding:8px 12px !important; justify-content:center}
+#tkValWrap{width:min(100%, 300px) !important}
+@media (min-width:561px){ #tkValWrap{width:280px !important} }
