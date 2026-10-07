@@ -2157,3 +2157,9 @@ body.is-prev #coupon{margin-top:0}
 /* просмотр тиража: проценты и кэфы под исходом, зашедший исход подсвечен */
 body.is-prev .pct-col.hit,body.is-prev .kf-col.hit{background:color-mix(in srgb, var(--cold) 22%, transparent); border-radius:4px; padding:3px 4px; box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--cold) 70%, transparent)}
 body.is-prev .pct-col.hit b,body.is-prev .kf-col.hit{color:var(--ink); font-weight:700}
+
+/* плашка «наборы ждут старта тиража» */
+.wait-note{display:flex; align-items:center; gap:10px; margin:10px 0; padding:10px 12px; border:1px solid var(--brand-gold); border-radius:8px; background:var(--brand-dark); color:var(--ink); font-size:13.5px; line-height:1.35}
+.wait-note[hidden]{display:none}
+.wait-note .wn-t{flex:1; min-width:0}
+.wait-note .wn-x{flex:none; height:28px; padding:0 10px; background:transparent; color:var(--brand-gold); border:1px solid var(--brand-gold); border-radius:4px; font:inherit; font-size:12px; cursor:pointer}

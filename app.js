@@ -98,6 +98,8 @@
   /* один шаг назад: предыдущий тираж хранится целиком для просмотра, купон он не трогает */
   if(!state.prev || !Array.isArray(state.prev.matches) || !state.prev.matches.length) state.prev = null;
   state.viewPrev = !!(state.viewPrev && state.prev);
+  /* ссылки на наборы тиража, который ещё не начался: ждут старта и сами открываются в просмотре */
+  if(!state.waitSets || !state.waitSets.tirazh || !Array.isArray(state.waitSets.payloads) || !state.waitSets.payloads.length) state.waitSets = null;
   if(state.tirazhId == null) state.tirazhId = null;
   state.compact = false;   /* компактный вид убран вместе с кнопкой */
   state.zoom = Number(state.zoom);
@@ -3086,7 +3088,7 @@
   }
   function render(){
     var t0 = performance.now();
-    renderCore(); ujSoon();
+    renderCore(); ujSoon(); renderWaitNote();
     if(typeof DBG !== "object") return;
     var d = performance.now() - t0; DBG.rn++; DBG.rsum += d; if(d > DBG.rmax) DBG.rmax = d;
     if(d > 80){ DBG.slow++; dbgLog("медленно", "перерисовка " + Math.round(d) + " мс"); }
@@ -5096,6 +5098,30 @@
     step();
   }
 
+  /* сохранённые наборы ждут старта тиража: тираж начался (текущим стал следующий) — открываем в просмотре */
+  /* постоянная плашка: пока наборы ждут старта тиража, она видна под панелью «Вид» */
+  function renderWaitNote(){
+    var ws = state.waitSets, el = document.getElementById("waitNote");
+    if(!ws || state.viewPrev){ if(el) el.hidden = true; return; }
+    var h = $("hint"); if(!h || !h.parentNode) return;
+    if(!el){
+      el = document.createElement("div"); el.id = "waitNote"; el.className = "wait-note";
+      el.innerHTML = '<span class="wn-t"></span><button type="button" class="wn-x">Убрать</button>';
+      el.querySelector(".wn-x").addEventListener("click", function(){ state.waitSets = null; save(); renderWaitNote(); });
+      h.parentNode.insertBefore(el, h);
+    }
+    el.hidden = false;
+    el.querySelector(".wn-t").textContent = "Наборов из ссылки: " + ws.payloads.length + ". Тираж №" + ws.tirazh + " ещё не начался, они откроются в просмотре сами после старта.";
+  }
+  function checkWaitSets(){
+    var ws = state.waitSets;
+    if(!ws || !state.tirazh || !state.matches.length) return;
+    if(!(Number(ws.tirazh) < Number(state.tirazh))) return;
+    state.waitSets = null; save();
+    openMultiPrev(ws.tirazh, ws.payloads, 0);
+  }
+  setInterval(checkWaitSets, 15000);
+  setTimeout(checkWaitSets, 3000);
   function tryPendingBook(){
     if(!pendingBook || !state.matches.length) return;
     var p = pendingBook;
@@ -5103,7 +5129,16 @@
       pendingBook = null;
       if(p.tirazh && Number(p.tirazh) < Number(state.tirazh)){ openMultiPrev(p.tirazh, p.multi, 0); return; }
       if(p.multi.length === 1){ pendingBook = { tirazh: p.tirazh, payload: p.multi[0] }; tryPendingBook(); return; }
-      say("Ссылка на варианты тиража №" + p.tirazh + " — он ещё не начался, такие наборы открываются в просмотре после начала тиража.");
+      if(p.tirazh && Number(p.tirazh) >= Number(state.tirazh)){
+        /* запоминаем наборы: как только тираж начнётся, они откроются в просмотре сами */
+        var wsOld = (state.waitSets && String(state.waitSets.tirazh) === String(p.tirazh)) ? state.waitSets.payloads : [];
+        var wsAll = wsOld.slice();
+        p.multi.forEach(function(x){ if(wsAll.indexOf(x) < 0) wsAll.push(x); });
+        state.waitSets = { tirazh: String(p.tirazh), payloads: wsAll, at: Date.now() };
+        save(); renderWaitNote();
+        return;
+      }
+      say("Ссылка на варианты тиража №" + p.tirazh + " — такой тираж уже не открыть.");
       return;
     }
     /* ссылка на уже закрытый тираж — открываем её в просмотре прошлого тиража,
