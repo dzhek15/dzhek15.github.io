@@ -2170,3 +2170,36 @@ body.is-prev .pct-col.hit b,body.is-prev .kf-col.hit{color:var(--ink); font-weig
 .prev-bar .pb-nav{flex:1 0 100%; display:flex; gap:8px}
 .prev-bar .pb-nav button{flex:1 1 0; min-width:0; height:34px; padding:0 8px; border:1px solid var(--brand-gold); border-radius:6px; background:transparent; color:var(--gold-ink); font:inherit; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap}
 .prev-bar .pb-nav button:hover{background:var(--surface-2)}
+
+/* стрелки у номера тиража заменены кнопкой «Тиражи» */
+.tir-nav button{display:none}
+.tir-pages{position:relative; overflow:hidden; display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  width:100%; max-width:168px; height:34px; margin-top:4px; padding:0 14px; cursor:pointer;
+  border:1px solid var(--brand-gold); border-radius:6px; color:var(--gold-ink); font-family:"Chivo",sans-serif; font-weight:800; font-size:13px; letter-spacing:.18em;
+  background:linear-gradient(180deg, rgba(212,175,90,.22), rgba(212,175,90,.06)); box-shadow:0 0 0 0 rgba(212,175,90,.45)}
+.tir-pages:hover{background:linear-gradient(180deg, rgba(212,175,90,.34), rgba(212,175,90,.12))}
+.tir-pages[aria-pressed="true"]{background:var(--brand-gold); color:#1a1408}
+.tir-pages .tp-t{position:relative; z-index:1}
+.tir-pages .tp-dot{flex:none; width:7px; height:7px; border-radius:50%; background:currentColor}
+.tir-pages .tp-sh{position:absolute; top:0; bottom:0; left:-60%; width:40%; pointer-events:none;
+  background:linear-gradient(100deg, transparent, rgba(255,236,170,.55), transparent); transform:skewX(-18deg)}
+@media (prefers-reduced-motion: no-preference){
+  .tir-pages{animation:tpGlow 2.8s ease-in-out infinite}
+  .tir-pages .tp-sh{animation:tpSweep 3.4s ease-in-out infinite}
+  .tir-pages .tp-dot{animation:tpDot 1.6s ease-in-out infinite}
+  .tir-pages[aria-pressed="true"], .tir-pages[aria-pressed="true"] .tp-sh{animation:none}
+}
+@keyframes tpGlow{0%,100%{box-shadow:0 0 0 0 rgba(212,175,90,.42)} 55%{box-shadow:0 0 0 6px rgba(212,175,90,0)}}
+@keyframes tpSweep{0%,55%{left:-60%} 100%{left:130%}}
+@keyframes tpDot{0%,100%{opacity:1; transform:scale(1)} 50%{opacity:.35; transform:scale(.7)}}
+
+/* вкладки страницы «Тиражи» */
+.prev-bar .pb-nav{display:none}
+.prev-bar .pb-tabs{flex:1 0 100%; display:flex; gap:8px; margin-bottom:2px}
+.prev-bar .pb-tabs button{flex:1 1 0; min-width:0; height:46px; padding:0 6px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;
+  border:1px solid var(--rule-strong); border-radius:6px; background:transparent; color:var(--muted); font:inherit; cursor:pointer}
+.prev-bar .pb-tabs button small{font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; white-space:nowrap}
+.prev-bar .pb-tabs button b{font-family:"Chivo",sans-serif; font-weight:800; font-size:16px; color:var(--ink)}
+.prev-bar .pb-tabs button[aria-selected="true"]{border-color:var(--brand-gold); background:rgba(212,175,90,.14); color:var(--gold-ink)}
+.prev-bar .pb-tabs button[aria-selected="true"] b{color:var(--gold-ink)}
+.prev-bar .pb-tabs.t3 button small{font-size:9.5px; letter-spacing:.04em}

@@ -4090,6 +4090,11 @@
   $("tirazhName").addEventListener("input", function(e){ state.tirazh = e.target.value; save(); });
   $("btnTirPrev").addEventListener("click", enterPrev);
   $("btnTirNext").addEventListener("click", leavePrev);
+  /* кнопка «ТИРАЖИ»: страница наблюдения — вкладки «Предыдущий» и «Текущий»; повторное нажатие возвращает к купону */
+  $("btnTirages").addEventListener("click", function(){
+    if(state.viewPrev){ leavePrev(); return; }
+    if(state.matches.length) enterCurView(); else enterPrev();
+  });
   $("tirazhName").value = state.tirazh || "";
   /* ---------- Окно «Расхождения с толпой» ----------
      Считаем, насколько доли игроков расходятся с оценкой конторы. Мера — сумма
@@ -6124,9 +6129,9 @@
       var fsNear = mkFs(m); fsNear.classList.add("fs-near");
       /* рядом с FS — кнопка «ИИ» (разбор матча), чтобы читать аналитику, пока идёт игра */
       var nearW = document.createElement("span"); nearW.className = "near-btns";
-      if(!p.cur && aiPrevRec(p.tirazh, idx)){ var aiNear = mkAiPrev(m, idx, p.tirazh, true); aiNear.classList.add("ai-near"); nearW.appendChild(aiNear); }
+      if(aiPrevRec(p.tirazh, idx)){ var aiNear = mkAiPrev(m, idx, p.tirazh, true); aiNear.classList.add("ai-near"); nearW.appendChild(aiNear); }
       nearW.appendChild(fsNear); teams.appendChild(nearW);
-      var aiRec = p.cur ? null : aiPrevRec(p.tirazh, idx), aiEl = mkAiLive(aiRec, m);
+      var aiRec = aiPrevRec(p.tirazh, idx), aiEl = mkAiLive(aiRec, m);
       if(aiEl){
         teams.appendChild(aiEl);
         var lo = liveOutcome(m), okk = aiRec.p.indexOf(lo.o) >= 0;
@@ -6138,7 +6143,7 @@
       var code = cont.hit ? ((hc || ac) ? null : cont.flag) : flagCode(m.league);
       if(code) meta.appendChild(mkFlag(code, "flag"));
       meta.appendChild(document.createTextNode([m.date, m.time, m.league].filter(Boolean).join("  ·  ")));
-      if(!p.cur) meta.appendChild(mkAiPrev(m, idx, p.tirazh, false));
+      meta.appendChild(mkAiPrev(m, idx, p.tirazh, false));
       liveDecor(m, row, meta);
       /* телефон: значок LIVE и метка ИИ стоят в одной строке под командами (копии, оригиналы там скрыты) */
       var stl = document.createElement("div"); stl.className = "st-line";
@@ -6217,7 +6222,7 @@
       var modes = document.createElement("div");
       modes.className = "modes";
       modes.appendChild(mkFs(m));
-      if(!p.cur) modes.appendChild(mkAiPrev(m, idx, p.tirazh, true));
+      modes.appendChild(mkAiPrev(m, idx, p.tirazh, true));
       row.appendChild(modes);
       rowsEl.appendChild(row);
     });
@@ -6225,7 +6230,13 @@
     var live = p.matches.filter(function(m){ return !m.res && m.score; }).length;
     var voids = p.matches.filter(function(m){ return m.res === VOID; }).length;
     var bar = $("prevBar");
-    bar.innerHTML = '<span class="pb-t">Просмотр тиража ' + escHtml(p.tirazh) + '</span>' + (p.cur ? '<span class="pb-nst">ещё не начался</span>' : '') +
+    var curN = Number(state.tirazh), prvN = curN - 1, pn = Number(p.tirazh);
+    var tabsH = '<span class="pb-tabs' + (pn !== curN && pn !== prvN ? ' t3' : '') + '" role="tablist" aria-label="Тиражи">' +
+      '<button type="button" role="tab" data-n="' + prvN + '" aria-selected="' + (pn === prvN) + '"><small>Предыдущий</small><b>№' + prvN + '</b></button>' +
+      '<button type="button" role="tab" data-n="' + curN + '" aria-selected="' + (pn === curN) + '"><small>Текущий · приём</small><b>№' + curN + '</b></button>' +
+      (pn !== curN && pn !== prvN ? '<button type="button" role="tab" data-n="' + pn + '" aria-selected="true"><small>По ссылке</small><b>№' + pn + '</b></button>' : '') +
+      '</span>';
+    bar.innerHTML = tabsH + '<span class="pb-t">Просмотр тиража ' + escHtml(p.tirazh) + '</span>' + (p.cur ? '<span class="pb-nst">ещё не начался</span>' : '') +
       '<span>сыграно <b>' + done + '</b> из ' + p.matches.length + '</span>' +
       (live ? '<span>идёт <b>' + live + '</b></span>' : '') +
       (p.matches.length - done - live - voids > 0 ? '<span>ждём <b>' + (p.matches.length - done - live - voids) + '</b></span>' : '') +
@@ -6240,14 +6251,14 @@
       (p.at ? '<span>обновлено <b>' + new Date(p.at).toTimeString().slice(0,5) + '</b></span>' : '') +
       '<button type="button" class="pb-exp" id="btnPrevExp">Раскрыть все</button>' +
       '<button type="button" class="pb-back" id="btnPrevBack">К текущему тиражу &#8250;</button>' +
-      '<span class="pb-nav" role="group" aria-label="Тираж в просмотре">' +
-        '<button type="button" id="pbNavL">&#8249; №' + (Number(p.tirazh) - 1) + '</button>' +
-        (Number(p.tirazh) < Number(state.tirazh) ? '<button type="button" id="pbNavR">№' + (Number(p.tirazh) + 1) + ' &#8250;</button>' : '') +
-      '</span>' +
       '<div class="pb-flt" id="pvFlt" role="group" aria-label="Фильтр матчей" hidden></div>';
     bar.hidden = false;
-    $("pbNavL").addEventListener("click", function(){ viewNavTo(Number(p.tirazh) - 1); });
-    if($("pbNavR")) $("pbNavR").addEventListener("click", function(){ viewNavTo(Number(p.tirazh) + 1); });
+    [].slice.call(bar.querySelectorAll(".pb-tabs button")).forEach(function(bt){
+      bt.addEventListener("click", function(){
+        var n = Number(bt.getAttribute("data-n"));
+        if(n !== Number(p.tirazh)) viewNavTo(n);
+      });
+    });
     if(pvFltTir !== String(p.tirazh)){ pvFlt = "all"; pvFltTir = String(p.tirazh); }
     pvFltRender();
     $("pvFlt").addEventListener("click", function(ev){
@@ -6278,22 +6289,12 @@
     pcsv.act = st ? i : 0; pcsv.page = 0; pcsv.flt = "all"; pcsv.what = null;
     pcsv.name = st ? st.name : ""; pcsv.rows = st ? st.rows : []; pcsv.sys = st ? (st.sys || []) : [];
   }
-  /* набор CSV один на все тиражи: хранится под одним ключом и считается по тому тиражу, который открыт.
-     Прежние наборы по отдельным тиражам при первом запуске стираются. */
-  var PCSV_W = "w";
   function pcsvEnsure(tir){
-    tir = String(tir);
-    if(pcsv.loaded){
-      if(pcsv.tir !== tir){
-        pcsv.tir = tir;
-        pcsv.sets = pcsv.sets.filter(function(x){ return !x.ai; });   /* наборы ИИ строятся заново под каждый тираж */
-        pcsvUse(Math.max(0, Math.min(pcsv.act, pcsv.sets.length - 1)));
-      }
-      return;
-    }
-    var saved = pcsvAll()[PCSV_W] || null, sets = [];
+    if(pcsv.tir === tir) return;
+    var saved = pcsvAll()[tir] || null, sets = [];
     if(saved && saved.sets) sets = saved.sets.map(function(st){ return { name: st.name, link: st.link || 0, sys: st.sys || [], rows: st.rows || pcsvExpand(st.sys || []) }; });
-    pcsv = { tir: tir, loaded: true, sets: sets, act: 0, page: 0, sort: pcsv.sort || "hits", view: pcsv.view, msg: pcsv.msg, msgAt: pcsv.msgAt };
+    else if(saved && saved.rows) sets = [{ name: saved.name || "Файл", rows: saved.rows, sys: saved.sys || saved.rows }];
+    pcsv = { tir: tir, sets: sets, act: 0, page: 0, sort: pcsv.sort || "hits", view: pcsv.view, msg: pcsv.msg, msgAt: pcsv.msgAt };
     pcsvUse(saved && saved.act < sets.length ? saved.act : 0);
   }
   function pcsvExpand(sys){
@@ -6321,7 +6322,7 @@
     return b && b.every(function(x){ return /^[1X2]{15}$/.test(String(x).replace(/,/g, "")); }) ? b : null;
   }
   function pcsvSyncAi(){
-    var p = state.prev; if(!p || p.cur || pcsv.tir !== String(p.tirazh)) return;
+    var p = state.prev; if(!p || pcsv.tir !== String(p.tirazh)) return;
     var picks = [], i, sys, nm = "ИИ-разбор · виртуальный", br = aiPrevBrief(p.tirazh);
     if(br){
       /* строки брифа идут как есть: каждая — один вариант, поэтому в набор попадают именно они, а не весь купон */
@@ -6341,7 +6342,7 @@
   }
   /* виртуальный набор стратегии «Охота на 15 · бриф 14 из 15»: строки готовы заранее (virt.json), в хранилище не пишутся */
   function pcsvSyncVirt(){
-    var p = state.prev; if(!p || p.cur || pcsv.tir !== String(p.tirazh)) return;
+    var p = state.prev; if(!p || pcsv.tir !== String(p.tirazh)) return;
     var rec = virt.data && virt.data[String(p.tirazh)]; if(!rec || !rec.z) return;
     var k = -1, i;
     for(i = 0; i < pcsv.sets.length; i++) if(pcsv.sets[i].virt){ k = i; break; }
@@ -6366,9 +6367,19 @@
   }
   /* добавить набор к любому тиражу: к открытому — сразу, к другому — в сохранённые */
   function pcsvAddTo(tir, set){
-    pcsvEnsure(String(tir));
-    if(set.link) set.name = "Ссылка " + (pcsv.sets.filter(function(x){ return x.link; }).length + 1);
-    var r = pcsvAdd(set); return { dup: r.dup, name: pcsvLabel(pcsv.sets[pcsv.act]) || pcsv.name };
+    if(pcsv.tir === tir){
+      if(set.link) set.name = "Ссылка " + (pcsv.sets.filter(function(x){ return x.link; }).length + 1);
+      var r = pcsvAdd(set); return { dup: r.dup, name: pcsvLabel(pcsv.sets[pcsv.act]) || pcsv.name };
+    }
+    var all = pcsvAll(), e = all[tir] || { sets: [], act: 0 };
+    if(!e.sets) e = { sets: e.rows ? [{ name: e.name || "Файл", sys: e.sys || e.rows }] : [], act: 0 };
+    var sig = (set.sys || []).join("|");
+    for(var i = 0; i < e.sets.length; i++) if((e.sets[i].sys || []).join("|") === sig){ e.act = i; all[tir] = e; pcsvPut(tir); return { dup: true, name: e.sets[i].name }; }
+    var nm = set.link ? "Ссылка " + (e.sets.filter(function(x){ return x.link; }).length + 1) : set.name;
+    e.sets.push({ name: nm, link: set.link || 0, sys: set.sys }); e.act = e.sets.length - 1; e.at = Date.now();
+    all[tir] = e;
+    pcsvPut(tir);
+    return { dup: false, name: set.link ? fmt(pcsvExpand(set.sys || []).length * (Number(state.price) || 0)) + " ₽" : nm };
   }
   function pcsvAdd(set, keepTwin){
     var sig = (set.sys || []).join("|") + "#" + set.rows.length, twin = false;
@@ -6465,17 +6476,26 @@
           });
           legacyKeys.forEach(function(k){ if(!got[k]) pcsvPut(k); });
           pcsvPurgeOld();
-          if(changed && pcsv.tir != null && !pcsvMine().length){ pcsv.tir = null; pcsv.loaded = false; }
+          if(changed && pcsv.tir != null && !pcsvMine().length) pcsv.tir = null;
           if(changed){ try{ if(state.prev && $("prevCsv")) renderPrevCsv(); }catch(e){} }
         };
         rq.onerror = function(){};
       }catch(e){}
     });
   }
-  /* наборы по отдельным тиражам (старый формат) удаляются: остаётся только общий набор */
+  /* на странице «Тиражи» живут два тиража: предыдущий и текущий. Наборы остальных стираются при заходе;
+     общий список прошлой версии («w») переезжает в тираж 5029, для которого он собирался */
   function pcsvPurgeOld(){
     var all = pcsvAll();
-    Object.keys(all).forEach(function(k){ if(k !== PCSV_W){ delete all[k]; pcsvPut(k); } });
+    if(all.w){
+      if(!all["5029"]) all["5029"] = all.w;
+      delete all.w; pcsvPut("w"); pcsvPut("5029");
+    }
+    var cur = Number(state.tirazh);
+    if(!(cur > 0)) return;
+    Object.keys(all).forEach(function(k){
+      if(Number(k) !== cur && Number(k) !== cur - 1){ delete all[k]; pcsvPut(k); }
+    });
   }
   pcsvPurgeOld();
   pcsvLoadDb();
@@ -6503,10 +6523,10 @@
     /* храним только строки файла (с допами) — варианты разворачиваются при открытии; удаляются только кнопкой «Убрать» */
     var mine = pcsvMine(), actM = 0;
     pcsv.sets.forEach(function(st, q){ if(q < pcsv.act && !st.ai) actM++; });
-    if(mine.length) all[PCSV_W] = { act: Math.min(actM, mine.length - 1), at: Date.now(),
+    if(mine.length) all[pcsv.tir] = { act: Math.min(actM, mine.length - 1), at: Date.now(),
       sets: mine.map(function(st){ return { name: st.name, link: st.link || 0, sys: st.sys }; }) };
-    else delete all[PCSV_W];
-    pcsvPut(PCSV_W);
+    else delete all[pcsv.tir];
+    pcsvPut(pcsv.tir);
     return true;
   }
   function pcsvPick(){
@@ -7115,6 +7135,7 @@
     document.body.classList.toggle("is-prev", inPrev);
     $("btnTirPrev").disabled = !state.prev || inPrev;
     $("btnTirNext").disabled = !inPrev;
+    var bt = $("btnTirages"); if(bt) bt.setAttribute("aria-pressed", inPrev ? "true" : "false");
     $("tirazhName").value = inPrev ? state.prev.tirazh : (state.tirazh || "");
     if(!inPrev){ $("prevBar").hidden = true; if($("prevCsv")) $("prevCsv").hidden = true; }
   }
