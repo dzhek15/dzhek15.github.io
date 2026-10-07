@@ -97,7 +97,8 @@
   state.showKf  = !!state.showKf;
   /* один шаг назад: предыдущий тираж хранится целиком для просмотра, купон он не трогает */
   if(!state.prev || !Array.isArray(state.prev.matches) || !state.prev.matches.length) state.prev = null;
-  if(state.prev && state.prev.cur && !state.viewPrev) state.prev = null;   /* снимок текущего тиража живёт только пока открыт его просмотр */
+  if(!state.prevKeep || !Array.isArray(state.prevKeep.matches) || !state.prevKeep.matches.length) state.prevKeep = null;
+  if(state.prev && state.prev.cur && !state.viewPrev){ state.prev = state.prevKeep; state.prevKeep = null; }   /* снимок текущего тиража живёт только пока открыт его просмотр */
   state.viewPrev = !!(state.viewPrev && state.prev);
   /* ссылки на наборы тиража, который ещё не начался: ждут старта и сами открываются в просмотре */
   if(!state.waitSets || !state.waitSets.tirazh || !Array.isArray(state.waitSets.payloads) || !state.waitSets.payloads.length) state.waitSets = null;
@@ -3104,7 +3105,7 @@
         if(String(pcur.tirazh) === String(state.tirazh)){
           var snCur = snapPrev(state.tirazh, state.tirazhId, state.deadline, state.matches, state.poolSum);
           snCur.cur = true; snCur.at = pcur.at; state.prev = snCur;
-        } else delete pcur.cur;   /* тираж начался: снимок стал обычным прошлым тиражом */
+        } else { delete pcur.cur; state.prevKeep = null; }   /* тираж начался: снимок стал обычным прошлым тиражом */
       }
       renderPrevView(); return;
     }
@@ -7084,9 +7085,9 @@
   function leavePrev(){
     var wasCur = !!(state.prev && state.prev.cur);
     state.viewPrev = false;
-    if(wasCur) state.prev = null;          /* снимок текущего тиража уходит, прошлый тираж подтянется заново */
+    if(wasCur){ state.prev = state.prevKeep || null; state.prevKeep = null; }   /* снимок текущего уходит, настоящий прошлый тираж возвращается сразу */
     save(); render(); renderKickoff();
-    if(wasCur) setTimeout(seedPrev, 200);
+    if(wasCur && !state.prev) setTimeout(seedPrev, 200);
   }
   /* отдельные кнопки в панели просмотра: листаем тиражи назад и вперёд, вплоть до текущего ещё не начавшегося.
      Набор CSV один на всех тиражах: те же варианты считаются по каждому тиражу. */
@@ -7116,6 +7117,7 @@
   }
   function enterCurView(){
     if(!state.matches.length) return;
+    if(state.prev && !state.prev.cur) state.prevKeep = state.prev;   /* прошлый тираж запоминаем: возврат на его вкладку мгновенный */
     var sn = snapPrev(state.tirazh, state.tirazhId, state.deadline, state.matches, state.poolSum);
     sn.cur = true; state.prev = sn; state.viewPrev = true;
     save(); render(); renderKickoff();
@@ -7123,10 +7125,18 @@
   function viewNavTo(n){
     n = Number(n); var cur = Number(state.tirazh);
     if(!(n > 0) || !isFinite(cur)) return;
-    if(navBusy && Date.now() - navBusy < 6000) return;
-    if(n > cur){ leavePrev(); return; }
     pcsv.msg = "";
+    if(n > cur){ leavePrev(); return; }
     if(n === cur){ enterCurView(); return; }
+    var k = state.prevKeep;
+    if(state.prev && !state.prev.cur && Number(state.prev.tirazh) === n){ enterPrev(); return; }
+    if(k && Number(k.tirazh) === n){
+      /* вкладка уже загружена: переключаем без сети */
+      state.prev = k; state.prevKeep = null; state.viewPrev = true;
+      save(); render(); renderKickoff(); refreshPrev();
+      return;
+    }
+    if(navBusy && Date.now() - navBusy < 6000) return;
     navBusy = Date.now();
     prevLoad(n, true, function(){ navBusy = 0; say("Тираж №" + n + " подгрузить не удалось: его нет в списке тиражей. Наборы сохранены и откроются, когда он загрузится."); });
   }
