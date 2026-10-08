@@ -9,6 +9,12 @@
 ],
 "id": 145
 },
+"авеллино": {
+"f": "dluUXyRq-dp0XifTb.png"
+},
+"айнтрахт брауншвейг": {
+"f": "bZS1GF96-rBP4Wuhs.png"
+},
 "ак барс": {
 "f": "tAmLD0WH-8IQDNH6S.png"
 },
@@ -34,6 +40,9 @@
 "аль-бака": {
 "f": "jcDwiYCN-SUoVDTGC.png"
 },
+"альдосиви": {
+"f": "pbQeONmC-Eew7tmfb.png"
+},
 "альдосиви(р)": {
 "f": "GKEcWIkC-vw1fi48G.png"
 },
@@ -50,8 +59,14 @@
 ],
 "id": 8157
 },
+"анси": {
+"f": "vqudxvme-YaxdL9AI.png"
+},
 "аргентинос хуниорс(р)": {
 "f": "jTDe8586-27vW42zI.png"
+},
+"арсенал тула": {
+"f": "OfyKnYjT-04cZ6kQB.png"
 },
 "атланта": {
 "f": "rVNPCcSq-l42IwVUF.png"
@@ -78,6 +93,9 @@
 },
 "бамбер бридж": {
 "f": "MD0qUEA6-r7aWsxVk.png"
+},
+"бандырмаспор": {
+"f": "IqHsN4S0-jwWnbfkt.png"
 },
 "барранкилья": {
 "f": "4On2CIR0-WMQ3R7Tc.png"
@@ -113,6 +131,12 @@
 "ботафого сп": {
 "f": "fy7q1GPq-dA1p8k46.png"
 },
+"брага": {
+"f": "j3CGCQTH-6JDIcK05.png"
+},
+"бранн": {
+"f": "nN0xKnjC-ANQtd77I.png"
+},
 "браун адроге": {
 "f": "zgxltWUH-INQSOKGE.png"
 },
@@ -137,14 +161,23 @@
 ],
 "id": 1343
 },
+"булонь-сюр-мер": {
+"f": "bkQjzw7k-ppahwjB4.png"
+},
 "вальядолид": {
 "f": "GvWsl3Sq-htRvrFH6.png"
+},
+"ванспор": {
+"f": "xQpfV8U0-E1tcA12K.png"
 },
 "васко да гама": {
 "f": "Qw7CsWAN-bam8o1Nj.png"
 },
 "видад темара": {
 "f": "CC9Gx2lC-Gtyfdpte.png"
+},
+"викинг": {
+"f": "UPxLwWoe-xvniPjZd.png"
 },
 "вила нова": {
 "f": "M5AhQV5k-OjIDDdYc.png"
@@ -155,6 +188,9 @@
 "#000000"
 ],
 "id": 200
+},
+"волендам": {
+"f": "8tDUPO86-WYtEUtB2.png"
 },
 "газль эль-махалла": {
 "f": "dGMW46U0-AXTgaM87.png"
@@ -201,8 +237,17 @@
 "доломиты беллунези": {
 "f": "vsHRPGjT-GfC4FMXT.png"
 },
+"дордрехт": {
+"f": "jLzHsbCN-GMtbjGer.png"
+},
+"дюнкерк": {
+"f": "EZvaO4BN-O8yOVkI8.png"
+},
 "ес сетиф": {
 "f": "z9A0LKVH-CEDetKma.png"
+},
+"жил висенте": {
+"f": "hQCcG5AN-2gs7fTQ1.png"
 },
 "жирона": {
 "f": "6mZj79BN-vPm0hQMN.png"
@@ -274,6 +319,9 @@
 "куяба": {
 "f": "UudlC76k-CWl52SGk.png"
 },
+"ланс": {
+"f": "tAec9KQq-rTEFAmVL.png"
+},
 "ланус": {
 "c": [
 "#9f2b54",
@@ -297,6 +345,9 @@
 "летерхед": {
 "f": "MLVdD7U0-A7dHJstO.png"
 },
+"лион": {
+"f": "bkuX6RS0-GU4hlIMk.png"
+},
 "локомотив ярославль": {
 "f": "d2XBiSjC-bcMBxKZi.png"
 },
@@ -313,6 +364,9 @@
 "маклсфилд таун": {
 "f": "YNfQpCiT-rZPjZPfl.png"
 },
+"малага": {
+"f": "4jmiYe8k-MTxwaw7C.png"
+},
 "мальорка": {
 "f": "WKsw8cne-rmDEjevK.png"
 },
@@ -327,6 +381,9 @@
 },
 "монтевидео уондерерс": {
 "f": "GxuaZV9N-zFwegNb8.png"
+},
+"морейренсе": {
+"f": "4rouTHVH-xjC3FA5b.png"
 },
 "насиональ монтевидео": {
 "f": "bZ1tooDN-xErFNzEn.png"
@@ -409,11 +466,20 @@
 ],
 "id": 9593
 },
+"сампдория": {
+"f": "WQp3CvUH-WdmUvPiG.png"
+},
 "сан лоренцо(р)": {
 "f": "AmumUhQq-KfZ5zEAf.png"
 },
 "сан тельмо": {
 "f": "OSSBMG8k-nFtSniOn.png"
+},
+"сармиенто хунин": {
+"f": "0jUeTMhT-jFNZQuRn.png"
+},
+"сарыер": {
+"f": "lhDxhGkC-WdqsldXR.png"
 },
 "сеара": {
 "c": [
@@ -428,8 +494,17 @@
 "скарборо атлетик": {
 "f": "x2TELSme-Acopjvte.png"
 },
+"сошо": {
+"f": "xGAjiOiT-GU4hlIMk.png"
+},
+"спартак кострома": {
+"f": "xbDf7Foe-vwkjP4tm.png"
+},
 "специя": {
 "f": "08qns8VH-SEcuqyiS.png"
+},
+"спортинг лиссабон": {
+"f": "jy2lEHBN-4ddK8rOq.png"
 },
 "суиндон таун": {
 "c": [
@@ -468,6 +543,9 @@
 },
 "уингейт энд финчли": {
 "f": "YcfjAdS0-IJlrPRxF.png"
+},
+"умраниеспор": {
+"f": "jFLFaPVH-f5ezBc45.png"
 },
 "университатя клуж": {
 "f": "vqp1ptT0-v1mKniN8.png"
@@ -518,6 +596,9 @@
 "химнасия м(р)": {
 "f": "b7L1PmVH-xGopHxTO.png"
 },
+"хольштайн киль": {
+"f": "8K98UZoe-EcK7yLm6.png"
+},
 "хувентуд лп": {
 "f": "Ewu5CRlC-WIGOXbOL.png"
 },
@@ -564,8 +645,14 @@
 "эмли": {
 "f": "OhOZ9Ele-4xODXnII.png"
 },
+"эммен": {
+"f": "pKNN2hkC-lYiIVDtc.png"
+},
 "энвигадо": {
 "f": "461l7eCN-2XZjQRJG.png"
+},
+"эспаньол": {
+"f": "QeCoIpXH-Msjm1Bq4.png"
 },
 "эстудиантес рио куарто(р)": {
 "f": "z1lasjRq-YeUZVafi.png"
