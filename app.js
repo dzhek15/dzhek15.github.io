@@ -753,108 +753,6 @@
     return { lines: lines, U: U, rows: lines.length, m: m, r: r, ms: Date.now() - t0, w15: wt ? w15 : null, w14: wt ? w14 : null };
   }
 
-  /* BRIEF_CHANCE_BEGIN
-     «Максимум шанса»: без гарантии. Из строк купона жадно берём те, чей шар (сама строка и все,
-     что отличаются от неё одним матчем — это 14 из 15) закрывает больше всего ещё не закрытой
-     вероятности. Вероятность считается по всему пространству 3^15, а не только внутри купона:
-     соседи за пределами купона тоже дают 14. Любой префикс списка — готовая система на меньшее
-     число строк. P — вероятности исходов по матчам (или null → поровну). */
-  function briefChance(sets, P, Kmax, budgetMs){
-    budgetMs = budgetMs || 25000;
-    var n = sets.length, i, o, t0 = Date.now();
-    var pw = [], p3 = [1];
-    for(i = 0; i < n; i++){
-      var pr = (P && P[i]) ? P[i] : [1/3, 1/3, 1/3], S = pr[0] + pr[1] + pr[2];
-      pw.push([Math.max(pr[0] / S, 1e-6), Math.max(pr[1] / S, 1e-6), Math.max(pr[2] / S, 1e-6)]);
-      p3.push(p3[i] * 3);
-    }
-    var U = 1; sets.forEach(function(st){ U *= st.length; });
-    var code = new Int32Array(U), wr = new Float64Array(U), x, rest, c, w, d;
-    for(x = 0; x < U; x++){
-      rest = x; c = 0; w = 1;
-      for(i = 0; i < n; i++){
-        var L = sets[i].length; d = rest % L; rest = (rest - d) / L;
-        o = sets[i][d]; c += o * p3[i]; w *= pw[i][o];
-      }
-      code[x] = c; wr[x] = w;
-    }
-    var covered = new Uint8Array(p3[n]);
-    function gain(x){
-      var c = code[x], g = covered[c] ? 0 : wr[x], w = wr[x], i, o, d, y;
-      for(i = 0; i < n; i++){
-        d = Math.floor(c / p3[i]) % 3;
-        for(o = 0; o < 3; o++){
-          if(o === d) continue;
-          y = c + (o - d) * p3[i];
-          if(!covered[y]) g += w * pw[i][o] / pw[i][d];
-        }
-      }
-      return g;
-    }
-    function mark(x){
-      var c = code[x], w = wr[x], i, o, d, y, add = 0;
-      if(!covered[c]){ covered[c] = 1; add += w; }
-      for(i = 0; i < n; i++){
-        d = Math.floor(c / p3[i]) % 3;
-        for(o = 0; o < 3; o++){
-          if(o === d) continue;
-          y = c + (o - d) * p3[i];
-          if(!covered[y]){ covered[y] = 1; add += w * pw[i][o] / pw[i][d]; }
-        }
-      }
-      return add;
-    }
-    var hx = new Int32Array(U + 1), hg = new Float64Array(U + 1), hs = new Int32Array(U + 1), hn = 0;
-    function better(a, b){ return hg[a] > hg[b] || (hg[a] === hg[b] && hx[a] < hx[b]); }
-    function swap(a, b){
-      var t = hx[a]; hx[a] = hx[b]; hx[b] = t;
-      t = hg[a]; hg[a] = hg[b]; hg[b] = t;
-      t = hs[a]; hs[a] = hs[b]; hs[b] = t;
-    }
-    function push(x, g, st){
-      hn++; hx[hn] = x; hg[hn] = g; hs[hn] = st;
-      var c = hn;
-      while(c > 1 && better(c, c >> 1)){ swap(c, c >> 1); c >>= 1; }
-    }
-    function pop(){
-      var tx = hx[1], tg = hg[1], ts = hs[1];
-      hx[1] = hx[hn]; hg[1] = hg[hn]; hs[1] = hs[hn]; hn--;
-      var c = 1;
-      for(;;){
-        var l = c << 1, r = l + 1, b = c;
-        if(l <= hn && better(l, b)) b = l;
-        if(r <= hn && better(r, b)) b = r;
-        if(b === c) break;
-        swap(b, c); c = b;
-      }
-      return { x: tx, g: tg, st: ts };
-    }
-    for(x = 0; x < U; x++) push(x, gain(x), 0);
-    Kmax = Math.min(Kmax || U, U);
-    var picks = [], cum14 = [], cum15 = [], c14 = 0, c15 = 0, gen = 0;
-    while(picks.length < Kmax && hn > 0){
-      if((gen & 15) === 0 && Date.now() - t0 > budgetMs) return { slow: true, U: U, ms: Date.now() - t0 };
-      var top = pop(), g, take = false;
-      if(top.st === gen) take = true;
-      else {
-        g = gain(top.x);
-        if(g <= 1e-18) continue;
-        if(hn === 0 || g >= hg[1]){ take = true; top.g = g; }
-        else push(top.x, g, gen);
-      }
-      if(!take) continue;
-      c14 += mark(top.x); c15 += wr[top.x];
-      picks.push(top.x); cum14.push(c14); cum15.push(c15);
-      gen++;
-    }
-    var lines = picks.map(function(x){
-      var rest = x, row = new Array(n), i, d, L;
-      for(i = 0; i < n; i++){ L = sets[i].length; d = rest % L; rest = (rest - d) / L; row[i] = sets[i][d]; }
-      return row;
-    });
-    return { lines: lines, rows: lines.length, U: U, cum14: cum14, cum15: cum15, ms: Date.now() - t0 };
-  }
-  /* BRIEF_CHANCE_END */
 
   /* потолки: выше первого предупреждаем о долгом счёте, выше второго не беремся вовсе */
   var BRIEF_CAP_U = C.BRIEF_CAP_U, BRIEF_WARN_WORK = C.BRIEF_WARN_WORK, BRIEF_MAX_WORK = C.BRIEF_MAX_WORK;
@@ -4416,7 +4314,7 @@
   function briefProbs(){
     return state.matches.map(function(m){ return (m.pct && m.pct.bk) ? calProb(m.pct.bk) : null; });
   }
-  function briefModeNow(){ return state.briefMode === "even" || state.briefMode === "chance" ? state.briefMode : "w"; }
+  function briefModeNow(){ return state.briefMode === "even" ? "even" : "w"; }
   function briefWeighted(){ return briefModeNow() === "w"; }
   /* шанс, что все 15 исходов окажутся внутри купона */
   function briefInside(sets, P){
@@ -4509,90 +4407,6 @@
     return '<tr><td>' + g + '<span class="bt-of"> из 15</span></td>' + cells + '</tr>';
   }
 
-  /* «Максимум шанса»: один прогон жадного подбора, а строки для каждого бюджета — его префиксы */
-  var BRIEF_CHANCE_SHARES = [0.05, 0.1, 0.15, 0.2, 0.3, 0.5], BRIEF_CHANCE_SYNC = 20000;
-  function showBriefChance(sets, U, price, h){
-    var cache = briefCache(sets), P = briefProbs(), res = cache.chance;
-    var noLine = P.some(function(x){ return !x; });
-    function mount(){
-      $("evBody").innerHTML = h; $("evBack").hidden = false;
-      [].slice.call($("evBody").querySelectorAll(".brief-mode-b")).forEach(function(b){
-        b.addEventListener("click", function(){ state.briefMode = b.getAttribute("data-m"); save(); showBrief(); });
-      });
-    }
-    if(!res && U > BRIEF_CAP_U){
-      h += '<p class="ev-warn">Вселенная ' + fmt(U) + ' строк — слишком большой перебор. Убери часть двоек и троек.</p>';
-      mount(); return;
-    }
-    if(!res && U > BRIEF_CHANCE_SYNC){
-      h += '<p class="ev-note">Купон большой (' + fmt(U) + ' строк), расчёт займёт несколько секунд.</p>' +
-           '<p class="ev-note"><button type="button" class="gap-set" id="briefChanceGo">собрать</button></p>';
-      mount();
-      $("briefChanceGo").addEventListener("click", function(){
-        this.textContent = "считаю…"; this.disabled = true;
-        setTimeout(function(){
-          cache.chance = briefChance(sets, P, Math.min(Math.ceil(U * 0.5), BASKET_MAX), 30000);
-          showBrief();
-        }, 30);
-      });
-      return;
-    }
-    if(!res){ res = cache.chance = briefChance(sets, P, Math.min(Math.ceil(U * 0.5), BASKET_MAX), 20000); }
-    if(res.slow){
-      h += '<p class="ev-warn">Не уложился за ' + Math.round(res.ms / 1000) + ' с. Убери часть двоек и троек.</p>';
-      delete cache.chance; mount(); return;
-    }
-    h += '<p class="ev-note">Гарантии нет: если часть исходов не угадана, система может не дать и 14. ' +
-         'Зато при той же цене шанс на 14 и 15 выше, чем у гарантийной системы. Шансы считаются по линии конторы ' +
-         'и показаны на весь тираж, а не при условии попадания в купон.' +
-         (noLine ? ' По матчам без линии конторы исходы приняты равновероятными, шанс там ориентировочный.' : '') + '</p>';
-    h += '<table class="ev-tab brief-tab"><thead><tr><th>Доля</th><th>Строк</th><th>Цена</th><th>Дешевле</th><th></th></tr></thead><tbody>';
-    var seen = {};
-    BRIEF_CHANCE_SHARES.forEach(function(sh){
-      var K = Math.max(1, Math.min(res.rows, Math.round(U * sh)));
-      if(seen[K]) return; seen[K] = true;
-      var c15 = res.cum15[K - 1], c14 = res.cum14[K - 1];
-      h += '<tr><td>' + Math.round(sh * 100) + '%</td><td><b>' + fmt(K) + '</b>' +
-           '<div class="brief-ch">15: ' + stratChance(c15) + '</div><div class="brief-ch">14+: ' + stratChance(c14) + '</div></td>' +
-           '<td>' + fmt(K * price) + ' ₽</td><td class="brief-save">−' + (100 * (1 - K / U)).toFixed(0) + '%</td>' +
-           '<td class="nw"><button type="button" class="gap-set brief-cart" data-k="' + K + '">в корзину</button>' +
-           ' <button type="button" class="gap-set brief-csv" data-k="' + K + '">CSV</button>' +
-           ' <button type="button" class="gap-set brief-prev" data-k="' + K + '">строки</button></td></tr>';
-    });
-    h += '</tbody></table><p class="ev-note">Строки отсортированы по важности: любой набор из первых строк — готовая система на меньшую сумму.</p>' +
-         '<div id="briefPrev"></div>';
-    mount();
-    var pick = function(b){ return res.lines.slice(0, Number(b.getAttribute("data-k"))); };
-    [].slice.call($("evBody").querySelectorAll(".brief-cart")).forEach(function(b){
-      b.addEventListener("click", function(){
-        var L = pick(b);
-        if(L.length > BASKET_MAX){
-          $("briefPrev").innerHTML = '<p class="ev-warn">В корзину помещается до ' + BASKET_MAX + ' строк, а здесь ' + fmt(L.length) + '. Скачай CSV.</p>';
-          return;
-        }
-        var r = briefToBasket(L, "шанс");
-        $("evBack").hidden = true;
-        say("«Бриф» максимум шанса: в корзину добавлено " + fmt(r.added) + " строк" + (r.dup ? ", " + r.dup + " уже были" : "") +
-            " на " + fmt(r.added * briefPrice()) + " ₽. В CSV уйдут только отмеченные галочкой.");
-      });
-    });
-    [].slice.call($("evBody").querySelectorAll(".brief-csv")).forEach(function(b){
-      b.addEventListener("click", function(){
-        var L = pick(b);
-        saveCsvFile(briefCsv(L), briefFileName("МАХ 15", L.length));
-      });
-    });
-    [].slice.call($("evBody").querySelectorAll(".brief-prev")).forEach(function(b){
-      b.addEventListener("click", function(){
-        var L = pick(b);
-        var head = L.slice(0, 20).map(function(R, i){ return (i + 1) + ". " + R.map(function(j){ return OUT[j]; }).join(""); }).join("\n");
-        $("briefPrev").innerHTML = '<h3>Первые строки системы (' + fmt(L.length) + ')</h3>' +
-          '<pre class="brief-pre">' + head + (L.length > 20 ? "\n… и ещё " + fmt(L.length - 20) + " строк" : "") + '</pre>';
-        $("briefPrev").scrollIntoView({behavior:"smooth", block:"nearest"});
-      });
-    });
-  }
-
   function showBrief(){
     $("evTitle").textContent = "Бриф-система";
     var bs = briefSets();
@@ -4611,10 +4425,7 @@
     var tri = sizes.filter(function(x){ return x === 3; }).length;
     var price = briefPrice();
 
-    var h = briefModeNow() === "chance"
-      ? '<p class="ev-lead">Бриф-система — это часть строк купона вместо всех. В режиме «Максимум шанса» гарантии нет: ' +
-        'строки выбираются так, чтобы при заданной цене как можно вероятнее попасть на 15 или хотя бы на 14 из 15.</p>'
-      : '<p class="ev-lead">Бриф-система — это часть строк купона вместо всех. ' +
+    var h = '<p class="ev-lead">Бриф-система — это часть строк купона вместо всех. ' +
       'Обещание такое: какой бы исход внутри твоего купона ни выпал, хотя бы одна строка системы угадает ' +
       'не меньше заявленного. Платишь меньше, а взамен отказываешься от верхних категорий: гарантия 14 ' +
       'означает, что пятнадцать из пятнадцати ты возьмёшь только случайно, а не по построению.</p>';
@@ -4630,8 +4441,7 @@
     h += '<div class="brief-mode" role="group" aria-label="Как строить систему">' +
          '<button type="button" class="gap-set brief-mode-b" data-m="w" aria-pressed="' + wOn + '">С учётом вероятностей</button>' +
          '<button type="button" class="gap-set brief-mode-b" data-m="even" aria-pressed="' + (bm === "even") + '">Все исходы поровну</button>' +
-         '<button type="button" class="gap-set brief-mode-b" data-m="chance" aria-pressed="' + (bm === "chance") + '">Максимум шанса</button></div>';
-    if(bm === "chance"){ showBriefChance(sets, U, price, h); return; }
+         '</div>';
     h +=
          '<p class="ev-note">' + (wOn ? 'Жадный подбор в первую очередь закрывает вероятные по линии конторы сочетания. Гарантия та же. Обычно разница небольшая: сравни строки и шансы в обоих режимах и бери, что выгоднее.'
                                       : 'Классическое покрытие: все исходы купона равноправны.') + '</p>';
