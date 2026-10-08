@@ -6743,6 +6743,18 @@
       lad[x.h] = (lad[x.h] || 0) + 1;
     });
     var flt = pcsv.flt || "all";
+    /* исходы «сейчас»: итоги + идущие матчи по текущему счёту (для рейтинга, шапки и подписей live) */
+    var er = ms.map(function(m, j){
+      if(res[j]) return res[j];
+      var lo = m.res ? null : liveOutcome(m); return lo && lo.live ? lo.o : "";
+    });
+    var pe = er.filter(Boolean).length, liveN = er.filter(function(x, j){ return x && !res[j]; }).length;
+    var lvB = 0, lvW = 0;
+    if(liveN) rows.forEach(function(r){
+      var hh = 0;
+      for(var j = 0; j < n; j++) if(er[j] && (er[j] === VOID || r.charAt(j) === er[j])) hh++;
+      if(hh > lvB) lvB = hh; if(hh >= PAY) lvW++;
+    });
     var h = '<div class="pc-head"><span class="pc-t">Мои варианты</span><span class="pc-f" title="' + escHtml(pcsvHead()) + '">' + escHtml(pcsvHead()) + '</span>' +
       '<span class="pc-acts">' + PC_BTNS + '<button type="button" class="pc-btn pc-share" id="pcShareAll" title="Одна ссылка на все загруженные наборы этого тиража — перешли её, и у получателя откроются все варианты">' +
       (pcsvMine().length > 1 ? 'Ссылка на все (' + pcsvMine().length + ')' : 'Ссылка на варианты') + '</button>' +
@@ -6750,25 +6762,22 @@
     var rkNow = null;
     if(pcsv.sets.length > 1){
       /* рейтинг наборов: завершённые матчи + идущие по текущему счёту; выше тот, у кого лучше результат */
-      var er = ms.map(function(m, j){
-        if(res[j]) return res[j];
-        var lo = m.res ? null : liveOutcome(m); return lo && lo.live ? lo.o : "";
-      });
-      var pe = er.filter(Boolean).length, liveN = er.filter(function(x, j){ return x && !res[j]; }).length;
       var sc = pcsv.sets.map(function(set, i){
-        var bst = 0, w = 0, al = 0, sum = 0, fin = 0;
+        var bst = 0, w = 0, al = 0, sum = 0;
         set.rows.forEach(function(r){
-          var hh = 0, mm = 0, mf = 0;
+          var hh = 0, mf = 0;
           for(var j = 0; j < n; j++){
-            if(er[j]){ if(er[j] === VOID || r.charAt(j) === er[j]) hh++; else mm++; }
+            if(er[j] && (er[j] === VOID || r.charAt(j) === er[j])) hh++;
             if(res[j] && res[j] !== VOID && r.charAt(j) !== res[j]) mf++;   /* только подведённые итоги: выбыл насовсем */
           }
-          if(hh > bst) bst = hh; if(hh >= PAY) w++; if(n - mm >= PAY) al++; if(n - mf >= PAY) fin++; sum += hh;
+          /* «Живых» — по сыгранным: идущий матч ещё может перевернуться, поэтому его счёт вариант не убивает */
+          if(hh > bst) bst = hh; if(hh >= PAY) w++; if(n - mf >= PAY) al++; sum += hh;
         });
-        return { i: i, b: bst, w: w, a: al, out: set.rows.length > 0 && played > 0 && !fin, avg: set.rows.length ? sum / set.rows.length : 0 };
+        return { i: i, b: bst, w: w, a: al, out: set.rows.length > 0 && played > 0 && !al, avg: set.rows.length ? sum / set.rows.length : 0 };
       });
       if(pe) sc.sort(function(x, y){ return (y.b - x.b) || (y.w - x.w) || (y.avg - x.avg) || (y.a - x.a) || (x.i - y.i); });
       var rk = pcsv.rk && pcsv.rk.tir === pcsv.tir ? pcsv.rk : (pcsv.rk = { tir: pcsv.tir, pos: {}, mv: {} });
+      if(rk.n !== sc.length){ rk.pos = {}; rk.mv = {}; rk.n = sc.length; }   /* набор добавили или убрали — старые места не сравниваем */
       sc.forEach(function(q, k){
         var o = rk.pos[q.i];
         if(o && o.place !== k + 1 && pe) rk.mv[q.i] = { d: o.place - (k + 1), at: Date.now() };
@@ -6800,15 +6809,15 @@
     }
     var pbB = document.getElementById("pbBest");
     if(pbB){
-      var bb = rkNow ? sc[0].b : best, bo = rkNow ? pe : played;
+      var bb = rkNow ? sc[0].b : liveN ? lvB : best, bo = rkNow || liveN ? pe : played;
       pbB.hidden = !bo; if(bo) pbB.innerHTML = 'лучший набор <b>' + bb + '</b> из ' + bo;
     }
     h += '<div class="pc-cards">' +
       (hasSys ? '<div><span>Строк</span><b>' + fmt(sysL.length) + '</b></div>' : '') +
       '<div><span>Вариантов</span><b>' + fmt(total) + '</b></div>' +
       '<div><span>Сумма</span><b>' + fmt(total * (Number(state.price) || 0)) + ' ₽</b></div>' +
-      '<div data-k="best"><span>Лучший</span><b>' + (played ? best + ' из ' + played : '—') + '</b></div>' +
-      '<div data-k="now9"><span>9+ сейчас</span><b>' + fmt(now9) + '</b></div>' +
+      '<div data-k="best"><span>Лучший</span><b>' + (played ? best + ' из ' + played : '—') + '</b>' + (liveN ? '<small class="pc-lv">live ' + lvB + ' из ' + pe + '</small>' : '') + '</div>' +
+      '<div data-k="now9"><span>9+ сейчас</span><b>' + fmt(now9) + '</b>' + (liveN ? '<small class="pc-lv">live ' + fmt(lvW) + '</small>' : '') + '</div>' +
       '<div data-k="can9"><span>Могут 9+</span><b>' + fmt(can9) + '</b></div>' +
       '<div data-k="can15"><span>Без ошибок</span><b>' + fmt(can15) + '</b></div></div>';
     if(played && total && !can9) h += '<p class="pc-lnote pc-outnote"><span class="rk-x" aria-hidden="true">\u00d7</span> Набор выбыл: после сыгранных матчей ни один вариант уже не наберёт ' + PAY + '+.</p>';

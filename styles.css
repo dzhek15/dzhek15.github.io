@@ -2245,3 +2245,11 @@ body.is-prev .pct-col.hit b,body.is-prev .kf-col.hit{color:var(--ink); font-weig
 :root[data-theme="light"] #tkValWrap .v.bad{color:#c4513f}
 :root[data-theme="light"] #tkValWrap .v.good{color:#1c8f5a}
 :root[data-theme="light"] #tkValWrap .k, :root[data-theme="light"] #tkValWrap .v:not(.good):not(.bad){color:#3d5266}
+/* карточки набора: строка «с live» под значением, карточки без неё центрируются по высоте */
+.pc-cards>div{display:flex; flex-direction:column; justify-content:center; align-items:center}
+.pc-cards small.pc-lv{display:block; margin-top:3px; font:600 10px/1.15 "IBM Plex Mono",monospace; color:var(--accent,#e0a526); letter-spacing:.02em; white-space:nowrap}
+/* «Лучший»: число и «из N» всегда в две строки по центру — раньше двузначное число переносилось, однозначное нет */
+.pc-rk>.rk-v:nth-child(3){display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; line-height:1}
+.pc-rk>.rk-v:nth-child(3) small{display:block; white-space:nowrap; line-height:1}
+@media (max-width:360px){ .pc-cards small.pc-lv{font-size:9px; letter-spacing:0} .pc-rkh{font-size:9px; letter-spacing:0} }
+@media (max-width:360px){ :root[data-theme="light"] .pc-rkh, .pc-rkh{font-size:9px; letter-spacing:0} }
