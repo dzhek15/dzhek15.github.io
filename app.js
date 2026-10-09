@@ -2597,14 +2597,126 @@
     s = s.replace(/(\d+\s(?:очк[а-я]*))/g, '<span class="ai-nm">$1</span>');
     return s;
   }
+  /* «Прошлые игры» двумя столбцами: слева хозяева этого матча, справа гости; у каждой игры пометка дома/выезд */
+  var aiCurM = null;
+  function aiPast(txt, mt){
+    var home = String((mt && mt.home) || ""), away = String((mt && mt.away) || "");
+    var sents = String(txt).split(/\.\s+(?=[А-ЯЁA-Z])/).map(function(z){ return z.trim(); }).filter(Boolean);
+    if(sents.length < 2) return null;
+    function keys(name){ return name.split(/[\s\-–]+/).filter(function(w){ return w.length >= 4; }).map(function(w){ return w.slice(0, 5).toLowerCase(); }); }
+    var hk = keys(home), ak = keys(away);
+    function starts(z, ks){ var w = z.split(/[\s:,]+/)[0].toLowerCase(); return ks.some(function(k){ return w.indexOf(k) === 0; }); }
+    var cut = -1, firstIsHome = true, i;
+    for(i = 1; i < sents.length; i++){
+      if(starts(sents[i], ak)){ cut = i; firstIsHome = true; break; }
+      if(starts(sents[i], hk)){ cut = i; firstIsHome = false; break; }
+    }
+    if(cut < 0){
+      for(i = 1; i < sents.length; i++){ if(/^[^:,]{2,40}:\s/.test(sents[i])){ cut = i; break; } }
+      if(cut < 0) return null;
+      firstIsHome = !starts(sents[0], ak);
+    }
+    var segs = [sents.slice(0, cut).join(". "), sents.slice(cut).join(". ")];
+    if(!firstIsHome) segs.reverse();
+    var cols = [], ok = true;
+    segs.forEach(function(seg, ci){
+      var name = ci === 0 ? home : away;
+      var mm = /^([^:,.]{2,40}):\s+([\s\S]*)$/.exec(seg);
+      var body = seg;
+      if(mm){ name = name || mm[1]; body = mm[2]; }
+      else {
+        var w0 = /^(\S+)\s+([\s\S]*)$/.exec(seg);
+        if(w0 && starts(w0[1], ci === 0 ? hk : ak)) body = w0[2];
+      }
+      body = body.replace(/\.$/, "");
+      var items = [];
+      body.split(/[;,]\s+/).forEach(function(it){
+        var sc = it.match(/\d{1,2}:\d{1,2}/g);
+        if(sc && sc.length > 1){ it.split(/\s(?:и|а также)\s(?=\S*\d{1,2}:\d{1,2})/).forEach(function(z){ items.push(z); }); }
+        else items.push(it);
+      });
+      var games = [], notes = [];
+      items.forEach(function(it){
+        it = it.trim(); if(!it) return;
+        var sm = /^([\s\S]*?)(\d{1,2}:\d{1,2})(?!\d)([\s\S]*)$/.exec(it);
+        if(!sm || /при\s*$/.test(sm[1]) || /^\s*по мячам/.test(sm[3])){ notes.push(it); return; }
+        var pre = sm[1].trim(), post = sm[3].trim();
+        var lead = /:$/.test(pre) ? pre.replace(/:$/, "") : "";
+        if(lead){ notes.push(lead); pre = ""; }
+        var fr = /товарищеск/i.test(pre + " " + post);
+        var txt2 = (pre + " " + post).replace(/товарищеск[а-яё]*(\s+матч[а-яё]*)?/ig, "").replace(/\s+/g, " ").trim();
+        var t2 = txt2.replace(/(^|\s)(?:в|во)\s(?:Лиг[аеиу]|Кубк[аеу])(?=\s|$)[^,;]*/g, "$1");
+        var ha = /(^|\s)дома(?=\s|$)/.test(t2) ? "home" : /в гостях|на выезде/.test(t2) ? "away" : /(^|[\s(])(?:в|во|у)\s+[А-ЯЁA-Z]/.test(t2) ? "away" : "home";
+        txt2 = txt2.replace(/(^|\s)дома(?=\s|$)/g, "$1").replace(/\s+/g, " ").trim();
+        games.push({ sc: sm[2], t: txt2, fr: fr, ha: ha });
+      });
+      if(!games.length && !notes.length) ok = false;
+      cols.push({ name: name, games: games, notes: notes, role: ci === 0 ? "хозяева" : "гости" });
+    });
+    if(!ok || !cols.some(function(c){ return c.games.length; })) return null;
+    return '<div class="ai-past">' + cols.map(function(c){
+      return '<div class="ai-past-c"><div class="ai-pg-h">' + escHtml(c.name) + '<small>' + c.role + '</small></div><ul class="ai-pg-l">' +
+        c.games.map(function(g){
+          return '<li class="ai-pg"><b class="ai-pg-sc">' + g.sc + '</b><span class="ai-pg-t">' + aiFmt(escHtml(g.t)) + (g.fr ? ' <em class="ai-pg-fr">товарищеский</em>' : '') + '</span><i class="ai-pg-ha ' + g.ha + '">' + (g.ha === "home" ? "дома" : "выезд") + '</i></li>';
+        }).join("") + '</ul>' + (c.notes.length ? '<p class="ai-past-n">' + aiFmt(escHtml(c.notes.join("; "))) + '</p>' : '') + '</div>';
+    }).join("") + '</div>';
+  }
+  /* «Прошлые игры» по данным разбора (поле g): блоки команд друг под другом, строка = игра с датой, турниром, счётом и значком В/Н/П */
+  var aiCurR = null;
+  function aiPastG(g, mt){
+    if(!g || (!(g.h || []).length && !(g.a || []).length && !g.hn && !g.an)) return null;
+    var home = String((mt && mt.home) || "Хозяева"), away = String((mt && mt.away) || "Гости");
+    function row(x, me){
+      var p = String(x[0] || "").split(":"), a = Number(p[0]), b = Number(p[1]);
+      if(isNaN(a) || isNaN(b)) return "";
+      var ha = x[2] === 1 ? 1 : (x[2] === 0 ? 0 : -1), opp = x[1] ? escHtml(x[1]) : "соперник не указан";
+      var res = a > b ? "w" : (a < b ? "l" : "d"), rl = { w: "В", d: "Н", l: "П" }[res];
+      var top = ha === 0 ? [opp, false, b] : [escHtml(me), true, a], bot = ha === 0 ? [escHtml(me), true, a] : [opp, false, b];
+      var tag = [x[3] || "", ha === 1 ? "дома" : (ha === 0 ? "гости" : "")].filter(Boolean).join(" · ");
+      function tm(t){ return '<span class="ai-pr-n' + (t[1] ? ' me' : '') + (!x[1] && !t[1] ? ' none' : '') + '">' + t[0] + '</span>'; }
+      return '<div class="ai-pr" data-ha="' + ha + '"><div class="ai-pr-d"><span>' + escHtml(x[4] || "") + '</span><em>' + escHtml(tag) + '</em></div>' +
+        '<div class="ai-pr-t">' + tm(top) + tm(bot) + '</div><div class="ai-pr-s"><b>' + top[2] + '</b><b>' + bot[2] + '</b></div>' +
+        '<i class="ai-pr-b ' + res + '" title="' + ({ w: "победа", d: "ничья", l: "поражение" }[res]) + '">' + rl + '</i></div>';
+    }
+    function sec(name, list, note, side){
+      return '<section class="ai-pt" data-side="' + side + '"><h5 class="ai-pt-h">Последние игры: ' + escHtml(name) + '</h5>' +
+        (list.length ? list.map(function(x){ return row(x, name); }).join("") : '') +
+        '<p class="ai-pt-e" hidden>Игр с такой пометкой в разборе нет</p>' +
+        (note ? '<p class="ai-pt-n">' + aiFmt(escHtml(note)) + '</p>' : '') + '</section>';
+    }
+    return '<div class="ai-past2"><div class="ai-pf" role="group" aria-label="Фильтр прошлых игр">' +
+      '<button type="button" class="on" data-f="all">Итого</button>' +
+      '<button type="button" data-f="h" title="' + escHtml(home) + ': только игры дома">Дома</button>' +
+      '<button type="button" data-f="a" title="' + escHtml(away) + ': только игры в гостях">В гостях</button></div>' +
+      sec(home, g.h || [], g.hn, "h") + sec(away, g.a || [], g.an, "a") + '</div>';
+  }
+  document.addEventListener("click", function(e){
+    var b = e.target && e.target.closest ? e.target.closest(".ai-pf button") : null; if(!b) return;
+    var box = b.closest(".ai-past2"); if(!box) return;
+    var f = b.getAttribute("data-f");
+    [].slice.call(box.querySelectorAll(".ai-pf button")).forEach(function(x){ x.classList.toggle("on", x === b); });
+    [].slice.call(box.querySelectorAll(".ai-pt")).forEach(function(s){
+      var side = s.getAttribute("data-side"), show = f === "all" || f === side, need = f === "h" ? "1" : (f === "a" ? "0" : null), n = 0;
+      s.hidden = !show;
+      [].slice.call(s.querySelectorAll(".ai-pr")).forEach(function(r){ var ok = !need || r.getAttribute("data-ha") === need; r.hidden = !ok; if(ok) n++; });
+      var em = s.querySelector(".ai-pt-e"); if(em) em.hidden = !(show && n === 0);
+    });
+  });
   function aiPara(x){
     var m = /^(Прошлые игры|Следующие игры|Кубок|На кону|Составы и отсутствующие|Тренеры и настроение|Неочевидная деталь):\s*([\s\S]*)$/.exec(x);
+    if(m && m[1] === "Прошлые игры"){
+      var ph = null;
+      try{ ph = (aiCurR && aiCurR.g) ? aiPastG(aiCurR.g, aiCurM) : null; }catch(e){ ph = null; }
+      if(!ph){ try{ ph = aiPast(m[2], aiCurM); }catch(e){ ph = null; } }
+      if(ph) return '<div class="ai-sec ai-s-past"><span class="ai-lb">Прошлые игры</span>' + ph + '</div>';
+    }
     if(m && AI_SEC[m[1]]){
       return '<div class="ai-sec ai-s-' + AI_SEC[m[1]] + '"><span class="ai-lb">' + escHtml(m[1]) + '</span><p>' + aiFmt(escHtml(m[2].charAt(0).toUpperCase() + m[2].slice(1))) + '</p></div>';
     }
     return '<p>' + aiFmt(escHtml(x)) + '</p>';
   }
-  function aiHtml(r, full){
+  function aiHtml(r, full, mt){
+    aiCurM = mt || null; aiCurR = r || null;
     var src = (r.s || []).map(function(x){
       return '<a target="_blank" rel="noopener noreferrer" href="' + escHtml(x.u) + '">' + escHtml(x.n) + '</a>';
     }).join(" · ");
@@ -2919,7 +3031,7 @@
       st = ' <span class="ai-live ' + (ok ? "ai-ok" : "ai-no") + '">' + (lo.live ? "сейчас " : "итог ") + (ok ? "угадан" : "мимо") + '</span>';
     } else if(r) st = ' <span class="ai-live">матч не начался</span>';
     $("evBody").innerHTML = '<div id="aiBox">' + (r ? aiGate('<p class="ai-pick">Вариант ИИ: <b>' + escHtml(r.p) + '</b>' + st + '</p>') +
-        (r.t ? aiHtml(r, true) : '<p class="ev-note">Полный текст разбора к этому тиражу не сохранён, остался только вариант.</p>')
+        (r.t ? aiHtml(r, true, m) : '<p class="ev-note">Полный текст разбора к этому тиражу не сохранён, остался только вариант.</p>')
       : '<p class="ev-warn">Разбора ИИ по этому тиражу нет.</p>') + '</div>' +
       '<div class="blend-go"><button type="button" class="btn-ev" id="aiNews">Новости и составы</button>' +
       '<button type="button" class="btn-ev" id="aiAcc">Точность по тиражам</button></div>';
@@ -2955,7 +3067,7 @@
         return;
       }
       var all = aiPlan(j);
-      el.innerHTML = (r.p ? aiGate(aiPickLine(r, idx)) : "") + aiHtml(r, true);
+      el.innerHTML = (r.p ? aiGate(aiPickLine(r, idx)) : "") + aiHtml(r, true, state.matches[idx]);
       if(r.p){
         aiGateBind(el, function(){
           var go = $("aiGo"); if(!go || $("aiOne")) return;
@@ -3035,7 +3147,7 @@
     $("evBack").hidden = false;
     if(!prev) loadAi(true).then(function(j){
       var el = $("nwAi"), r = aiFor(j, idx); if(!el || !r) return;
-      el.innerHTML = '<h3 class="th-h2 nw-h">Разбор ИИ</h3>' + (r.p ? aiPickLine(r, idx) : '') + aiHtml(r, false);
+      el.innerHTML = '<h3 class="th-h2 nw-h">Разбор ИИ</h3>' + (r.p ? aiPickLine(r, idx) : '') + aiHtml(r, false, m);
       if(r.p) el.insertAdjacentHTML("beforeend", '<p class="ai-more"><button type="button" class="nw-btn" id="nwAiMore">поставить вариант ИИ</button></p>');
       var mb = $("nwAiMore"); if(mb) mb.addEventListener("click", function(){ showAi(m, idx); });
     });
@@ -5300,6 +5412,10 @@
 
   var pullDone = false;               /* свежий тираж уже подтянут (или не вышло) — можно разбирать ссылку */
   function tryPending(){ pullDone = true; tryPendingLink(); tryPendingBook(); }
+  /* ссылку вставили в уже открытую вкладку: меняется только #хвост, страница сама не перезагружается — перезагружаем, чтобы ссылка разобралась */
+  window.addEventListener("hashchange", function(){
+    if(/^#(?:s|v|vs|k)=/.test(String(location.hash || ""))) location.reload();
+  });
   /* адрес вида #s=код: достаём набор с сервера и дальше работаем как со ссылкой #vs= */
   (function(){
     var m = String(location.hash || "").match(/^#s=([A-Za-z0-9_-]{6,16})$/);
