@@ -4494,57 +4494,196 @@
     return '<tr><td>' + g + '<span class="bt-of"> из 15</span></td>' + cells + '</tr>';
   }
 
-  /* формула сбора купона под бриф: крупно, с шансами, рекомендациями и раскрывающимся описанием. one — число ординаров сейчас */
-  var BRIEF_SHAPES = [
-    /* ординаров, форма, строк, накрыто исходов из 45, шанс 12+ по модели */
-    [2, "11 дв + 2 тр", 256, 30, "10,8%"],
-    [3, "8 дв + 4 тр", 252, 31, "11,3%"],
-    [4, "5 дв + 6 тр", 276, 32, "11,6%"],
-    [1, "14 дв", 256, 29, "9,6%"]
-  ];
-  function briefRuleBox(one){
-    var price = briefPrice();
-    var rows = BRIEF_SHAPES.map(function(f){
-      var cur = f[0] === one;
-      return '<tr' + (cur ? ' class="cur"' : '') + '><td>' + f[0] + '</td><td>' + f[1] + '</td><td>' + f[3] + ' из 45</td>' +
-        '<td>' + f[2] + '</td><td>' + fmt(f[2] * price) + ' ₽</td><td class="brief-rule-p">' + f[4] + '</td></tr>';
+  /* формула сбора купона под бриф: два режима (13 и 14 из 15), у каждого описание, шаги, варианты форм с шансами и кнопкой «Собрать с ИИ».
+     Форма: s — ординаров, d — двойников, t — тройников, rows — строк в системе, ch — шансы по модели (12+ и, для гарантии 14, ещё 14+) */
+  var BRIEF_FORMS = {
+    13: {
+      name: "13 из 15", sub: "около 7 700 ₽",
+      lead: "Купон собирается в три шага, система к нему берётся из библиотеки проверенных покрытий. Решает не код, а то, сколько исходов купон накрывает.",
+      steps: [
+        ["Ординары", "только при двух жёстких фактах, обычно 2–3, не больше 4"],
+        ["Тройники", "в самых ровных матчах, где нельзя отсечь ни один исход"],
+        ["Двойники", "всё остальное"]
+      ],
+      groups: [{ shapes: [
+        { s: 2, d: 11, t: 2, rows: 256, ch: "12+ 10,8%" },
+        { s: 3, d: 8, t: 4, rows: 252, ch: "12+ 11,3%" },
+        { s: 4, d: 5, t: 6, rows: 276, ch: "12+ 11,6%" },
+        { s: 1, d: 14, t: 0, rows: 256, ch: "12+ 9,6%" }
+      ] }],
+      foot: "Накрыто — исходов купона из 45 возможных. 12+ — шанс на 12 и больше угаданных по модели на ровном тираже при гарантии 13. Бюджет формулы 6 900–8 450 ₽ (230–281 строка).",
+      recs: [
+        "Один надёжный ординар — ищите второй: 14 двойников накрывают меньше всего и дают худший шанс.",
+        "Четвёртый ординар только при двух жёстких фактах; если их нет, остановитесь на трёх.",
+        "Тройник ставьте туда, где по фактам нельзя отсечь ни один исход, а не туда, где просто страшно.",
+        "Смотрите строку «шанс, что все 15 внутри купона» ниже: гарантия работает только в этом случае."
+      ],
+      how: [
+        "Гарантия действует, только если все 15 итогов попали внутрь купона. На ровном тираже для купона из 14 двойников это около 1 к 200: " +
+        "обычно мимо купона уходят 3–5 итогов, и тогда лучшая строка даёт «гарантия минус число промахов». Поэтому при одинаковом числе строк " +
+        "бриф почти не отличается от такого же числа случайных строк того же купона, а решает то, сколько исходов купон накрывает.",
+        "Тройник накрывает матч целиком и стоит дороже двух двойников, поэтому его уравновешивают ординаром. По модели на линии конторы каждый " +
+        "дополнительный накрытый исход при тех же 256 строках даёт примерно +0,5 п.п. к шансу на 12 и больше: 14 дв + 1 орд (29 исходов) — 9,6%, " +
+        "11 дв + 2 тр + 2 орд (30) — 10,8%, 8 дв + 4 тр + 3 орд (31) — 11,3%, 5 дв + 6 тр + 4 орд (32) — 11,6%. Разница между двумя последними в пределах " +
+        "погрешности, а ординар без двух жёстких фактов губит всё, так что форму выбирает число надёжных ординаров. Шансы в таблице — модель " +
+        "200 000 сценариев по линии конторы на ровном тираже; в тираже с явными фаворитами они выше у всех форм, порядок форм тот же.",
+        "Сами системы берутся из библиотеки готовых покрытий, каждая проверена перебором всех комбинаций купона; на частых формах их размер совпадает " +
+        "с лучшими известными покрытиями из таблиц Кери, для редких форм считается жадное покрытие прямо в браузере. Самые вероятные строки вместо системы " +
+        "работают хуже всех: на 12 и больше они дают 6,4% против 9,6%."
+      ]
+    },
+    14: {
+      name: "14 из 15", sub: "около 21 900 ₽",
+      lead: "То же правило, но гарантия на ступень выше: если все 15 итогов внутри купона, одна из строк системы даст не меньше 14. Системе нужно почти втрое больше строк, поэтому основной бюджет формулы около 21 900 ₽ вместо 7 700 ₽.",
+      steps: [
+        ["Ординары", "только при двух жёстких фактах, 2–4: чем меньше ординаров, тем дороже система"],
+        ["Тройники", "в самых ровных матчах: тройник берёт матч целиком и добавляет накрытый исход"],
+        ["Двойники", "всё остальное"]
+      ],
+      groups: [
+        { shapes: [
+          { s: 2, d: 13, t: 0, rows: 730, ch: "12+ 15,5% · 14+ 0,61%" },
+          { s: 3, d: 10, t: 2, rows: 768, ch: "12+ 17,1% · 14+ 0,65%" },
+          { s: 3, d: 11, t: 1, rows: 548, ch: "12+ 14,1% · 14+ 0,48%" },
+          { s: 4, d: 8, t: 3, rows: 690, ch: "12+ 15,4% · 14+ 0,58%" }
+        ] },
+        { label: "Дешевле, но больше ординаров", shapes: [
+          { s: 4, d: 11, t: 0, rows: 192, ch: "12+ 7,9% · 14+ 0,19%" },
+          { s: 4, d: 10, t: 1, rows: 316, ch: "12+ 10,1% · 14+ 0,32%" },
+          { s: 3, d: 12, t: 0, rows: 380, ch: "12+ 11,3% · 14+ 0,34%" }
+        ] }
+      ],
+      foot: "Накрыто — исходов купона из 45 возможных. 12+ и 14+ — шанс на 12 и больше и на 14 и больше угаданных по модели на ровном тираже при гарантии 14. Основной бюджет формулы 20 700–23 040 ₽ (690–768 строк).",
+      recs: [
+        "Гарантию 14 берите, когда есть два–четыре ординара с двумя жёсткими фактами каждый: при трёх это 10 двойников и 2 тройника за 23 040 ₽ или экономный вариант 11 двойников и 1 тройник за 16 440 ₽.",
+        "Шансы у форм около 21 900 ₽ почти одинаковые, поэтому форму выбирает число надёжных ординаров, а не проценты в карточке.",
+        "Пятый ординар не берите: правила разбора его не допускают, а в бюджет 6 900–8 450 ₽ гарантия 14 укладывается только с пятью ординарами.",
+        "Нужно дешевле: четыре ординара и 11 двойников дают 5 760 ₽, три ординара и 12 двойников — 11 400 ₽, но шанс на 12 и больше ниже на 4–8 п.п.",
+        "Смотрите строку «шанс, что все 15 внутри купона» ниже: гарантия 14 тоже работает только в этом случае."
+      ],
+      how: [
+        "Гарантия 14 означает, что любой купон из системы отличается от какой-то её строки не больше чем в одном матче. Для этого строк нужно намного больше, " +
+        "чем для 13: 11 двойников — 192 строки вместо 44 при гарантии 13, 13 двойников — 730 строк вместо 128. Условие то же: все 15 итогов должны оказаться внутри купона.",
+        "Шанс на 14 и больше у любой формы ниже 1%. При близкой цене (5–10 тысяч ₽) он почти одинаков у гарантии 13 и 14, около 0,2–0,3%, а на 12 и больше " +
+        "гарантия 14 слабее на 1–3,5 п.п.: плата за более высокую ступень внутри купона. Шансы в таблице — модель 200 000 сценариев по линии конторы на ровном тираже.",
+        "Системы для 8–11 двойников найдены компьютерным поиском и проверены перебором всех комбинаций купона: для 9, 10 и 11 двойников это 62, 120 и 192 строки, " +
+        "как у лучших известных покрытий. Для остальных форм берутся готовые системы из библиотеки."
+      ]
+    }
+  };
+  var briefTab = 13;
+  function briefShapeCard(sh, g, cur, aiOk){
+    var price = briefPrice(), cov = sh.s + 2 * sh.d + 3 * sh.t;
+    var form = (sh.d ? sh.d + " дв" : "") + (sh.d && sh.t ? " + " : "") + (sh.t ? sh.t + " тр" : "");
+    return '<div class="bf-v' + (cur ? ' cur' : '') + '"><div class="bf-i"><div class="bf-h"><span class="bf-o">' + sh.s + ' ' + (sh.s === 1 ? 'ординар' : 'ординара') + '</span><b>' + form + '</b></div>' +
+      '<div class="bf-m"><span>' + cov + ' из 45</span><span>' + fmt(sh.rows) + ' ' + plural(sh.rows, 'строка', 'строки', 'строк') + '</span><span>' + fmt(sh.rows * price) + ' ₽</span><span class="bf-p">' + sh.ch + '</span></div></div>' +
+      '<button type="button" class="gap-set bf-ai" data-g="' + g + '" data-s="' + sh.s + '" data-d="' + sh.d + '" data-t="' + sh.t + '"' + (aiOk ? '' : ' disabled title="Разбор ИИ на этот тираж ещё не готов"') + '>Собрать с ИИ</button></div>';
+  }
+  function briefRuleBox(one, cs){
+    var F = BRIEF_FORMS[briefTab] || BRIEF_FORMS[13], g = briefTab;
+    var aiOk = !!aiPlan(ai.data) && state.matches.length === 15;
+    var anyExact = false;
+    F.groups.forEach(function(gr){ gr.shapes.forEach(function(sh){ if(cs && sh.s === cs.s && sh.d === cs.d && sh.t === cs.t) anyExact = true; }); });
+    var list = F.groups.map(function(gr, gi){
+      return (gr.label ? '<div class="bf-gl">' + gr.label + '</div>' : '') + gr.shapes.map(function(sh){
+        var cur = anyExact ? (cs.s === sh.s && cs.d === sh.d && cs.t === sh.t) : (gi === 0 && sh.s === one);
+        return briefShapeCard(sh, g, cur, aiOk);
+      }).join("");
     }).join("");
-    var now = one === 1 ? 'Сейчас в купоне один ординар: это самая слабая форма, лучше найти второй.' :
-              one === 0 ? 'Сейчас в купоне нет ординаров: без них бюджет не сходится, нужен хотя бы один матч с двумя жёсткими фактами.' :
+    var lim = g === 14 ? 'Для гарантии 14 нужно хотя бы два ординара.' : 'Без них бюджет не сходится.';
+    var now = one === 1 && g === 13 ? 'Сейчас в купоне один ординар: это самая слабая форма, лучше найти второй.' :
+              one === 1 ? 'Сейчас в купоне один ординар: для гарантии 14 это 14 двойников за 43 800 ₽, лучше найти второй ординар.' :
+              one === 0 ? 'Сейчас в купоне нет ординаров: нужен хотя бы один матч с двумя жёсткими фактами. ' + lim :
               one > 4 ? 'Сейчас в купоне ' + one + ' ординаров: больше четырёх опасно, каждый лишний ординар без фактов губит купон целиком.' :
-              'Сейчас в купоне ' + one + ' ' + (one === 1 ? 'ординар' : 'ординара') + ' — целевая форма подсвечена в таблице.';
-    return '<div class="brief-rule">' +
-      '<div class="brief-rule-t">Формула сбора</div>' +
-      '<p class="brief-rule-d">Купон собирается в три шага, система к нему берётся из библиотеки проверенных покрытий. Решает не код, а то, сколько исходов купон накрывает.</p>' +
-      '<ol class="brief-rule-l">' +
-        '<li><span class="brief-rule-n">1</span><div><b>Ординары</b><small>только при двух жёстких фактах, обычно 2–3, не больше 4</small></div></li>' +
-        '<li><span class="brief-rule-n">2</span><div><b>Тройники</b><small>в самых ровных матчах, где нельзя отсечь ни один исход</small></div></li>' +
-        '<li><span class="brief-rule-n">3</span><div><b>Двойники</b><small>всё остальное</small></div></li>' +
-      '</ol>' +
-      '<div class="brief-rule-tw"><table class="brief-rule-tab"><thead><tr><th>Орд.</th><th>Форма</th><th>Накрыто</th><th>Строк</th><th>Цена</th><th>12+</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
-      '<p class="brief-rule-fn">Накрыто — исходов купона из 45 возможных. 12+ — шанс на 12 и больше угаданных по модели на ровном тираже при гарантии 13.</p>' +
+              'Сейчас в купоне ' + one + ' ' + (one === 1 ? 'ординар' : 'ординара') + ' — подходящая форма подсвечена ниже.';
+    var tabs = '<div class="brief-tabs" role="tablist" aria-label="Формула сбора">' + [13, 14].map(function(k){
+      return '<button type="button" role="tab" data-tab="' + k + '" aria-selected="' + (k === g) + '"><b>' + BRIEF_FORMS[k].name + '</b><small>' + BRIEF_FORMS[k].sub + '</small></button>';
+    }).join("") + '</div>';
+    return tabs + '<div class="brief-rule">' +
+      '<div class="brief-rule-t">Формула сбора · <span class="bf-nw">' + F.name + '</span></div>' +
+      '<p class="brief-rule-d">' + F.lead + '</p>' +
+      '<ol class="brief-rule-l">' + F.steps.map(function(st, i){
+        return '<li><span class="brief-rule-n">' + (i + 1) + '</span><div><b>' + st[0] + '</b><small>' + st[1] + '</small></div></li>';
+      }).join("") + '</ol>' +
+      '<div class="bf-list">' + list + '</div>' +
+      '<p class="brief-rule-fn">' + F.foot + ' Кнопка «Собрать с ИИ» ставит в купон выбор ИИ с нужным числом ординаров, двойников и тройников.</p>' +
       '<p class="brief-rule-now">' + now + '</p>' +
       '<div class="brief-rule-rt">Рекомендации</div>' +
-      '<ul class="brief-rule-r">' +
-        '<li>Один надёжный ординар — ищите второй: 14 двойников накрывают меньше всего и дают худший шанс.</li>' +
-        '<li>Четвёртый ординар только при двух жёстких фактах; если их нет, остановитесь на трёх.</li>' +
-        '<li>Тройник ставьте туда, где по фактам нельзя отсечь ни один исход, а не туда, где просто страшно.</li>' +
-        '<li>Смотрите строку «шанс, что все 15 внутри купона» ниже: гарантия работает только в этом случае.</li>' +
-      '</ul>' +
-      '<details class="ev-how brief-how"><summary>Как это работает и откуда формула</summary>' +
-        '<p>Гарантия действует, только если все 15 итогов попали внутрь купона. На ровном тираже для купона из 14 двойников это около 1 к 200: ' +
-        'обычно мимо купона уходят 3–5 итогов, и тогда лучшая строка даёт «гарантия минус число промахов». Поэтому при одинаковом числе строк ' +
-        'бриф почти не отличается от такого же числа случайных строк того же купона, а решает то, сколько исходов купон накрывает.</p>' +
-        '<p>Тройник накрывает матч целиком и стоит дороже двух двойников, поэтому его уравновешивают ординаром. По модели на линии конторы каждый ' +
-        'дополнительный накрытый исход при тех же 256 строках даёт примерно +0,5 п.п. к шансу на 12 и больше: 14 дв + 1 орд (29 исходов) — 9,6%, ' +
-        '11 дв + 2 тр + 2 орд (30) — 10,8%, 8 дв + 4 тр + 3 орд (31) — 11,3%, 5 дв + 6 тр + 4 орд (32) — 11,6%. Разница между двумя последними в пределах ' +
-        'погрешности, а ординар без двух жёстких фактов губит всё, так что форму выбирает число надёжных ординаров. Шансы в таблице — модель ' +
-        '200 000 сценариев по линии конторы на ровном тираже; в тираже с явными фаворитами они выше у всех форм, порядок форм тот же.</p>' +
-        '<p>Сами системы берутся из библиотеки готовых покрытий, каждая проверена перебором всех комбинаций купона; на частых формах их размер совпадает ' +
-        'с лучшими известными покрытиями из таблиц Кери, для редких форм считается жадное покрытие прямо в браузере. Самые вероятные строки вместо системы ' +
-        'работают хуже всех: на 12 и больше они дают 6,4% против 9,6%.</p>' +
-      '</details>' +
+      '<ul class="brief-rule-r">' + F.recs.map(function(x){ return '<li>' + x + '</li>'; }).join("") + '</ul>' +
+      '<details class="ev-how brief-how"><summary>Как это работает и откуда формула</summary>' + F.how.map(function(x){ return '<p>' + x + '</p>'; }).join("") + '</details>' +
     '</div>';
+  }
+  /* «Собрать с ИИ»: форма (s ординаров, d двойников, t тройников) наполняется выбором ИИ. Порядок такой:
+     ординары — у матчей, где ИИ сам дал один исход, затем у тех, где ИИ дал два, с самым сильным лидером по линии;
+     тройники — у матчей, где ИИ дал три, затем у самых ровных по линии; остальное двойники.
+     У ИИ-двойника исходы остаются как у ИИ; недостающий второй исход берётся по линии конторы. */
+  function aiShapeBuild(j, S, D, T){
+    var n = state.matches.length, i, free = [], fixed = { 1: 0, 2: 0, 3: 0 }, out = new Array(n), meta = { s: [], t: [], xs: [], xt: [], lock: 0 };
+    var info = [];
+    for(i = 0; i < n; i++){
+      var m = state.matches[i], pr = evProbs(m);
+      var A = String((j.m[i] || {}).p || "").split("").map(function(c){ return OUT.indexOf(c); }).filter(function(x){ return x >= 0; });
+      var q = { i: i, A: A, P: pr };
+      q.maxA = pr ? Math.max.apply(null, A.map(function(o){ return pr[o]; })) : 0.5;
+      q.maxP = pr ? Math.max(pr[0], pr[1], pr[2]) : 0.34;
+      if(m.mode === "lock"){
+        var cur = []; for(var k = 0; k < 3; k++) if(m.picks[OUT[k]]) cur.push(k);
+        out[i] = cur; fixed[Math.max(1, Math.min(3, cur.length))]++; meta.lock++;
+      } else free.push(q);
+    }
+    var S2 = Math.max(0, S - fixed[1]), T2 = Math.max(0, T - fixed[3]);
+    if(S2 + T2 > free.length){ T2 = Math.max(0, free.length - S2); S2 = Math.min(S2, free.length); }
+    var byS = free.slice().sort(function(a, b){ return (a.A.length - b.A.length) || (b.maxA - a.maxA) || (a.i - b.i); });
+    var sSet = {}; byS.slice(0, S2).forEach(function(q){ sSet[q.i] = 1; });
+    var rest = free.filter(function(q){ return !sSet[q.i]; });
+    var byT = rest.slice().sort(function(a, b){ return (b.A.length - a.A.length) || (a.maxP - b.maxP) || (a.i - b.i); });
+    var tSet = {}; byT.slice(0, T2).forEach(function(q){ tSet[q.i] = 1; });
+    free.forEach(function(q){
+      var A = q.A, P = q.P;
+      var rank = function(arr){ return arr.slice().sort(function(a, b){ return P ? (P[b] - P[a]) : (a - b); }); };
+      if(sSet[q.i]){
+        out[q.i] = [rank(A.length ? A : [1])[0]]; meta.s.push(q.i); if(A.length > 1) meta.xs.push(q.i);
+      } else if(tSet[q.i]){
+        out[q.i] = [0, 1, 2]; meta.t.push(q.i); if(A.length < 3) meta.xt.push(q.i);
+      } else if(A.length === 2){ out[q.i] = A.slice().sort(); }
+      else if(A.length === 1){
+        var oth = rank([0, 1, 2].filter(function(o){ return o !== A[0]; }))[0];
+        out[q.i] = [A[0], oth].sort();
+      } else if(A.length === 3){ out[q.i] = rank(A).slice(0, 2).sort(); }
+      else out[q.i] = [0, 1];
+    });
+    meta.s.sort(function(a, b){ return a - b; }); meta.t.sort(function(a, b){ return a - b; });
+    return { sets: out, meta: meta };
+  }
+  function briefAiAssemble(g, S, D, T, btn){
+    var was = btn ? btn.textContent : "";
+    if(btn){ btn.disabled = true; btn.textContent = "собираю…"; }
+    loadAi(true).then(function(j){
+      var plan = aiPlan(j);
+      if(btn){ btn.disabled = false; btn.textContent = was; }
+      if(!plan || S + D + T !== state.matches.length){
+        say("Разбор ИИ на этот тираж ещё не опубликован: форму собрать не из чего.");
+        return;
+      }
+      pushHistory("до сборки с ИИ");
+      var r = aiShapeBuild(j, S, D, T);
+      state.matches.forEach(function(m, i){
+        if(m.mode === "lock") return;
+        m.picks = { "1": false, "X": false, "2": false };
+        r.sets[i].forEach(function(o){ m.picks[OUT[o]] = true; });
+        m.mode = "free";
+      });
+      save(); render();
+      $("evBack").hidden = true;
+      var t0 = tally(), nm = function(a){ return a.map(function(i){ return "№" + (i + 1); }).join(", "); };
+      var msg = "Купон собран по ИИ под формулу " + g + " из 15: ординары " + (r.meta.s.length ? nm(r.meta.s) : "нет") +
+        ", тройники " + (r.meta.t.length ? nm(r.meta.t) : "нет") + ", остальные двойники.";
+      if(r.meta.xs.length) msg += " Ординар сверх выбора ИИ: " + nm(r.meta.xs) + " (у ИИ там двойник, взят исход с большей вероятностью по линии).";
+      if(r.meta.xt.length) msg += " Тройник сверх выбора ИИ: " + nm(r.meta.xt) + " (самые ровные матчи по линии).";
+      if(r.meta.lock) msg += " Зафиксированных матчей не трогал: " + r.meta.lock + ".";
+      msg += " В купоне " + fmt(t0.combos) + " вариант(ов) на " + fmt(t0.combos * briefPrice()) + " ₽. Откройте «Бриф»: гарантия " + g + " из 15 посчитается под этот купон.";
+      say(msg);
+    }).catch(function(){ if(btn){ btn.disabled = false; btn.textContent = was; } say("Не удалось загрузить разбор ИИ. Попробуйте ещё раз."); });
   }
 
   function showBrief(){
@@ -4569,7 +4708,8 @@
       'Обещание такое: какой бы исход внутри твоего купона ни выпал, хотя бы одна строка системы угадает ' +
       'не меньше заявленного. Платишь меньше, а взамен отказываешься от верхних категорий: гарантия 14 ' +
       'означает, что пятнадцать из пятнадцати ты возьмёшь только случайно, а не по построению.</p>';
-    h += briefRuleBox(one);
+    var curShape = { s: one, d: two, t: tri };
+    h += '<div id="briefRuleW">' + briefRuleBox(one, curShape) + '</div>';
     var pin = briefInside(sets, briefProbs());
     h += '<p class="ev-note">Купон сейчас: ординаров ' + one + ', двоек ' + two + ', троек ' + tri +
          '. Полное покрытие — <b>' + fmt(U) + '</b> строк на <b>' + fmt(U * price) + ' ₽</b> по ' + fmt(price) + ' ₽ за строку.</p>';
@@ -4592,6 +4732,22 @@
          'для остальных считается жадное покрытие, оно не обязано быть минимальным, зато считается за доли секунды прямо в браузере.</p>';
     h += '<div id="briefPrev"></div>';
     $("evBody").innerHTML = h;
+    var bindRule = function(){
+      var w = $("briefRuleW"); if(!w) return;
+      [].slice.call(w.querySelectorAll(".brief-tabs button")).forEach(function(b){
+        b.addEventListener("click", function(){
+          briefTab = Number(b.getAttribute("data-tab")) === 14 ? 14 : 13;
+          w.innerHTML = briefRuleBox(one, curShape); bindRule();
+        });
+      });
+      [].slice.call(w.querySelectorAll(".bf-ai")).forEach(function(b){
+        b.addEventListener("click", function(){
+          briefAiAssemble(Number(b.getAttribute("data-g")), Number(b.getAttribute("data-s")), Number(b.getAttribute("data-d")), Number(b.getAttribute("data-t")), b);
+        });
+      });
+    };
+    bindRule();
+    if(!aiPlan(ai.data)) loadAi(true).then(function(j){ if(aiPlan(j) && $("briefRuleW")){ $("briefRuleW").innerHTML = briefRuleBox(one, curShape); bindRule(); } });
 
     [].slice.call($("evBody").querySelectorAll(".brief-go")).forEach(function(b){
       b.addEventListener("click", function(){
@@ -6701,7 +6857,8 @@
     var h = '<div class="pc-head"><span class="pc-t">Мои варианты</span><span class="pc-f" title="' + escHtml(pcsvHead()) + '">' + escHtml(pcsvHead()) + '</span>' +
       '<span class="pc-acts">' + PC_BTNS + '<button type="button" class="pc-btn pc-share" id="pcShareAll" title="Одна ссылка на все загруженные наборы этого тиража — перешли её, и у получателя откроются все варианты">' +
       (pcsvMine().length > 1 ? 'Ссылка на все (' + pcsvMine().length + ')' : 'Ссылка на варианты') + '</button>' +
-      (pcsv.sets[pcsv.act] && pcsv.sets[pcsv.act].ai ? "" : '<button type="button" class="pc-btn ghost" id="pcDrop">Убрать</button>') + '</span></div>' + PC_PASTE + msg;
+      (pcsv.sets[pcsv.act] && pcsv.sets[pcsv.act].ai ? "" : '<button type="button" class="pc-btn ghost" id="pcDrop">Убрать</button>') +
+      (pcsvMine().length ? '<button type="button" class="pc-btn ghost" id="pcDropAll" title="Удалить все загруженные CSV и ссылки этого тиража">Убрать все CSV</button>' : "") + '</span></div>' + PC_PASTE + msg;
     var rkNow = null;
     if(pcsv.sets.length > 1){
       /* рейтинг наборов: завершённые матчи + идущие по текущему счёту; выше тот, у кого лучше результат */
@@ -6898,6 +7055,15 @@
     $("pcLoad").addEventListener("click", pcsvPick);
     pcPasteBind();
     $("pcShareAll").addEventListener("click", pcsvShareAll);
+    if($("pcDropAll")) $("pcDropAll").addEventListener("click", function(){
+      var mine = pcsvMine(), nv = mine.reduce(function(a, st){ return a + st.rows.length; }, 0);
+      if(!window.confirm("Убрать все загруженные CSV тиража №" + pcsv.tir + ": " + mine.length + " " + plural(mine.length, "набор", "набора", "наборов") +
+        ", " + fmt(nv) + " " + plural(nv, "вариант", "варианта", "вариантов") + "? Вернуть их нельзя.")) return;
+      pcsv.sets = pcsv.sets.filter(function(x){ return x.ai; });
+      pcsvUse(0); pcsvStore();
+      pcsv.msgAt = Date.now(); pcsv.msg = "Все загруженные CSV тиража №" + pcsv.tir + " убраны.";
+      renderPrevCsv();
+    });
     if($("pcDrop")) $("pcDrop").addEventListener("click", function(){
       pcsv.sets.splice(pcsv.act, 1);
       pcsvUse(Math.max(0, Math.min(pcsv.act, pcsv.sets.length - 1)));
@@ -7096,7 +7262,13 @@
     document.body.classList.toggle("is-prev", inPrev);
     $("btnTirPrev").disabled = !state.prev || inPrev;
     $("btnTirNext").disabled = !inPrev;
-    var bt = $("btnTirages"); if(bt) bt.setAttribute("aria-pressed", inPrev ? "true" : "false");
+    var bt = $("btnTirages");
+    if(bt){
+      bt.setAttribute("aria-pressed", inPrev ? "true" : "false");
+      var tpt = bt.querySelector(".tp-t");
+      if(tpt) tpt.textContent = inPrev ? "АКТИВНЫЙ ТИРАЖ" : "ТИРАЖИ";
+      bt.title = inPrev ? "Вернуться к купону активного тиража" : "Страница наблюдения за тиражами: предыдущий и текущий, их наборы CSV, бриф, охота и ИИ";
+    }
     $("tirazhName").value = inPrev ? state.prev.tirazh : (state.tirazh || "");
     if(!inPrev){ $("prevBar").hidden = true; if($("prevCsv")) $("prevCsv").hidden = true; }
   }
