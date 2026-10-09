@@ -2412,3 +2412,14 @@ body.is-prev .pct-col.hit b,body.is-prev .kf-col.hit{color:var(--ink); font-weig
 .ai-paper .ai-lu-no,.ai-paper .ai-lu-xi{display:block; font-size:13.5px; line-height:1.45}
 .ai-paper .ai-lu-xi{margin-top:4px; color:#3A332A; overflow-wrap:anywhere}
 .ai-paper .ai-lu-xi i{font-weight:700; font-style:normal; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:#8E2A1E; margin-right:4px}
+
+/* вкладки тиражей: заметнее; активная с бегущей золотой змейкой */
+@property --pbA{syntax:"<angle>"; inherits:false; initial-value:0deg}
+.prev-bar .pb-tabs button{position:relative; background:var(--surface-2); border-color:var(--rule-strong); box-shadow:inset 0 1px 0 rgba(255,255,255,.05), 0 1px 2px rgba(0,0,0,.18); transition:background .2s, box-shadow .2s}
+.prev-bar .pb-tabs button:not([aria-selected="true"]):hover{background:var(--surface-3)}
+.prev-bar .pb-tabs button[aria-selected="true"]{background:linear-gradient(rgba(212,175,90,.16),rgba(212,175,90,.16)), var(--surface); box-shadow:0 0 0 1px rgba(212,175,90,.35), 0 0 16px rgba(212,175,90,.28)}
+.prev-bar .pb-tabs button[aria-selected="true"]::after{content:""; position:absolute; inset:-1px; border-radius:7px; padding:2px; pointer-events:none;
+  background:conic-gradient(from var(--pbA), rgba(212,175,90,.25) 0 55%, rgba(212,175,90,.5) 68%, #E8C66A 88%, #FFF1B8 96%, rgba(212,175,90,.25) 100%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite:xor; mask:linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0)}
+@media (prefers-reduced-motion:no-preference){ .prev-bar .pb-tabs button[aria-selected="true"]::after{animation:pbSpin 3.2s linear infinite} }
+@keyframes pbSpin{to{--pbA:360deg}}
