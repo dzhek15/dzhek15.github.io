@@ -2317,47 +2317,74 @@ body.is-prev .pct-col.hit b,body.is-prev .kf-col.hit{color:var(--ink); font-weig
 
 .bf-nw{white-space:nowrap}
 
-/* Прошлые игры: два столбца, хозяева слева, гости справа */
-.ai-past{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:0 12px; align-items:start}
-.ai-past-c{min-width:0}
-.ai-pg-h{margin:0 0 4px; padding:0 0 3px; border-bottom:1px solid #8D7F63; font:700 13px/1.25 "Old Standard TT",Georgia,serif; color:#1D1A15; overflow-wrap:anywhere}
-.ai-pg-h small{display:block; font:italic 400 11px/1.3 "PT Serif",Georgia,serif; color:#5E5446}
-.ai-pg-l{list-style:none; margin:0; padding:0}
-.ai-pg{display:flex; flex-wrap:wrap; gap:1px 6px; align-items:baseline; padding:4px 0; border-bottom:1px dotted rgba(141,127,99,.55); font:400 13px/1.4 "PT Serif",Georgia,serif; color:#1D1A15; min-width:0}
-.ai-pg:last-child{border-bottom:0}
-.ai-pg-sc{flex:0 0 auto; padding:0 4px; background:rgba(29,26,21,.1); font:700 12.5px/1.5 "IBM Plex Mono",monospace; white-space:nowrap}
-.ai-pg-t{flex:1 1 90px; min-width:0; overflow-wrap:anywhere}
-.ai-pg-t .ai-sc{background:none; padding:0; font-weight:400}
-.ai-pg-fr{font:italic 400 11px/1.3 "PT Serif",Georgia,serif; color:#5E5446}
-.ai-pg-ha{flex:0 0 auto; margin-left:auto; font:italic 400 11px/1.4 "PT Serif",Georgia,serif; color:#5E5446; white-space:nowrap}
-.ai-pg-ha.away{color:#8E2A1E}
-.ai-past-n{margin:6px 0 0; font:italic 400 12.5px/1.45 "PT Serif",Georgia,serif; color:#5E5446}
-@media (max-width:360px){ .ai-past{gap:0 8px} .ai-pg{font-size:12.5px} .ai-pg-sc{font-size:12px} }
+/* Календарь «Следующие игры»: таблица по команде. Красный соперник сильнее, зелёный слабее */
+.ai-paper .ai-cal-t{display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin:8px 0 3px; font:700 13.5px/1.3 "PT Serif",Georgia,serif; color:#1D1A15; min-width:0}
+.ai-paper .ai-cal-t:first-of-type{margin-top:2px}
+.ai-paper .ai-cal-t b{overflow-wrap:anywhere}
+.ai-paper .ai-cal-t span{flex:none; font:400 12px/1.3 "PT Serif",Georgia,serif; color:#5E5446; white-space:nowrap}
+.ai-paper .ai-cal{width:100%; table-layout:fixed; border-collapse:collapse; margin:0 0 4px; font:400 13.5px/1.35 "PT Serif",Georgia,serif; color:#1D1A15}
+.ai-paper .ai-cal td{padding:4px 0; border-top:1px solid #B9AB8C; vertical-align:top; overflow-wrap:anywhere}
+.ai-paper .ai-cal tr:last-child td{border-bottom:1px solid #B9AB8C}
+.ai-paper .ai-cd{width:3.3em; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap}
+.ai-paper .ai-cc{width:30%; padding-left:8px; text-align:right; font-size:12px; color:#5E5446}
+.ai-paper .ai-cv{display:inline-block; width:1.35em; margin-right:5px; text-align:center; font:700 11px/1.5 "PT Serif",Georgia,serif; color:#5E5446; border:1px solid #8D7F63; border-radius:3px; vertical-align:1px}
+.ai-paper .ai-cn{font-weight:700}
+.ai-paper .ai-cp{font-size:12px; color:#5E5446; white-space:nowrap}
+.ai-paper .ai-dby{display:block; margin:1px 0 0 calc(1.35em + 5px); font:italic 400 12px/1.3 "PT Serif",Georgia,serif; color:#8E2A1E}
+.ai-paper .ai-st{color:#A12B20}
+.ai-paper .ai-wk{color:#2A6B35}
+.ai-paper .ai-cal-lg{margin:5px 0 0; font:400 11.5px/1.4 "PT Serif",Georgia,serif; color:#5E5446}
+.ai-paper .ai-cal-lg .ai-st,.ai-paper .ai-cal-lg .ai-wk{font-weight:700}
+@media (max-width:360px){ .ai-paper .ai-cal{font-size:13px} .ai-paper .ai-cc{width:34%; font-size:11.5px} .ai-paper .ai-cal-t{font-size:13px} }
 
-/* Прошлые игры по принципу H2H: переключатель, блоки команд друг под другом, строка = игра */
-.ai-blk .ai-past-n{margin:6px 0 0; font:italic 400 12.5px/1.45 "PT Serif",Georgia,serif; color:#5E5446}
-.ai-past2{display:block; min-width:0}
-.ai-pf{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; margin:0 0 8px}
-.ai-pf button{min-width:0; white-space:nowrap; min-height:30px; padding:4px 10px; border:1px solid #8D7F63; border-radius:0; background:transparent; color:#1D1A15; font:600 11.5px/1.2 "IBM Plex Mono",monospace; letter-spacing:.02em; text-transform:uppercase; cursor:pointer; overflow-wrap:anywhere; text-align:center}
-.ai-pf button:hover,.ai-pf button:focus-visible{background:rgba(29,26,21,.1); color:#1D1A15}
-.ai-pf button.on,.ai-pf button.on:hover{background:#1D1A15; border-color:#1D1A15; color:#F2E8D0}
-.ai-pt{margin:0 0 10px; min-width:0}
-.ai-pt:last-child{margin-bottom:0}
-.ai-pt[hidden],.ai-pr[hidden],.ai-pt-e[hidden]{display:none}
-.ai-blk .ai-pt-h{margin:0; padding:5px 8px; background:rgba(29,26,21,.1); font:700 11.5px/1.3 "IBM Plex Mono",monospace; letter-spacing:.04em; text-transform:uppercase; color:#1D1A15; overflow-wrap:anywhere}
-.ai-pr{display:grid; grid-template-columns:62px minmax(0,1fr) 18px 22px; gap:0 8px; align-items:center; padding:6px 4px; border-bottom:1px dotted rgba(141,127,99,.7); min-width:0}
-.ai-pr-d{display:flex; flex-direction:column; gap:1px; min-width:0; font:400 11.5px/1.25 "IBM Plex Mono",monospace; color:#3A3328}
-.ai-pr-d span:empty{display:none}
-.ai-pr-d em{font:italic 400 10.5px/1.25 "PT Serif",Georgia,serif; color:#5E5446; overflow-wrap:anywhere}
-.ai-pr-t{display:flex; flex-direction:column; gap:3px; min-width:0}
-.ai-pr-n{display:block; min-width:0; font:400 13.5px/1.25 "PT Serif",Georgia,serif; color:#1D1A15; overflow-wrap:anywhere}
-.ai-pr-n.me{font-weight:700}
-.ai-pr-n.none{font-style:italic; color:#5E5446}
-.ai-pr-s{display:flex; flex-direction:column; gap:3px; align-items:flex-end; font:700 13.5px/1.25 "IBM Plex Mono",monospace; color:#1D1A15}
-.ai-pr-s b{display:block; min-width:1ch; text-align:right}
-.ai-pr-b{display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; font:700 12px/1 "PT Serif",Georgia,serif; font-style:normal; color:#fff}
-.ai-pr-b.w{background:#2F6B3A}
-.ai-pr-b.d{background:#B7791F}
-.ai-pr-b.l{background:#A12B20}
-.ai-blk .ai-pt-n,.ai-blk .ai-pt-e{margin:6px 0 0; padding:0 4px; font:italic 400 12.5px/1.45 "PT Serif",Georgia,serif; color:#5E5446}
-@media (max-width:360px){ .ai-pr{grid-template-columns:54px minmax(0,1fr) 16px 20px; gap:0 6px; padding:6px 2px} .ai-pr-n{font-size:13px} .ai-pr-s{font-size:13px} .ai-pr-b{width:20px; height:20px; font-size:11.5px} .ai-pf button{padding:4px 2px; font-size:10.5px; letter-spacing:0} }
+/* Шапка матча: турнир и тур, команды, время, стадион, поле. Всё по центру */
+.ai-paper .ai-hd{margin:0 0 14px; padding:9px 0 10px; border-top:3px double #1D1A15; border-bottom:1px solid #1D1A15; text-align:center; color:#1D1A15; min-width:0}
+.ai-paper .ai-hd-top{display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:2px 9px; font:700 11.5px/1.4 "Old Standard TT",Georgia,serif; letter-spacing:.14em; text-transform:uppercase; color:#5E5446}
+.ai-paper .ai-hd-top i{width:4px; height:4px; background:#8D7F63; transform:rotate(45deg); flex:none}
+.ai-paper .ai-hd-tag{display:inline-block; margin:6px 0 0; padding:1px 10px; border:1px solid #8E2A1E; color:#8E2A1E; font:italic 700 12.5px/1.4 "PT Serif",Georgia,serif}
+.ai-paper .ai-hd-teams{display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:start; gap:6px; margin:10px 0 9px}
+.ai-paper .ai-ht{display:flex; flex-direction:column; align-items:center; gap:2px; min-width:0}
+.ai-paper .ai-ht b{font:700 18px/1.2 "PT Serif",Georgia,serif; overflow-wrap:anywhere}
+.ai-paper .ai-ht span{font:400 13px/1.35 "PT Serif",Georgia,serif; color:#1D1A15}
+.ai-paper .ai-ht em{font:italic 400 12px/1.35 "PT Serif",Georgia,serif; color:#5E5446}
+.ai-paper .ai-hd-vs{padding-top:2px; font:700 17px/1.2 "PT Serif",Georgia,serif; color:#8D7F63}
+.ai-paper .ai-hd-info{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); border-top:1px solid #B9AB8C}
+.ai-paper .ai-hi{display:flex; flex-direction:column; align-items:center; gap:1px; padding:7px 6px 0; min-width:0}
+.ai-paper .ai-hi + .ai-hi{border-left:1px solid #B9AB8C}
+.ai-paper .ai-hi span{font:700 10.5px/1.3 "Old Standard TT",Georgia,serif; letter-spacing:.14em; text-transform:uppercase; color:#5E5446}
+.ai-paper .ai-hi b{font:700 13.5px/1.3 "PT Serif",Georgia,serif; overflow-wrap:anywhere}
+@media (max-width:480px){
+  .ai-paper .ai-hd-info{grid-template-columns:minmax(0,1fr)}
+  .ai-paper .ai-hi{padding:6px 0 0}
+  .ai-paper .ai-hi + .ai-hi{border-left:0; border-top:1px dotted #B9AB8C; margin-top:6px}
+  .ai-paper .ai-ht b{font-size:16px}
+}
+@media (max-width:360px){ .ai-paper .ai-ht b{font-size:15px} .ai-paper .ai-ht span{font-size:12.5px} }
+
+.ai-paper .ai-cc{display:block; width:auto; padding:0 0 0 calc(1.35em + 5px); text-align:left; font:400 12px/1.35 "PT Serif",Georgia,serif; color:#5E5446}
+.ai-paper .ai-dby{display:inline; margin:0; font:italic 700 12px/1.3 "PT Serif",Georgia,serif; color:#8E2A1E}
+.ai-paper .ai-cd{width:3.4em}
+@media (max-width:360px){ .ai-paper .ai-cc{width:auto; font-size:11.5px} }
+@media (max-width:340px){ .ai-paper .ai-ht b{font-size:13.5px} .ai-paper .ai-hd-teams{gap:4px} }
+@media (max-width:360px){ .ai-paper .ai-hd-teams{grid-template-columns:minmax(0,1fr); gap:3px} .ai-paper .ai-hd-vs{padding:0; line-height:1} }
+
+/* Еврокубки в календаре: синяя полоса, плашка и фон */
+.ai-paper .ai-cal tr.ai-eu td{background:rgba(31,58,107,.10); border-top-color:#1F3A6B}
+.ai-paper .ai-cal tr.ai-eu td:first-child{box-shadow:inset 3px 0 0 #1F3A6B; padding-left:7px}
+.ai-paper .ai-cal tr.ai-eu td:last-child{padding-right:4px}
+.ai-paper .ai-cal tr.ai-eu .ai-cc{color:#1F3A6B; font-weight:700}
+.ai-paper .ai-eub{display:inline-block; margin-right:3px; padding:0 5px; background:#1F3A6B; color:#F2E8D0; font:700 10px/1.5 "Old Standard TT",Georgia,serif; letter-spacing:.1em; text-transform:uppercase; border-radius:2px}
+.ai-paper .ai-euk{color:#1F3A6B; font-weight:700}
+/* порядок чтения и лёгкая редактура: буквица, составы по командам, «Главное» */
+.ai-paper .ai-k-main p:first-of-type::first-letter{float:left; margin:3px 7px 0 0; font:700 3em/.82 "Old Standard TT",Georgia,serif; color:#8E2A1E}
+.ai-paper .ai-blk p{text-wrap:pretty; hyphens:auto; -webkit-hyphens:auto}
+.ai-paper .ai-lu-meta{margin:0 0 6px; font:italic 400 12.5px/1.45 "PT Serif",Georgia,serif; color:#5E5446}
+.ai-paper .ai-lu-t{margin:0 0 7px; padding:0 0 0 10px; border-left:2px solid #B9AB8C}
+.ai-paper .ai-lu-t b{display:block; margin:0 0 1px; font:700 11.5px/1.3 "Old Standard TT",Georgia,serif; letter-spacing:.1em; text-transform:uppercase; color:#8E2A1E}
+.ai-paper .ai-lu-t > span{display:block; font-size:14px; line-height:1.5; overflow-wrap:anywhere}
+.ai-paper .ai-lu-key{margin:2px 0 4px; padding:5px 8px; background:rgba(142,42,30,.08); border-left:3px solid #8E2A1E; font-size:14px; line-height:1.45}
+.ai-paper .ai-lu-key b{display:block; font:700 11px/1.3 "Old Standard TT",Georgia,serif; letter-spacing:.12em; text-transform:uppercase; color:#8E2A1E}
+.ai-paper .ai-lu-note{margin:0; font:italic 400 12px/1.4 "PT Serif",Georgia,serif; color:#5E5446}
+.ai-paper .ai-fin{margin:14px 0 4px; padding:9px 12px 10px; border-top:3px double #1D1A15; border-bottom:1px solid #1D1A15; background:rgba(29,26,21,.05)}
+.ai-paper .ai-fin .ai-lb{text-align:center; border-bottom:0; margin:0 0 4px; letter-spacing:.2em}
+.ai-paper .ai-fin p{margin:0; font:700 15px/1.5 "PT Serif",Georgia,serif; color:#1D1A15; text-wrap:pretty; overflow-wrap:anywhere}
