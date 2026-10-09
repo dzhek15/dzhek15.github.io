@@ -2622,6 +2622,7 @@
       var cal = aiCal(r.n);
       if(cal) return '<div class="ai-sec ai-s-next"><span class="ai-lb">Следующие игры</span>' + cal + (m[2] ? '<p>' + aiFmt(escHtml(m[2].charAt(0).toUpperCase() + m[2].slice(1))) + '</p>' : '') + '</div>';
     }
+    if(m && m[1] === "Составы и отсутствующие" && r && r.lu && r.lu.teams) return aiLuHtml(r.lu);
     if(m && m[1] === "Составы и отсутствующие" && r){
       var lu = aiLineup(m[2], r);
       if(lu) return '<div class="ai-sec ai-s-lineup"><span class="ai-lb">Составы и отсутствующие</span>' + lu + '</div>';
@@ -2655,6 +2656,31 @@
       return k < 0 ? 50 : k;
     };
     return ps.map(function(x, i){ return { x: x, i: i, k: rank(x) }; }).sort(function(a, b){ return a.k - b.k || a.i - b.i; }).map(function(o){ return o.x; });
+  }
+  /* составы построчно: каждый игрок отдельной строкой — позиция, статус, причина, с какого времени, ОСНОВНОЙ или РЕЗЕРВ */
+  var AI_ST = { "выбыл": "out", "под вопросом": "q", "дисквалифицирован": "sus", "вернулся": "back", "в строю": "ok" };
+  function aiLuPl(p){
+    var st = AI_ST[p.st] || "q", ro = String(p.role || "").toLowerCase();
+    var rb = ro === "основной" ? '<span class="ai-ro ai-ro-m">Основной</span>' : (ro === "резерв" ? '<span class="ai-ro ai-ro-r">Резерв</span>' : '<span class="ai-ro ai-ro-u">Роль не указана</span>');
+    var d = [];
+    if(p.why) d.push(escHtml(p.why));
+    if(p.since) d.push('<span class="ai-lu-sn">' + escHtml(p.since) + '</span>');
+    return '<li class="ai-lp"><div class="ai-lp-a"><b>' + escHtml(p.n) + '</b>' + (p.pos ? '<span class="ai-lp-pos">' + escHtml(p.pos) + '</span>' : '') + rb + '</div>' +
+      '<div class="ai-lp-b"><span class="ai-stb ai-stb-' + st + '">' + escHtml(p.st || "статус не указан") + '</span>' + (d.length ? '<span class="ai-lp-d">' + d.join(" · ") + '</span>' : '') + '</div></li>';
+  }
+  function aiLuHtml(lu){
+    var o = '<div class="ai-sec ai-s-lineup"><span class="ai-lb">Составы и отсутствующие</span>';
+    if(lu.meta) o += '<p class="ai-lu-meta">' + aiFmt(escHtml(lu.meta)) + '</p>';
+    (lu.teams || []).forEach(function(t){
+      o += '<div class="ai-lu-t"><b>' + escHtml(t.n) + '</b>';
+      if(t.pl && t.pl.length) o += '<ul class="ai-lps">' + t.pl.map(aiLuPl).join("") + '</ul>';
+      else o += '<span class="ai-lu-no">' + escHtml(t.no || "Отсутствующих в источниках нет.") + '</span>';
+      if(t.xi) o += '<span class="ai-lu-xi"><i>Вероятный состав</i> ' + escHtml(t.xi) + '</span>';
+      o += '</div>';
+    });
+    if(lu.key) o += '<p class="ai-lu-key"><b>Ключевой вопрос</b>' + aiFmt(escHtml(lu.key)) + '</p>';
+    if(lu.note) o += '<p class="ai-lu-note">' + escHtml(lu.note) + '</p>';
+    return o + '</div>';
   }
   /* составы по командам: метка проверки, по абзацу на команду, ключевой вопрос, примечание */
   function aiLineup(txt, r){
