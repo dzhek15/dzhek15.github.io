@@ -18,6 +18,9 @@
 "ак барс": {
 "f": "tAmLD0WH-8IQDNH6S.png"
 },
+"академику визеу": {
+"f": "hEMeTfme-v7jBLevD.png"
+},
 "аккрингтон стэнли": {
 "c": [
 "#a73421",
@@ -68,6 +71,9 @@
 "арсенал тула": {
 "f": "OfyKnYjT-04cZ6kQB.png"
 },
+"астон вилла": {
+"f": "UHchCEVH-jwz95gs0.png"
+},
 "атланта": {
 "f": "rVNPCcSq-l42IwVUF.png"
 },
@@ -91,6 +97,9 @@
 ],
 "id": 3846
 },
+"байер 04": {
+"f": "dWZYQIPq-WrjrBuU2.png"
+},
 "бамбер бридж": {
 "f": "MD0qUEA6-r7aWsxVk.png"
 },
@@ -105,6 +114,12 @@
 },
 "белграно": {
 "f": "htqgPrT0-jXvNrLYt.png"
+},
+"бернли": {
+"f": "xO3nES96-6PhTI7J6.png"
+},
+"блэкберн роверс": {
+"f": "AHfWnRCN-ImMEe0UF.png"
 },
 "богемиан": {
 "c": [
@@ -122,6 +137,9 @@
 "бокель": {
 "f": "foVtu87k-ABpmWgn7.png"
 },
+"болтон": {
+"f": "8jj84yCN-bJFnYpTt.png"
+},
 "бостон ривер": {
 "f": "tCs8eX7k-pOoSyvxr.png"
 },
@@ -133,6 +151,9 @@
 },
 "брага": {
 "f": "j3CGCQTH-6JDIcK05.png"
+},
+"брайтон": {
+"f": "G0q9xjRq-b92lfEJC.png"
 },
 "бранн": {
 "f": "nN0xKnjC-ANQtd77I.png"
@@ -146,6 +167,9 @@
 "#fedf00"
 ],
 "id": 203
+},
+"брентфорд": {
+"f": "SjSCLv86-r9Mudk7j.png"
 },
 "бристоль роверс": {
 "c": [
@@ -192,8 +216,14 @@
 "волендам": {
 "f": "8tDUPO86-WYtEUtB2.png"
 },
+"вулверхэмптон": {
+"f": "MV7MiUmC-ABWS7fBq.png"
+},
 "газль эль-махалла": {
 "f": "dGMW46U0-AXTgaM87.png"
+},
+"гент": {
+"f": "hr2efhUH-ETUaLGDL.png"
 },
 "греббестад": {
 "f": "ttDGsWlC-ng1fW8Y5.png"
@@ -231,6 +261,9 @@
 "депортиво мерло": {
 "f": "UXlpx17k-jRV1V0Hu.png"
 },
+"дерби каунти": {
+"f": "xrSu4XPq-jJPRA9H4.png"
+},
 "динамо минск": {
 "f": "Q5LavxT0-nexJVvF1.png"
 },
@@ -252,11 +285,20 @@
 "жирона": {
 "f": "6mZj79BN-vPm0hQMN.png"
 },
+"зенит": {
+"f": "EyVBaZlC-fwTrvtzQ.png"
+},
+"зюлте-варегем": {
+"f": "6JNt5MlC-fc7DY1B9.png"
+},
 "институто(р)": {
 "f": "Y1JDyBhT-QDJMU2Y6.png"
 },
 "интернациональ рс": {
 "f": "p2TzSgBN-ALgHCh57.png"
+},
+"ипсвич таун": {
+"f": "r9vl4eQq-0C98slBk.png"
 },
 "иттихад танжер": {
 "c": [
@@ -278,6 +320,9 @@
 "#bca593"
 ],
 "id": 88
+},
+"кардифф сити": {
+"f": "AaPWNHkC-x4VfTaKj.png"
 },
 "керри": {
 "c": [
@@ -308,6 +353,9 @@
 "#f2212c"
 ],
 "id": 653
+},
+"краснодар": {
+"f": "Ig4p4mBN-vTLj5hDm.png"
 },
 "кру александра": {
 "c": [
@@ -354,12 +402,18 @@
 "лондрина": {
 "f": "hWxFjziC-hlPnAf3r.png"
 },
+"лорьян": {
+"f": "0r9EzUS0-YHcYEYzR.png"
+},
 "магриб фес": {
 "c": [
 "#ffff01",
 "#000003"
 ],
 "id": 3453
+},
+"майнц": {
+"f": "tbR3gUTH-EoYxhN5r.png"
 },
 "маклсфилд таун": {
 "f": "YNfQpCiT-rZPjZPfl.png"
@@ -372,6 +426,12 @@
 },
 "мб руиссе": {
 "f": "GEMJ49CN-2wF033pH.png"
+},
+"мидлсбро": {
+"f": "p6waIw86-MgUZUr6h.png"
+},
+"миллуолл": {
+"f": "KE2n7iVH-prpZfVqU.png"
 },
 "мк оран": {
 "f": "4O8X4ejC-WEM4tWjn.png"
@@ -410,6 +470,9 @@
 "орсомарсо": {
 "f": "nJOU79BN-OQvTHdKn.png"
 },
+"париж": {
+"f": "S85qoCiT-AelKXger.png"
+},
 "петровац": {
 "f": "UFVX1R86-ABpmWgn7.png"
 },
@@ -418,6 +481,9 @@
 },
 "платенсе(р)": {
 "f": "zDDx8C76-4SMicvEk.png"
+},
+"престон": {
+"f": "pzTKMome-KSOT8pKJ.png"
 },
 "раджа касабланка": {
 "f": "IZc8YSlC-fLPkADxb.png"
@@ -438,6 +504,9 @@
 "#5c231c"
 ],
 "id": 53
+},
+"рексхэм": {
+"f": "bHt6w87k-OxoAKHbA.png"
 },
 "ремо": {
 "f": "GEFVWo96-vsDPUWUH.png"
@@ -475,6 +544,9 @@
 "сан тельмо": {
 "f": "OSSBMG8k-nFtSniOn.png"
 },
+"сандерленд": {
+"f": "rPPdotBN-0d34NJCO.png"
+},
 "сармиенто хунин": {
 "f": "0jUeTMhT-jFNZQuRn.png"
 },
@@ -505,6 +577,9 @@
 },
 "спортинг лиссабон": {
 "f": "jy2lEHBN-4ddK8rOq.png"
+},
+"сток сити": {
+"f": "hfCH0SA6-KpUCBoUk.png"
 },
 "суиндон таун": {
 "c": [
@@ -550,6 +625,9 @@
 "университатя клуж": {
 "f": "vqp1ptT0-v1mKniN8.png"
 },
+"унион берлин": {
+"f": "0OMJUule-ncmj9JbF.png"
+},
 "унион магдалена": {
 "f": "K82zyHA6-MTr4IgZi.png"
 },
@@ -565,6 +643,9 @@
 },
 "уоррингтон таун": {
 "f": "EqWSRriC-dUDxzbGu.png"
+},
+"уотфорд": {
+"f": "pYQ39lBN-QHkJrpz6.png"
 },
 "усм алжир": {
 "f": "Qsg1H1jC-dYgRyyJN.png"
@@ -582,6 +663,9 @@
 "#a59798"
 ],
 "id": 3179
+},
+"фулхэм": {
+"f": "fkbYUWme-ImMEe0UF.png"
 },
 "хассани агадир": {
 "c": [
@@ -635,6 +719,9 @@
 ],
 "id": 1364
 },
+"элверсберг": {
+"f": "lbqNa1le-QsgNMFNg.png"
+},
 "эльденсе": {
 "c": [
 "#d19734",
@@ -656,6 +743,9 @@
 },
 "эстудиантес рио куарто(р)": {
 "f": "z1lasjRq-YeUZVafi.png"
+},
+"эшторил": {
+"f": "W6lzPAoe-8GL0cHSF.png"
 },
 "эшторил(23)": {
 "f": "EuicW7oe-WEIjXBWa.png"
