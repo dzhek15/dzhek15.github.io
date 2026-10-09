@@ -619,6 +619,93 @@
     return tot;
   }
 
+  /* ---------- готовые системы (brief_lib.js): покрытия для купонов из двоек и троек ---------- */
+  function briefLibKey(sizes, r){
+    var d = 0, t = 0;
+    sizes.forEach(function(x){ if(x === 2) d++; else if(x === 3) t++; });
+    return { d: d, t: t, key: d + "," + t + "," + r };
+  }
+  function briefLibRows(str){
+    var out = [];
+    for(var i = 0; i + 4 <= str.length; i += 4) out.push(parseInt(str.substr(i, 4), 36));
+    return out;
+  }
+  function briefLibHas(sizes, r){
+    return !!window.BRIEF_LIB && !!window.BRIEF_LIB[briefLibKey(sizes, r).key];
+  }
+  /* номера строк в нумерации купона (mul — веса позиций купона). exact: форма купона совпала с готовой;
+     иначе — проекция более широкой готовой системы, проверенная перебором (детерминированно). */
+  function briefLibCode(sizes, mul, r){
+    if(!window.BRIEF_LIB) return null;
+    var m = sizes.length, kk = briefLibKey(sizes, r), d = kk.d, t = kk.t, k, j;
+    var dpos = [], tpos = [];
+    for(k = 0; k < m; k++) (sizes[k] === 2 ? dpos : tpos).push(k);
+    var order = dpos.concat(tpos);
+    function digitsOf(x, sz, ml, n){
+      var dg = new Array(n);
+      for(var q = 0; q < n; q++) dg[q] = Math.floor(x / ml[q]) % sz[q];
+      return dg;
+    }
+    function toMul(sz){ var ml = [1]; for(var q = 1; q < sz.length; q++) ml.push(ml[q-1] * sz[q-1]); return ml; }
+    var exact = window.BRIEF_LIB[kk.key];
+    if(exact){
+      var sz0 = []; for(j = 0; j < d; j++) sz0.push(2); for(j = 0; j < t; j++) sz0.push(3);
+      var ml0 = toMul(sz0), rows0 = briefLibRows(exact).map(function(x){
+        var dg = digitsOf(x, sz0, ml0, sz0.length), y = 0;
+        for(var q = 0; q < order.length; q++) y += dg[q] * mul[order[q]];
+        return y;
+      });
+      return { rows: rows0, exact: true };
+    }
+    /* проекция: берём t троичных столбцов и d любых из остальных */
+    var best = null;
+    Object.keys(window.BRIEF_LIB).forEach(function(key){
+      var pr = key.split(","), d2 = Number(pr[0]), t2 = Number(pr[1]);
+      if(Number(pr[2]) !== r || t2 < t || d2 + t2 < m) return;
+      var sz2 = []; for(j = 0; j < d2; j++) sz2.push(2); for(j = 0; j < t2; j++) sz2.push(3);
+      var ml2 = toMul(sz2), code2 = briefLibRows(window.BRIEF_LIB[key]);
+      if(best && code2.length > best.rows.length * 4) return;
+      for(var trial = 0; trial < 6; trial++){
+        var idx3 = [], idx2 = [];
+        for(j = 0; j < t2; j++) idx3.push(d2 + ((j + trial) % t2));
+        for(j = 0; j < d2; j++) idx2.push((j + trial) % d2);
+        var pt = idx3.slice(0, t);
+        var pool = idx2.concat(idx3.filter(function(c){ return pt.indexOf(c) < 0; }));
+        var cols = pool.slice(0, d).concat(pt);
+        var seen = {}, rows = [];
+        code2.forEach(function(x){
+          var dg = digitsOf(x, sz2, ml2, sz2.length), y = 0;
+          for(var q = 0; q < cols.length; q++){
+            var v = dg[cols[q]]; if(q < d && v === 2) v = 0;
+            y += v * mul[order[q]];
+          }
+          if(!seen[y]){ seen[y] = 1; rows.push(y); }
+        });
+        if(best && rows.length >= best.rows.length) continue;
+        if(briefCovers(rows, sizes, mul, r)) best = { rows: rows, exact: false };
+      }
+    });
+    return best;
+  }
+  function briefCovers(rows, sizes, mul, r){
+    var m = sizes.length, U = 1, k;
+    for(k = 0; k < m; k++) U *= sizes[k];
+    var cov = new Uint8Array(U), left = U;
+    function mark(x, dg, depth, start){
+      if(!cov[x]){ cov[x] = 1; left--; }
+      if(depth === r) return;
+      for(var p = start; p < m; p++){
+        for(var v = 0; v < sizes[p]; v++){ if(v === dg[p]) continue; mark(x + (v - dg[p]) * mul[p], dg, depth + 1, p + 1); }
+      }
+    }
+    for(var i = 0; i < rows.length; i++){
+      var dg = new Array(m);
+      for(k = 0; k < m; k++) dg[k] = Math.floor(rows[i] / mul[k]) % sizes[k];
+      mark(rows[i], dg, 0, 0);
+    }
+    return left === 0;
+  }
+
   /* W — вероятности исходов по матчам (или null): тогда жадный шаг берёт строку, чей шар
      закрывает больше всего ещё не закрытой ВЕРОЯТНОСТИ, а не штук. Гарантия та же, но
      строки ложатся на вероятные сочетания — чаще 15 и 14. */
@@ -698,15 +785,16 @@
       }
       return { x: topX, st: topSt };
     }
+    var libRes = briefLibCode(sizes, mul, r), libExact = !!(libRes && libRes.exact);
     var ballSize = 0; walk(0, 0, 0, function(){ ballSize++; });
     /* со взвешиванием стартовые оценки неизвестны — ставим заведомо большие и
        устаревшие (штамп −1), CELF пересчитает их при первом же взятии */
-    for(var x = 0; x < U; x++){ if(gw) push(1e9, x, -1); else push(ballSize, x, 0); }
+    if(!libExact) for(var x = 0; x < U; x++){ if(gw) push(1e9, x, -1); else push(ballSize, x, 0); }
 
     var gen = 0, t0 = Date.now(), cnt = 0;
     var counter = gw ? function(y){ if(!covered[y]) cnt += gw[y]; } : function(y){ if(!covered[y]) cnt++; };
     var marker = function(y){ if(!covered[y]){ covered[y] = 1; left--; } };
-    while(left > 0){
+    while(left > 0 && !libExact){
       if((gen & 31) === 0 && Date.now() - t0 > budgetMs)
         return { slow: true, U: U, m: m, r: r, ms: Date.now() - t0 };
       var best = -1;
@@ -724,6 +812,7 @@
       walk(best, 0, 0, marker);
       gen++;
     }
+    if(libRes && (libExact || libRes.rows.length < code.length)) code = libRes.rows.slice().sort(function(a, b){ return a - b; });
     /* доля вероятности (при условии, что все исходы попали в купон), где лучшая строка
        берёт 15 и хотя бы 14 */
     var w15 = 0, w14 = 0;
@@ -4314,8 +4403,6 @@
   function briefProbs(){
     return state.matches.map(function(m){ return (m.pct && m.pct.bk) ? calProb(m.pct.bk) : null; });
   }
-  function briefModeNow(){ return state.briefMode === "even" ? "even" : "w"; }
-  function briefWeighted(){ return briefModeNow() === "w"; }
   /* шанс, что все 15 исходов окажутся внутри купона */
   function briefInside(sets, P){
     var p = 1;
@@ -4371,7 +4458,7 @@
     var r = state.matches.length - g;
     var wideSizes = sizes.filter(function(x){ return x > 1; });
     var m = wideSizes.length;
-    var key = "g" + g + (briefWeighted() ? "w" : "");
+    var key = "g" + g;
     var have = briefCache(sets)[key];
     var cells;
     if(have && have.rows){
@@ -4394,7 +4481,7 @@
       cells = '<td colspan="3" class="brief-no">не уложился за ' + Math.round(have.ms/1000) + ' с</td><td class="brief-save"></td>';
     } else {
       var ball = briefBall(wideSizes, r);
-      var work = U * ball;
+      var fast = briefLibHas(wideSizes, r), work = fast ? 0 : U * ball;
       if(r >= m) cells = '<td><b>1</b></td><td>' + fmt(briefPrice()) + ' ₽</td><td class="brief-save">−' + (100*(1-1/U)).toFixed(0) + '%</td>' +
                          '<td class="nw"><button type="button" class="gap-set brief-go" data-g="' + g + '">собрать</button></td>';
       else if(U > BRIEF_CAP_U || work > BRIEF_MAX_WORK)
@@ -4437,23 +4524,15 @@
       $("evBody").innerHTML = h; $("evBack").hidden = false; return;
     }
 
-    var bm = briefModeNow(), wOn = bm === "w";
-    h += '<div class="brief-mode" role="group" aria-label="Как строить систему">' +
-         '<button type="button" class="gap-set brief-mode-b" data-m="w" aria-pressed="' + wOn + '">С учётом вероятностей</button>' +
-         '<button type="button" class="gap-set brief-mode-b" data-m="even" aria-pressed="' + (bm === "even") + '">Все исходы поровну</button>' +
-         '</div>';
-    h +=
-         '<p class="ev-note">' + (wOn ? 'Жадный подбор в первую очередь закрывает вероятные по линии конторы сочетания. Гарантия та же. Обычно разница небольшая: сравни строки и шансы в обоих режимах и бери, что выгоднее.'
-                                      : 'Классическое покрытие: все исходы купона равноправны.') + '</p>';
+    h += '<p class="ev-note">Классическое покрытие: все исходы купона равноправны. Шансы 15 и 14+ под числом строк считаются по линии конторы и только как справка, на состав системы они не влияют.</p>';
     h += '<table class="ev-tab brief-tab"><thead><tr><th><span class="bt-of">Гарантия</span><span class="bt-sh">Из 15</span></th><th>Строк</th><th>Цена</th><th>Дешевле</th><th></th></tr></thead><tbody>';
     h += '<tr><td>15<span class="bt-of"> из 15</span></td><td><b>' + fmt(U) + '</b></td><td>' + fmt(U * price) + ' ₽</td><td class="brief-save">—</td>' +
          '<td class="nw">полное покрытие</td></tr>';
     for(var g = 14; g >= 9; g--) h += briefRow(g, sets, sizes, U);
     h += '</tbody></table>';
     h += '<p class="ev-note">Числа детерминированы: один и тот же купон всегда даёт одну и ту же систему. ' +
-         'Считается жадным покрытием, а оно не обязано быть минимальным — на десяти двойках с гарантией 14 ' +
-         'выходит 135 строк, теоретический минимум 120. Разницу в 12% считаю честной ценой за то, что расчёт ' +
-         'идёт доли секунды прямо в браузере.</p>';
+         'Для частых форм купона из двоек и троек берутся готовые системы, каждая проверена перебором всех комбинаций; ' +
+         'для остальных считается жадное покрытие, оно не обязано быть минимальным, зато считается за доли секунды прямо в браузере.</p>';
     h += '<div id="briefPrev"></div>';
     $("evBody").innerHTML = h;
 
@@ -4462,17 +4541,14 @@
         var g = Number(b.getAttribute("data-g"));
         b.textContent = "считаю…"; b.disabled = true;
         setTimeout(function(){
-          briefCache(sets)["g" + g + (briefWeighted() ? "w" : "")] = briefBuild(sets, g, 30000, briefProbs(), !briefWeighted());
+          briefCache(sets)["g" + g] = briefBuild(sets, g, 30000, briefProbs(), true);
           showBrief();
         }, 30);
       });
     });
-    [].slice.call($("evBody").querySelectorAll(".brief-mode-b")).forEach(function(b){
-      b.addEventListener("click", function(){ state.briefMode = b.getAttribute("data-m"); save(); showBrief(); });
-    });
     [].slice.call($("evBody").querySelectorAll(".brief-cart")).forEach(function(b){
       b.addEventListener("click", function(){
-        var g = Number(b.getAttribute("data-g")), res = briefCache(sets)["g" + g + (briefWeighted() ? "w" : "")];
+        var g = Number(b.getAttribute("data-g")), res = briefCache(sets)["g" + g];
         if(!res || !res.lines) return;
         if(res.lines.length > BASKET_MAX){
           $("briefPrev").innerHTML = '<p class="ev-warn">В корзину помещается до ' + BASKET_MAX + ' строк, а здесь ' + fmt(res.lines.length) +
@@ -4487,14 +4563,14 @@
     });
     [].slice.call($("evBody").querySelectorAll(".brief-csv")).forEach(function(b){
       b.addEventListener("click", function(){
-        var g = Number(b.getAttribute("data-g")), res = briefCache(sets)["g" + g + (briefWeighted() ? "w" : "")];
+        var g = Number(b.getAttribute("data-g")), res = briefCache(sets)["g" + g];
         if(!res || !res.lines) return;
-        saveCsvFile(briefCsv(res.lines), briefFileName(briefWeighted() ? "вер-ть" : "исход", res.rows));
+        saveCsvFile(briefCsv(res.lines), briefFileName("исход", res.rows));
       });
     });
     [].slice.call($("evBody").querySelectorAll(".brief-prev")).forEach(function(b){
       b.addEventListener("click", function(){
-        var g = Number(b.getAttribute("data-g")), res = briefCache(sets)["g" + g + (briefWeighted() ? "w" : "")];
+        var g = Number(b.getAttribute("data-g")), res = briefCache(sets)["g" + g];
         if(!res || !res.lines) return;
         var head = res.lines.slice(0, 20).map(function(L, i){
           return (i + 1) + ". " + L.map(function(j){ return OUT[j]; }).join("");
