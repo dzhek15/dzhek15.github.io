@@ -2416,13 +2416,11 @@ body.is-prev .pct-col.hit b,body.is-prev .kf-col.hit{color:var(--ink); font-weig
 /* календарь «Следующие игры»: одна строка на игру, домашняя слева, гостевая справа */
 .ai-paper .ai-g{padding:5px 0 5px; border-top:1px solid #B9AB8C; min-width:0}
 .ai-paper .ai-g:last-child{border-bottom:1px solid #B9AB8C}
-.ai-paper .ai-g-h{text-align:left}
-.ai-paper .ai-g-a{text-align:right}
+.ai-paper .ai-g-h,.ai-paper .ai-g-a{text-align:center}
 .ai-paper .ai-gl{font:400 14px/1.35 "PT Serif",Georgia,serif; color:#1D1A15; overflow-wrap:anywhere}
 .ai-paper .ai-gme{font-weight:700}
 .ai-paper .ai-gc{margin-top:1px; font:400 11.5px/1.35 "PT Serif",Georgia,serif; color:#5E5446; overflow-wrap:anywhere}
 .ai-paper .ai-g.ai-eu{background:rgba(31,58,107,.10); border-top-color:#1F3A6B}
-.ai-paper .ai-g-h.ai-eu{box-shadow:inset 3px 0 0 #1F3A6B; padding-left:7px; padding-right:4px}
-.ai-paper .ai-g-a.ai-eu{box-shadow:inset -3px 0 0 #1F3A6B; padding-right:7px; padding-left:4px}
+.ai-paper .ai-g.ai-eu{border-bottom:1px solid #1F3A6B; padding-left:4px; padding-right:4px}
 .ai-paper .ai-g.ai-eu .ai-gc{color:#1F3A6B; font-weight:700}
 .ai-paper .ai-lp-num{flex:none; min-width:1.9em; padding:0 4px; text-align:center; font:700 12px/1.55 "Old Standard TT",Georgia,serif; color:#fff; background:#3A3226; border-radius:2px; font-variant-numeric:tabular-nums}
