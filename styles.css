@@ -2424,3 +2424,44 @@ body.is-prev .pct-col.hit b,body.is-prev .kf-col.hit{color:var(--ink); font-weig
 .ai-paper .ai-g.ai-eu{border-bottom:1px solid #1F3A6B; padding-left:4px; padding-right:4px}
 .ai-paper .ai-g.ai-eu .ai-gc{color:#1F3A6B; font-weight:700}
 .ai-paper .ai-lp-num{flex:none; min-width:1.9em; padding:0 4px; text-align:center; font:700 12px/1.55 "Old Standard TT",Georgia,serif; color:#fff; background:#3A3226; border-radius:2px; font-variant-numeric:tabular-nums}
+
+/* СТАТИСТИКА СТРАТЕГИЙ: кнопка на всю ширину блока «Аналитика», выделена золотом */
+.btn-stat{display:flex; align-items:center; justify-content:center; gap:9px; width:100%; margin:2px 0 0; padding:13px 14px;
+  font:800 14px/1.2 inherit; letter-spacing:.09em; text-transform:uppercase; text-align:center; cursor:pointer;
+  color:#1B1608; background:linear-gradient(135deg,#B98F2E 0%,#E7C873 48%,#B98F2E 100%); background-size:200% 100%;
+  border:1px solid #E7C873; border-radius:6px; box-shadow:0 0 0 1px rgba(201,162,75,.35), 0 0 16px rgba(201,162,75,.35);
+  animation:statShine 6s ease-in-out infinite}
+.btn-stat:hover{filter:brightness(1.07)}
+.btn-stat:focus-visible{outline:2px solid var(--ink); outline-offset:2px}
+.btn-stat svg{flex:none}
+@keyframes statShine{0%,100%{background-position:0% 0} 50%{background-position:100% 0}}
+@media (prefers-reduced-motion:reduce){ .btn-stat{animation:none} }
+@media (max-width:520px){ .btn-stat{padding:12px 8px; font-size:12.5px; letter-spacing:.06em} }
+@media (max-width:420px){ .acc{table-layout:fixed} .acc th:first-child{width:42px} .acc-l{display:none} .acc thead th{font-size:9.5px; letter-spacing:0} .acc th, .acc td{padding:6px 2px} .acc td b{font-size:14px} .acc td small{font-size:9.5px} }
+
+#aiGo:empty{display:none}
+.acc-s{display:none} @media (max-width:420px){ .acc-s{display:inline} }
+
+/* окно разбора ИИ целиком как газетная полоса */
+.ev-box.ev-paper{--ink:#1D1A15; --muted:#5E5446; --rule:#B9AB8C; --rule-strong:#8D7F63; --surface:#F1E8D4; --surface-2:#E9DEC4; --gold-ink:#8E2A1E; --brand-gold:#8D7F63; --np-red:#8E2A1E;
+  color:#1D1A15; border:1px solid #1D1A15; border-radius:0; overflow:hidden;
+  background:radial-gradient(120% 90% at 50% 40%, transparent 55%, rgba(120,90,40,.18) 100%), var(--bg-grain), #F1E8D4;
+  box-shadow:0 0 0 4px #F1E8D4, 0 0 0 5px #1D1A15, 0 10px 30px rgba(0,0,0,.45)}
+.ev-paper .ev-head{position:relative; justify-content:center; margin:8px 12px 0; padding:11px 42px 10px; background:none;
+  border-top:3px double #1D1A15; border-bottom:1px solid #1D1A15}
+.ev-paper .ev-head h2{margin:0; text-align:center; font:700 14.5px/1.3 "Old Standard TT",Georgia,serif; letter-spacing:.1em; text-transform:uppercase; color:#1D1A15; overflow-wrap:anywhere}
+.ev-paper .ev-head button{position:absolute; right:0; top:50%; transform:translateY(-50%); width:32px; height:32px; padding:0; display:flex; align-items:center; justify-content:center;
+  font:400 22px/1 "PT Serif",Georgia,serif; color:#1D1A15; background:transparent; border:1px solid #8D7F63; border-radius:0}
+.ev-paper .ev-head button:hover{background:rgba(29,26,21,.08)}
+.ev-paper .ev-body{padding:12px 14px 16px; scrollbar-color:#8D7F63 #E6DBC0}
+.ev-paper .ai-paper{margin:0; padding:0; background:none; border:0; box-shadow:none}
+.ev-paper .ai-pick{margin:0 0 10px; text-align:center; font:400 13.5px/1.4 "PT Serif",Georgia,serif; color:#5E5446}
+.ev-paper .ai-pick-closed{justify-content:center}
+.ev-paper .ai-reveal, .ev-paper .btn-ev{border:1px solid #1D1A15; border-radius:0; background:transparent; color:#1D1A15; padding:6px 12px; line-height:1.2;
+  font:700 11px/1.2 "Old Standard TT",Georgia,serif; letter-spacing:.12em; text-transform:uppercase}
+.ev-paper .ai-reveal:hover, .ev-paper .btn-ev:hover:not(:disabled){background:rgba(29,26,21,.08); border-color:#1D1A15}
+.ev-paper .blend-go{margin-top:10px}
+.ev-paper .ev-note, .ev-paper .ev-warn{font:italic 400 13px/1.45 "PT Serif",Georgia,serif; color:#5E5446}
+.ev-paper .ai-cmp .ai-c{border-radius:0}
+@media (max-width:520px){ .ev-paper .ev-head h2{font-size:12.5px; letter-spacing:.06em} .ev-paper .ev-head{margin:6px 8px 0; padding:9px 38px 8px} .ev-paper .ev-body{padding:10px 10px 14px} }
+@media (max-width:420px){ .acc-u{display:none} }

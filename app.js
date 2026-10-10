@@ -2792,7 +2792,7 @@
     return { hit: hit, vars: vars };
   }
   function showAcc(back){
-    $("evTitle").textContent = "Точность по тиражам";
+    $("evTitle").textContent = "Статистика стратегий";
     $("evBody").innerHTML = '<div id="accBox"><p class="ev-note">Считаю…</p></div>' +
       (back ? '<div class="blend-go"><button type="button" class="btn-ev" id="accBack">К разбору</button></div>' : '');
     $("evBack").hidden = false;
@@ -2817,34 +2817,44 @@
             }).catch(function(){});
         }));
       }).catch(function(){});
-    Promise.all([aiH, draws]).then(function(r){
-      var aih = r[0] || {}, el = $("accBox"); if(!el) return;
+    var vp = loadVirt().catch(function(){ return null; });
+    Promise.all([aiH, draws, vp]).then(function(r){
+      var aih = r[0] || {}, vdata = r[2] || {}, el = $("accBox"); if(!el) return;
       var nums = Object.keys(store).map(Number).sort(function(a, b){ return b - a; });
       var keep = {}; nums.slice(0, 40).forEach(function(n){ keep[n] = store[n]; }); accWrite(keep);
       nums = nums.slice(0, ACC_N);
       if(!nums.length){ el.innerHTML = '<p class="ev-warn">Пока не удалось получить итоги прошлых тиражей. Попробуй позже.</p>'; return; }
-      var cols = [["ai", "ИИ"], ["gap", "Расхожд."], ["sim", "Симул."], ["kel", "Келли"]], sum = {}, cnt = {};
+      var cols = [["ai", "ИИ", "ИИ"], ["hunt", "Охота", "Охота"], ["gap", "Расхожд.", "Расх."], ["sim", "Симул.", "Сим."], ["kel", "Келли", "Келли"]], sum = {}, cnt = {};
       var body = nums.map(function(n){
         var d = store[n], sc = {}, best = -1;
         cols.forEach(function(c){
-          var line = c[0] === "ai" ? aih[n] : d[c[0]];
-          sc[c[0]] = accScore(line, d.res);
+          if(c[0] === "hunt"){
+            var vr = vdata[String(n)];
+            if(vr && vr.z && Array.isArray(d.res)){
+              var best15 = 0;
+              virtRows(vr.z).forEach(function(row){
+                var h15 = 0; for(var q = 0; q < row.length; q++) if(hitRes(row.charAt(q), d.res[q])) h15++;
+                if(h15 > best15) best15 = h15;
+              });
+              sc.hunt = { hit: best15, vars: vr.n, rows: true };
+            } else sc.hunt = null;
+          } else sc[c[0]] = accScore(c[0] === "ai" ? aih[n] : d[c[0]], d.res);
           if(sc[c[0]] && sc[c[0]].hit > best) best = sc[c[0]].hit;
         });
         return '<tr><th scope="row">' + n + '</th>' + cols.map(function(c){
           var x = sc[c[0]];
           if(!x) return '<td class="acc-na">—</td>';
           sum[c[0]] = (sum[c[0]] || 0) + x.hit; cnt[c[0]] = (cnt[c[0]] || 0) + 1;
-          return '<td' + (x.hit === best ? ' class="acc-best"' : '') + '><b>' + x.hit + '</b><small>' + fmt(x.vars) + ' вар.</small></td>';
+          return '<td' + (x.hit === best ? ' class="acc-best"' : '') + '><b>' + x.hit + '</b><small>' + fmt(x.vars) + '<span class="acc-u">' + (x.rows ? ' стр.' : ' вар.') + '</span></small></td>';
         }).join("") + '</tr>';
       }).join("");
       var foot = '<tr><th scope="row">Среднее</th>' + cols.map(function(c){
         return cnt[c[0]] ? '<td><b>' + (sum[c[0]] / cnt[c[0]]).toFixed(1).replace(".", ",") + '</b><small>' + cnt[c[0]] + ' тир.</small></td>' : '<td class="acc-na">—</td>';
       }).join("") + '</tr>';
-      el.innerHTML = '<p class="ev-note acc-lead">Сколько матчей из 15 накрыл купон — столько угадала бы его лучшая строка. Под числом — сколько вариантов стоил купон. Лучший результат тиража подсвечен.</p>' +
-        '<div class="acc-wrap"><table class="acc"><thead><tr><th>Тираж</th>' + cols.map(function(c){ return '<th>' + c[1] + '</th>'; }).join("") +
+      el.innerHTML = '<p class="ev-note acc-lead">Сколько матчей из 15 накрыл купон — столько угадала бы его лучшая строка. Под числом — сколько вариантов стоил купон. «Охота» — лучшая из её готовых строк (под числом число строк). Лучший результат тиража подсвечен.</p>' +
+        '<div class="acc-wrap"><table class="acc"><thead><tr><th>Тираж</th>' + cols.map(function(c){ return '<th><span class="acc-l">' + c[1] + '</span><span class="acc-s">' + c[2] + '</span></th>'; }).join("") +
         '</tr></thead><tbody>' + body + '</tbody><tfoot>' + foot + '</tfoot></table></div>' +
-        '<p class="ev-note">Стратегии посчитаны по линии и долям на закрытие тиража при текущих настройках цены и бюджета. «—» — купона не было.</p>';
+        '<p class="ev-note">Расхождения, Симуляция и Келли посчитаны по линии и долям на закрытие тиража при текущих настройках цены и бюджета; ИИ и Охота взяты из сохранённых на тираж данных. «—» — купона не было.</p>';
     });
   }
   var AI_SN = [["gap", "Расхождения"], ["sim", "Симуляция"], ["kel", "Келли"]];
@@ -3030,12 +3040,8 @@
     } else if(r) st = ' <span class="ai-live">матч не начался</span>';
     $("evBody").innerHTML = '<div id="aiBox">' + (r ? aiGate('<p class="ai-pick">Вариант ИИ: <b>' + escHtml(r.p) + '</b>' + st + '</p>') +
         (r.t ? aiHtml(r, true, m) : '<p class="ev-note">Полный текст разбора к этому тиражу не сохранён, остался только вариант.</p>')
-      : '<p class="ev-warn">Разбора ИИ по этому тиражу нет.</p>') + '</div>' +
-      '<div class="blend-go"><button type="button" class="btn-ev" id="aiNews">Новости и составы</button>' +
-      '<button type="button" class="btn-ev" id="aiAcc">Точность по тиражам</button></div>';
+      : '<p class="ev-warn">Разбора ИИ по этому тиражу нет.</p>') + '</div>';
     $("evBack").hidden = false;
-    $("aiNews").addEventListener("click", function(){ showNews(m, idx, true); });
-    $("aiAcc").addEventListener("click", function(){ showAcc(function(){ showAiPrev(m, idx, no); }); });
     aiGateBind($("aiBox"));
   }
   function mkAiPrev(m, idx, no, mode){
@@ -3052,11 +3058,8 @@
   function showAi(m, idx){
     $("evTitle").textContent = "Разбор ИИ · " + m.home + " — " + m.away;
     $("evBody").innerHTML = '<div id="aiBox"><p class="ev-note">Загружаю…</p></div>' +
-      '<div class="blend-go" id="aiGo"><button type="button" class="btn-ev" id="aiNews">Новости и составы</button>' +
-      '<button type="button" class="btn-ev" id="aiAcc">Точность по тиражам</button></div>';
+      '<div class="blend-go" id="aiGo"></div>';
     $("evBack").hidden = false;
-    $("aiNews").addEventListener("click", function(){ showNews(m, idx, false); });
-    $("aiAcc").addEventListener("click", function(){ showAcc(function(){ showAi(m, idx); }); });
     loadAi(true).then(function(j){
       var el = $("aiBox"); if(!el) return;
       var r = aiFor(j, idx);
@@ -7514,6 +7517,12 @@
 
   /* кнопка «Оценить купон» снята 20.09.2026 — расчёт EV не пригодился; showEV оставлен на случай возврата */
   $("btnPF").addEventListener("click", function(){ showPortfolio(); });
+  /* окно разбора ИИ целиком в газетном стиле: рамка, шапка, кнопки; остальные окна обычные */
+  (function(){
+    var t = $("evTitle"), box = t && t.closest(".ev-box"); if(!box || typeof MutationObserver !== "function") return;
+    function sync(){ box.classList.toggle("ev-paper", /^Разбор ИИ/.test(t.textContent || "")); }
+    new MutationObserver(sync).observe(t, { childList: true, characterData: true, subtree: true }); sync();
+  })();
   $("evClose").addEventListener("click", function(){ $("evBack").hidden = true; });
   $("evBack").addEventListener("click", function(e){ if(e.target === $("evBack")) $("evBack").hidden = true; });
   document.addEventListener("keydown", function(e){ if(e.key === "Escape") $("evBack").hidden = true; });
@@ -8558,6 +8567,7 @@
   $("stratHelp").addEventListener("click", function(e){ e.preventDefault(); showStratGuide(); });
   $("btnSim").addEventListener("click", showSim);
   $("btnKelly").addEventListener("click", showKellyStrat);
+  $("btnStat").addEventListener("click", function(){ showAcc(); });
   setTimeout(checkFsVoids, 4000);
   loadAi().then(aiBtnsUpdate);
   setInterval(function(){ loadAi().then(aiBtnsUpdate); }, 30 * 60000);
