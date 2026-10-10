@@ -2511,3 +2511,14 @@ body.is-prev .pct-col.hit b,body.is-prev .kf-col.hit{color:var(--ink); font-weig
 .ai-act .btn-ev{flex:1 1 200px; min-width:0}
 .ev-paper .ai-act .btn-ev{padding:9px 12px}
 @media (max-width:520px){ .ai-act .btn-ev{flex:1 1 100%} }
+
+/* бриф: строка «Купон сейчас» по центру и выделена; пояснения сворачиваются */
+.brief-cur{display:grid; gap:3px; margin:12px 0; padding:11px 14px; border:1px solid var(--brand-gold); border-radius:var(--r); background:var(--surface-2); text-align:center; font-size:13.5px; line-height:1.45; color:var(--muted)}
+.brief-cur b{color:var(--ink); font-family:"IBM Plex Mono",monospace; font-weight:700}
+.brief-cur-a{font-size:15px; font-weight:600; color:var(--brand-gold); letter-spacing:.01em}
+.brief-cur-a b{color:var(--brand-gold)}
+.brief-expl{margin:10px 0 4px}
+.brief-expl > summary{text-align:center}
+.brief-expl[open] > summary{margin-bottom:8px}
+.brief-cur b{white-space:nowrap}
+.brief-cur-b{text-wrap:balance}

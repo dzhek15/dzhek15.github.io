@@ -2791,6 +2791,29 @@
     }
     return { hit: hit, vars: vars };
   }
+  /* ИИ в статистике считаем по ТОЧНОЙ системе, которую реально ставим: бриф 13 из 15 из готовой библиотеки (не по всему базовому купону) */
+  function accAiBrief(sets, res){
+    if(!Array.isArray(sets) || sets.length !== res.length || !window.BRIEF_LIB) return null;
+    var wide = [], sizes = [], mul = [], u = 1, fixedHit = 0, k;
+    for(k = 0; k < sets.length; k++){
+      if(!sets[k]) return null;
+      if(sets[k].length > 1){ wide.push(k); sizes.push(sets[k].length); mul.push(u); u *= sets[k].length; }
+      else if(hitRes(sets[k], res[k])) fixedHit++;
+    }
+    var code;
+    try { code = briefLibCode(sizes, mul, 2); } catch(e){ code = null; }
+    if(!code || !code.rows || !code.rows.length) return null;
+    var best = 0;
+    code.rows.forEach(function(x){
+      var h = fixedHit;
+      for(var q = 0; q < wide.length; q++){
+        var dg = Math.floor(x / mul[q]) % sizes[q];
+        if(hitRes(sets[wide[q]].charAt(dg), res[wide[q]])) h++;
+      }
+      if(h > best) best = h;
+    });
+    return { hit: best, vars: code.rows.length, rows: true };
+  }
   function showAcc(back){
     $("evTitle").textContent = "Статистика стратегий";
     $("evBody").innerHTML = '<div id="accBox"><p class="ev-note">Считаю…</p></div>' +
@@ -2838,14 +2861,16 @@
               });
               sc.hunt = { hit: best15, vars: vr.n, rows: true };
             } else sc.hunt = null;
-          } else sc[c[0]] = accScore(c[0] === "ai" ? aih[n] : d[c[0]], d.res);
+          } else if(c[0] === "ai"){
+            sc.ai = accAiBrief(aih[n], d.res) || accScore(aih[n], d.res);
+          } else sc[c[0]] = accScore(d[c[0]], d.res);
           if(sc[c[0]] && sc[c[0]].hit > best) best = sc[c[0]].hit;
         });
         return '<tr><th scope="row">' + n + '</th>' + cols.map(function(c){
           var x = sc[c[0]];
           if(!x) return '<td class="acc-na">—</td>';
           sum[c[0]] = (sum[c[0]] || 0) + x.hit; cnt[c[0]] = (cnt[c[0]] || 0) + 1;
-          return '<td><span class="ac-pill' + (x.hit === best ? ' ac-best' : x.hit >= 9 ? ' ac-prize' : '') + '"><b>' + x.hit + '</b></span><small>' + fmt(x.vars) + '<span class="acc-u">' + (x.rows ? ' стр.' : ' вар.') + '</span></small></td>';
+          return '<td><span class="ac-pill' + (x.hit === best ? ' ac-best' : '') + '"><b>' + x.hit + '</b></span><small>' + fmt(x.vars) + '<span class="acc-u">' + (x.rows ? ' стр.' : ' вар.') + '</span></small></td>';
         }).join("") + '</tr>';
       }).join("");
       var avg = {}, topK = null;
@@ -2859,11 +2884,10 @@
         return cnt[c[0]] ? '<td><span class="ac-pill' + (c[0] === topK ? ' ac-best' : '') + '"><b>' + f1(avg[c[0]]) + '</b></span><small>' + cnt[c[0]] + ' тир.</small></td>' : '<td class="acc-na">—</td>';
       }).join("") + '</tr>';
       el.innerHTML = '<h3 class="ac-h">Среднее число угаданных матчей</h3><div class="ac-lbs">' + lb + '</div>' +
-        '<h3 class="ac-h">По тиражам</h3>' +
-        '<p class="ac-leg"><span class="ac-pill ac-best"><b>12</b></span> лучший в тираже <span class="ac-pill ac-prize"><b>9</b></span> призовая зона, 9 и больше</p>' +
+        '<p class="ac-leg"><span class="ac-pill ac-best"><b>12</b></span> лучший результат тиража</p>' +
         '<div class="acc-wrap"><table class="acc"><thead><tr><th>Тираж</th>' + cols.map(function(c){ return '<th' + (c[0] === topK ? ' class="ac-topc"' : '') + '><span class="acc-l">' + c[1] + '</span><span class="acc-s">' + c[2] + '</span></th>'; }).join("") +
         '</tr></thead><tbody>' + body + '</tbody><tfoot>' + foot + '</tfoot></table></div>' +
-        '<p class="ev-note ac-fn">Число в таблице: сколько матчей из 15 накрыл купон, столько угадала бы его лучшая строка. У Охоты это лучшая из её готовых строк, под числом количество строк. Расхождения, Симуляция и Келли посчитаны по линии и долям на закрытие тиража при текущих настройках цены и бюджета; ИИ и Охота взяты из сохранённых на тираж данных. «—» — купона не было.</p>';
+        '<p class="ev-note ac-fn">Число в таблице: сколько матчей из 15 угадала лучшая строка. У ИИ это строки брифа 13 из 15 (то, что реально ставится, а не весь базовый купон), у Охоты лучшая из её готовых строк; под числом количество строк. Расхождения, Симуляция и Келли посчитаны по линии и долям на закрытие тиража при текущих настройках цены и бюджета; ИИ и Охота взяты из сохранённых на тираж данных. «—» — купона не было.</p>';
     });
   }
   var AI_SN = [["gap", "Расхождения"], ["sim", "Симуляция"], ["kel", "Келли"]];
@@ -4701,6 +4725,9 @@
       '<div class="bf-m"><span>' + cov + ' из 45</span><span>' + fmt(sh.rows) + ' ' + plural(sh.rows, 'строка', 'строки', 'строк') + '</span><span>' + fmt(sh.rows * price) + ' ₽</span><span class="bf-p">' + sh.ch + '</span></div></div>' +
       '<button type="button" class="gap-set bf-ai" data-g="' + g + '" data-s="' + sh.s + '" data-d="' + sh.d + '" data-t="' + sh.t + '"' + (aiOk ? '' : ' disabled title="Разбор ИИ на этот тираж ещё не готов"') + '>Собрать с ИИ</button></div>';
   }
+  document.addEventListener("toggle", function(e){
+    var t = e.target; if(t && t.classList && t.classList.contains("brief-expl")) window.__briefExplOpen = t.open;
+  }, true);
   function briefRuleBox(one, cs){
     var F = BRIEF_FORMS[briefTab] || BRIEF_FORMS[13], g = briefTab;
     var aiOk = !!aiPlan(ai.data) && state.matches.length === 15;
@@ -4728,10 +4755,11 @@
         return '<li><span class="brief-rule-n">' + (i + 1) + '</span><div><b>' + st[0] + '</b><small>' + st[1] + '</small></div></li>';
       }).join("") + '</ol>' +
       '<div class="bf-list">' + list + '</div>' +
+      '<details class="ev-how brief-expl"' + (window.__briefExplOpen ? ' open' : '') + '><summary>Пояснения и рекомендации</summary>' +
       '<p class="brief-rule-fn">' + F.foot + ' Кнопка «Собрать с ИИ» ставит в купон выбор ИИ с нужным числом ординаров, двойников и тройников.</p>' +
       '<p class="brief-rule-now">' + now + '</p>' +
       '<div class="brief-rule-rt">Рекомендации</div>' +
-      '<ul class="brief-rule-r">' + F.recs.map(function(x){ return '<li>' + x + '</li>'; }).join("") + '</ul>' +
+      '<ul class="brief-rule-r">' + F.recs.map(function(x){ return '<li>' + x + '</li>'; }).join("") + '</ul></details>' +
       '<details class="ev-how brief-how"><summary>Как это работает и откуда формула</summary>' + F.how.map(function(x){ return '<p>' + x + '</p>'; }).join("") + '</details>' +
     '</div>';
   }
@@ -4833,8 +4861,8 @@
     var curShape = { s: one, d: two, t: tri };
     h += '<div id="briefRuleW">' + briefRuleBox(one, curShape) + '</div>';
     var pin = briefInside(sets, briefProbs());
-    h += '<p class="ev-note">Купон сейчас: ординаров ' + one + ', двоек ' + two + ', троек ' + tri +
-         '. Полное покрытие — <b>' + fmt(U) + '</b> строк на <b>' + fmt(U * price) + ' ₽</b> по ' + fmt(price) + ' ₽ за строку.</p>';
+    h += '<p class="brief-cur"><span class="brief-cur-a">Купон сейчас: ординаров <b>' + one + '</b>, двоек <b>' + two + '</b>, троек <b>' + tri +
+         '</b></span><span class="brief-cur-b">Полное покрытие — <b>' + fmt(U) + '</b> строк на <b>' + fmt(U * price) + ' ₽</b> по ' + fmt(price) + ' ₽ за строку</span></p>';
     h += '<p class="ev-note brief-pin">Шанс, что все 15 итогов окажутся внутри купона: <b>' + stratChance(pin) + '</b>' +
          (pin < 0.05 ? ' — только в этом случае гарантия и срабатывает. При k промахах мимо купона лучшая строка даёт не меньше «гарантия минус k».' : '.') + '</p>';
 
