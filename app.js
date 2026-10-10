@@ -6866,19 +6866,23 @@
         return;
       }
       /* можно вставить сразу несколько ссылок — через пробел или с новой строки */
-      var re = /#v=([^-&#\s]*)-([A-Za-z0-9\-_]+)/g, m, list = [], other = 0;
+      var re = /#v=([^-&#\s]*)-([A-Za-z0-9\-_]+)/g, m, list = [], other = 0, cur = [];
       var reS = /#vs=([^-&#\s]*)-([A-Za-z0-9\-_.]+)/g, ms2;
       while((ms2 = reS.exec(v))){
         var t2 = decodeURIComponent(ms2[1]);
         if(Number(t2) < Number(state.tirazh)) ms2[2].split(".").filter(Boolean).forEach(function(pl){ list.push({ tirazh: t2, payload: pl }); });
+        else if(Number(t2) === Number(state.tirazh)) ms2[2].split(".").filter(Boolean).forEach(function(pl){ cur.push(pl); });
         else other++;
       }
       v = v.replace(reS, " ");
       while((m = re.exec(v))){
         var t = decodeURIComponent(m[1]);
         if(Number(t) < Number(state.tirazh)) list.push({ tirazh: t, payload: m[2] });
+        else if(Number(t) === Number(state.tirazh)) cur.push(m[2]);
         else other++;
       }
+      /* ссылка на текущий приём: те же наборы, что открывает адрес со ссылкой, — в просмотре текущего тиража */
+      if(cur.length){ openMultiCur(String(state.tirazh), cur); if(!list.length) return; }
       if(!list.length){
         pcsv.msgAt = Date.now();
         pcsv.msg = other ? "Это ссылки на текущий тираж №" + state.tirazh + " — их открывают в самом купоне, а не в просмотре."
