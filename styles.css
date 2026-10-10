@@ -2465,3 +2465,49 @@ body.is-prev .pct-col.hit b,body.is-prev .kf-col.hit{color:var(--ink); font-weig
 .ev-paper .ai-cmp .ai-c{border-radius:0}
 @media (max-width:520px){ .ev-paper .ev-head h2{font-size:12.5px; letter-spacing:.06em} .ev-paper .ev-head{margin:6px 8px 0; padding:9px 38px 8px} .ev-paper .ev-body{padding:10px 10px 14px} }
 @media (max-width:420px){ .acc-u{display:none} }
+
+/* разбор ИИ: все заголовки по центру */
+.ai-paper .ai-lb{text-align:center}
+.ai-paper .ai-cal-t{justify-content:center; flex-wrap:wrap; text-align:center; column-gap:8px}
+.ai-paper .ai-lu-t{padding-left:0; border-left:0; margin:0 0 9px}
+.ai-paper .ai-lu-t > b{text-align:center; margin:0 0 4px; padding:0 0 2px; border-bottom:1px solid #B9AB8C}
+.ai-paper .ai-lu-key b{text-align:center; margin-bottom:2px}
+.ai-paper .ai-lu-xi i{display:block; margin:0 0 1px; text-align:center}
+.ai-paper .ai-lu-xi{text-align:left}
+
+/* СТАТИСТИКА СТРАТЕГИЙ: оформление */
+.ac-h{margin:4px 0 8px; text-align:center; font:700 11.5px/1.3 inherit; letter-spacing:.14em; text-transform:uppercase; color:var(--muted)}
+.ac-lbs{display:grid; gap:7px; margin:0 0 16px}
+.ac-lb{display:grid; grid-template-columns:minmax(66px,92px) minmax(0,1fr) 44px 40px; align-items:center; gap:8px; font-size:13px}
+.ac-lbn{font-weight:600; color:var(--ink); overflow-wrap:anywhere}
+.ac-bar{display:block; height:12px; border-radius:6px; background:var(--surface-2); border:1px solid var(--rule); overflow:hidden}
+.ac-bar i{display:block; height:100%; border-radius:6px; background:linear-gradient(90deg,#6F7F8C,#9FB3C4)}
+.ac-lb b{text-align:right; font:700 15px/1 "IBM Plex Mono",monospace; color:var(--ink)}
+.ac-lb small{font-size:10.5px; color:var(--muted); white-space:nowrap}
+.ac-lb.ac-top .ac-bar i{background:linear-gradient(90deg,#B98F2E,#E7C873); box-shadow:0 0 10px rgba(201,162,75,.55)}
+.ac-lb.ac-top .ac-lbn, .ac-lb.ac-top b{color:#B98F2E}
+[data-theme="light"] .ac-lb.ac-top .ac-lbn, [data-theme="light"] .ac-lb.ac-top b{color:#8A6A12}
+.ac-leg{display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:6px 10px; margin:0 0 8px; font-size:11.5px; color:var(--muted)}
+.ac-pill{display:inline-flex; align-items:center; justify-content:center; min-width:34px; padding:3px 7px; border-radius:999px; border:1px solid transparent}
+.ac-pill b{display:inline; font:700 15px/1.1 "IBM Plex Mono",monospace; color:var(--ink)}
+.ac-pill.ac-prize{background:rgba(46,160,90,.18); border-color:rgba(46,160,90,.5)}
+.ac-pill.ac-best{background:linear-gradient(135deg,#C9A24B,#EBCF7F); border-color:#EBCF7F; box-shadow:0 0 10px rgba(201,162,75,.5)}
+.ac-pill.ac-best b{color:#1B1608}
+.acc{border-collapse:separate; border-spacing:0}
+.acc thead th{padding:8px 3px; border-bottom:2px solid var(--rule-strong); font-size:11px; color:var(--muted)}
+.acc thead th.ac-topc{color:#B98F2E; border-bottom-color:#C9A24B}
+[data-theme="light"] .acc thead th.ac-topc{color:#8A6A12}
+.acc tbody tr:nth-child(even) th, .acc tbody tr:nth-child(even) td{background:var(--surface-2)}
+.acc tbody th, .acc tbody td{padding:7px 3px 6px; border-bottom:1px solid var(--rule)}
+.acc tbody th{font:600 12.5px/1 "IBM Plex Mono",monospace; color:var(--muted)}
+.acc td small{margin-top:2px}
+.acc tfoot th, .acc tfoot td{padding:9px 3px 6px; border-top:2px solid var(--rule-strong); border-bottom:0}
+.acc tfoot th{font:700 12px/1.1 inherit; text-transform:uppercase; letter-spacing:.06em; color:var(--ink)}
+.ac-fn{margin-top:12px; text-align:center}
+@media (max-width:420px){ .ac-lb{grid-template-columns:86px minmax(0,1fr) 38px 34px; gap:6px; font-size:12px} .ac-lbn{white-space:nowrap} .ac-pill{min-width:30px; padding:3px 5px} .ac-pill b{font-size:14px} .ac-lb small{font-size:9.5px} }
+
+/* кнопки «Поставить вариант ИИ» и «Весь купон ИИ» сразу под открытым вариантом, над разбором */
+.ai-act{display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin:2px 0 14px}
+.ai-act .btn-ev{flex:1 1 200px; min-width:0}
+.ev-paper .ai-act .btn-ev{padding:9px 12px}
+@media (max-width:520px){ .ai-act .btn-ev{flex:1 1 100%} }

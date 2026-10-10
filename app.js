@@ -2845,16 +2845,25 @@
           var x = sc[c[0]];
           if(!x) return '<td class="acc-na">—</td>';
           sum[c[0]] = (sum[c[0]] || 0) + x.hit; cnt[c[0]] = (cnt[c[0]] || 0) + 1;
-          return '<td' + (x.hit === best ? ' class="acc-best"' : '') + '><b>' + x.hit + '</b><small>' + fmt(x.vars) + '<span class="acc-u">' + (x.rows ? ' стр.' : ' вар.') + '</span></small></td>';
+          return '<td><span class="ac-pill' + (x.hit === best ? ' ac-best' : x.hit >= 9 ? ' ac-prize' : '') + '"><b>' + x.hit + '</b></span><small>' + fmt(x.vars) + '<span class="acc-u">' + (x.rows ? ' стр.' : ' вар.') + '</span></small></td>';
         }).join("") + '</tr>';
       }).join("");
+      var avg = {}, topK = null;
+      cols.forEach(function(c){ if(cnt[c[0]]){ avg[c[0]] = sum[c[0]] / cnt[c[0]]; if(topK === null || avg[c[0]] > avg[topK]) topK = c[0]; } });
+      var f1 = function(v){ return v.toFixed(1).replace(".", ","); };
+      var lb = cols.filter(function(c){ return avg[c[0]] !== undefined; }).sort(function(x, y){ return avg[y[0]] - avg[x[0]]; }).map(function(c){
+        return '<div class="ac-lb' + (c[0] === topK ? ' ac-top' : '') + '"><span class="ac-lbn">' + c[1].replace("Расхожд.", "Расхождения").replace("Симул.", "Симуляция") + '</span>' +
+          '<span class="ac-bar"><i style="width:' + Math.round(avg[c[0]] / 15 * 100) + '%"></i></span><b>' + f1(avg[c[0]]) + '</b><small>' + cnt[c[0]] + ' тир.</small></div>';
+      }).join("");
       var foot = '<tr><th scope="row">Среднее</th>' + cols.map(function(c){
-        return cnt[c[0]] ? '<td><b>' + (sum[c[0]] / cnt[c[0]]).toFixed(1).replace(".", ",") + '</b><small>' + cnt[c[0]] + ' тир.</small></td>' : '<td class="acc-na">—</td>';
+        return cnt[c[0]] ? '<td><span class="ac-pill' + (c[0] === topK ? ' ac-best' : '') + '"><b>' + f1(avg[c[0]]) + '</b></span><small>' + cnt[c[0]] + ' тир.</small></td>' : '<td class="acc-na">—</td>';
       }).join("") + '</tr>';
-      el.innerHTML = '<p class="ev-note acc-lead">Сколько матчей из 15 накрыл купон — столько угадала бы его лучшая строка. Под числом — сколько вариантов стоил купон. «Охота» — лучшая из её готовых строк (под числом число строк). Лучший результат тиража подсвечен.</p>' +
-        '<div class="acc-wrap"><table class="acc"><thead><tr><th>Тираж</th>' + cols.map(function(c){ return '<th><span class="acc-l">' + c[1] + '</span><span class="acc-s">' + c[2] + '</span></th>'; }).join("") +
+      el.innerHTML = '<h3 class="ac-h">Среднее число угаданных матчей</h3><div class="ac-lbs">' + lb + '</div>' +
+        '<h3 class="ac-h">По тиражам</h3>' +
+        '<p class="ac-leg"><span class="ac-pill ac-best"><b>12</b></span> лучший в тираже <span class="ac-pill ac-prize"><b>9</b></span> призовая зона, 9 и больше</p>' +
+        '<div class="acc-wrap"><table class="acc"><thead><tr><th>Тираж</th>' + cols.map(function(c){ return '<th' + (c[0] === topK ? ' class="ac-topc"' : '') + '><span class="acc-l">' + c[1] + '</span><span class="acc-s">' + c[2] + '</span></th>'; }).join("") +
         '</tr></thead><tbody>' + body + '</tbody><tfoot>' + foot + '</tfoot></table></div>' +
-        '<p class="ev-note">Расхождения, Симуляция и Келли посчитаны по линии и долям на закрытие тиража при текущих настройках цены и бюджета; ИИ и Охота взяты из сохранённых на тираж данных. «—» — купона не было.</p>';
+        '<p class="ev-note ac-fn">Число в таблице: сколько матчей из 15 накрыл купон, столько угадала бы его лучшая строка. У Охоты это лучшая из её готовых строк, под числом количество строк. Расхождения, Симуляция и Келли посчитаны по линии и долям на закрытие тиража при текущих настройках цены и бюджета; ИИ и Охота взяты из сохранённых на тираж данных. «—» — купона не было.</p>';
     });
   }
   var AI_SN = [["gap", "Расхождения"], ["sim", "Симуляция"], ["kel", "Келли"]];
@@ -3058,7 +3067,7 @@
   function showAi(m, idx){
     $("evTitle").textContent = "Разбор ИИ · " + m.home + " — " + m.away;
     $("evBody").innerHTML = '<div id="aiBox"><p class="ev-note">Загружаю…</p></div>' +
-      '<div class="blend-go" id="aiGo"></div>';
+      '';
     $("evBack").hidden = false;
     loadAi(true).then(function(j){
       var el = $("aiBox"); if(!el) return;
@@ -3071,10 +3080,10 @@
       el.innerHTML = (r.p ? aiGate(aiPickLine(r, idx)) : "") + aiHtml(r, true, state.matches[idx]);
       if(r.p){
         aiGateBind(el, function(){
-          var go = $("aiGo"); if(!go || $("aiOne")) return;
-          go.insertAdjacentHTML("afterbegin",
+          var go = el.querySelector(".ai-gate .ai-real"); if(!go || $("aiOne")) return;
+          go.insertAdjacentHTML("beforeend", '<div class="ai-act">' +
             '<button type="button" class="btn-ev" id="aiOne">Поставить ' + escHtml(r.p) + ' в матч</button>' +
-            (all ? '<button type="button" class="btn-ev" id="aiAll">Весь купон ИИ · ' + fmt(all.combos) + ' вар.</button>' : ''));
+            (all ? '<button type="button" class="btn-ev" id="aiAll">Весь купон ИИ · ' + fmt(all.combos) + ' вар.</button>' : '') + '</div>');
           $("aiOne").addEventListener("click", function(){ aiApply(j, [idx]); });
           if(all) $("aiAll").addEventListener("click", function(){ aiApply(j, null); });
           el.insertAdjacentHTML("beforeend", aiKellySummary(j));
