@@ -2661,7 +2661,7 @@
   var AI_ST = { "выбыл": "out", "под вопросом": "q", "дисквалифицирован": "sus", "вернулся": "back", "в строю": "ok" };
   function aiLuPl(p){
     var st = AI_ST[p.st] || "q", ro = String(p.role || "").toLowerCase();
-    var rb = ro === "основной" ? '<span class="ai-ro ai-ro-m">Основной</span>' : (ro === "резерв" ? '<span class="ai-ro ai-ro-r">Резерв</span>' : '<span class="ai-ro ai-ro-u">Роль не указана</span>');
+    var rb = ro === "основной" ? '<span class="ai-ro ai-ro-m">Основной</span>' : (ro === "резерв" ? '<span class="ai-ro ai-ro-r">Резерв</span>' : '');
     var d = [];
     if(p.why) d.push(escHtml(p.why));
     if(p.since) d.push('<span class="ai-lu-sn">' + escHtml(p.since) + '</span>');
