@@ -65,6 +65,9 @@
 "анси": {
 "f": "vqudxvme-YaxdL9AI.png"
 },
+"аргентинос хуниорс": {
+"f": "p0EKsd7k-CUuaFAMD.png"
+},
 "аргентинос хуниорс(р)": {
 "f": "jTDe8586-27vW42zI.png"
 },
@@ -140,6 +143,9 @@
 "болтон": {
 "f": "8jj84yCN-bJFnYpTt.png"
 },
+"боруссия менхенгладбах": {
+"f": "tjlAHwhT-84sATBUR.png"
+},
 "бостон ривер": {
 "f": "tCs8eX7k-pOoSyvxr.png"
 },
@@ -188,6 +194,9 @@
 "булонь-сюр-мер": {
 "f": "bkQjzw7k-ppahwjB4.png"
 },
+"валенсия": {
+"f": "8Cqphq8k-MHrRLNUo.png"
+},
 "вальядолид": {
 "f": "GvWsl3Sq-htRvrFH6.png"
 },
@@ -219,6 +228,9 @@
 "вулверхэмптон": {
 "f": "MV7MiUmC-ABWS7fBq.png"
 },
+"газиантеп": {
+"f": "UH4szVne-nwcq2Drl.png"
+},
 "газль эль-махалла": {
 "f": "dGMW46U0-AXTgaM87.png"
 },
@@ -227,6 +239,9 @@
 },
 "греббестад": {
 "f": "ttDGsWlC-ng1fW8Y5.png"
+},
+"гронинген": {
+"f": "AJOIh8jT-Mm3KkBrA.png"
 },
 "грэмио рс": {
 "f": "lnrkBi86-tQsU6dGl.png"
@@ -261,11 +276,17 @@
 "депортиво мерло": {
 "f": "UXlpx17k-jRV1V0Hu.png"
 },
+"депортиво риестра": {
+"f": "zFp4DxiT-rRNfwvij.png"
+},
 "дерби каунти": {
 "f": "xrSu4XPq-jJPRA9H4.png"
 },
 "динамо минск": {
 "f": "Q5LavxT0-nexJVvF1.png"
+},
+"динамо москва": {
+"f": "M3FxMJkC-txMKtAQi.png"
 },
 "доломиты беллунези": {
 "f": "vsHRPGjT-GfC4FMXT.png"
@@ -324,6 +345,9 @@
 "кардифф сити": {
 "f": "AaPWNHkC-x4VfTaKj.png"
 },
+"кельн": {
+"f": "KMphsCCN-86lnAaq9.png"
+},
 "керри": {
 "c": [
 "#054b26",
@@ -356,6 +380,9 @@
 },
 "краснодар": {
 "f": "Ig4p4mBN-vTLj5hDm.png"
+},
+"кристал пэлас": {
+"f": "GfkvlLmC-drybTCiH.png"
 },
 "кру александра": {
 "c": [
@@ -393,6 +420,12 @@
 "летерхед": {
 "f": "MLVdD7U0-A7dHJstO.png"
 },
+"ливерпуль": {
+"f": "nBClzyne-KCp4zq5F.png"
+},
+"лиллестрем": {
+"f": "rqNEwqQq-zTAC7Vhk.png"
+},
 "лион": {
 "f": "bkuX6RS0-GU4hlIMk.png"
 },
@@ -424,6 +457,9 @@
 "мальорка": {
 "f": "WKsw8cne-rmDEjevK.png"
 },
+"манчестер сити": {
+"f": "0vgscFU0-lQuhqN8N.png"
+},
 "мб руиссе": {
 "f": "GEMJ49CN-2wF033pH.png"
 },
@@ -435,6 +471,9 @@
 },
 "мк оран": {
 "f": "4O8X4ejC-WEM4tWjn.png"
+},
+"мольде": {
+"f": "Y95jeTlC-baDaGjjh.png"
 },
 "монтевидео сити торке": {
 "f": "YD3L0x6k-hOX9sHW0.png"
@@ -448,8 +487,17 @@
 "насиональ монтевидео": {
 "f": "bZ1tooDN-xErFNzEn.png"
 },
+"насьонал": {
+"f": "A7esGM6k-pUpRIC96.png"
+},
+"ницца": {
+"f": "bJCGymle-00sqJmg8.png"
+},
 "новара": {
 "f": "nTi4zziT-IehoPOFd.png"
+},
+"ноттингем форест": {
+"f": "86ODdyle-ImKwLTtA.png"
 },
 "нуэва чикаго": {
 "f": "44c5ZQ76-ClnEoGMd.png"
@@ -463,6 +511,9 @@
 "#000000"
 ],
 "id": 457
+},
+"олесунн": {
+"f": "88VSvrWH-QBQwYJis.png"
 },
 "операрио пр": {
 "f": "p0AtzGQq-vm8qH06L.png"
@@ -479,6 +530,9 @@
 "пласа колония": {
 "f": "2Bu4C5AN-SARVQmpJ.png"
 },
+"платенсе": {
+"f": "pl4O86U0-pAQm6KvU.png"
+},
 "платенсе(р)": {
 "f": "zDDx8C76-4SMicvEk.png"
 },
@@ -487,6 +541,9 @@
 },
 "раджа касабланка": {
 "f": "IZc8YSlC-fLPkADxb.png"
+},
+"расинг сантандер": {
+"f": "UcT1DDUH-MsWrauH8.png"
 },
 "реал овьедо": {
 "c": [
@@ -514,6 +571,9 @@
 "ренессанс беркан": {
 "f": "0zS1aRRq-xExOnmQQ.png"
 },
+"риу аве": {
+"f": "06rYX486-pjxqSmk4.png"
+},
 "ротерем юнайтед": {
 "c": [
 "#ef2129",
@@ -538,6 +598,9 @@
 "сампдория": {
 "f": "WQp3CvUH-WdmUvPiG.png"
 },
+"сан лоренцо": {
+"f": "bVaqpoWH-YyppIBwT.png"
+},
 "сан лоренцо(р)": {
 "f": "AmumUhQq-KfZ5zEAf.png"
 },
@@ -549,6 +612,9 @@
 },
 "сармиенто хунин": {
 "f": "0jUeTMhT-jFNZQuRn.png"
+},
+"сарпсборг 08": {
+"f": "KSrFsjA6-vFdnoPtE.png"
 },
 "сарыер": {
 "f": "lhDxhGkC-WdqsldXR.png"
@@ -562,6 +628,9 @@
 },
 "серро монтевидео": {
 "f": "tl6sskT0-dUH9C2gd.png"
+},
+"ска": {
+"f": "lpqqOiVH-6H8nRKw4.png"
 },
 "скарборо атлетик": {
 "f": "x2TELSme-Acopjvte.png"
@@ -578,8 +647,14 @@
 "спортинг лиссабон": {
 "f": "jy2lEHBN-4ddK8rOq.png"
 },
+"спортинг хихон": {
+"f": "ziVpaDjC-IDZgZhUt.png"
+},
 "сток сити": {
 "f": "hfCH0SA6-KpUCBoUk.png"
+},
+"страсбур": {
+"f": "2XOhzSQq-lAc5wKNp.png"
 },
 "суиндон таун": {
 "c": [
@@ -667,6 +742,9 @@
 "фулхэм": {
 "f": "fkbYUWme-ImMEe0UF.png"
 },
+"халл сити": {
+"f": "WGeGdCSq-bJFnYpTt.png"
+},
 "хассани агадир": {
 "c": [
 "#f1676d",
@@ -696,6 +774,9 @@
 ],
 "id": 1372
 },
+"чорум беледиеспор": {
+"f": "ShtFJk96-nsVkkOor.png"
+},
 "чфр клуж": {
 "f": "pQ7BiYTH-OUUX0e6e.png"
 },
@@ -705,12 +786,18 @@
 "шаморин": {
 "f": "2mO4H05k-xtVmNEr4.png"
 },
+"эвертон": {
+"f": "EBfZuwme-bRmKmISE.png"
+},
 "эйндховен": {
 "c": [
 "#3864ad",
 "#aabcdd"
 ],
 "id": 422
+},
+"эксельсиор": {
+"f": "82r5rXU0-GOuuvzfL.png"
 },
 "эксетер сити": {
 "c": [
