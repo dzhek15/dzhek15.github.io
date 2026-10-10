@@ -2603,16 +2603,18 @@
     var rows = t.g.map(function(g){
       var cls = g[4] === "s" ? " ai-st" : g[4] === "w" ? " ai-wk" : "";
       var eu = /^Лига (чемпионов|Европы|конференций)/.test(g[1]);
-      return '<tr' + (eu ? ' class="ai-eu"' : '') + '><td class="ai-cd">' + escHtml(g[0]) + '</td><td class="ai-co"><span class="ai-cv" title="' + (g[2] ? "дома" : "в гостях") + '">' + (g[2] ? "д" : "г") + '</span><span class="ai-cn' + cls + '">' + escHtml(g[3]) + '</span>' +
-        (g[5] ? ' <span class="ai-cp">' + escHtml(g[5]) + '</span>' : '') + '<span class="ai-cc">' + (eu ? '<span class="ai-eub">Еврокубок</span> ' : '') + escHtml(g[1]) + (g[6] ? ' · <em class="ai-dby">' + escHtml(g[6]) + '</em>' : '') + '</span></td></tr>';
+      var me = '<b class="ai-gme">' + escHtml(t.n) + '</b>', op = '<span class="ai-cn' + cls + '">' + escHtml(g[3]) + '</span>';
+      var cap = (eu ? '<span class="ai-eub">Еврокубок</span> ' : '') + escHtml(g[1]) + (g[5] ? ' · соперник ' + escHtml(g[5]) + ' место' : '') + (g[6] ? ' · <em class="ai-dby">' + escHtml(g[6]) + '</em>' : '');
+      return '<div class="ai-g ' + (g[2] ? 'ai-g-h' : 'ai-g-a') + (eu ? ' ai-eu' : '') + '"><div class="ai-gl"><span class="ai-cd">' + escHtml(g[0]) + '</span> ' +
+        (g[2] ? me + ' — ' + op : op + ' — ' + me) + '</div><div class="ai-gc">' + cap + '</div></div>';
     }).join("");
-    return '<div class="ai-cal-t"><b>' + escHtml(t.n) + '</b>' + (t.p ? '<span>' + escHtml(t.p) + '</span>' : '') + '</div><table class="ai-cal"><tbody>' + rows + '</tbody></table>';
+    return '<div class="ai-cal-t"><b>' + escHtml(t.n) + '</b>' + (t.p ? '<span>' + escHtml(t.p) + '</span>' : '') + '</div><div class="ai-cal">' + rows + '</div>';
   }
   function aiCal(n){
     if(!n) return "";
     var a = aiCalTeam(n.h), b = aiCalTeam(n.a);
     if(!a && !b) return "";
-    return a + b + '<p class="ai-cal-lg"><span class="ai-st">Красный</span> соперник сильнее или выше в таблице, <span class="ai-wk">зелёный</span> слабее или ниже, без цвета класс не определён. <span class="ai-euk">Синим</span> выделены еврокубки. д дома, г в гостях.</p>';
+    return a + b + '<p class="ai-cal-lg"><span class="ai-st">Красный</span> соперник сильнее или выше в таблице, <span class="ai-wk">зелёный</span> слабее или ниже, без цвета класс не определён. <span class="ai-euk">Синим</span> выделены еврокубки. Домашняя игра слева, гостевая справа.</p>';
   }
   function aiPara(x, r){
     var m = /^(Прошлые игры|Следующие игры|Кубок|На кону|Составы и отсутствующие|Тренеры и настроение|Неочевидная деталь|Неочевидные детали, наблюдения):\s*([\s\S]*)$/.exec(x);
@@ -2665,7 +2667,7 @@
     var d = [];
     if(p.why) d.push(escHtml(p.why));
     if(p.since) d.push('<span class="ai-lu-sn">' + escHtml(p.since) + '</span>');
-    return '<li class="ai-lp"><div class="ai-lp-a"><b>' + escHtml(p.n) + '</b>' + (p.pos ? '<span class="ai-lp-pos">' + escHtml(p.pos) + '</span>' : '') + rb + '</div>' +
+    return '<li class="ai-lp"><div class="ai-lp-a">' + (p.num ? '<span class="ai-lp-num">' + escHtml(String(p.num).replace(/^№\s*/, "")) + '</span>' : '') + '<b>' + escHtml(p.n) + '</b>' + (p.pos ? '<span class="ai-lp-pos">' + escHtml(p.pos) + '</span>' : '') + rb + '</div>' +
       '<div class="ai-lp-b"><span class="ai-stb ai-stb-' + st + '">' + escHtml(p.st || "статус не указан") + '</span>' + (d.length ? '<span class="ai-lp-d">' + d.join(" · ") + '</span>' : '') + '</div></li>';
   }
   function aiLuHtml(lu){
