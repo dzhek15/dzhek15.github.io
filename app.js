@@ -3009,11 +3009,11 @@
   /* виртуальные купоны стратегий (data/api/virt.json {"<тираж>": {name, sets, n, pin, z}}): считаются до дедлайна и не меняются,
      в просмотре идут в рейтинг с пометкой «виртуальный» — на деньги не ставятся, нужны для отслеживания */
   var virt = { data: null, at: 0, loading: null };
-  function loadVirt(){
-    if(virt.data && Date.now() - virt.at < 10 * 60000) return Promise.resolve(virt.data);
+  function loadVirt(fresh){
+    if(virt.data && Date.now() - virt.at < (fresh ? 60000 : 10 * 60000)) return Promise.resolve(virt.data);
     if(virt.loading) return virt.loading;
     if(typeof fetch !== "function") return Promise.resolve(null);
-    virt.loading = fetch(MIRROR + "virt.json?t=" + Math.floor(Date.now() / 600000))
+    virt.loading = fetch(MIRROR + "virt.json?t=" + (fresh ? Date.now() : Math.floor(Date.now() / 600000)), fresh ? {cache: "no-store"} : undefined)
       .then(function(r){ return r.ok ? r.json() : null; })
       .then(function(j){ virt.loading = null; if(j){ virt.data = j; virt.at = Date.now(); } return virt.data; })
       .catch(function(){ virt.loading = null; return virt.data; });
@@ -7057,6 +7057,35 @@
     }
     return '<span class="pc-tm">' + escHtml((pcDay(m) ? pcDay(m) + " " : "") + (m.time || "—")) + '</span>';
   }
+  /* текущий приём в просмотре: ИИ-бриф и «Охота на 15» должны быть всегда; пока разбор не проведён и бриф не подгружен — сноска */
+  var curAiPoll = 0;
+  function curAiMissing(p){
+    if(!p || !p.cur) return null;
+    var tir = String(p.tirazh), rec = virt.data && virt.data[tir];
+    var miss = [];
+    if(!aiPrevBrief(tir)) miss.push("ИИ-бриф");
+    if(!(rec && rec.z)) miss.push("Охота на 15");
+    return miss.length ? miss : null;
+  }
+  function pcNoAiNote(p){
+    var miss = curAiMissing(p);
+    if(!miss) return "";
+    var tx = miss.length > 1 ? "ИИ-разбор на этот тираж не проведён: купоны «ИИ-бриф» и «Охота на 15» появятся здесь сразу после разбора."
+                            : "Купон «" + miss[0] + "» ещё не подгружен: он появится здесь сразу после расчёта.";
+    return '<p class="pc-noai" id="pcNoAi">' + tx + '</p>';
+  }
+  function curAiPollSync(p){
+    if(curAiMissing(p)){
+      if(curAiPoll) return;
+      curAiPoll = setInterval(function(){
+        var q = state.prev;
+        if(!(state.viewPrev && q && q.cur && curAiMissing(q))){ clearInterval(curAiPoll); curAiPoll = 0; return; }
+        Promise.all([loadAi(true), loadAiHist(), loadAiArch(), loadVirt(true)]).then(function(){
+          if(state.viewPrev && state.prev && state.prev.cur) renderPrevCsv();
+        });
+      }, 120000);
+    } else if(curAiPoll){ clearInterval(curAiPoll); curAiPoll = 0; }
+  }
   function renderPrevCsv(){
     var box = $("prevCsv"); if(!box) return;
     var p = state.prev;
@@ -7065,13 +7094,15 @@
     pcsvEnsure(String(p.tirazh));
     pcsvSyncAi();
     pcsvSyncVirt();
+    curAiPollSync(p);
+    var noAi = pcNoAiNote(p);
     /* сообщение держим 10 с: фоновые обновления счёта перерисовывают блок */
     var msg = pcsv.msg && Date.now() - (pcsv.msgAt || 0) < 45000 ? '<p class="pc-msg">' + escHtml(pcsv.msg) + '</p>' : "";
     if(!pcsv.rows.length){
       var pbE = document.getElementById("pbBest"); if(pbE) pbE.hidden = true;
       var pbS0 = document.getElementById("pbSum"); if(pbS0) pbS0.hidden = true;
       box.innerHTML = '<div class="pc-empty"><span>Загрузи CSV своих вариантов на этот тираж или вставь ссылку на них — здесь появится весь купон и все варианты с угаданными по ходу матчей.</span>' +
-        '<span class="pc-acts">' + PC_BTNS + '</span></div>' + PC_PASTE + msg;
+        '<span class="pc-acts">' + PC_BTNS + '</span></div>' + noAi + PC_PASTE + msg;
       $("pcLoad").addEventListener("click", pcsvPick);
       pcPasteBind();
       return;
@@ -7109,7 +7140,7 @@
       '<span class="pc-acts">' + PC_BTNS + '<button type="button" class="pc-btn pc-share" id="pcShareAll" title="Одна ссылка на все загруженные наборы этого тиража — перешли её, и у получателя откроются все варианты">' +
       (pcsvMine().length > 1 ? 'Ссылка на все (' + pcsvMine().length + ')' : 'Ссылка на варианты') + '</button>' +
       (pcsv.sets[pcsv.act] && pcsv.sets[pcsv.act].ai ? "" : '<button type="button" class="pc-btn ghost" id="pcDrop">Убрать</button>') +
-      (pcsvMine().length ? '<button type="button" class="pc-btn ghost" id="pcDropAll" title="Удалить все загруженные CSV и ссылки этого тиража">Убрать все CSV</button>' : "") + '</span></div>' + PC_PASTE + msg;
+      (pcsvMine().length ? '<button type="button" class="pc-btn ghost" id="pcDropAll" title="Удалить все загруженные CSV и ссылки этого тиража">Убрать все CSV</button>' : "") + '</span></div>' + noAi + PC_PASTE + msg;
     var rkNow = null;
     if(pcsv.sets.length > 1){
       /* рейтинг наборов: завершённые матчи + идущие по текущему счёту; выше тот, у кого лучше результат */
