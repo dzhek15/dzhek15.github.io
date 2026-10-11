@@ -1,0 +1,6 @@
+{
+  "appId": "io.github.dzhek15.app",
+  "appName": "ДЖЕК 15",
+  "webDir": "www",
+  "android": {"allowMixedContent": false}
+}
