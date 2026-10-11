@@ -5259,6 +5259,111 @@
     cb("r" + b64u(u8));
   }
 
+  /* запасной gunzip на чистом JS: DecompressionStream нет в Safari до 16.4 и в части встроенных браузеров телефонов */
+  var JSZ = { lb: [3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258],
+    le: [0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0],
+    db: [1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577],
+    de: [0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13],
+    co: [16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15] };
+  function jsInflateRaw(src){
+    var out = [], pos = 0, bb = 0, bc = 0;
+    function bits(n){
+      var v = bb;
+      while(bc < n){ if(pos >= src.length) throw new Error("eof"); v |= src[pos++] << bc; bc += 8; }
+      bb = v >>> n; bc -= n;
+      return v & ((1 << n) - 1);
+    }
+    function mk(len, n){
+      var h = { c: [], s: [] }, i, k;
+      for(i = 0; i < 16; i++) h.c[i] = 0;
+      for(i = 0; i < n; i++) h.c[len[i]]++;
+      var off = [0, 0];
+      for(i = 1; i < 15; i++) off[i + 1] = off[i] + h.c[i];
+      for(i = 0; i < n; i++) if(len[i]) h.s[off[len[i]]++] = i;
+      return h;
+    }
+    function dec(h){
+      var code = 0, first = 0, index = 0, len, cnt;
+      for(len = 1; len <= 15; len++){
+        code |= bits(1); cnt = h.c[len];
+        if(code - cnt < first) return h.s[index + (code - first)];
+        index += cnt; first += cnt; first <<= 1; code <<= 1;
+      }
+      throw new Error("code");
+    }
+    function block(lh, dh){
+      for(;;){
+        var sym = dec(lh);
+        if(sym < 256) out.push(sym);
+        else if(sym === 256) return;
+        else {
+          sym -= 257; if(sym >= 29) throw new Error("sym");
+          var len = JSZ.lb[sym] + bits(JSZ.le[sym]), ds = dec(dh);
+          if(ds >= 30) throw new Error("dist");
+          var dist = JSZ.db[ds] + bits(JSZ.de[ds]);
+          if(dist > out.length) throw new Error("back");
+          for(var q = 0; q < len; q++) out.push(out[out.length - dist]);
+        }
+      }
+    }
+    var last, i;
+    do {
+      last = bits(1);
+      var type = bits(2);
+      if(type === 0){
+        bb = 0; bc = 0;
+        var ln = src[pos] | (src[pos + 1] << 8); pos += 4;
+        for(i = 0; i < ln; i++) out.push(src[pos++]);
+      } else if(type === 1){
+        var fl = [], fd = [];
+        for(i = 0; i < 144; i++) fl[i] = 8;
+        for(; i < 256; i++) fl[i] = 9;
+        for(; i < 280; i++) fl[i] = 7;
+        for(; i < 288; i++) fl[i] = 8;
+        for(i = 0; i < 30; i++) fd[i] = 5;
+        block(mk(fl, 288), mk(fd, 30));
+      } else if(type === 2){
+        var nl = bits(5) + 257, nd = bits(5) + 1, nc = bits(4) + 4, lens = [];
+        for(i = 0; i < 19; i++) lens[i] = 0;
+        for(i = 0; i < nc; i++) lens[JSZ.co[i]] = bits(3);
+        var ch = mk(lens, 19), all = [];
+        while(all.length < nl + nd){
+          var sy = dec(ch);
+          if(sy < 16) all.push(sy);
+          else {
+            var rep, pv = 0;
+            if(sy === 16){ if(!all.length) throw new Error("rep"); pv = all[all.length - 1]; rep = 3 + bits(2); }
+            else if(sy === 17) rep = 3 + bits(3);
+            else rep = 11 + bits(7);
+            while(rep--) all.push(pv);
+          }
+        }
+        block(mk(all.slice(0, nl), nl), mk(all.slice(nl, nl + nd), nd));
+      } else throw new Error("type");
+    } while(!last);
+    return new Uint8Array(out);
+  }
+  function jsGunzip(src){
+    if(src[0] !== 0x1f || src[1] !== 0x8b) throw new Error("gz");
+    var p = 10, flg = src[3];
+    if(flg & 4) p += 2 + src[p] + (src[p + 1] << 8);
+    if(flg & 8) while(src[p++]);
+    if(flg & 16) while(src[p++]);
+    if(flg & 2) p += 2;
+    return jsInflateRaw(src.subarray(p));
+  }
+  /* gunzip: родной DecompressionStream, а если его нет — запасной на JS */
+  function gunzipU8(u8, ok, bad){
+    if(typeof DecompressionStream === "function"){
+      try{
+        new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream("gzip")))
+          .arrayBuffer().then(function(ab){ ok(new Uint8Array(ab)); }, function(){ bad(); });
+        return;
+      }catch(e){}
+    }
+    try{ ok(jsGunzip(u8)); }catch(e2){ bad(); }
+  }
+
   function varsDecode(payload, N, cb){
     var tag0 = String(payload).charAt(0);
     if(tag0 === "y" || tag0 === "s"){
@@ -5285,13 +5390,7 @@
         cb(rows, pages);
       };
       if(tag0 === "y"){
-        if(typeof DecompressionStream !== "function"){ cb(null); return; }
-        try{
-          new Response(new Blob([body0]).stream().pipeThrough(new DecompressionStream("gzip")))
-            .arrayBuffer()
-            .then(function(ab){ fin(new Uint8Array(ab)); })
-            .catch(function(){ cb(null); });
-        }catch(e){ cb(null); }
+        gunzipU8(body0, fin, function(){ cb(null); });
       } else fin(body0);
       return;
     }
@@ -5319,13 +5418,7 @@
       cb(rows.length ? rows : null);
     };
     if(tag === "z"){
-      if(typeof DecompressionStream !== "function"){ cb(null); return; }
-      try{
-        new Response(new Blob([body]).stream().pipeThrough(new DecompressionStream("gzip")))
-          .arrayBuffer()
-          .then(function(ab){ done(new Uint8Array(ab)); })
-          .catch(function(){ cb(null); });
-      }catch(e){ cb(null); }
+      gunzipU8(body, done, function(){ cb(null); });
     } else if(tag === "r"){ done(body); }
     else cb(null);
   }
