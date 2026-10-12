@@ -2751,7 +2751,7 @@
     } catch(e){}
     try { var sm = planBySim(mx ? M : stratBudgetValue()); if(sm && sm.rows) v.sim = sm.rows.map(function(r){ return str(r.set); }); } catch(e){}
     try {
-      var K = planByKelly(mx ? M : limitLines("kelLimit", M)), kp = K && !K.error ? (K.best || K.cands[0]) : null;
+      var K = planByKelly(mx ? M : limitLines("kelLimit", M)), kp = K && !K.error ? K.pick : null;
       if(kp) v.kel = kp.plan.rows.map(function(r){ return str(r.set); });
     } catch(e){}
     return v;
@@ -2765,7 +2765,7 @@
   function accRead(){ try { return JSON.parse(localStorage.getItem(ACC_KEY)) || {}; } catch(e){ return {}; } }
   function accWrite(o){ try { localStorage.setItem(ACC_KEY, JSON.stringify(o)); } catch(e){} }
   /* статистика не зависит от лимитов пользователя: только от цены строки и потолка */
-  function accSetKey(){ return "max" + LIM_MAX_RUB + "|" + linePrice() + "|v2"; }
+  function accSetKey(){ return "max" + LIM_MAX_RUB + "|" + linePrice() + "|v3"; }
   function stratForInfo(info){
     var list = matchesFromInfo(info);
     var bak = { matches: state.matches, poolSum: state.poolSum, jackpot: state.jackpot, tirazh: state.tirazh }, v;
@@ -8459,7 +8459,7 @@
     if(GS.error) return { error: GS.error };
     var gapSets = GS.rows.map(function(r){ return r.set.slice(); });
     var sim = planBySim(budget), K = planByKelly(limitLines("kelLimit", limitMaxLines()));
-    var kp = K && !K.error ? (K.best || K.cands[0]) : null;
+    var kp = K && !K.error ? K.pick : null;
     var kRows = kp ? kp.plan.rows : null;
     var rows = sim.rows.map(function(r, i){
       var votes = [0, 0, 0];
@@ -8488,7 +8488,7 @@
     var dAll = tails("set"), dStr = tails("strong");
     return { rows: rows, combos: cnt("set"), strongCombos: cnt("strong"),
              p9: evTail(dAll, 9), p12: evTail(dAll, 12), s9: evTail(dStr, 9),
-             kelly: kp ? (K.best ? "Келли выбрал купон на " + fmt(kp.plan.combos) + " стр." : "У Келли выгодного купона нет, взят наименее убыточный на " + fmt(kp.plan.combos) + " стр.")
+             kelly: kp ? "Келли собрал купон на " + fmt(kp.plan.combos) + " стр." + (kp.g > 0 ? "" : " (по модели он невыгоден)")
                        : "Келли не посчитался: " + ((K && K.error) || "нет данных") + " — голосуют две стратегии" };
   }
   function blendState(){
@@ -8538,6 +8538,55 @@
     });
   }
 
+  /* купон ровно на n строк: n = 2^a · 3^b однозначно задаёт число двойников (a) и тройников (b);
+     по матчам они раскладываются так, чтобы произведение вероятностей накрытия было наибольшим (точный перебор по матчам) */
+  function planExact(n){
+    var rows = [], fixed = 1;
+    state.matches.forEach(function(m, idx){
+      var r = { idx: idx, m: m, locked: m.mode === "lock", p: null, q: null, set: [] };
+      if(m.pct && m.pct.bk) r.p = calProb(m.pct.bk);
+      if(m.pct) r.q = crowdShare(m.pct.pool);
+      if(r.locked){ r.set = OUT.filter(function(o){ return m.picks[o]; }).map(function(o){ return OUT.indexOf(o); }); fixed *= Math.max(1, r.set.length); }
+      rows.push(r);
+    });
+    if(n % fixed) return null;
+    var rest = n / fixed, a = 0, b = 0;
+    while(rest % 2 === 0){ rest /= 2; a++; }
+    while(rest % 3 === 0){ rest /= 3; b++; }
+    if(rest !== 1) return null;
+    var free = rows.filter(function(r){ return !r.locked && r.p; });
+    if(a + b > free.length) return null;
+    var ord = free.map(function(r){ return [0, 1, 2].sort(function(x, y){ return r.p[y] - r.p[x]; }); });
+    var NEG = -1e18, dp = [], from = [], j, x, y;
+    var key = function(x, y){ return x * 16 + y; };
+    dp[0] = {}; dp[0][key(0, 0)] = 0;
+    for(j = 0; j < free.length; j++){
+      var P = free[j].p, o = ord[j], c = [Math.log(Math.max(P[o[0]], 1e-9)), Math.log(Math.max(P[o[0]] + P[o[1]], 1e-9)), 0];
+      dp[j + 1] = {}; from[j + 1] = {};
+      Object.keys(dp[j]).forEach(function(kk){
+        var v = dp[j][kk], x0 = Math.floor(kk / 16), y0 = kk % 16;
+        [[0, 0, 1], [1, 0, 2], [0, 1, 3]].forEach(function(st){
+          var x1 = x0 + st[0], y1 = y0 + st[1];
+          if(x1 > a || y1 > b) return;
+          var k1 = key(x1, y1), nv = v + c[st[2] - 1];
+          if(dp[j + 1][k1] === undefined || nv > dp[j + 1][k1]){ dp[j + 1][k1] = nv; from[j + 1][k1] = [Number(kk), st[2]]; }
+        });
+      });
+    }
+    var cur = key(a, b);
+    if(dp[free.length][cur] === undefined) return null;
+    for(j = free.length; j > 0; j--){
+      var f = from[j][cur], r = free[j - 1];
+      r.set = ord[j - 1].slice(0, f[1]); cur = f[0];
+    }
+    rows.forEach(function(r){
+      if(!r.p){ return; }
+      r.set.sort();
+      var top = r.set.map(function(k){ return OUT[k] + " " + Math.round(r.p[k] * 100) + "%"; }).join(", ");
+      r.why = r.locked ? "фикс, не трогаю" : r.set.length === 3 ? "тройник: " + top : r.set.length === 2 ? "двойник: " + top : "самый вероятный: " + top;
+    });
+    return { rows: rows, combos: n };
+  }
   /* ---------- «Келли»: какой купон сильнее всего растит банк ----------
      Кандидаты — купоны «По данным» и «Симуляции» на 1…512 вариантов.
      Для каждого: шанс хоть какого-то приза p (купон угадал 9+), средняя выплата
@@ -8562,7 +8611,8 @@
     if(probs.length !== 15) return { error: "в тираже не 15 матчей с данными" };
     var lines = (fund / 0.9) / price, cands = [];
     limitList(price).filter(function(B){ return B <= maxLines; }).forEach(function(B){
-      [["Система", planByData(B)], ["Симуляция", planBySim(B)]].forEach(function(pair){
+      [["Система", planByData(B)], ["Симуляция", planBySim(B)], ["Ровно на сумму", planExact(B)]].forEach(function(pair){
+        if(!pair[1]) return;
         var plan = pair[1];
         if(plan.rows.some(function(r){ return !r.set.length; })) return;
         var sets = plan.rows.map(function(r){ return r.set; });
@@ -8578,7 +8628,12 @@
       });
     });
     cands.sort(function(a, b){ return b.g - a.g; });
-    return { cands: cands, best: cands[0] && cands[0].g > 0 ? cands[0] : null, bank: bank, maxLines: maxLines };
+    /* купон на выбранную сумму: самый крупный кандидат в пределах лимита, среди равных по размеру — с большим ростом банка */
+    var pick = null;
+    cands.forEach(function(c){
+      if(!pick || c.plan.combos > pick.plan.combos || (c.plan.combos === pick.plan.combos && c.g > pick.g)) pick = c;
+    });
+    return { cands: cands, best: cands[0] && cands[0].g > 0 ? cands[0] : null, pick: pick, bank: bank, maxLines: maxLines };
   }
 
   /* ---------- общее окно стратегии ---------- */
@@ -8592,7 +8647,7 @@
     ["Бриф", "Собирает систему с гарантией: вместо всех строк купона берётся их часть, которая всё равно гарантирует заданное число угаданных при попадании в отмеченные исходы.<span class=\"ev-bt\">На истории не проверялась: работает поверх вашего купона.</span>"],
     ["Охота на 15", "Цель — забрать 15 из 15. Вместо системы берутся самые вероятные отдельные строки: система вынуждена покупать и маловероятные сочетания. Вероятности — модель, обученная на истории (линия конторы, ничьи, молодёжные турниры); среди почти равных строк остаются менее популярные у игроков, чтобы не делить суперприз. До 400 строк — в корзину, больше — сразу в CSV.<span class=\"ev-bt\">На истории (618 тиражей, на 940 тиражах не пересчитывалось): при ~900 строках шанс 15 из 15 по модели — 0,085% против 0,073% у системы той же цены, при ~8 000 строк — 0,55% против 0,44%. На ~8 000 строк 15 из 15 забрали бы 4 раза, система — ни разу, но 4 события слишком мало для вывода, это не доказательство.</span>"],
     ["Симуляция", "Цель — чаще попадать в призы (9 и больше). Двойники и тройники ставятся там, где сильнее всего растёт шанс 9+, в пределах выбранного лимита суммы; итог проверяется розыгрышем 10 000 тиражей.<span class=\"ev-bt\">На истории (733 тиража, купон до 32 вариантов, в среднем 809 ₽): приз в 40,1% тиражей, 12+ — в 2,46%, 13+ — в 0,55%.</span>"],
-    ["Келли", "Цель — быстрее всего растить банк. Сравнивает системы по вероятностям и купоны «Симуляции» всех допустимых размеров в пределах лимита суммы (до 17 280 ₽) и подставляет один системный купон с наибольшим ожидаемым ростом расчётного банка 30 000 ₽. Если выгодного нет, честно говорит «не ставить» и предлагает наименее убыточный.<span class=\"ev-bt\">На истории (733 тиража, прежняя версия: купоны до 512 вариантов, банк 10 000 ₽): в среднем купон за 3 113 ₽, приз в 55,7% тиражей, 12+ — в 4,91%, 13+ — в 1,64%. Модель выплат считала выгодным каждый тираж из-за крупных суперпризов — к этому стоит относиться осторожно.</span>"]
+    ["Келли", "Цель — быстрее всего растить банк. Сравнивает системы по вероятностям и купоны «Симуляции» всех допустимых размеров в пределах лимита суммы (до 17 280 ₽) и собирает один системный купон на выбранную сумму, из равных по размеру — с большим ожидаемым ростом расчётного банка 30 000 ₽. Если купон по модели невыгоден, честно предупреждает и показывает купон с наибольшим ростом.<span class=\"ev-bt\">На истории (733 тиража, прежняя версия: купоны до 512 вариантов, банк 10 000 ₽): в среднем купон за 3 113 ₽, приз в 55,7% тиражей, 12+ — в 4,91%, 13+ — в 1,64%. Модель выплат считала выгодным каждый тираж из-за крупных суперпризов — к этому стоит относиться осторожно.</span>"]
   ];
   function showStratGuide(){
     $("evTitle").textContent = "Как работают стратегии";
@@ -8641,7 +8696,7 @@
     save(); render();
     $("evBack").hidden = true;
     var t0 = tally();
-    say("«" + name + "»: проставлено " + set + " матч(ей), " + fmt(t0.combos) + " вариант(ов) на "
+    say("«" + name + "»: проставлено " + set + " матч(ей), " + fmt(t0.combos) + " стр. на "
         + fmt(t0.combos * (Number(state.price) || 0)) + " ₽. «Назад» откатит изменения.");
   }
   function stratGuard(title){
@@ -8888,32 +8943,30 @@
   function showKellyStrat(){
     var box = stratGuard("Стратегия «Келли»"); if(!box) return;
     var L = limitLines("kelLimit", limitMaxLines()), K = planByKelly(L), price = linePrice();
-    var h = stratHow('Цель — быстрее всего растить банк. Сравниваются системы по вероятностям и купоны «Симуляции» на все допустимые размеры в пределах лимита суммы; берётся один системный купон с наибольшим ожидаемым ростом банка за тираж. Банк модели — расчётные 30 000 ₽, а не реальный баланс. Если у всех кандидатов рост отрицательный — ставить не стоит.');
+    var h = stratHow('Цель — быстрее всего растить банк. Сравниваются системы по вероятностям и купоны «Симуляции» на все допустимые размеры в пределах лимита суммы; купон собирается на выбранную сумму (самый крупный допустимый в её пределах), а из равных по размеру берётся тот, у которого ожидаемый рост банка больше. Рядом показан купон с наибольшим ростом. Банк модели — расчётные 30 000 ₽, а не реальный баланс. Если рост отрицательный — модель предупреждает, что ставить невыгодно.');
     h += limitSelect("kelLimit", L);
     if(K.error){
       box.innerHTML = h + '<p class="ev-warn">Посчитать не получилось: ' + K.error + '.</p>';
       $("evBack").hidden = false; limitBind(box, showKellyStrat); return;
     }
-    var b = K.best;
-    if(b){
-      h += stratCards([["Строк", fmt(b.plan.combos) + " · " + fmt(b.cost) + " ₽"], ["Шанс приза", stratChance(b.pWin)], ["Рост банка", (b.g >= 0 ? "+" : "") + (b.g * 100).toFixed(2) + "%"]]);
-    } else {
-      h += '<p class="ev-warn dt-center">Выгодного купона в пределах лимита нет: модель советует тираж пропустить.</p>';
+    var pick = K.pick, b = K.best;
+    if(pick){
+      h += stratCards([["Строк", fmt(pick.plan.combos) + " · " + fmt(pick.cost) + " ₽"], ["Шанс приза", stratChance(pick.pWin)], ["Рост банка", isFinite(pick.g) ? (pick.g >= 0 ? "+" : "") + (pick.g * 100).toFixed(2) + "%" : "—"]]);
+      if(!(pick.g > 0)) h += '<p class="ev-warn dt-center">По модели купон на эту сумму невыгоден: ожидаемый рост банка отрицательный' + (b ? '' : ', выгодного купона в пределах лимита нет — модель советует тираж пропустить') + '.</p>';
+      if(b && b !== pick) h += '<p class="ev-note dt-center">Наибольший рост банка у купона «' + b.src + ', ' + fmt(b.plan.combos) + ' стр.» за ' + fmt(b.cost) + ' ₽: выбери эту сумму в списке, если нужен он.</p>';
     }
     h += '<table class="ev-tab ev-data-cands"><thead><tr><th>Купон</th><th>Сумма</th><th>Приз</th><th>Отдача</th><th>Рост</th></tr></thead><tbody>';
-    K.cands.slice(0, 6).forEach(function(c, i){
-      h += '<tr' + (i === 0 ? ' class="dt-best"' : '') + '><td>' + c.src + ', ' + fmt(c.plan.combos) + ' стр.</td><td class="nw">' + fmt(c.cost) + ' ₽</td><td>' + stratChance(c.pWin)
+    var shown = K.cands.slice(0, 5);
+    if(pick && shown.indexOf(pick) < 0) shown.push(pick);
+    shown.forEach(function(c){
+      h += '<tr' + (c === pick ? ' class="dt-best"' : '') + '><td>' + c.src + ', ' + fmt(c.plan.combos) + ' стр.</td><td class="nw">' + fmt(c.cost) + ' ₽</td><td>' + stratChance(c.pWin)
         + '</td><td>' + c.ret.toFixed(2) + '</td><td class="' + (c.g > 0 ? "ev-good" : "ev-bad") + '">' + (isFinite(c.g) ? (c.g * 100).toFixed(2) + '%' : '—') + '</td></tr>';
     });
-    h += '</tbody></table><p class="ev-note">«Отдача» — средняя выплата на рубль суммы купона; меньше 1 — в среднем в минус. Модель выплат оптимистична, прибыль она не обещает.</p>';
-    /* выгодного нет — всё равно даём подставить наименее убыточный купон */
-    var pick = b || K.cands[0];
+    h += '</tbody></table><p class="ev-note">Выделен купон на выбранную сумму; выше — кандидаты с наибольшим ростом банка. «Отдача» — средняя выплата на рубль суммы купона; меньше 1 — в среднем в минус. Модель выплат оптимистична, прибыль она не обещает.</p>';
     if(pick){
-      if(!b) h += '<p class="ev-sub">Наименьшие потери у купона «' + pick.src + ', ' + fmt(pick.plan.combos) + ' стр.»:</p>';
       h += planSummary(pick.plan.rows, L, KELLY_BANK);
       h += stratTable(pick.plan.rows);
-      h += '<div class="ev-data-go ev-data-go2"><button type="button" id="dataApply" class="btn-ev">'
-        + (b ? 'Подставить в купон' : 'Подставить наименее убыточный') + '</button><button type="button" id="planCsv" class="btn-ev">Скачать CSV</button></div>' + STRAT_NOTE;
+      h += '<div class="ev-data-go ev-data-go2"><button type="button" id="dataApply" class="btn-ev">Подставить в купон</button><button type="button" id="planCsv" class="btn-ev">Скачать CSV</button></div>' + STRAT_NOTE;
     }
     stratFinish(box, h, pick ? pick.plan : null, "Келли", showKellyStrat);
   }
