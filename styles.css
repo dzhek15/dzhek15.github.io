@@ -2523,3 +2523,24 @@ body.is-prev .pct-col.hit b,body.is-prev .kf-col.hit{color:var(--ink); font-weig
 .brief-expl[open] > summary{margin-bottom:8px}
 .brief-cur b{white-space:nowrap}
 .brief-cur-b{text-wrap:balance}
+
+/* лимит суммы купона и итог по стратегиям (Келли, Расхождения, Симуляция) */
+.lim-sum{margin:6px 0 10px; line-height:1.5}
+.lim-sum b{font-family:"IBM Plex Mono",monospace; white-space:nowrap}
+.ev-data-bar .lim-sel{max-width:100%}
+.acc td small.acc-rub{display:block; margin-top:1px; font-size:10px; color:var(--muted); white-space:nowrap}
+.ac-h2{margin-top:18px}
+.acs{display:grid; gap:8px; max-width:640px; margin:0 auto}
+.acs-r{padding:9px 10px 8px; border:1px solid var(--rule); border-radius:var(--r); background:var(--surface-2)}
+.acs-top{display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1.2fr); align-items:end; gap:8px; margin-bottom:7px}
+.acs-n{font-size:13px; color:var(--ink); align-self:center}
+.acs-v{display:grid; gap:1px; text-align:right}
+.acs-v i, .acs-c i{font-style:normal; font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted)}
+.acs-v b{font:700 12.5px/1.15 "IBM Plex Mono",monospace; color:var(--ink); white-space:nowrap}
+.acs-k{display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:4px}
+.acs-c{display:grid; justify-items:center; gap:2px; padding:4px 0 3px; border-radius:8px; border:1px solid var(--rule)}
+.acs-c b{font:700 12px/1.1 "IBM Plex Mono",monospace; color:var(--muted); max-width:100%; overflow-wrap:anywhere; text-align:center}
+.acs-c.on{background:linear-gradient(135deg,#C9A24B,#EBCF7F); border-color:#EBCF7F; box-shadow:0 0 8px rgba(201,162,75,.4)}
+.acs-c.on i, .acs-c.on b{color:#1B1608}
+@media (max-width:360px){ .acs-r{padding:8px 7px 7px} .acs-top{gap:5px} .acs-n{font-size:12px} .acs-v b{font-size:11px} .acs-c b{font-size:9.5px; white-space:nowrap; overflow-wrap:normal} .acs-k{gap:3px} }
+@media (max-width:420px){ .acc td small.acc-rub{font-size:9px} }
