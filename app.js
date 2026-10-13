@@ -3165,105 +3165,148 @@
       var tot = {}; cols.forEach(function(c){ tot[c[0]] = { lines: 0, rub: 0, n: 0, dist: [], win: 0, cost: 0, pn: 0, best: 0 }; for(var k = 0; k <= 15; k++) tot[c[0]].dist.push(0); });
       var paidN = 0;
       var rub = function(v){ return fmt(Math.round(v)) + " ₽"; };
-      var body = nums.map(function(n){
-        var d = store[n], sc = {}, PK = payFor(n), wins = {};
+      /* ---------- данные: по каждому тиражу и стратегии — угадано, строк, ставка, распределение, выигрыш ---------- */
+      var D = {};
+      nums.forEach(function(n){
+        var d = store[n], sc = {}, PK = payFor(n);
         var price = Number(d.price) > 0 ? Number(d.price) : 30;    /* цена строки на тот тираж, не сегодняшняя */
         if(PK) paidN++;
+        var row = { price: price, PK: PK, s: {}, unpub: !!(vdata[String(n)] && vdata[String(n)].unpub) };
         cols.forEach(function(c){
           if(c[0] === "mine"){
             var mr = mineRows(n);
-            sc.mine = mr.length && Array.isArray(d.res) ? accDistRows(mr.map(function(row){
-              var h15 = 0; for(var q = 0; q < 15; q++) if(hitRes(row.charAt(q), d.res[q])) h15++;
+            sc.mine = mr.length && Array.isArray(d.res) ? accDistRows(mr.map(function(rw){
+              var h15 = 0; for(var q = 0; q < 15; q++) if(hitRes(rw.charAt(q), d.res[q])) h15++;
               return h15;
             })) : null;
           } else if(c[0] === "hunt"){
             var vr = vdata[String(n)];
-            if(vr && vr.z && Array.isArray(d.res)){
-              sc.hunt = accDistRows(virtRows(vr.z).map(function(row){
-                var h15 = 0; for(var q = 0; q < row.length; q++) if(hitRes(row.charAt(q), d.res[q])) h15++;
-                return h15;
-              }));
-            } else sc.hunt = null;
+            sc.hunt = vr && vr.z && Array.isArray(d.res) ? accDistRows(virtRows(vr.z).map(function(rw){
+              var h15 = 0; for(var q = 0; q < rw.length; q++) if(hitRes(rw.charAt(q), d.res[q])) h15++;
+              return h15;
+            })) : null;
           } else if(c[0] === "ai"){
             sc.ai = accAiBrief(aih[n], d.res) || accScore(aih[n], d.res);
           } else sc[c[0]] = accScore(d[c[0]], d.res);
-          var x = sc[c[0]];
-          if(x){
-            var t = tot[c[0]]; t.lines += x.vars; t.rub += x.vars * price; t.n++;
-            for(var k = 9; k <= 15; k++) t.dist[k] += (x.dist && x.dist[k]) || 0;
-            if(PK){ var w = payWin(x.dist, PK.k, price); wins[c[0]] = w; t.win += w; t.cost += x.vars * price; t.pn++; if(w > t.best) t.best = w; }
-          }
+          var x = sc[c[0]]; if(!x) return;
+          var it = { hit: x.hit, vars: x.vars, dist: x.dist || [], cost: x.vars * price };
+          var t = tot[c[0]]; t.n++; t.lines += x.vars; t.rub += it.cost; sum[c[0]] = (sum[c[0]] || 0) + x.hit; cnt[c[0]] = (cnt[c[0]] || 0) + 1;
+          if(x.hit > (t.bestHit || 0)) t.bestHit = x.hit;
+          if(PK){ it.win = payWin(it.dist, PK.k, price); t.win += it.win; t.cost += it.cost; t.pn++; }
+          row.s[c[0]] = it;
         });
-        /* строка таблицы: тираж × стратегия — угадано, итог (плюс / минус / мимо), ставка и выигрыш */
-        return '<tr><th scope="row"><b>' + n + '</b>' + (PK ? '<i class="act-paid" title="выплаты загружены">₽ выплаты</i>' : '') + '</th>' + cols.map(function(c){
-          var x = sc[c[0]];
-          if(!x) return '<td class="act-na">—</td>';
-          sum[c[0]] = (sum[c[0]] || 0) + x.hit; cnt[c[0]] = (cnt[c[0]] || 0) + 1;
-          var up = c[0] === "hunt" && vdata[String(n)] && vdata[String(n)].unpub;   /* составлена до матчей, но на сайт тогда не попала */
-          var cost = x.vars * price, w = wins[c[0]], res = "";
-          if(w !== undefined) res = w <= 0 ? '<span class="act-res act-minus">мимо</span>' :
-            '<span class="act-res ' + (w >= cost ? 'act-plus' : 'act-minus') + '">' + (w >= cost ? '+' : '−') + rub(Math.abs(w - cost)) + '</span>';
-          return '<td' + (up ? ' title="Купон составлен до матчей (' + escHtml(String(vdata[String(n)].at || "").replace("T", " ").replace("Z", " UTC")) + '), но на сайте до тиража не публиковался"' : '') + '>' +
-            '<span class="act-top"><span class="ac-pill' + (x.hit >= 9 ? ' ac-best' : '') + '"><b>' + x.hit + (up ? '<sup class="acc-up">*</sup>' : '') + '</b></span>' + res + '</span>' +
-            '<span class="act-ln"><i>ставка</i> ' + rub(cost) + '</span>' +
-            (w !== undefined ? '<span class="act-ln"><i>выигрыш</i> <em' + (w > 0 ? ' class="act-plus"' : '') + '>' + rub(w) + '</em></span>' : '') +
-            '<span class="act-ln act-sm">' + fmt(x.vars) + ' стр.</span></td>';
-        }).join("") + '</tr>';
-      }).join("");
-      var avg = {}, topK = null;
-      cols.forEach(function(c){ if(cnt[c[0]]){ avg[c[0]] = sum[c[0]] / cnt[c[0]]; if(topK === null || avg[c[0]] > avg[topK]) topK = c[0]; } });
+        D[n] = row;
+      });
       var f1 = function(v){ return v.toFixed(1).replace(".", ","); };
-      var lb = cols.filter(function(c){ return avg[c[0]] !== undefined; }).sort(function(x, y){ return avg[y[0]] - avg[x[0]]; }).map(function(c){
-        return '<div class="ac-lb' + (c[0] === topK ? ' ac-top' : '') + '"><span class="ac-lbn">' + c[3] + '</span>' +
-          '<span class="ac-bar"><i style="width:' + Math.round(avg[c[0]] / 15 * 100) + '%"></i></span><b>' + f1(avg[c[0]]) + '</b><small>' + cnt[c[0]] + ' тир.</small></div>';
+      var sgn = function(v){ return (v >= 0 ? "+" : "−") + fmt(Math.round(Math.abs(v))) + " ₽"; };
+      var k5 = function(v){ return String(Math.round(v * 100000) / 100000).replace(".", ","); };
+      /* итог одной ставки: плюс / минус / мимо (ни одна строка не дошла до 9 угаданных) */
+      var net = function(it){
+        if(!it || it.win === undefined) return '<span class="st-mute">нет выплат</span>';
+        if(it.win <= 0) return '<span class="st-miss">мимо</span>';
+        return '<span class="' + (it.win >= it.cost ? 'st-plus' : 'st-minus') + '">' + sgn(it.win - it.cost) + '</span>';
+      };
+      var name = {}; cols.forEach(function(c){ name[c[0]] = c[3]; });
+
+      /* ---------- 1. итоги стратегий: одна строка — одна стратегия ---------- */
+      var order = cols.map(function(c){ return c[0]; }).sort(function(x, y){
+        var a = tot[x], b = tot[y];
+        if(!!a.pn !== !!b.pn) return a.pn ? -1 : 1;
+        if(a.pn) return (b.win - b.cost) - (a.win - a.cost);
+        return (sum[y] || 0) / (cnt[y] || 1) - (sum[x] || 0) / (cnt[x] || 1);
+      });
+      var sumHtml = '<div class="st-sum">' + order.map(function(k, i){
+        var t = tot[k], nt = t.win - t.cost;
+        return '<div class="st-srow' + (i === 0 && t.pn && nt > 0 ? ' st-lead' : '') + '">' +
+          '<div class="st-sname"><b>' + name[k] + '</b><span>' + (t.n ? 'тиражей: ' + t.n + ' · в среднем угадано ' + f1((sum[k] || 0) / (cnt[k] || 1)) + ' · лучший ' + (t.bestHit || 0) + ' из 15' : 'купонов не было') + '</span></div>' +
+          (t.pn ? '<div class="st-snum"><i>Поставил</i><b>' + rub(t.cost) + '</b></div><div class="st-snum"><i>Выиграл</i><b>' + rub(t.win) + '</b></div>' +
+            '<div class="st-snum st-snet"><i>Итог</i><b class="' + (nt >= 0 ? 'st-plus' : 'st-minus') + '">' + sgn(nt) + '</b><small>возврат ' + Math.round(t.cost ? t.win / t.cost * 100 : 0) + '%</small></div>'
+            : '<div class="st-snum st-snone">' + (t.n ? 'выплаты по его тиражам не загружены' : '') + '</div>') +
+          '</div>';
+      }).join("") + '</div>' +
+        '<p class="st-note">Деньги — только по тиражам с загруженными выплатами (' + paidN + ' ' + plural(paidN, "тираж", "тиража", "тиражей") + '). Сверху — стратегия с лучшим итогом.</p>';
+
+      /* ---------- 2. главная таблица, как была: тиражи × стратегии, в ячейке столбиком — угадано, поставил, выиграл, итог ---------- */
+      var calc = function(n, k){
+        var r = D[n], it = r.s[k]; if(!it) return "";
+        var h = '<div class="st-calc"><div class="st-calc-h"><b>' + name[k] + ' · тираж ' + n + '</b><button type="button" class="st-x" aria-label="Закрыть расчёт">×</button></div>' +
+          '<p><b>Поставил:</b> ' + fmt(it.vars) + ' ' + plural(it.vars, "строка", "строки", "строк") + ' × ' + r.price + ' ₽ = <b>' + rub(it.cost) + '</b>. Лучшая строка угадала ' + it.hit + ' из 15.</p>';
+        if(!r.PK) return h + '<p class="st-mute">Выплаты тиража ' + n + ' не загружены — выигрыш посчитать нельзя. Нажми «Загрузить выигрыши».</p></div>';
+        var K = r.PK.k, acc = 0, lines = [], paidL = 0;
+        for(var q = 9; q <= 15; q++){
+          acc += Number(K[q]) || 0;
+          var c = it.dist[q] || 0; if(!c) continue;
+          var per = r.price * acc; paidL += c;
+          lines.unshift('<tr><td>' + q + '</td><td>' + fmt(c) + '</td><td>' + fmt(Math.round(per)) + ' ₽</td><td><b>' + rub(c * per) + '</b></td></tr>');
+        }
+        h += lines.length ? '<table class="st-ct"><thead><tr><th>Угадали</th><th>Строк</th><th>За строку</th><th>Сумма</th></tr></thead><tbody>' + lines.join("") + '</tbody></table>' : '';
+        h += '<p>' + (it.vars - paidL > 0 ? fmt(it.vars - paidL) + ' ' + plural(it.vars - paidL, "строка", "строки", "строк") + ' угадали меньше 9 — без выплаты. ' : '') +
+          '<b>Выиграл:</b> ' + rub(it.win) + '. <b>Итог:</b> ' + rub(it.win) + ' − ' + rub(it.cost) + ' = ' + net(it) + '</p></div>';
+        return h;
+      };
+      var cell = function(n, k){
+        var it = D[n].s[k];
+        if(!it) return '<td class="acc-na">—</td>';
+        var star = k === "hunt" && D[n].unpub ? '<sup class="acc-up">*</sup>' : '';
+        return '<td class="st-c" data-n="' + n + '" data-k="' + k + '" tabindex="0" title="Нажми — покажу расчёт">' +
+          '<span class="ac-pill' + (it.hit >= 9 ? ' ac-best' : '') + '"><b>' + it.hit + star + '</b></span>' +
+          '<span class="st-v st-cost">' + rub(it.cost) + '</span>' +
+          (it.win === undefined ? '' : '<span class="st-v st-win' + (it.win > 0 ? ' on' : '') + '">' + rub(it.win) + '</span><span class="st-v st-net">' + net(it) + '</span>') + '</td>';
+      };
+      var fixed = cols.map(function(c){ return c[0]; });   /* в таблице порядок колонок постоянный, как раньше */
+      var head = '<tr><th>Тираж</th>' + fixed.map(function(k){ return '<th>' + name[k] + '</th>'; }).join("") + '</tr>';
+      var body = nums.map(function(n){
+        return '<tr><th scope="row">' + n + (D[n].PK ? '<i class="acc-paid" title="выплаты загружены">₽</i>' : '') + '</th>' + fixed.map(function(k){ return cell(n, k); }).join("") + '</tr>';
       }).join("");
-      /* низ таблицы: среднее угаданных и деньги за тиражи с выплатами */
-      var foot = '<tr class="act-avg"><th scope="row">Среднее<small>угаданных</small></th>' + cols.map(function(c){
-        return cnt[c[0]] ? '<td><span class="act-top"><span class="ac-pill' + (avg[c[0]] >= 9 ? ' ac-best' : '') + '"><b>' + f1(avg[c[0]]) + '</b></span></span><span class="act-ln act-sm">' + cnt[c[0]] + ' тир.</span></td>' : '<td class="act-na">—</td>';
-      }).join("") + '</tr>' + (paidN ? '<tr class="act-sum"><th scope="row">Итого<small>' + paidN + ' ' + plural(paidN, "тираж", "тиража", "тиражей") + ' с выплатами</small></th>' + cols.map(function(c){
-        var t = tot[c[0]]; if(!t.pn) return '<td class="act-na">—</td>';
-        var net = t.win - t.cost;
-        return '<td><span class="act-top"><span class="act-res ' + (net >= 0 ? 'act-plus' : 'act-minus') + '">' + (net >= 0 ? '+' : '−') + rub(Math.abs(net)) + '</span></span>' +
-          '<span class="act-ln"><i>ставка</i> ' + rub(t.cost) + '</span><span class="act-ln"><i>выигрыш</i> <em' + (t.win > 0 ? ' class="act-plus"' : '') + '>' + rub(t.win) + '</em></span>' +
-          '<span class="act-ln act-sm">возврат ' + Math.round(t.cost ? t.win / t.cost * 100 : 0) + '%</span></td>';
+      var foot = '<tr><th scope="row">Среднее<small>угадано</small></th>' + fixed.map(function(k){
+        return cnt[k] ? '<td><span class="ac-pill' + ((sum[k] / cnt[k]) >= 9 ? ' ac-best' : '') + '"><b>' + f1(sum[k] / cnt[k]) + '</b></span><span class="st-v st-cost">' + cnt[k] + ' тир.</span></td>' : '<td class="acc-na">—</td>';
+      }).join("") + '</tr>' + (paidN ? '<tr class="st-tot"><th scope="row">Итого<small>' + paidN + ' тир. с выплатами</small></th>' + fixed.map(function(k){
+        var t = tot[k]; if(!t.pn) return '<td class="acc-na">—</td>';
+        return '<td><span class="st-v st-cost">' + rub(t.cost) + '</span><span class="st-v st-win' + (t.win > 0 ? ' on' : '') + '">' + rub(t.win) + '</span><span class="st-v st-net"><span class="' + (t.win >= t.cost ? 'st-plus' : 'st-minus') + '">' + sgn(t.win - t.cost) + '</span></span></td>';
       }).join("") + '</tr>' : '');
-      /* итог по стратегиям: строк, сумма, сколько полных строк угадали ровно 9…15 */
-      var ks = [9, 10, 11, 12, 13, 14, 15];
-      var sumT = '<div class="acs">' + cols.map(function(c){
-          var t = tot[c[0]];
-          return '<div class="acs-r"><div class="acs-top"><b class="acs-n">' + c[3] + '</b>' +
-            '<span class="acs-v"><i>Строк</i><b>' + (t.n ? fmt(t.lines) : '—') + '</b></span>' +
-            '<span class="acs-v"><i>Сумма</i><b>' + (t.n ? rub(t.rub) : '—') + '</b></span></div>' +
-            '<div class="acs-k">' + ks.map(function(k){
-              var v = t.dist[k];
-              return '<span class="acs-c' + (v ? ' on' : '') + '"><i>' + k + '</i><b>' + (t.n ? fmt(v) : '—') + '</b></span>';
-            }).join("") + '</div></div>';
-        }).join("") + '</div>';
-      var money = !paidN ? '<p class="ev-note">Выплаты ещё не загружены. Нажми «Загрузить выигрыши» и добавь скриншот таблицы выплат тиража — тогда здесь появится, сколько каждая стратегия выиграла и проиграла.</p>' :
-        '<div class="pay-s">' + cols.filter(function(c){ return tot[c[0]].pn; }).sort(function(x, y){ var a = tot[x[0]], b = tot[y[0]]; return (b.win - b.cost) - (a.win - a.cost); }).map(function(c){
-          var t = tot[c[0]], net = t.win - t.cost;
-          return '<div class="pay-r"><b class="acs-n">' + c[3] + '</b>' +
-            '<span class="acs-v"><i>Поставил</i><b>' + rub(t.cost) + '</b></span>' +
-            '<span class="acs-v"><i>Выиграл</i><b>' + rub(t.win) + '</b></span>' +
-            '<span class="acs-v"><i>Итог</i><b class="' + (net >= 0 ? 'pay-plus' : 'pay-minus') + '">' + (net >= 0 ? '+' : '−') + rub(Math.abs(net)) + '</b></span>' +
-            '<span class="acs-v"><i>Возврат</i><b>' + Math.round(t.cost ? t.win / t.cost * 100 : 0) + '%</b></span>' +
-            '<span class="acs-v"><i>Тиражей</i><b>' + t.pn + '</b></span></div>';
-        }).join("") + '</div>';
-      el.innerHTML = (note ? '<p class="pay-ok" id="payOk">' + escHtml(note) + '</p>' : '') + '<div class="pay-go pay-top"><button type="button" class="btn-ev" id="payOpen">Загрузить выигрыши</button></div><div id="payBox" class="pay-box" hidden></div>' +
-        '<h3 class="ac-h">Среднее число угаданных матчей</h3><div class="ac-lbs">' + lb + '</div>' +
-        '<p class="ac-leg"><span class="ac-pill ac-best"><b>9+</b></span> результат от 9 до 15 угаданных</p>' +
-        '<h3 class="ac-h ac-h2">По тиражам</h3><div class="act-wrap"><table class="act"><thead><tr><th>Тираж</th>' + cols.map(function(c){ return '<th' + (c[0] === topK ? ' class="act-topc"' : '') + '>' + c[3] + '</th>'; }).join("") +
-        '</tr></thead><tbody>' + body + '</tbody><tfoot>' + foot + '</tfoot></table></div>' +
-        (nums.some(function(n){ var v = vdata[String(n)]; return v && v.unpub && Array.isArray((store[n] || {}).res); }) ? '<p class="ev-note acc-upn">* «Охота на 15» на этот тираж составлена до матчей по линии конторы, но на сайте до тиража не публиковалась.</p>' : '') +
-        '<h3 class="ac-h ac-h2">Выигрыши и проигрыши' + (paidN ? ' за ' + paidN + ' ' + plural(paidN, "тираж", "тиража", "тиражей") + ' с выплатами' : '') + '</h3>' + money +
-        (paidN ? '<p class="ev-note ac-fn">Выигрыш строки = цена строки × сумма коэффициентов от 9 до числа угаданных. «Поставил» и «Выиграл» считаются только по тиражам, где загружены выплаты (₽ рядом с номером). Для Расхождений, Симуляции и Келли — купон при максимальном лимите, как в таблице выше. Это расчёт по коэффициентам, а не фактический платёж оператора.</p>' : '') +
-        '<h3 class="ac-h ac-h2">Строки по числу угаданных за ' + nums.length + ' ' + plural(nums.length, "тираж", "тиража", "тиражей") + '</h3>' + sumT +
-        '<p class="ev-note ac-fn">Одна строка — одна полная комбинация из 15 одиночных исходов. Двойники и тройники учтены раскрытием комбинаций. Столбцы 9–15 — сколько строк угадали ровно столько матчей; «Сумма» — строки × цена строки того тиража.</p>' +
-        '<p class="ev-note ac-fn">«Угадано» — сколько матчей из 15 угадала лучшая строка купона; «Поставил» — строки × цена строки того тиража; «Выиграл» — по загруженным коэффициентам выплат; «Итог» — выигрыш минус ставка, «мимо» — ни одна строка не дошла до выплаты (меньше 9 угаданных). «Мои CSV» — ваши наборы из просмотра тиража (хранятся только в этом браузере): считаются те, что были загружены до окончания тиража и пролежали до его конца; удалённые до окончания и загруженные после окончания в статистику не входят. У ИИ это строки брифа 13 из 15 (то, что реально ставится), у Охоты её готовые строки; оба взяты из сохранённых на тираж данных. Результаты Расхождений, Симуляции и Келли рассчитаны при максимальном доступном лимите бюджета (' + rub(LIM_MAX_RUB) + '), указана фактическая стоимость сформированных купонов. Купон собирается по линии и долям на закрытие приёма, итоги матчей в расчёт не входят; посчитанный купон хранится в браузере и после появления результатов не пересобирается. «—» — купона не было.</p>';
+      var legend = '<div class="st-leg"><span class="st-leg-t">В ячейке сверху вниз:</span>' +
+        '<span><span class="ac-pill ac-best"><b>11</b></span> угадано из 15</span><span><b class="st-cost">17 280 ₽</b> поставил</span><span><b class="st-win on">25 737 ₽</b> выиграл</span><span><b class="st-plus">+8 457 ₽</b> / <b class="st-minus">−5 330 ₽</b> / <b class="st-miss">мимо</b> итог</span></div>';
+      var mainHtml = legend + '<div class="acc-wrap st-wrap"><table class="acc st-main" style="--n:' + fixed.length + '"><thead>' + head + '</thead><tbody>' + body + '</tbody><tfoot>' + foot + '</tfoot></table></div>' +
+        '<div id="stCalc" class="st-calcbox" hidden></div>' +
+        '<p class="st-note">Нажми на ячейку — под таблицей появится расчёт: сколько строк что угадали и сколько за них заплачено. Если выплаты тиража не загружены, в ячейке только угадано и ставка.</p>';
+      /* ---------- 4. как считается — на живом примере последнего тиража с выплатами ---------- */
+      var exN = nums.filter(function(n){ return D[n].PK; })[0], ex = "";
+      if(exN){
+        var EK = D[exN].PK.k, pr = D[exN].price, s9 = Number(EK[9]) || 0, s10 = s9 + (Number(EK[10]) || 0), s11 = s10 + (Number(EK[11]) || 0);
+        ex = '<div class="st-ex"><b>Пример, тираж ' + exN + ', строка ' + pr + ' ₽:</b>' +
+          '<span>9 угаданных: ' + pr + ' × ' + k5(EK[9]) + ' = <b>' + rub(pr * s9) + '</b></span>' +
+          '<span>10 угаданных: ' + pr + ' × (' + k5(EK[9]) + ' + ' + k5(EK[10]) + ') = <b>' + rub(pr * s10) + '</b></span>' +
+          '<span>11 угаданных: ' + pr + ' × (' + k5(EK[9]) + ' + ' + k5(EK[10]) + ' + ' + k5(EK[11]) + ') = <b>' + rub(pr * s11) + '</b></span></div>';
+      }
+      var rules = '<div class="st-rules"><h4>Как считается</h4><ol>' +
+        '<li><b>Поставил</b> = число строк купона × цена строки того тиража. Строка — одна полная комбинация из 15 исходов; двойники и тройники раскрыты.</li>' +
+        '<li><b>Выплата за строку</b> = цена строки × (К9 + К10 + … + К угаданных). К — коэффициенты из таблицы выплат БалтБета: строка с 11 угаданными получает за 9, за 10 и за 11.</li>' +
+        '<li><b>Выиграл</b> = сумма выплат по всем строкам купона, угадавшим 9 и больше.</li>' +
+        '<li><b>Итог</b> = выиграл − поставил. <span class="st-miss">мимо</span> — ни одна строка не угадала 9.</li>' +
+        '</ol>' + ex +
+        '<p class="st-note">Угадано — лучшая строка купона. ИИ — строки брифа 13 из 15; Охота — её готовые строки' + (nums.some(function(n){ return D[n].unpub; }) ? ' (* — составлена до матчей, на сайте до тиража не публиковалась)' : '') + '; Расхождения, Симуляция и Келли — купон при максимальном лимите ' + rub(LIM_MAX_RUB) + ', собран по линии и долям на закрытие приёма. ' +
+        (name.mine ? '«Мои CSV» — ваши наборы из этого браузера, загруженные до окончания тиража и не удалённые до конца. ' : '') + 'Это расчёт по коэффициентам, а не фактический платёж оператора.</p></div>';
+
+      el.innerHTML = (note ? '<p class="pay-ok" id="payOk">' + escHtml(note) + '</p>' : '') +
+        '<div class="pay-go pay-top"><button type="button" class="btn-ev" id="payOpen">Загрузить выигрыши</button></div><div id="payBox" class="pay-box" hidden></div>' +
+        '<h3 class="st-h">По тиражам</h3>' + mainHtml +
+        '<h3 class="st-h">Итоги стратегий</h3>' + sumHtml + rules;
+      var cbox = $("stCalc");
+      [].slice.call(el.querySelectorAll(".st-c")).forEach(function(td){
+        var op = function(){
+          [].slice.call(el.querySelectorAll(".st-c.on")).forEach(function(x){ x.classList.remove("on"); });
+          td.classList.add("on");
+          cbox.innerHTML = calc(td.dataset.n, td.dataset.k); cbox.hidden = false;
+          cbox.querySelector(".st-x").addEventListener("click", function(){ cbox.hidden = true; td.classList.remove("on"); });
+          try { cbox.scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch(e){}
+        };
+        td.addEventListener("click", op);
+        td.addEventListener("keydown", function(e){ if(e.key === "Enter" || e.key === " "){ e.preventDefault(); op(); } });
+      });
       var pb = $("payBox");
       if(note){                                           /* после сохранения: сообщение сверху и подсветка строки тиража */
         var ok = $("payOk"); if(ok) try { ok.scrollIntoView({ block: "start" }); } catch(e){}
-        if(noteN) [].slice.call(el.querySelectorAll(".act tbody th b")).forEach(function(b){ if(b.textContent === String(noteN)) b.closest("tr").classList.add("act-new"); });
+        if(noteN) [].slice.call(el.querySelectorAll(".st-main tbody th")).forEach(function(th){ if(parseInt(th.textContent, 10) === Number(noteN)) th.parentNode.classList.add("st-new"); });
       }
       $("payOpen").addEventListener("click", function(){
         if(!pb.hidden){ pb.hidden = true; return; }

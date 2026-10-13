@@ -2580,83 +2580,8 @@ body.is-prev .pct-col.hit b,body.is-prev .kf-col.hit{color:var(--ink); font-weig
 .acc-upn{margin-top:6px}
 @media (max-width:440px){ .acc td small.acc-win{font-size:8.5px; letter-spacing:-.03em; white-space:nowrap} }
 
-/* статистика: карточки тиражей — поставил / выиграл / итог, крупно */
-.acds{display:grid; gap:12px; max-width:720px; margin:0 auto}
-.acd{border:1px solid var(--rule); border-radius:var(--r); background:var(--surface-2); overflow:hidden}
-.acd-h{display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:4px 10px; padding:10px 14px; border-bottom:1px solid var(--rule-strong)}
-.acd-h b{font:700 17px/1.2 "IBM Plex Mono",monospace; color:var(--ink)}
-.acd-paid{font-size:13px; color:#3aa76d}
-.acd-h .acd-nopay{font-size:13px}
-.acd-r{display:grid; grid-template-columns:minmax(0,1.5fr) repeat(3, minmax(0,1fr)); align-items:start; gap:8px 10px; padding:10px 14px; border-bottom:1px solid var(--rule)}
-.acd-r:last-child{border-bottom:0}
-.acd-n{display:flex; align-items:center; justify-content:space-between; gap:8px; align-self:center; min-width:0}
-.acd-nm{font-size:16px; font-weight:600; color:var(--ink)}
-.acd-hit{display:inline-flex; align-items:center; gap:5px; flex:none}
-.acd-hit i{font-style:normal; font-size:12px; color:var(--muted)}
-.acd-hit .ac-pill b{font-size:17px}
-.acd-v{display:grid; gap:2px; justify-items:end; text-align:right; min-width:0}
-.acd-v i{font-style:normal; font-size:11.5px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted)}
-.acd-v b{font:700 15.5px/1.2 "IBM Plex Mono",monospace; color:var(--ink); white-space:nowrap; font-variant-numeric:tabular-nums}
-.acd-v small{font-size:12px; color:var(--muted); white-space:nowrap}
-.acd-v b.acd-plus{color:#3aa76d}
-.acd-v b.acd-minus{color:#e0645a}
-.acd-nopay{color:var(--muted); font-weight:500}
-.acd-v b.acd-nopay{color:var(--muted)}
-.acd-r.acd-na{grid-template-columns:1fr auto; align-items:center}
-.acd-none{font-size:14px; color:var(--muted)}
-.ac-lb{font-size:15px} .ac-lb b{font-size:16px} .ac-lb small{font-size:12px}
-.pay-r .acs-n{font-size:15px} .pay-r .acs-v b{font-size:15px} .pay-r .acs-v i{font-size:11px}
-.acs-n{font-size:15px} .acs-v b{font-size:14px} .acs-c b{font-size:13px}
-.ac-fn{font-size:13px}
-@media (max-width:600px){
-  .acd-h{padding:9px 12px}
-  .acd-r{grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px; padding:10px 12px}
-  .acd-n{grid-column:1 / -1}
-  .acd-v{justify-items:start; text-align:left}
-  .acd-v.acd-res{justify-items:end; text-align:right}
-  .acd-v b{font-size:14.5px}
-  .acd-r.acd-r.acd-na{grid-template-columns:1fr auto; align-items:center}
-  .acd-r.acd-na .acd-n{grid-column:auto}
-}
-@media (max-width:360px){ .acd-v b{font-size:13px} .acd-v i{font-size:10.5px} .acd-r{padding:9px 10px} }
-
-/* статистика: таблица тиражей × стратегий — крупно, первая колонка и шапка закреплены, на телефоне листается вбок */
-.act-wrap{overflow:auto; max-height:78vh; border:1px solid var(--rule); border-radius:var(--r); -webkit-overflow-scrolling:touch}
-.act{width:100%; min-width:760px; border-collapse:separate; border-spacing:0; font-size:14px}
-.act th, .act td{padding:10px 10px; border-bottom:1px solid var(--rule); vertical-align:top; text-align:left; background:var(--surface)}
-.act tbody tr:nth-child(even) th, .act tbody tr:nth-child(even) td{background:var(--surface-2)}
-.act thead th{position:sticky; top:0; z-index:2; font-size:13px; font-weight:700; letter-spacing:.02em; color:var(--ink); background:var(--surface-2); border-bottom:2px solid var(--rule-strong); white-space:nowrap}
-.act thead th.act-topc{color:#B98F2E; border-bottom-color:#C9A24B}
-.act tbody th, .act tfoot th{position:sticky; left:0; z-index:1; min-width:78px; border-right:1px solid var(--rule-strong)}
-.act thead th:first-child{left:0; z-index:3; border-right:1px solid var(--rule-strong)}
-.act tbody th b{display:block; font:700 16px/1.2 "IBM Plex Mono",monospace; color:var(--ink)}
-.act-paid{display:block; margin-top:4px; font-style:normal; font-size:11.5px; font-weight:500; color:#3aa76d; white-space:nowrap}
-.act td{min-width:118px}
-.act-top{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:5px}
-.act-top .ac-pill b{font-size:17px}
-.act-res{font:700 15px/1.2 "IBM Plex Mono",monospace; white-space:nowrap; font-variant-numeric:tabular-nums}
-.act-plus{color:#3aa76d}
-.act-minus{color:#e0645a}
-.act-ln{display:block; font:500 13px/1.45 "IBM Plex Mono",monospace; color:var(--ink); white-space:nowrap; font-variant-numeric:tabular-nums}
-.act-ln i{font:500 12px/1 inherit; font-family:inherit; font-style:normal; color:var(--muted)}
-.act-ln em{font-style:normal}
-.act-ln em.act-plus{color:#3aa76d; font-weight:700}
-.act-sm{font-size:12px; color:var(--muted)}
-.act-na{color:var(--muted); font-size:16px; text-align:center !important; vertical-align:middle !important}
-.act tfoot th, .act tfoot td{border-top:2px solid var(--rule-strong); border-bottom:0; background:var(--surface-2)}
-.act tfoot tr + tr th, .act tfoot tr + tr td{border-top:1px solid var(--rule)}
-.act tfoot th{font-size:14px; font-weight:700; color:var(--ink)}
-.act tfoot th small{display:block; margin-top:3px; font-size:11.5px; font-weight:500; color:var(--muted); white-space:normal}
-.act-sum .act-res{font-size:16px}
-@media (max-width:600px){
-  .act{min-width:700px; font-size:13px}
-  .act th, .act td{padding:9px 8px}
-  .act td{min-width:108px}
-  .act tbody th, .act tfoot th{min-width:64px}
-  .act tbody th b{font-size:15px}
-}
 /* окно статистики шире, чтобы таблица помещалась без прокрутки на компьютере */
-@media (min-width:700px){ .ev-box:has(.act){max-width:min(1080px, 96vw); width:min(1080px, 96vw)} }
+@media (min-width:700px){ .ev-box:has(.st-main){max-width:min(1000px, 96vw); width:min(1000px, 96vw)} }
 .pay-zone{min-height:54px; padding:10px 12px; border:1.5px dashed var(--rule-strong); border-radius:var(--r); background:var(--surface); color:var(--ink); font-size:14px; line-height:1.4; outline:none; overflow:hidden; max-height:80px}
 .pay-zone:empty::before{content:attr(data-ph); color:var(--muted)}
 .pay-zone:focus{border-color:var(--brand-gold)}
@@ -2665,3 +2590,74 @@ body.is-prev .pct-col.hit b,body.is-prev .kf-col.hit{color:var(--ink); font-weig
 .act tbody tr.act-new th, .act tbody tr.act-new td{background:rgba(58,167,109,.14)}
 .pay-src{display:grid; grid-template-columns:1fr 1fr; gap:8px}
 .pay-src .btn-ev{display:flex; align-items:center; justify-content:center; min-height:44px; height:auto; margin:0; padding:10px 8px; text-align:center; line-height:1.25}
+
+/* ---------- статистика стратегий: таблица тиражей (значения столбиком), итоги, расчёт ---------- */
+.st-h{margin:20px 0 10px; text-align:center; font-size:14px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted)}
+.st-note{max-width:720px; margin:8px auto 0; font-size:13px; line-height:1.5; color:var(--muted); text-align:center}
+.st-leg{display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:6px 14px; margin:0 auto 10px; font-size:13px; color:var(--muted)}
+.st-leg > span{display:inline-flex; align-items:center; gap:5px; white-space:nowrap}
+.st-leg-t{flex-basis:100%; justify-content:center}
+.st-leg b{font:700 13px/1.2 "IBM Plex Mono",monospace}
+.st-leg .ac-pill{min-width:28px; padding:2px 6px} .st-leg .ac-pill b{font-size:13px}
+.st-wrap{overflow-x:auto; -webkit-overflow-scrolling:touch}
+.st-main{min-width:calc(72px + var(--n, 5) * 104px); font-size:14px}
+.st-main thead th:first-child, .st-main tbody th, .st-main tfoot th{width:72px}
+.st-main thead th{font-size:12px; letter-spacing:.04em; color:var(--ink); padding:9px 4px; white-space:normal; line-height:1.2; vertical-align:bottom}
+.st-main tbody th, .st-main tfoot th{position:sticky; left:0; z-index:1; background:var(--surface); font:700 15px/1.2 "IBM Plex Mono",monospace; color:var(--ink); padding:10px 6px; min-width:58px; border-right:1px solid var(--rule-strong); box-shadow:2px 0 4px rgba(0,0,0,.12)}
+.st-main tbody th .acc-paid{display:block; margin:3px 0 0; font-size:11px; vertical-align:baseline}
+.st-main tbody tr:nth-child(even) th{background:var(--surface-2)}
+.st-main tbody td, .st-main tfoot td{padding:9px 4px 8px; vertical-align:top}
+.st-main tfoot th{font:700 13px/1.2 inherit; text-transform:uppercase; letter-spacing:.04em; background:var(--surface-2)}
+.st-main tfoot th small{display:block; margin-top:3px; font-size:11px; font-weight:500; text-transform:none; letter-spacing:0; color:var(--muted)}
+.st-main tfoot td{background:var(--surface-2)}
+.st-main .ac-pill b{font-size:16px}
+.st-v{display:block; margin-top:3px; font:500 13px/1.25 "IBM Plex Mono",monospace; white-space:nowrap; font-variant-numeric:tabular-nums}
+.st-cost{color:var(--muted)}
+.st-win{color:var(--muted)} .st-win.on{color:#3aa76d}
+.st-net{font-weight:700; font-size:14px}
+.st-plus{color:#3aa76d; font-weight:700}
+.st-minus{color:#e0645a; font-weight:700}
+.st-miss{color:#e0645a; font-weight:700; text-transform:lowercase}
+.st-mute{color:var(--muted)}
+.st-c{cursor:pointer; transition:background .15s}
+.st-c:hover{background:rgba(201,162,75,.10) !important}
+.st-c.on{box-shadow:inset 0 0 0 2px var(--brand-gold); background:rgba(201,162,75,.12) !important}
+.st-main tr.st-new th, .st-main tr.st-new td{background:rgba(58,167,109,.14)}
+.st-calcbox{max-width:720px; margin:12px auto 0}
+.st-calc{padding:12px 14px; border:1px solid var(--brand-gold); border-radius:var(--r); background:var(--surface-2); font-size:14px; line-height:1.5}
+.st-calc p{margin:6px 0}
+.st-calc-h{display:flex; justify-content:space-between; align-items:center; gap:10px; font-size:15px}
+.st-x{border:0; background:none; color:var(--muted); font-size:22px; line-height:1; cursor:pointer; padding:0 4px}
+.st-ct{width:100%; border-collapse:collapse; margin:6px 0; font:500 13.5px/1.3 "IBM Plex Mono",monospace}
+.st-ct th{font:600 11.5px/1.2 inherit; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); text-align:right; padding:5px 6px; border-bottom:1px solid var(--rule-strong)}
+.st-ct td{text-align:right; padding:6px; border-bottom:1px solid var(--rule)}
+.st-ct th:first-child, .st-ct td:first-child{text-align:left}
+.st-sum{display:grid; gap:8px; max-width:720px; margin:0 auto}
+.st-srow{display:grid; grid-template-columns:minmax(0,1.6fr) repeat(3, minmax(0,1fr)); align-items:center; gap:10px; padding:11px 14px; border:1px solid var(--rule); border-radius:var(--r); background:var(--surface-2)}
+.st-srow.st-lead{border-color:#3aa76d}
+.st-sname b{display:block; font-size:16px; color:var(--ink)}
+.st-sname span{display:block; margin-top:2px; font-size:12.5px; color:var(--muted)}
+.st-snum{display:grid; gap:2px; justify-items:end; text-align:right}
+.st-snum i{font-style:normal; font-size:11px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted)}
+.st-snum b{font:700 15px/1.2 "IBM Plex Mono",monospace; color:var(--ink); white-space:nowrap}
+.st-snone{grid-column:2 / -1; justify-items:end; font-size:13px; color:var(--muted)}
+.st-rules{max-width:720px; margin:20px auto 0; padding:12px 16px; border:1px solid var(--rule); border-radius:var(--r); font-size:14px; line-height:1.55}
+.st-rules h4{margin:0 0 6px; font-size:15px}
+.st-rules ol{margin:0; padding-left:20px} .st-rules li{margin:4px 0}
+.st-ex{margin:10px 0 0; padding:8px 10px; border-radius:8px; background:var(--surface-2); font:500 13px/1.5 "IBM Plex Mono",monospace}
+.st-rules .st-note{text-align:left; margin-top:10px}
+@media (max-width:600px){
+  .st-main{min-width:calc(56px + var(--n, 5) * 90px)}
+  .st-main tbody th, .st-main tfoot th{min-width:56px; width:56px; padding:9px 4px; font-size:14px}
+  .st-main tfoot th{font-size:11px; letter-spacing:0; white-space:normal}
+  .st-main thead th:first-child{position:sticky; left:0; z-index:2; background:var(--surface)}
+  .st-v{font-size:12.5px} .st-net{font-size:13px}
+  .st-srow{grid-template-columns:repeat(3, minmax(0,1fr)); padding:10px 12px}
+  .st-sname{grid-column:1 / -1}
+  .st-snum{justify-items:start; text-align:left}
+  .st-snet{justify-items:end; text-align:right}
+  .st-snone{grid-column:1 / -1; justify-items:start}
+}
+.st-snum b.st-plus{color:#3aa76d} .st-snum b.st-minus{color:#e0645a}
+.st-snum small{font-size:12px; color:var(--muted)}
+.st-ex{display:grid; gap:3px} .st-ex span{display:block}
