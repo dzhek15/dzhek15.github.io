@@ -3142,7 +3142,8 @@
     var draws = apiFetch("baltbet-main/drawings?page=1")
       .then(function(r){ return r.ok ? r.json() : null; })
       .then(function(j){
-        var rows = ((j && j.data) || []).filter(function(d){ return d.status === "finished"; })
+        /* «expected» — матчи сыграны, оператор ещё не закрыл тираж: берём, если известны все итоги */
+        var rows = ((j && j.data) || []).filter(function(d){ return d.status === "finished" || d.status === "expected"; })
           .sort(function(a, b){ return b.number - a.number; }).slice(0, ACC_N);
         return Promise.all(rows.map(function(d){
           var have = store[d.number];
@@ -3150,7 +3151,9 @@
           return apiFetch("drawing-info/" + d.id).then(function(r){ return r.ok ? r.json() : null; })
             .then(function(j2){
               var info = j2 && (j2.data || j2);
-              if(!info || info.status !== "finished") return;
+              if(!info) return;
+              var allRes = (info.events || []).length >= 15 && (info.events || []).every(function(e){ return !!normOut(e && e.result); });
+              if(info.status !== "finished" && !allRes) return;
               info.number = info.number || d.number;
               store[d.number] = stratForInfo(info);
             }).catch(function(){});
