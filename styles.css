@@ -2661,3 +2661,9 @@ body.is-prev .pct-col.hit b,body.is-prev .kf-col.hit{color:var(--ink); font-weig
 .st-snum b.st-plus{color:#3aa76d} .st-snum b.st-minus{color:#e0645a}
 .st-snum small{font-size:12px; color:var(--muted)}
 .st-ex{display:grid; gap:3px} .st-ex span{display:block}
+.pay-loc{max-width:720px; margin:0 auto 12px; padding:12px 14px; border:1px solid #d9a441; border-radius:var(--r); background:rgba(217,164,65,.12); font-size:14px; line-height:1.45; color:var(--ink)}
+.pay-loc p{margin:0 0 10px}
+.pay-loc .btn-ev{width:100%}
+#ownBox{max-width:720px; margin:18px auto 4px; padding:8px 12px; border:1px solid var(--line); border-radius:var(--r)}
+#ownBox .pay-tok{flex:1; min-width:0}
+.pay-bad{color:#c0392b}

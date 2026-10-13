@@ -2770,11 +2770,13 @@
   var PAY_KEY = "dzhek-pay", PAY_KS = [15, 14, 13, 12, 11, 10, 9], payShared = null;
   function payRead(){ try { return JSON.parse(localStorage.getItem(PAY_KEY)) || {}; } catch(e){ return {}; } }
   function payWrite(o){ try { localStorage.setItem(PAY_KEY, JSON.stringify(o)); } catch(e){} }
+  var payAt = 0;
   function payLoadShared(){
-    if(payShared) return Promise.resolve(payShared);
+    if(payShared && Date.now() - payAt < 30000) return Promise.resolve(payShared);   /* приложение на телефоне живёт часами — перечитываем архив */
+    payAt = Date.now();
     return fetch(MIRROR + "payouts.json?t=" + Date.now(), {cache: "no-store"})
-      .then(function(r){ return r.ok ? r.json() : {}; }).catch(function(){ return {}; })
-      .then(function(j){ payShared = j || {}; return payShared; });
+      .then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; })
+      .then(function(j){ payShared = j || payShared || {}; return payShared; });   /* сеть подвела — оставляем прежний архив */
   }
   function payFor(n){ var l = payRead()[n]; return (l && l.k) ? l : ((payShared || {})[n] && payShared[n].k ? payShared[n] : null); }
   function payWin(dist, K, price){
@@ -2817,6 +2819,12 @@
   /* общий архив: запись в data/api/payouts.json репозитория сайта ключом владельца (хранится только в его браузере) */
   var OWN_KEY = "dzhek-owner-gh", PAY_URL = "https://api.github.com/repos/dzhek15/dzhek15.github.io/contents/data/api/payouts.json";
   function ownTok(){ try { return localStorage.getItem(OWN_KEY) || ""; } catch(e){ return ""; } }
+  /* проверка ключа: GitHub должен подтвердить право записи в репозиторий сайта */
+  function ownCheck(tok){
+    return fetch("https://api.github.com/repos/dzhek15/dzhek15.github.io", { headers: { Authorization: "Bearer " + tok, Accept: "application/vnd.github+json" }, cache: "no-store" })
+      .then(function(r){ if(r.status === 401) throw new Error("ключ не принят GitHub"); if(!r.ok) throw new Error("GitHub ответил " + r.status); return r.json(); })
+      .then(function(j){ if(!(j.permissions && (j.permissions.push || j.permissions.admin))) throw new Error("у ключа нет права записи в репозиторий сайта"); return true; });
+  }
   function payPush(n, rec){
     var tok = ownTok(); if(!tok) return Promise.reject(new Error("нет ключа владельца"));
     var H = { "Authorization": "Bearer " + tok, "Accept": "application/vnd.github+json" };
@@ -2828,8 +2836,10 @@
         if(!r.ok) throw new Error(r.status === 401 ? "ключ не принят GitHub" : "GitHub ответил " + r.status);
         return r.json().then(function(j){ var t = b64d(j.content || ""); return { sha: j.sha, data: t.trim() ? JSON.parse(t) : {} }; });
       }).then(function(cur){
-        var d = cur.data || {}; if(rec) d[n] = rec; else delete d[n];
-        var body = { message: "Выплаты тиража " + n, content: b64e(JSON.stringify(d, null, 1) + "\n"), branch: "main" };
+        var d = cur.data || {};
+        if(n && typeof n === "object") Object.keys(n).forEach(function(k){ d[k] = n[k]; });   /* пачка: все локальные тиражи разом */
+        else if(rec) d[n] = rec; else delete d[n];
+        var body = { message: n && typeof n === "object" ? "Выплаты тиражей " + Object.keys(n).join(", ") : "Выплаты тиража " + n, content: b64e(JSON.stringify(d, null, 1) + "\n"), branch: "main" };
         if(cur.sha) body.sha = cur.sha;
         return fetch(PAY_URL, { method: "PUT", headers: H, body: JSON.stringify(body) }).then(function(r){
           if((r.status === 409 || r.status === 422) && left > 0) return attempt(left - 1);
@@ -2839,6 +2849,17 @@
       });
     };
     return attempt(2);
+  }
+  /* выплаты, сохранённые только в этом браузере (без ключа владельца): их не видно на других устройствах */
+  function payLocalOnly(){
+    var o = payRead(), sh = payShared || {};
+    return Object.keys(o).filter(function(n){ return o[n] && o[n].k && JSON.stringify((sh[n] || {}).k || null) !== JSON.stringify(o[n].k); }).sort();
+  }
+  function payPushLocal(){
+    var o = payRead(), ns = payLocalOnly(), pack = {};
+    if(!ns.length) return Promise.resolve([]);
+    ns.forEach(function(n){ pack[n] = o[n]; });
+    return payPush(pack).then(function(){ var o2 = payRead(); ns.forEach(function(n){ delete o2[n]; }); payWrite(o2); return ns; });
   }
   var payOcrBusy = false;
   /* правдоподобная таблица: все 7 коэффициентов, и чем больше угадано, тем выше коэффициент (нулевые — нет выплаты) */
@@ -2947,10 +2968,8 @@
       '<p class="ev-note" id="payMsg2" hidden></p>' +
       '<div class="pay-go"><button type="button" class="btn-ev" id="paySave">Сохранить и пересчитать</button>' +
       '<button type="button" class="btn-ev" id="payDel">Удалить выплаты тиража</button></div>' +
-      '<details class="pay-own"><summary id="payOwnS"></summary>' +
-      '<p class="ev-note">Ключ владельца сайта (GitHub, право записи в репозиторий сайта) хранится только в этом браузере. С ним выплаты сохраняются в общий архив и через минуту видны всем посетителям; без него — только на этом устройстве.</p>' +
-      '<div class="pay-go"><input type="password" id="payTok" class="pay-tok" placeholder="github_pat_…" autocomplete="off">' +
-      '<button type="button" class="btn-ev" id="payTokSave">Запомнить ключ</button><button type="button" class="btn-ev" id="payTokDel">Забыть ключ</button></div></details></div>';
+      '<p class="ev-note">Выплаты сохраняются в общий архив и через минуту видны всем посетителям, на всех устройствах.</p>' +
+      '<div class="pay-go"><button type="button" class="btn-ev" id="payTokDel">Выйти из режима владельца</button></div></div>';
     var q = function(id){ return box.querySelector("#" + id); }, ocrNum = null;
     var msg = function(t, warn){
       var p = q("payMsg"); p.textContent = t; p.className = warn ? "ev-warn" : "ev-note";
@@ -2985,18 +3004,7 @@
       else msg(got === 7 ? "Распознаны все 7 коэффициентов" + (r.num ? " тиража " + r.num + (r.byScore ? " (тираж определён по счетам матчей)" : "") : ". Номер тиража не найден — проверь выбор тиража") + ". Сверь цифры со скриншотом и нажми «Сохранить»." :
         "Распознано коэффициентов: " + got + " из 7. Допиши недостающие вручную" + (got < 5 ? " или сделай скриншот крупнее: увеличь таблицу на экране (на телефоне — разведи пальцами) так, чтобы она заняла всю ширину, и загрузи снова" : "") + ".", got !== 7);
     };
-    var ownState = function(){
-      var on = !!ownTok();
-      q("payOwnS").textContent = on ? "Общий архив: запись включена" : "Владелец сайта: включить общий архив";
-      q("payTokDel").hidden = !on;
-    };
-    ownState();
-    q("payTokSave").addEventListener("click", function(){
-      var v = q("payTok").value.trim(); if(!v) return;
-      try { localStorage.setItem(OWN_KEY, v); } catch(e){}
-      q("payTok").value = ""; ownState(); msg("Ключ запомнен. Следующее сохранение уйдёт в общий архив.");
-    });
-    q("payTokDel").addEventListener("click", function(){ try { localStorage.removeItem(OWN_KEY); } catch(e){} ownState(); msg("Ключ удалён из этого браузера."); });
+    q("payTokDel").addEventListener("click", function(){ try { localStorage.removeItem(OWN_KEY); } catch(e){} onSaved("Режим владельца выключен в этом браузере. Загрузка выплат скрыта.", null); });
     var share = function(n, rec){
       if(!ownTok()){ onSaved(rec ? savedNote(n, "на этом устройстве") : "Выплаты тиража " + n + " удалены.", n); return; }
       msg("Сохраняю в общий архив…");
@@ -3287,10 +3295,41 @@
         '<p class="st-note">Угадано — лучшая строка купона. ИИ — строки брифа 13 из 15; Охота — её готовые строки' + (nums.some(function(n){ return D[n].unpub; }) ? ' (* — составлена до матчей, на сайте до тиража не публиковалась)' : '') + '; Расхождения, Симуляция и Келли — купон при максимальном лимите ' + rub(LIM_MAX_RUB) + ', собран по линии и долям на закрытие приёма. ' +
         (name.mine ? '«Мои CSV» — ваши наборы из этого браузера, загруженные до окончания тиража и не удалённые до конца. ' : '') + 'Это расчёт по коэффициентам, а не фактический платёж оператора.</p></div>';
 
-      el.innerHTML = (note ? '<p class="pay-ok" id="payOk">' + escHtml(note) + '</p>' : '') +
-        '<div class="pay-go pay-top"><button type="button" class="btn-ev" id="payOpen">Загрузить выигрыши</button></div><div id="payBox" class="pay-box" hidden></div>' +
+      var own = !!ownTok(), locOnly = payLocalOnly();
+      var locHtml = locOnly.length ? '<div class="pay-loc"><p><b>Выплаты ' + plural(locOnly.length, "тиража", "тиражей", "тиражей") + ' ' + locOnly.join(", ") + ' сохранены только на этом устройстве.</b> На телефонах и у других посетителей их не видно.</p>' +
+        '<button type="button" class="btn-ev" id="payLocGo">' + (own ? 'Отправить в общий архив' : 'Войти как владелец и отправить') + '</button></div>' : '';
+      var ownHtml = own ? '' : '<details class="pay-own" id="ownBox"><summary>Вход владельца</summary>' +
+        '<p class="ev-note">Загружать выплаты может только владелец сайта. Ключ вводится один раз и хранится только в этом браузере.</p>' +
+        '<div class="pay-go"><input type="password" id="ownTok" class="pay-tok" placeholder="github_pat_…" autocomplete="off"><button type="button" class="btn-ev" id="ownGo">Войти</button></div>' +
+        '<p class="ev-note" id="ownMsg" hidden></p></details>';
+      el.innerHTML = (note ? '<p class="pay-ok" id="payOk">' + escHtml(note) + '</p>' : '') + locHtml +
+        (own ? '<div class="pay-go pay-top"><button type="button" class="btn-ev" id="payOpen">Загрузить выигрыши</button></div><div id="payBox" class="pay-box" hidden></div>' : '') +
         '<h3 class="st-h">По тиражам</h3>' + mainHtml +
-        '<h3 class="st-h">Итоги стратегий</h3>' + sumHtml + rules;
+        '<h3 class="st-h">Итоги стратегий</h3>' + sumHtml + rules + ownHtml;
+      var ownIn = function(){
+        var t = $("ownTok"), m = $("ownMsg"), v = t.value.trim(); if(!v) return;
+        var say = function(x, bad){ m.hidden = false; m.textContent = x; m.classList.toggle("pay-bad", !!bad); };
+        $("ownGo").disabled = true; say("Проверяю ключ…");
+        ownCheck(v).then(function(){
+          try { localStorage.setItem(OWN_KEY, v); } catch(e){}
+          var loc = payLocalOnly();
+          if(!loc.length){ showAcc(back, "Вход выполнен. Теперь в статистике есть кнопка «Загрузить выигрыши».", null); return; }
+          say("Ключ принят. Отправляю в общий архив выплаты с этого устройства: " + loc.join(", ") + "…");
+          payPushLocal().then(function(ns){ showAcc(back, "Вход выполнен. Выплаты тиражей " + ns.join(", ") + " отправлены в общий архив, через минуту их увидят все.", ns[0]); },
+            function(e){ showAcc(back, "Вход выполнен, но выплаты отправить не удалось: " + (e && e.message || e) + ". Нажмите «Отправить в общий архив».", null); });
+        }, function(e){ $("ownGo").disabled = false; say("Ключ не подошёл: " + (e && e.message || e) + ".", true); });
+      };
+      if($("ownGo")){ $("ownGo").addEventListener("click", ownIn); $("ownTok").addEventListener("keydown", function(e){ if(e.key === "Enter") ownIn(); }); }
+      if($("payLocGo")) $("payLocGo").addEventListener("click", function(){
+        var bt = this;
+        if(!ownTok()){                                  /* раскрываем вход владельца */
+          var d = $("ownBox"); if(d){ d.open = true; try { d.scrollIntoView({ block: "center" }); } catch(e){} $("ownTok").focus(); }
+          return;
+        }
+        bt.disabled = true; bt.textContent = "Отправляю…";
+        payPushLocal().then(function(ns){ showAcc(back, "Выплаты тиражей " + ns.join(", ") + " отправлены в общий архив. Через минуту их увидят все — и на телефонах.", ns[0]); },
+          function(e){ bt.disabled = false; bt.textContent = "Отправить в общий архив"; window.alert("Не удалось отправить: " + (e && e.message || e)); });
+      });
       var cbox = $("stCalc");
       [].slice.call(el.querySelectorAll(".st-c")).forEach(function(td){
         var op = function(){
@@ -3308,7 +3347,7 @@
         var ok = $("payOk"); if(ok) try { ok.scrollIntoView({ block: "start" }); } catch(e){}
         if(noteN) [].slice.call(el.querySelectorAll(".st-main tbody th")).forEach(function(th){ if(parseInt(th.textContent, 10) === Number(noteN)) th.parentNode.classList.add("st-new"); });
       }
-      $("payOpen").addEventListener("click", function(){
+      if($("payOpen")) $("payOpen").addEventListener("click", function(){
         if(!pb.hidden){ pb.hidden = true; return; }
         pb.hidden = false; payPanel(pb, nums, function(note, n){ showAcc(back, note, n); });
         pb.scrollIntoView({block: "nearest"});
@@ -5530,7 +5569,7 @@
     }
     if(book) book = null;
     book = { name: "купон по ссылке · тираж №" + (state.tirazh || ""), rows: rows, pages: [cells], lines: 0, idx: 0 };
-    try{ history.replaceState(null, "", location.pathname + location.search); }catch(e){}
+    try{ history.replaceState(null, "", linkCleanUrl()); }catch(e){}
     bookShow();
     say("Купон из ссылки открыт в просмотре. Твой купон цел: «В купон» перенесёт исходы, «Закрыть» вернёт к своему.");
     try{ $("bookBar").scrollIntoView({ behavior:"smooth", block:"center" }); }catch(e){}
@@ -6003,7 +6042,7 @@
       if(!rows){ say("Ссылку со списком вариантов развернуть не удалось — похоже, адрес обрезался при пересылке."); if(p.next) p.next(); return; }
       var add = pcsvAddTo(String(p.tirazh), { link: 1, rows: rows.map(function(r){ return r.join(""); }),
                           sys: (pages || rows).map(function(pg){ return pg.join(","); }) });
-      try{ history.replaceState(null, "", location.pathname + location.search); }catch(e){}
+      try{ history.replaceState(null, "", linkCleanUrl()); }catch(e){}
       pcsv.msgAt = Date.now();
       pcsv.msg = (add.dup ? "Эта ссылка уже загружена — «" + add.name + "». " : "Из ссылки открыто " + fmt(rows.length) + " вариант(ов)" +
         (pages && pages.length !== rows.length ? " в " + fmt(pages.length) + " строк(е)" : "") + (isPrev ? "" : ", тираж №" + p.tirazh) + ". ") +
@@ -7382,6 +7421,11 @@
   var PC_BTNS = '<button type="button" class="pc-btn" id="pcLoad">Загрузить CSV</button><button type="button" class="pc-btn" id="pcLinkBtn">Загрузить ссылку</button>';
   var pcPasteBusy = false;
   /* ссылку могли переслать с искажениями: мессенджер закодировал # и =, вставили только код, адрес с ?s= */
+  /* адрес без хвоста ссылки (?s=код, #s=код…): после открытия набора повторная перезагрузка его не дублирует */
+  function linkCleanUrl(){
+    var q = String(location.search || "").replace(/^\?/, "").split("&").filter(function(x){ return x && !/^(s|v|vs|k)=/.test(x); }).join("&");
+    return location.pathname + (q ? "?" + q : "");
+  }
   function linkNorm(t){
     var v = String(t || "").trim();
     for(var i = 0; i < 2 && /%(23|3D|3d|2E|2e)/.test(v); i++){ try { v = decodeURIComponent(v); } catch(e){ v = v.replace(/%23/g, "#").replace(/%3D/gi, "=").replace(/%2E/gi, "."); } }
@@ -7398,7 +7442,7 @@
         /* если браузер даёт прочитать буфер — подставляем ссылку сразу */
         try{
           if(navigator.clipboard && navigator.clipboard.readText) navigator.clipboard.readText().then(function(t){
-            if((/#vs?=[^-\s]*-[A-Za-z0-9\-_.]+/.test(t || "") || /#s=[A-Za-z0-9_-]{6,16}/.test(t || "")) && !inp.value) inp.value = String(t).trim();
+            if((/#vs?=[^-\s]*-[A-Za-z0-9\-_.]+/.test(t || "") || /[#?&]s=[A-Za-z0-9_-]{6,16}/.test(t || "")) && !inp.value) inp.value = String(t).trim();
           }, function(){});
         }catch(e){}
       }
@@ -7471,7 +7515,8 @@
       var packed = list.join("."), base = location.origin + location.pathname;
       var longUrl = base + "#vs=" + encodeURIComponent(tir || "") + "-" + packed;
       /* длинный адрес заменяем коротким #s=код; не вышло — отдаём длинный, как раньше */
-      return shortPut(tir, packed).then(function(id){ return base + "#s=" + id; }, function(){ return longUrl; });
+      /* код в ?s=, а не в #s=: мессенджеры (MAX и др.) обрезают ссылку на «#» или делают из «#s» хэштег */
+      return shortPut(tir, packed).then(function(id){ return base + "?s=" + id; }, function(){ return longUrl; });
     });
     var wrote = null;
     if(window.ClipboardItem && navigator.clipboard && navigator.clipboard.write){
@@ -7489,8 +7534,8 @@
         return;
       }
       var ok = function(){
-        fin((url.indexOf("#s=") > 0 ? "Короткая ссылка скопирована: " : "Ссылка скопирована: ") + fmt(sets.length) + " набор(ов), " + fmt(nVars) + " вариант(ов), тираж №" + tir +
-          ". Кто откроет — увидит все наборы вкладками в просмотре тиража." + (url.indexOf("#s=") > 0 ? " Хранится 90 дней." : (url.length > 3500 ? " Адрес длинный — в Telegram может не влезть одним сообщением." : "")));
+        fin((url.indexOf("?s=") > 0 ? "Короткая ссылка скопирована: " : "Ссылка скопирована: ") + fmt(sets.length) + " набор(ов), " + fmt(nVars) + " вариант(ов), тираж №" + tir +
+          ". Кто откроет — увидит все наборы вкладками в просмотре тиража." + (url.indexOf("?s=") > 0 ? " Хранится 90 дней." : (url.length > 3500 ? " Адрес длинный — в Telegram может не влезть одним сообщением." : "")));
       };
       var manual = function(){
         fin("Скопировать автоматически не вышло — ссылка в окне, скопируй её оттуда.");
@@ -7962,7 +8007,7 @@
     var N = state.matches.length || 15, k = 0, added = 0;
     var step = function(){
       if(k >= payloads.length){
-        try{ history.replaceState(null, "", location.pathname + location.search); }catch(e){}
+        try{ history.replaceState(null, "", linkCleanUrl()); }catch(e){}
         enterCurView();
         pcsv.msgAt = Date.now();
         pcsv.msg = "Из ссылки открыто наборов: " + added + ". Тираж №" + tir + " ещё не начался: когда он начнётся, наборы останутся в просмотре.";

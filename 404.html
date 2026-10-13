@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ДЖЕК 15</title>
+<script>
+/* Мессенджеры иногда портят ссылку: «#» превращается в «%23», хвост попадает в путь (…/%23s=код, …/s=код, …/s/код).
+   GitHub в таких случаях отдаёт эту страницу — достаём код набора и открываем сайт правильно. */
+(function(){
+  var u = String(location.href);
+  for(var i = 0; i < 3 && /%(23|3D|3d|2E|2e|26)/.test(u); i++){ try { u = decodeURIComponent(u); } catch(e){ break; } }
+  var tail = u.replace(/^https?:\/\/[^\/]+/, "");
+  var m = tail.match(/(?:^|[\/#?&])s(?:=|\/)([A-Za-z0-9_-]{6,16})(?![A-Za-z0-9_-])/);
+  if(m){ location.replace("/?s=" + m[1]); return; }
+  var v = tail.match(/(?:^|[\/#?&])(vs?|k)=([^\s"'<>]+)/);
+  if(v){ location.replace("/#" + v[1] + "=" + v[2]); return; }
+  location.replace("/");
+})();
+</script>
+</head>
+<body style="font:16px system-ui,sans-serif;background:#0f1419;color:#e6e6e6;padding:24px">
+<p>Открываю ДЖЕК 15… Если страница не открылась, перейдите на <a href="/" style="color:#d9a441">dzhek15.github.io</a>.</p>
+</body>
+</html>
