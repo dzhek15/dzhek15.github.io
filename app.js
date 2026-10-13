@@ -2750,6 +2750,10 @@
       if(gs && gs.rows) v.gap = gs.rows.map(function(r){ return str(r.set); });
     } catch(e){}
     try { var sm = planBySim(mx ? M : stratBudgetValue()); if(sm && sm.rows) v.sim = sm.rows.map(function(r){ return str(r.set); }); } catch(e){}
+    if(mx){                                           /* претенденты считаются только для статистики, на максимальный лимит */
+      try { var g2 = withSP(CHAL.gap.P, function(){ return planGapSys(M); }); if(g2 && g2.rows) v.gap2 = g2.rows.map(function(r){ return str(r.set); }); } catch(e){}
+      try { var s2 = withSP(CHAL.sim.P, function(){ return planBySim(M); }); if(s2 && s2.rows) v.sim2 = s2.rows.map(function(r){ return str(r.set); }); } catch(e){}
+    }
     try {
       var K = planByKelly(mx ? M : limitLines("kelLimit", M)), kp = K && !K.error ? K.pick : null;
       if(kp) v.kel = kp.plan.rows.map(function(r){ return str(r.set); });
@@ -3069,7 +3073,7 @@
     });
   }
   /* статистика не зависит от лимитов пользователя: только от цены строки и потолка */
-  function accSetKey(){ return "max" + LIM_MAX_RUB + "|" + linePrice() + "|v3"; }
+  function accSetKey(){ return "max" + LIM_MAX_RUB + "|" + linePrice() + "|v4"; }
   function stratForInfo(info){
     var list = matchesFromInfo(info);
     var bak = { matches: state.matches, poolSum: state.poolSum, jackpot: state.jackpot, tirazh: state.tirazh }, v;
@@ -3080,7 +3084,7 @@
     } finally {
       state.matches = bak.matches; state.poolSum = bak.poolSum; state.jackpot = bak.jackpot; state.tirazh = bak.tirazh;
     }
-    return { res: list.map(function(m){ return m.res; }), gap: v.gap, sim: v.sim, kel: v.kel, key: accSetKey(), price: linePrice() };
+    return { res: list.map(function(m){ return m.res; }), gap: v.gap, sim: v.sim, kel: v.kel, gap2: v.gap2, sim2: v.sim2, key: accSetKey(), price: linePrice() };
   }
   /* системный купон: сколько полных строк угадали ровно k матчей (свёртка по матчам, без перебора строк) */
   function accScore(line, res){
@@ -3159,7 +3163,8 @@
       var keep = {}; nums.slice(0, 40).forEach(function(n){ keep[n] = store[n]; }); accWrite(keep);
       nums = nums.slice(0, ACC_N);
       if(!nums.length){ el.innerHTML = '<p class="ev-warn">Пока не удалось получить итоги прошлых тиражей. Попробуй позже.</p>'; return; }
-      var cols = [["ai", "ИИ", "ИИ", "ИИ"], ["hunt", "Охота", "Охота", "Охота на 15"], ["gap", "Расхожд.", "Расх.", "Расхождения"], ["sim", "Симул.", "Сим.", "Симуляция"], ["kel", "Келли", "Келли", "Келли"]], sum = {}, cnt = {};
+      var cols = [["ai", "ИИ", "ИИ", "ИИ"], ["hunt", "Охота", "Охота", "Охота на 15"], ["gap", "Расхожд.", "Расх.", "Расхождения"], ["sim", "Симул.", "Сим.", "Симуляция"], ["kel", "Келли", "Келли", "Келли"],
+        ["gap2", "Расх. О", "Р·О", "Расхождения · обучение"], ["sim2", "Сим. О", "С·О", "Симуляция · обучение"]], sum = {}, cnt = {};
       /* свои CSV из просмотра тиража (хранятся только в этом браузере): все свои наборы тиража вместе, без ИИ и Охоты.
          Считаются только наборы, загруженные до окончания тиража и не удалённые до него (удалённые после — хранятся в kept) */
       var mineRows = function(n){
@@ -3215,6 +3220,7 @@
         return '<span class="' + (it.win >= it.cost ? 'st-plus' : 'st-minus') + '">' + sgn(it.win - it.cost) + '</span>';
       };
       var name = {}; cols.forEach(function(c){ name[c[0]] = c[3]; });
+      var isCh = function(k){ return k === "gap2" || k === "sim2"; };
 
       /* ---------- 1. итоги стратегий: одна строка — одна стратегия ---------- */
       var order = cols.map(function(c){ return c[0]; }).sort(function(x, y){
@@ -3226,13 +3232,32 @@
       var sumHtml = '<div class="st-sum">' + order.map(function(k, i){
         var t = tot[k], nt = t.win - t.cost;
         return '<div class="st-srow' + (i === 0 && t.pn && nt > 0 ? ' st-lead' : '') + '">' +
-          '<div class="st-sname"><b>' + name[k] + '</b><span>' + (t.n ? 'тиражей: ' + t.n + ' · в среднем угадано ' + f1((sum[k] || 0) / (cnt[k] || 1)) + ' · лучший ' + (t.bestHit || 0) + ' из 15' : 'купонов не было') + '</span></div>' +
+          '<div class="st-sname"><b>' + name[k] + (isCh(k) ? ' <em class="st-chtag">без денег</em>' : '') + '</b><span>' + (t.n ? 'тиражей: ' + t.n + ' · в среднем угадано ' + f1((sum[k] || 0) / (cnt[k] || 1)) + ' · лучший ' + (t.bestHit || 0) + ' из 15' : 'купонов не было') + '</span></div>' +
           (t.pn ? '<div class="st-snum"><i>Поставил</i><b>' + rub(t.cost) + '</b></div><div class="st-snum"><i>Выиграл</i><b>' + rub(t.win) + '</b></div>' +
             '<div class="st-snum st-snet"><i>Итог</i><b class="' + (nt >= 0 ? 'st-plus' : 'st-minus') + '">' + sgn(nt) + '</b><small>возврат ' + Math.round(t.cost ? t.win / t.cost * 100 : 0) + '%</small></div>'
             : '<div class="st-snum st-snone">' + (t.n ? 'выплаты по его тиражам не загружены' : '') + '</div>') +
           '</div>';
       }).join("") + '</div>' +
         '<p class="st-note">Деньги — только по тиражам с загруженными выплатами (' + paidN + ' ' + plural(paidN, "тираж", "тиража", "тиражей") + '). Сверху — стратегия с лучшим итогом.</p>';
+      /* ---------- претенденты против основных: одни и те же тиражи с выплатами ---------- */
+      var NEED = 10;
+      var chHtml = '<div class="st-chal">' + [["gap", "gap2"], ["sim", "sim2"]].map(function(pr){
+        var a = pr[0], b = pr[1], cfg = CHAL[a];
+        /* засчитываются только тиражи после появления претендента: прошлые участвовали в подборе настроек */
+        var cmp = function(from, to){
+          var o = { n: 0, wa: 0, ca: 0, wb: 0, cb: 0 };
+          nums.forEach(function(n){ if(n < from || n > to) return; var x = D[n].s[a], y = D[n].s[b]; if(!x || !y || x.win === undefined || y.win === undefined) return; o.n++; o.wa += x.win; o.ca += x.cost; o.wb += y.win; o.cb += y.cost; });
+          return o;
+        };
+        var nw = cmp(cfg.since, 1e9), old = cmp(0, cfg.since - 1);
+        var na = nw.n, wa = nw.wa, ca = nw.ca, wb = nw.wb, cb = nw.cb, na1 = wa - ca, nb1 = wb - cb, st;
+        var oldHtml = old.n ? '<p class="st-mute">На прошлых тиражах (' + old.n + ', до №' + cfg.since + ', для вывода не считаются): основная ' + sgn(old.wa - old.ca) + ', обучение ' + sgn(old.wb - old.cb) + '.</p>' : '';
+        if(na < NEED) st = 'Зачётных тиражей с выплатами с №' + cfg.since + ': ' + na + ' из ' + NEED + '. Пока рано делать вывод.';
+        else st = nb1 > na1 ? '<b class="st-plus">Обучение впереди</b> за ' + na + ' тиражей: ' + sgn(nb1) + ' против ' + sgn(na1) + '. Можно переводить в основную.'
+                            : '<b class="st-minus">Основная не хуже</b> за ' + na + ' тиражей: ' + sgn(na1) + ' против ' + sgn(nb1) + '. Остаётся основная.';
+        return '<div class="st-chrow"><b>' + name[b] + '</b><p>Что изменено: ' + escHtml(cfg.what) + '.</p><p class="st-mute">Проверка на ' + escHtml(cfg.bt) + '.</p>' +
+          (na ? '<p>С №' + cfg.since + ': ' + name[a] + ' ' + rub(ca) + ' → ' + rub(wa) + ' (' + sgn(na1) + '), обучение ' + rub(cb) + ' → ' + rub(wb) + ' (' + sgn(nb1) + ').</p>' : '') + '<p>' + st + '</p>' + oldHtml + '</div>';
+      }).join("") + '<p class="st-note">Обучение — та же стратегия с другими настройками, подобранными на архиве из 1 000 тиражей. Её купон считается тем же кодом и по тем же данным, что и основной, но в купоны и деньги не идёт. Основную стратегию она заменяет, только если обыграет её по реальным выплатам минимум на ' + NEED + ' новых тиражах — начиная с номера, с которого появилась.</p></div>';
 
       /* ---------- 2. главная таблица, как была: тиражи × стратегии, в ячейке столбиком — угадано, поставил, выиграл, итог ---------- */
       var calc = function(n, k){
@@ -3262,7 +3287,7 @@
           (it.win === undefined ? '' : '<span class="st-v st-win' + (it.win > 0 ? ' on' : '') + '">' + rub(it.win) + '</span><span class="st-v st-net">' + net(it) + '</span>') + '</td>';
       };
       var fixed = cols.map(function(c){ return c[0]; });   /* в таблице порядок колонок постоянный, как раньше */
-      var head = '<tr><th>Тираж</th>' + fixed.map(function(k){ return '<th>' + name[k] + '</th>'; }).join("") + '</tr>';
+      var head = '<tr><th>Тираж</th>' + fixed.map(function(k){ return '<th' + (isCh(k) ? ' class="st-ch"' : '') + '>' + name[k] + (isCh(k) ? '<small>без денег</small>' : '') + '</th>'; }).join("") + '</tr>';
       var body = nums.map(function(n){
         return '<tr><th scope="row">' + n + (D[n].PK ? '<i class="acc-paid" title="выплаты загружены">₽</i>' : '') + '</th>' + fixed.map(function(k){ return cell(n, k); }).join("") + '</tr>';
       }).join("");
@@ -3305,7 +3330,7 @@
       el.innerHTML = (note ? '<p class="pay-ok" id="payOk">' + escHtml(note) + '</p>' : '') + locHtml +
         (own ? '<div class="pay-go pay-top"><button type="button" class="btn-ev" id="payOpen">Загрузить выигрыши</button></div><div id="payBox" class="pay-box" hidden></div>' : '') +
         '<h3 class="st-h">По тиражам</h3>' + mainHtml +
-        '<h3 class="st-h">Итоги стратегий</h3>' + sumHtml + rules + ownHtml;
+        '<h3 class="st-h">Итоги стратегий</h3>' + sumHtml + '<h3 class="st-h">Обучение стратегий</h3>' + chHtml + rules + ownHtml;
       var ownIn = function(){
         var t = $("ownTok"), m = $("ownMsg"), v = t.value.trim(); if(!v) return;
         var say = function(x, bad){ m.hidden = false; m.textContent = x; m.classList.toggle("pay-bad", !!bad); };
@@ -4778,6 +4803,20 @@
   /* Порог окупаемости замены: сброшенной толпы не меньше отданной вероятности,
      и за один исход отдаём не больше 5 пунктов (LOSS_CAP в config.js). */
   var SWAP_MIN = C.SWAP_MIN, LOSS_CAP = C.LOSS_CAP;
+  /* ---------- претенденты: те же стратегии с другими настройками, играют рядом без денег ----------
+     Настройки подобраны на архиве (тиражи 4131–4800) и проверены на 4801–5034, но выигрыш не доказан:
+     основную стратегию претендент заменит, только если обыграет её на новых тиражах с реальными выплатами. */
+  var SP = null;                                     /* настройки, действующие во время расчёта претендента */
+  function spv(k, d){ return SP && SP[k] != null ? SP[k] : d; }
+  var CHAL = {
+    gap: { since: 5036, P: { LOSS_CAP: 0.03, GAPW: 0.7, VMIN: 0.9 },
+           what: "допы и при небольшом перегрузе толпой (до 10%), сильнее тянется к недогруженным исходам, замена отдаёт не больше 3 процентных пунктов вероятности",
+           bt: "архиве, тиражи 4801–5034: отдача по модели 1,63 против 1,37, приз в 73,5% тиражей против 68,4%; разница не доказана (интервал −0,12…+0,62)" },
+    sim: { since: 5036, P: { SIMW: 0.7, SIM_T: 10 },
+           what: "допы с поправкой на недогруз толпой, цель — 10+ угаданных вместо 9+",
+           bt: "архиве, тиражи 4801–5034: отдача по модели 1,51 против 1,32, приз в 78,2% против 77,8%; разница не доказана (интервал −0,25…+0,62)" }
+  };
+  function withSP(P, fn){ var old = SP; SP = P; try { return fn(); } finally { SP = old; } }
 
   /* Те же замены, но всегда в один заданный исход — нужно для ничейной линейки */
   function gapSwapsTo(g, to){
@@ -8711,7 +8750,7 @@
   function calProb(bk){
     var s = Number(bk[0]) + Number(bk[1]) + Number(bk[2]);
     if(!(s > 0)) return null;
-    var D = buildDataCal(), SHRINK = 300, out = [];
+    var D = buildDataCal(), SHRINK = spv("SHRINK", 300), out = [];
     for(var k = 0; k < 3; k++){
       var p = Number(bk[k]) / s;
       var c = D.cal[k][Math.max(0, Math.min(D.B - 1, Math.floor(p * 100 / D.SIZE)))];
@@ -8740,7 +8779,7 @@
         var best = 0, bs = -1;
         for(var k = 0; k < 3; k++){
           var v = r.q ? r.p[k] / r.q[k] : 1;
-          var sc = r.p[k] * Math.pow(Math.min(v, 2), 0.35);
+          var sc = r.p[k] * Math.pow(Math.min(v, spv("VCAP", 2)), spv("DATAW", 0.35));
           if(sc > bs){ bs = sc; best = k; }
         }
         r.set = [best];
@@ -8802,7 +8841,7 @@
       if(!r.p) return r.locked ? 0.4 : 0;
       var s = 0; r.set.forEach(function(k){ s += r.p[k]; }); return Math.min(1, s);
     }
-    function tail9(){ return evTail(poissonBinomial(rows.map(cover)), 9); }
+    function tail9(){ return evTail(poissonBinomial(rows.map(cover)), spv("SIM_T", 9)); }
     var combos = 1; rows.forEach(function(r){ combos *= Math.max(1, r.set.length); });
     var cur = tail9();
     for(;;){
@@ -8813,7 +8852,7 @@
         for(var k = 0; k < 3; k++){
           if(r.set.indexOf(k) >= 0) continue;
           r.set.push(k); var t = tail9(); r.set.pop();
-          var g = Math.log(t / Math.max(cur, 1e-12)) / Math.log((n + 1) / n);
+          var g = Math.log(t / Math.max(cur, 1e-12)) / Math.log((n + 1) / n) * (r.q && spv("SIMW", 0) ? Math.pow(Math.min(r.p[k] / Math.max(r.q[k], 1e-4), spv("VCAP", 2)), spv("SIMW", 0)) : 1);
           if(g > bestG){ bestG = g; bestR = r; bestK = k; bestT = t; }
         }
       });
@@ -8947,7 +8986,7 @@
     var line = g.base.slice(), swapped = {};
     var sw = g.swaps.slice().sort(function(a, b){ return b.score - a.score; });
     for(var k = 0; k < sw.length; k++){
-      if(sw[k].score >= SWAP_MIN && sw[k].loss <= LOSS_CAP){ line[sw[k].i] = sw[k].to; swapped[sw[k].i] = 1; }
+      if(sw[k].score >= SWAP_MIN && sw[k].loss <= spv("LOSS_CAP", LOSS_CAP)){ line[sw[k].i] = sw[k].to; swapped[sw[k].i] = 1; }
       else break;
     }
     var rows = state.matches.map(function(m, i){
@@ -8965,8 +9004,8 @@
         for(var j = 0; j < 3; j++){
           if(r.set.indexOf(j) >= 0) continue;
           var v = r.p[j] / Math.max(r.q[j], 1e-4);
-          if(v < 1) continue;                 /* толпа грузит исход выше конторы — допом не берём */
-          var gg = Math.log((S + r.p[j]) / S) / Math.log((n + 1) / n) * Math.pow(Math.min(v, 2), 0.35);
+          if(v < spv("VMIN", 1)) continue;   /* толпа грузит исход заметно выше конторы — допом не берём */
+          var gg = Math.log((S + r.p[j]) / S) / Math.log((n + 1) / n) * Math.pow(Math.min(v, spv("VCAP", 2)), spv("GAPW", 0.35));
           if(gg > bG){ bG = gg; bR = r; bK = j; }
         }
       });
