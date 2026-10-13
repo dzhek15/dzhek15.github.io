@@ -2576,3 +2576,46 @@ body.is-prev .pct-col.hit b,body.is-prev .kf-col.hit{color:var(--ink); font-weig
 .pay-own summary{cursor:pointer; font-size:13px; color:var(--muted)}
 .pay-own[open] summary{margin-bottom:6px}
 .pay-tok{flex:1 1 200px; min-width:0; padding:9px; border:1px solid var(--rule); border-radius:var(--r); background:var(--surface); color:var(--ink); font:inherit}
+.acc-up{font-size:.7em;margin-left:1px;color:var(--muted,#9a8f80)}
+.acc-upn{margin-top:6px}
+@media (max-width:440px){ .acc td small.acc-win{font-size:8.5px; letter-spacing:-.03em; white-space:nowrap} }
+
+/* статистика: карточки тиражей — поставил / выиграл / итог, крупно */
+.acds{display:grid; gap:12px; max-width:720px; margin:0 auto}
+.acd{border:1px solid var(--rule); border-radius:var(--r); background:var(--surface-2); overflow:hidden}
+.acd-h{display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:4px 10px; padding:10px 14px; border-bottom:1px solid var(--rule-strong)}
+.acd-h b{font:700 17px/1.2 "IBM Plex Mono",monospace; color:var(--ink)}
+.acd-paid{font-size:13px; color:#3aa76d}
+.acd-h .acd-nopay{font-size:13px}
+.acd-r{display:grid; grid-template-columns:minmax(0,1.5fr) repeat(3, minmax(0,1fr)); align-items:start; gap:8px 10px; padding:10px 14px; border-bottom:1px solid var(--rule)}
+.acd-r:last-child{border-bottom:0}
+.acd-n{display:flex; align-items:center; justify-content:space-between; gap:8px; align-self:center; min-width:0}
+.acd-nm{font-size:16px; font-weight:600; color:var(--ink)}
+.acd-hit{display:inline-flex; align-items:center; gap:5px; flex:none}
+.acd-hit i{font-style:normal; font-size:12px; color:var(--muted)}
+.acd-hit .ac-pill b{font-size:17px}
+.acd-v{display:grid; gap:2px; justify-items:end; text-align:right; min-width:0}
+.acd-v i{font-style:normal; font-size:11.5px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted)}
+.acd-v b{font:700 15.5px/1.2 "IBM Plex Mono",monospace; color:var(--ink); white-space:nowrap; font-variant-numeric:tabular-nums}
+.acd-v small{font-size:12px; color:var(--muted); white-space:nowrap}
+.acd-v b.acd-plus{color:#3aa76d}
+.acd-v b.acd-minus{color:#e0645a}
+.acd-nopay{color:var(--muted); font-weight:500}
+.acd-v b.acd-nopay{color:var(--muted)}
+.acd-r.acd-na{grid-template-columns:1fr auto; align-items:center}
+.acd-none{font-size:14px; color:var(--muted)}
+.ac-lb{font-size:15px} .ac-lb b{font-size:16px} .ac-lb small{font-size:12px}
+.pay-r .acs-n{font-size:15px} .pay-r .acs-v b{font-size:15px} .pay-r .acs-v i{font-size:11px}
+.acs-n{font-size:15px} .acs-v b{font-size:14px} .acs-c b{font-size:13px}
+.ac-fn{font-size:13px}
+@media (max-width:600px){
+  .acd-h{padding:9px 12px}
+  .acd-r{grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px; padding:10px 12px}
+  .acd-n{grid-column:1 / -1}
+  .acd-v{justify-items:start; text-align:left}
+  .acd-v.acd-res{justify-items:end; text-align:right}
+  .acd-v b{font-size:14.5px}
+  .acd-r.acd-r.acd-na{grid-template-columns:1fr auto; align-items:center}
+  .acd-r.acd-na .acd-n{grid-column:auto}
+}
+@media (max-width:360px){ .acd-v b{font-size:13px} .acd-v i{font-size:10.5px} .acd-r{padding:9px 10px} }
