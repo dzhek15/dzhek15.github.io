@@ -5895,20 +5895,80 @@
   }
 
   /* короткие ссылки: набор лежит на сервере под кодом, в адресе только #s=код */
-  function shortPut(tir, packed){
+  /* Код ссылки — тот же, что выдаёт сервер ссылок: SHA-256(«тираж-набор»), 6 байт в base64url */
+  function linkId(tir, packed){
+    if(!(window.crypto && crypto.subtle && window.TextEncoder)) return Promise.reject(new Error("no"));
+    return crypto.subtle.digest("SHA-256", new TextEncoder().encode(String(tir || "") + "-" + packed)).then(function(buf){
+      var b = new Uint8Array(buf).slice(0, 6), bin = "";
+      for(var i = 0; i < b.length; i++) bin += String.fromCharCode(b[i]);
+      return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    });
+  }
+  var LINK_GH = "https://api.github.com/repos/dzhek15/dzhek15.github.io/contents/data/links/";
+  /* Наборы по ссылке кладём на сам сайт (GitHub открывается в России без VPN; сервер на workers.dev операторы РФ режут).
+     Писать туда может только владелец (ключ). Сервер Cloudflare — запасной путь. */
+  function linkPutSite(id, tir, packed){
+    var tok = ownTok(); if(!tok) return Promise.reject(new Error("нет ключа"));
+    var H = { "Authorization": "Bearer " + tok, "Accept": "application/vnd.github+json" };
+    return fetch(LINK_GH + id + ".json?ref=main&t=" + Date.now(), { headers: H, cache: "no-store" }).then(function(r){
+      if(r.ok) return id;                                       /* такой набор уже лежит */
+      if(r.status !== 404) throw new Error("GitHub ответил " + r.status);
+      var body = { message: "Ссылка " + id + " · тираж " + tir, branch: "main",
+                   content: btoa(unescape(encodeURIComponent(JSON.stringify({ t: String(tir || ""), d: packed }) + "\n"))) };
+      return fetch(LINK_GH + id + ".json", { method: "PUT", headers: H, body: JSON.stringify(body) }).then(function(r2){
+        if(r2.ok || r2.status === 422) return id;
+        throw new Error("GitHub ответил " + r2.status);
+      });
+    });
+  }
+  function linkPutWorker(tir, packed){
     if(typeof fetch !== "function" || !C.SHORT_HOST) return Promise.reject(new Error("no"));
     return fetch(C.SHORT_HOST, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ t: String(tir || ""), d: packed }) })
       .then(function(r){ if(!r.ok) throw new Error("http"); return r.json(); })
       .then(function(j){ if(!j || !j.id) throw new Error("id"); return j.id; });
   }
-  function shortGet(id){
-    if(typeof fetch !== "function" || !C.SHORT_HOST) return Promise.reject(new Error("no"));
-    return fetch(C.SHORT_HOST + "?id=" + encodeURIComponent(id))
+  /* -> {id, site}: site = набор лежит на сайте (откроется у всех, в том числе без VPN) */
+  function shortPut(tir, packed){
+    var w = linkPutWorker(tir, packed).then(function(id){ return id; }, function(){ return null; });
+    if(!ownTok()) return w.then(function(id){ if(!id) throw new Error("no"); return { id: id, site: false }; });
+    return linkId(tir, packed).then(function(id){
+      return linkPutSite(id, tir, packed).then(function(){ return w.then(function(){ return { id: id, site: true }; }); },
+        function(){ return w.then(function(wid){ if(!wid) throw new Error("no"); return { id: wid, site: false }; }); });
+    });
+  }
+  function shortGetSite(id){
+    return fetch("data/links/" + encodeURIComponent(id) + ".json?t=" + Date.now(), { cache: "no-store" })
       .then(function(r){ if(!r.ok) throw new Error(r.status === 404 ? "gone" : "http"); return r.json(); })
       .then(function(j){ if(!j || !j.t || !j.d) throw new Error("bad"); return j; });
   }
+  function shortGetWorker(id){
+    if(typeof fetch !== "function" || !C.SHORT_HOST) return Promise.reject(new Error("no"));
+    var ctl = window.AbortController ? new AbortController() : null;
+    if(ctl) setTimeout(function(){ ctl.abort(); }, 8000);     /* в РФ соединение с Cloudflare может висеть — не ждём вечно */
+    return fetch(C.SHORT_HOST + "?id=" + encodeURIComponent(id), ctl ? { signal: ctl.signal } : {})
+      .then(function(r){ if(!r.ok) throw new Error(r.status === 404 ? "gone" : "http"); return r.json(); })
+      .then(function(j){ if(!j || !j.t || !j.d) throw new Error("bad"); return j; });
+  }
+  /* сначала сайт, потом сервер ссылок; свежая ссылка может ещё публиковаться (до ~2 мин) — подождём */
+  function shortGet(id, onWait){
+    return shortGetSite(id).catch(function(){
+      return shortGetWorker(id).catch(function(e){
+        var left = 12;
+        return new Promise(function(res, rej){
+          var again = function(){
+            if(left-- <= 0){ rej(e); return; }
+            if(onWait) onWait();
+            setTimeout(function(){ shortGetSite(id).then(res, again); }, 10000);
+          };
+          again();
+        });
+      });
+    });
+  }
   var pendingBook = (function(){
     var h = String(location.hash || "");
+    /* длинная ссылка в ?vs= (так её не режут мессенджеры) */
+    if(!/^#vs?=/.test(h) && /[?&]vs?=/.test(location.search)) h = linkNorm(location.search).replace(/^[^#]*/, "").replace(/&.*$/, "");
     var ms = h.match(/^#vs=([^-]*)-([A-Za-z0-9\-_.]+)$/);
     if(ms) return { tirazh: decodeURIComponent(ms[1]), multi: ms[2].split(".").filter(Boolean) };
     var m = h.match(/^#v=([^-]*)-([A-Za-z0-9\-_]+)$/);
@@ -6024,7 +6084,8 @@
     if(!/^#s=/.test(hh) && /^#s(%3D|=)|[?&]s=/i.test(hh + location.search)){ hh = linkNorm(hh + location.search).replace(/^[^#]*/, ""); }
     var m = hh.match(/^#s=([A-Za-z0-9_-]{6,16})/);
     if(!m) return;
-    shortGet(m[1]).then(function(j){
+    var waitSaid = false;
+    shortGet(m[1], function(){ if(!waitSaid){ waitSaid = true; say("Набор по ссылке ещё публикуется на сайте — подождите до двух минут, он откроется сам."); } }).then(function(j){
       var parts = String(j.d).split(".").filter(Boolean);
       pendingBook = { tirazh: String(j.t), multi: parts };
       if(pullDone) tryPending();          /* иначе ссылку разберёт тот, кто закончит подтяжку тиража */
@@ -7513,10 +7574,12 @@
       });
     })).then(function(list){
       var packed = list.join("."), base = location.origin + location.pathname;
-      var longUrl = base + "#vs=" + encodeURIComponent(tir || "") + "-" + packed;
-      /* длинный адрес заменяем коротким #s=код; не вышло — отдаём длинный, как раньше */
-      /* код в ?s=, а не в #s=: мессенджеры (MAX и др.) обрезают ссылку на «#» или делают из «#s» хэштег */
-      return shortPut(tir, packed).then(function(id){ return base + "?s=" + id; }, function(){ return longUrl; });
+      /* адрес в ?…, а не в #…: мессенджеры (MAX и др.) обрезают ссылку на «#» или делают из «#s» хэштег */
+      var longUrl = base + "?vs=" + encodeURIComponent(tir || "") + "-" + packed;
+      /* у владельца — короткая ссылка, набор лежит на сайте. У остальных сервер ссылок (Cloudflare) из РФ часто недоступен,
+         поэтому небольшие наборы отдаём длинной ссылкой без сервера */
+      if(!ownTok() && longUrl.length <= 3500) return longUrl;
+      return shortPut(tir, packed).then(function(r){ return base + "?s=" + r.id; }, function(){ return longUrl; });
     });
     var wrote = null;
     if(window.ClipboardItem && navigator.clipboard && navigator.clipboard.write){
