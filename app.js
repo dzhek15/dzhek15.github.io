@@ -3139,12 +3139,13 @@
     var store = accRead(), key = accSetKey();
     var aiH = fetch(MIRROR + "ai_hist.json?t=" + Date.now(), {cache: "no-store"})
       .then(function(r){ return r.ok ? r.json() : {}; }).catch(function(){ return {}; });
-    var draws = apiFetch("baltbet-main/drawings?page=1")
-      .then(function(r){ return r.ok ? r.json() : null; })
-      .then(function(j){
+    /* итоги — по всем тиражам с загруженными выплатами; без выплат — только последние ACC_N */
+    var draws = Promise.all([apiFetch("baltbet-main/drawings?page=1").then(function(r){ return r.ok ? r.json() : null; }), payLoadShared()])
+      .then(function(rr){ var j = rr[0];
         /* «expected» — матчи сыграны, оператор ещё не закрыл тираж: берём, если известны все итоги */
         var rows = ((j && j.data) || []).filter(function(d){ return d.status === "finished" || d.status === "expected"; })
-          .sort(function(a, b){ return b.number - a.number; }).slice(0, ACC_N);
+          .sort(function(a, b){ return b.number - a.number; })
+          .filter(function(d, i){ return i < ACC_N || payFor(d.number); });
         return Promise.all(rows.map(function(d){
           var have = store[d.number];
           if(have && have.key === key) return null;
@@ -3163,8 +3164,8 @@
     Promise.all([aiH, draws, vp, payLoadShared()]).then(function(r){
       var aih = r[0] || {}, vdata = r[2] || {}, el = $("accBox"); if(!el) return;
       var nums = Object.keys(store).map(Number).sort(function(a, b){ return b - a; });
-      var keep = {}; nums.slice(0, 40).forEach(function(n){ keep[n] = store[n]; }); accWrite(keep);
-      nums = nums.slice(0, ACC_N);
+      var keep = {}; nums.forEach(function(n, i){ if(i < 40 || payFor(n)) keep[n] = store[n]; }); accWrite(keep);
+      nums = nums.filter(function(n, i){ return i < ACC_N || payFor(n); });
       if(!nums.length){ el.innerHTML = '<p class="ev-warn">Пока не удалось получить итоги прошлых тиражей. Попробуй позже.</p>'; return; }
       var cols = [["ai", "ИИ", "ИИ", "ИИ"], ["hunt", "Охота", "Охота", "Охота на 15"], ["gap", "Расхожд.", "Расх.", "Расхождения"], ["sim", "Симул.", "Сим.", "Симуляция"], ["kel", "Келли", "Келли", "Келли"],
         ["gap2", "Расх. О", "Р·О", "Расхождения · обучение"], ["sim2", "Сим. О", "С·О", "Симуляция · обучение"]], sum = {}, cnt = {};
