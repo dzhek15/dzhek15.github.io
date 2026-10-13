@@ -2790,10 +2790,10 @@
     /* строки таблицы: метка, количество вариантов, коэффициент. Распознавание путает метку (11 → «n», «ll») и теряет запятую (24,95872 → 2495872) */
     var rows = [];
     t.split(/\n/).forEach(function(line){
-      var s = line.trim(), cm = s.match(/(?:^|\s)(\d+[.,]\d{5}|\d{6,})\s*$/);
+      var s = line.trim().replace(/(\s\d{1,6}) (\d{5})\s*$/, "$1,$2"), cm = s.match(/(?:^|\s)(\d+[.,]\d{5}|\d{6,})\s*$/);
       if(!cm) return;
       var cv = cm[1].replace(",", "."); if(cv.indexOf(".") < 0) cv = cv.slice(0, -5) + "." + cv.slice(-5);
-      var rest = s.slice(0, cm.index).trim(), km = rest.match(/^(\S{1,3})\s+(\d[\d ]*)$/) || rest.match(/^(\S{1,3})$/);
+      var rest = s.slice(0, cm.index).trim(), km = rest.match(/^(\S{1,3})\s+(\d[\d ]*)$/) || rest.match(/^(\S{1,3})(?:\s+\S{1,8})?$/);   /* количество могло прочитаться мусором — тогда без него */
       if(!km) return;
       var lab = km[1].replace(/[lI|!iJ]/g, "1").replace(/[oOО]/g, "0");
       rows.push({ k: /^(9|1[0-5])$/.test(lab) ? Number(lab) : null, c: km[2] ? payNum(km[2]) : undefined, v: payNum(cv) });
@@ -2841,13 +2841,33 @@
     return attempt(2);
   }
   var payOcrBusy = false;
+  /* правдоподобная таблица: все 7 коэффициентов, и чем больше угадано, тем выше коэффициент (нулевые — нет выплаты) */
+  function payMono(K){
+    var prev = -1;
+    for(var k = 9; k <= 15; k++){ var v = K[k]; if(v === undefined) continue; if(v === 0) continue; if(v <= prev) return false; prev = v; }
+    return true;
+  }
+  function payGood(r){ return r && Object.keys(r.k).length === 7 && payMono(r.k); }
+  /* из двух прочтений берём правдоподобное; недостающее добираем из второго, если порядок не ломается */
+  function payBest(a, b){
+    if(payGood(a)) return a;
+    if(b && payGood(b)){ b.num = b.num || a.num; return b; }
+    var r = { num: a.num || (b && b.num) || null, k: {}, c: {} }, src = payMono(a.k) ? a : (b && payMono(b.k) ? b : a), oth = src === a ? b : a;
+    PAY_KS.forEach(function(k){ if(src.k[k] !== undefined){ r.k[k] = src.k[k]; if(src.c[k] !== undefined) r.c[k] = src.c[k]; } });
+    if(oth) PAY_KS.forEach(function(k){
+      if(r.k[k] !== undefined || oth.k[k] === undefined) return;
+      r.k[k] = oth.k[k]; if(!payMono(r.k)){ delete r.k[k]; return; }
+      if(oth.c[k] !== undefined) r.c[k] = oth.c[k];
+    });
+    return r;
+  }
   /* подготовка скриншота: светлый текст на тёмном фоне переворачиваем, мелкий шрифт увеличиваем */
   function payPrep(file){
     return new Promise(function(res){
       var img = new Image(), url = URL.createObjectURL(file);
       img.onload = function(){
         try {
-          var sc = Math.max(1, Math.min(3, 2400 / Math.max(img.width, 1)));
+          var sc = Math.max(1, Math.min(4, 2600 / Math.max(img.width, 1)));
           var c = document.createElement("canvas"); c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
           var x = c.getContext("2d"); x.imageSmoothingEnabled = true; x.imageSmoothingQuality = "high"; x.drawImage(img, 0, 0, c.width, c.height);
           var d = x.getImageData(0, 0, c.width, c.height), p = d.data, sum = 0, n = p.length / 4;
@@ -2870,8 +2890,16 @@
           workerPath: base + "worker.min.js", corePath: base, workerBlobURL: false, langPath: base.replace(/\/$/, ""), gzip: true,
           logger: function(m){ if(m && m.status === "recognizing text") onMsg("Распознаю… " + Math.round((m.progress || 0) * 100) + "%"); }
         }).then(function(wk){ w = wk; return w.setParameters({ tessedit_pageseg_mode: "6", preserve_interword_spaces: "1" }); })
-          .then(function(){ return w.recognize(img); });
-      }).then(function(r){ var t = r.data.text || ""; if(w) w.terminate(); done(null, t); })
+          .then(function(){ return w.recognize(img); })
+          .then(function(r){
+            var t = r.data.text || "";
+            if(payGood(payParse(t))) return [t, ""];
+            /* второй проход: только цифры — буквы B/S/O больше не подменяют 8/5/0 */
+            onMsg("Перечитываю таблицу в режиме «только цифры»…");
+            return w.setParameters({ tessedit_char_whitelist: "0123456789,. " }).then(function(){ return w.recognize(img); })
+              .then(function(r2){ return [t, r2.data.text || ""]; });
+          });
+      }).then(function(tt){ if(w) w.terminate(); done(null, tt[0], tt[1]); })
         .catch(function(e){ if(w) try { w.terminate(); } catch(x){} done(String(e && e.message || e)); });
     };
     if(window.Tesseract) return go();
@@ -2909,11 +2937,14 @@
     }).join("");
     box.innerHTML = '<div class="pay-f">' +
       '<label class="pay-l">Тираж <select id="payDraw">' + opts + '</select></label>' +
-      '<label class="btn-ev pay-file">Скриншот выплат<input type="file" accept="image/*" id="payFile" hidden></label>' +
+      '<div class="pay-src"><label class="btn-ev pay-file">Загрузить скриншот<input type="file" accept="image/*" id="payFile" hidden></label>' +
+      '<button type="button" class="btn-ev" id="payPasteBtn">Вставить скриншот</button></div>' +
+      '<div class="pay-zone" id="payZone" contenteditable="true" role="textbox" aria-label="Поле для вставки скриншота" data-ph="Или нажми сюда и вставь скриншот: Ctrl+V на компьютере, на телефоне — удерживай палец и выбери «Вставить»"></div>' +
       '<details class="pay-txt"><summary>или вставить таблицу текстом</summary><textarea id="payText" rows="5" placeholder="15  0  0,00000&#10;14  2  12345,67890&#10;…"></textarea>' +
       '<button type="button" class="btn-ev" id="payParse">Разобрать текст</button></details>' +
       '<p class="ev-note" id="payMsg">Загрузи скриншот таблицы «Угадано событий — Количество вариантов — Коэффициент выплаты» из БалтБета или вставь его через Ctrl+V. Цифры можно поправить вручную.</p>' +
       '<table class="pay-t"><thead><tr><th>Угадано</th><th>Коэффициент</th><th>Вариантов</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+      '<p class="ev-note" id="payMsg2" hidden></p>' +
       '<div class="pay-go"><button type="button" class="btn-ev" id="paySave">Сохранить и пересчитать</button>' +
       '<button type="button" class="btn-ev" id="payDel">Удалить выплаты тиража</button></div>' +
       '<details class="pay-own"><summary id="payOwnS"></summary>' +
@@ -2921,7 +2952,14 @@
       '<div class="pay-go"><input type="password" id="payTok" class="pay-tok" placeholder="github_pat_…" autocomplete="off">' +
       '<button type="button" class="btn-ev" id="payTokSave">Запомнить ключ</button><button type="button" class="btn-ev" id="payTokDel">Забыть ключ</button></div></details></div>';
     var q = function(id){ return box.querySelector("#" + id); }, ocrNum = null;
-    var msg = function(t, warn){ var p = q("payMsg"); p.textContent = t; p.className = warn ? "ev-warn" : "ev-note"; };
+    var msg = function(t, warn){
+      var p = q("payMsg"); p.textContent = t; p.className = warn ? "ev-warn" : "ev-note";
+      var p2 = q("payMsg2"); if(p2){ p2.hidden = !warn; p2.textContent = t; p2.className = "ev-warn"; if(warn) try { p2.scrollIntoView({ block: "nearest" }); } catch(e){} }   /* ошибку видно и у кнопки сохранения */
+    };
+    var savedNote = function(n, where){
+      var P = payFor(n) || {}, k = P.k || {};
+      return "Выплаты тиража " + n + " сохранены " + where + " и пересчитаны: 9 — " + String(k[9]).replace(".", ",") + ", 10 — " + String(k[10]).replace(".", ",") + ", 11 — " + String(k[11]).replace(".", ",") + ", 12 — " + String(k[12]).replace(".", ",") + ", 13 — " + String(k[13]).replace(".", ",") + ".";
+    };
     var fill = function(n){
       var P = payFor(n); ocrNum = null;
       box.querySelectorAll(".pay-k").forEach(function(i){ var v = P && P.k[i.dataset.k]; i.value = (v !== undefined && v !== null) ? String(v).replace(".", ",") : ""; });
@@ -2945,7 +2983,7 @@
       ocrNum = r.num; var got = Object.keys(r.k).length, sel = Number(q("payDraw").value);
       if(r.num && r.num !== sel) msg("На скриншоте тираж " + r.num + ", а выбран " + sel + ". Проверь выбор тиража — сохранение заблокировано, пока номера не совпадут.", true);
       else msg(got === 7 ? "Распознаны все 7 коэффициентов" + (r.num ? " тиража " + r.num + (r.byScore ? " (тираж определён по счетам матчей)" : "") : ". Номер тиража не найден — проверь выбор тиража") + ". Сверь цифры со скриншотом и нажми «Сохранить»." :
-        "Распознано коэффициентов: " + got + " из 7. Допиши недостающие вручную.", got !== 7);
+        "Распознано коэффициентов: " + got + " из 7. Допиши недостающие вручную" + (got < 5 ? " или сделай скриншот крупнее: увеличь таблицу на экране (на телефоне — разведи пальцами) так, чтобы она заняла всю ширину, и загрузи снова" : "") + ".", got !== 7);
     };
     var ownState = function(){
       var on = !!ownTok();
@@ -2960,10 +2998,10 @@
     });
     q("payTokDel").addEventListener("click", function(){ try { localStorage.removeItem(OWN_KEY); } catch(e){} ownState(); msg("Ключ удалён из этого браузера."); });
     var share = function(n, rec){
-      if(!ownTok()){ onSaved(); return; }
+      if(!ownTok()){ onSaved(rec ? savedNote(n, "на этом устройстве") : "Выплаты тиража " + n + " удалены.", n); return; }
       msg("Сохраняю в общий архив…");
       payPush(n, rec).then(function(){
-        var o = payRead(); delete o[n]; payWrite(o); onSaved();   /* в общем архиве — локальная копия не нужна */
+        var o = payRead(); delete o[n]; payWrite(o); onSaved(rec ? savedNote(n, "в общий архив (всем посетителям — через минуту)") : "Выплаты тиража " + n + " удалены из общего архива.", n);   /* в общем архиве — локальная копия не нужна */
       }).catch(function(e){ msg("В общий архив не записано (" + e.message + "). Сохранено только на этом устройстве.", true); });
     };
     fill(cur);
@@ -2972,10 +3010,13 @@
     var runOcr = function(f){
       if(!f || payOcrBusy) return;
       payOcrBusy = true;
-      payOcr(f, msg, function(err, text){
+      payOcr(f, msg, function(err, text, digits){
         payOcrBusy = false;
         if(err){ msg("Не удалось распознать: " + err + ". Впиши коэффициенты вручную.", true); return; }
-        q("payText").value = text; putIdent(text, payParse(text));
+        q("payText").value = text;
+        /* во втором проходе (только цифры) берём лишь верх до списка матчей: даты 12.10.2026 — не строки таблицы */
+        var dg = digits ? payParse(String(digits).split(/\d{2}\.\d{2}\.\d{4}/)[0]) : null;
+        putIdent(text, payBest(payParse(text), dg));
       });
     };
     q("payFile").addEventListener("change", function(){ var f = this.files && this.files[0]; this.value = ""; runOcr(f); });
@@ -2989,9 +3030,23 @@
       e.preventDefault(); msg("Скриншот вставлен из буфера обмена."); runOcr(f);
     };
     document.addEventListener("paste", onPaste);
+    var zone = q("payZone");
+    zone.addEventListener("input", function(){ zone.innerHTML = ""; });   /* текст в поле не нужен — только картинка */
+    zone.addEventListener("drop", function(e){ var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]; if(f && /^image\//.test(f.type)){ e.preventDefault(); runOcr(f); } });
+    q("payPasteBtn").addEventListener("click", function(){
+      var hint = "Нажми в поле ниже и вставь: Ctrl+V на компьютере, на телефоне — удерживай палец и выбери «Вставить».";
+      if(!(navigator.clipboard && navigator.clipboard.read)){ msg("Этот браузер не даёт сайту читать буфер обмена. " + hint, true); zone.focus(); return; }
+      navigator.clipboard.read().then(function(items){
+        for(var i = 0; i < items.length; i++){
+          var tp = (items[i].types || []).filter(function(t){ return /^image\//.test(t); })[0];
+          if(tp) return items[i].getType(tp).then(function(bl){ msg("Скриншот вставлен из буфера обмена."); runOcr(new File([bl], "paste.png", { type: tp })); });
+        }
+        msg("В буфере обмена нет картинки. Сделай скриншот таблицы выплат или скопируй картинку и нажми ещё раз.", true);
+      }).catch(function(){ msg("Браузер не дал доступ к буферу обмена. " + hint, true); zone.focus(); });
+    });
     q("payDel").addEventListener("click", function(){
       var n = Number(q("payDraw").value), o = payRead(); delete o[n]; payWrite(o);
-      if(ownTok() && payShared && payShared[n]) share(n, null); else onSaved();
+      if(ownTok() && payShared && payShared[n]) share(n, null); else onSaved("Выплаты тиража " + n + " удалены.", n);
     });
     q("paySave").addEventListener("click", function(){
       var n = Number(q("payDraw").value), K = {}, C = {}, bad = [];
@@ -3063,7 +3118,7 @@
     });
     return accDistRows(hits);
   }
-  function showAcc(back){
+  function showAcc(back, note, noteN){
     $("evTitle").textContent = "Статистика стратегий";
     $("evBody").innerHTML = '<div id="accBox"><p class="ev-note">Считаю…</p></div>' +
       (back ? '<div class="blend-go"><button type="button" class="btn-ev" id="accBack">К разбору</button></div>' : '');
@@ -3139,23 +3194,21 @@
             if(PK){ var w = payWin(x.dist, PK.k, price); wins[c[0]] = w; t.win += w; t.cost += x.vars * price; t.pn++; if(w > t.best) t.best = w; }
           }
         });
-        /* карточка тиража: по каждой стратегии — угадано, поставил, выиграл, итог (плюс / минус / мимо) */
-        var lines = cols.map(function(c){
+        /* строка таблицы: тираж × стратегия — угадано, итог (плюс / минус / мимо), ставка и выигрыш */
+        return '<tr><th scope="row"><b>' + n + '</b>' + (PK ? '<i class="act-paid" title="выплаты загружены">₽ выплаты</i>' : '') + '</th>' + cols.map(function(c){
           var x = sc[c[0]];
-          if(!x) return '<div class="acd-r acd-na"><span class="acd-n">' + c[3] + '</span><span class="acd-none">купона не было</span></div>';
+          if(!x) return '<td class="act-na">—</td>';
           sum[c[0]] = (sum[c[0]] || 0) + x.hit; cnt[c[0]] = (cnt[c[0]] || 0) + 1;
           var up = c[0] === "hunt" && vdata[String(n)] && vdata[String(n)].unpub;   /* составлена до матчей, но на сайт тогда не попала */
-          var cost = x.vars * price, w = wins[c[0]], res;
-          if(w === undefined) res = '<span class="acd-v acd-res"><i>Итог</i><b class="acd-nopay">—</b></span>';
-          else if(w <= 0) res = '<span class="acd-v acd-res"><i>Итог</i><b class="acd-minus">мимо</b></span>';
-          else res = '<span class="acd-v acd-res"><i>Итог</i><b class="' + (w >= cost ? 'acd-plus' : 'acd-minus') + '">' + (w >= cost ? '+' : '−') + rub(Math.abs(w - cost)) + '</b></span>';
-          return '<div class="acd-r"' + (up ? ' title="Купон составлен до матчей (' + escHtml(String(vdata[String(n)].at || "").replace("T", " ").replace("Z", " UTC")) + '), но на сайте до тиража не публиковался"' : '') + '>' +
-            '<span class="acd-n"><span class="acd-nm">' + c[3] + (up ? '<sup class="acc-up">*</sup>' : '') + '</span>' +
-            '<span class="acd-hit"><span class="ac-pill' + (x.hit >= 9 ? ' ac-best' : '') + '"><b>' + x.hit + '</b></span><i>из 15</i></span></span>' +
-            '<span class="acd-v"><i>Поставил</i><b>' + rub(cost) + '</b><small>' + fmt(x.vars) + ' стр.</small></span>' +
-            '<span class="acd-v"><i>Выиграл</i><b' + (w > 0 ? ' class="acd-plus"' : '') + '>' + (w === undefined ? '—' : rub(w)) + '</b></span>' + res + '</div>';
-        }).join("");
-        return '<div class="acd"><div class="acd-h"><b>Тираж ' + n + '</b>' + (PK ? '<span class="acd-paid">выплаты загружены</span>' : '<span class="acd-nopay">выплаты не загружены</span>') + '</div>' + lines + '</div>';
+          var cost = x.vars * price, w = wins[c[0]], res = "";
+          if(w !== undefined) res = w <= 0 ? '<span class="act-res act-minus">мимо</span>' :
+            '<span class="act-res ' + (w >= cost ? 'act-plus' : 'act-minus') + '">' + (w >= cost ? '+' : '−') + rub(Math.abs(w - cost)) + '</span>';
+          return '<td' + (up ? ' title="Купон составлен до матчей (' + escHtml(String(vdata[String(n)].at || "").replace("T", " ").replace("Z", " UTC")) + '), но на сайте до тиража не публиковался"' : '') + '>' +
+            '<span class="act-top"><span class="ac-pill' + (x.hit >= 9 ? ' ac-best' : '') + '"><b>' + x.hit + (up ? '<sup class="acc-up">*</sup>' : '') + '</b></span>' + res + '</span>' +
+            '<span class="act-ln"><i>ставка</i> ' + rub(cost) + '</span>' +
+            (w !== undefined ? '<span class="act-ln"><i>выигрыш</i> <em' + (w > 0 ? ' class="act-plus"' : '') + '>' + rub(w) + '</em></span>' : '') +
+            '<span class="act-ln act-sm">' + fmt(x.vars) + ' стр.</span></td>';
+        }).join("") + '</tr>';
       }).join("");
       var avg = {}, topK = null;
       cols.forEach(function(c){ if(cnt[c[0]]){ avg[c[0]] = sum[c[0]] / cnt[c[0]]; if(topK === null || avg[c[0]] > avg[topK]) topK = c[0]; } });
@@ -3164,9 +3217,16 @@
         return '<div class="ac-lb' + (c[0] === topK ? ' ac-top' : '') + '"><span class="ac-lbn">' + c[3] + '</span>' +
           '<span class="ac-bar"><i style="width:' + Math.round(avg[c[0]] / 15 * 100) + '%"></i></span><b>' + f1(avg[c[0]]) + '</b><small>' + cnt[c[0]] + ' тир.</small></div>';
       }).join("");
-      var foot = '<tr><th scope="row">Среднее</th>' + cols.map(function(c){
-        return cnt[c[0]] ? '<td><span class="ac-pill' + (avg[c[0]] >= 9 ? ' ac-best' : '') + '"><b>' + f1(avg[c[0]]) + '</b></span><small>' + cnt[c[0]] + ' тир.</small></td>' : '<td class="acc-na">—</td>';
-      }).join("") + '</tr>';
+      /* низ таблицы: среднее угаданных и деньги за тиражи с выплатами */
+      var foot = '<tr class="act-avg"><th scope="row">Среднее<small>угаданных</small></th>' + cols.map(function(c){
+        return cnt[c[0]] ? '<td><span class="act-top"><span class="ac-pill' + (avg[c[0]] >= 9 ? ' ac-best' : '') + '"><b>' + f1(avg[c[0]]) + '</b></span></span><span class="act-ln act-sm">' + cnt[c[0]] + ' тир.</span></td>' : '<td class="act-na">—</td>';
+      }).join("") + '</tr>' + (paidN ? '<tr class="act-sum"><th scope="row">Итого<small>' + paidN + ' ' + plural(paidN, "тираж", "тиража", "тиражей") + ' с выплатами</small></th>' + cols.map(function(c){
+        var t = tot[c[0]]; if(!t.pn) return '<td class="act-na">—</td>';
+        var net = t.win - t.cost;
+        return '<td><span class="act-top"><span class="act-res ' + (net >= 0 ? 'act-plus' : 'act-minus') + '">' + (net >= 0 ? '+' : '−') + rub(Math.abs(net)) + '</span></span>' +
+          '<span class="act-ln"><i>ставка</i> ' + rub(t.cost) + '</span><span class="act-ln"><i>выигрыш</i> <em' + (t.win > 0 ? ' class="act-plus"' : '') + '>' + rub(t.win) + '</em></span>' +
+          '<span class="act-ln act-sm">возврат ' + Math.round(t.cost ? t.win / t.cost * 100 : 0) + '%</span></td>';
+      }).join("") + '</tr>' : '');
       /* итог по стратегиям: строк, сумма, сколько полных строк угадали ровно 9…15 */
       var ks = [9, 10, 11, 12, 13, 14, 15];
       var sumT = '<div class="acs">' + cols.map(function(c){
@@ -3189,10 +3249,11 @@
             '<span class="acs-v"><i>Возврат</i><b>' + Math.round(t.cost ? t.win / t.cost * 100 : 0) + '%</b></span>' +
             '<span class="acs-v"><i>Тиражей</i><b>' + t.pn + '</b></span></div>';
         }).join("") + '</div>';
-      el.innerHTML = '<div class="pay-go pay-top"><button type="button" class="btn-ev" id="payOpen">Загрузить выигрыши</button></div><div id="payBox" class="pay-box" hidden></div>' +
+      el.innerHTML = (note ? '<p class="pay-ok" id="payOk">' + escHtml(note) + '</p>' : '') + '<div class="pay-go pay-top"><button type="button" class="btn-ev" id="payOpen">Загрузить выигрыши</button></div><div id="payBox" class="pay-box" hidden></div>' +
         '<h3 class="ac-h">Среднее число угаданных матчей</h3><div class="ac-lbs">' + lb + '</div>' +
         '<p class="ac-leg"><span class="ac-pill ac-best"><b>9+</b></span> результат от 9 до 15 угаданных</p>' +
-        '<h3 class="ac-h ac-h2">По тиражам</h3><div class="acds">' + body + '</div>' +
+        '<h3 class="ac-h ac-h2">По тиражам</h3><div class="act-wrap"><table class="act"><thead><tr><th>Тираж</th>' + cols.map(function(c){ return '<th' + (c[0] === topK ? ' class="act-topc"' : '') + '>' + c[3] + '</th>'; }).join("") +
+        '</tr></thead><tbody>' + body + '</tbody><tfoot>' + foot + '</tfoot></table></div>' +
         (nums.some(function(n){ var v = vdata[String(n)]; return v && v.unpub && Array.isArray((store[n] || {}).res); }) ? '<p class="ev-note acc-upn">* «Охота на 15» на этот тираж составлена до матчей по линии конторы, но на сайте до тиража не публиковалась.</p>' : '') +
         '<h3 class="ac-h ac-h2">Выигрыши и проигрыши' + (paidN ? ' за ' + paidN + ' ' + plural(paidN, "тираж", "тиража", "тиражей") + ' с выплатами' : '') + '</h3>' + money +
         (paidN ? '<p class="ev-note ac-fn">Выигрыш строки = цена строки × сумма коэффициентов от 9 до числа угаданных. «Поставил» и «Выиграл» считаются только по тиражам, где загружены выплаты (₽ рядом с номером). Для Расхождений, Симуляции и Келли — купон при максимальном лимите, как в таблице выше. Это расчёт по коэффициентам, а не фактический платёж оператора.</p>' : '') +
@@ -3200,9 +3261,13 @@
         '<p class="ev-note ac-fn">Одна строка — одна полная комбинация из 15 одиночных исходов. Двойники и тройники учтены раскрытием комбинаций. Столбцы 9–15 — сколько строк угадали ровно столько матчей; «Сумма» — строки × цена строки того тиража.</p>' +
         '<p class="ev-note ac-fn">«Угадано» — сколько матчей из 15 угадала лучшая строка купона; «Поставил» — строки × цена строки того тиража; «Выиграл» — по загруженным коэффициентам выплат; «Итог» — выигрыш минус ставка, «мимо» — ни одна строка не дошла до выплаты (меньше 9 угаданных). «Мои CSV» — ваши наборы из просмотра тиража (хранятся только в этом браузере): считаются те, что были загружены до окончания тиража и пролежали до его конца; удалённые до окончания и загруженные после окончания в статистику не входят. У ИИ это строки брифа 13 из 15 (то, что реально ставится), у Охоты её готовые строки; оба взяты из сохранённых на тираж данных. Результаты Расхождений, Симуляции и Келли рассчитаны при максимальном доступном лимите бюджета (' + rub(LIM_MAX_RUB) + '), указана фактическая стоимость сформированных купонов. Купон собирается по линии и долям на закрытие приёма, итоги матчей в расчёт не входят; посчитанный купон хранится в браузере и после появления результатов не пересобирается. «—» — купона не было.</p>';
       var pb = $("payBox");
+      if(note){                                           /* после сохранения: сообщение сверху и подсветка строки тиража */
+        var ok = $("payOk"); if(ok) try { ok.scrollIntoView({ block: "start" }); } catch(e){}
+        if(noteN) [].slice.call(el.querySelectorAll(".act tbody th b")).forEach(function(b){ if(b.textContent === String(noteN)) b.closest("tr").classList.add("act-new"); });
+      }
       $("payOpen").addEventListener("click", function(){
         if(!pb.hidden){ pb.hidden = true; return; }
-        pb.hidden = false; payPanel(pb, nums, function(){ showAcc(back); });
+        pb.hidden = false; payPanel(pb, nums, function(note, n){ showAcc(back, note, n); });
         pb.scrollIntoView({block: "nearest"});
       });
     });

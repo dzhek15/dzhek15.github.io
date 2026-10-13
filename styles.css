@@ -2619,3 +2619,49 @@ body.is-prev .pct-col.hit b,body.is-prev .kf-col.hit{color:var(--ink); font-weig
   .acd-r.acd-na .acd-n{grid-column:auto}
 }
 @media (max-width:360px){ .acd-v b{font-size:13px} .acd-v i{font-size:10.5px} .acd-r{padding:9px 10px} }
+
+/* статистика: таблица тиражей × стратегий — крупно, первая колонка и шапка закреплены, на телефоне листается вбок */
+.act-wrap{overflow:auto; max-height:78vh; border:1px solid var(--rule); border-radius:var(--r); -webkit-overflow-scrolling:touch}
+.act{width:100%; min-width:760px; border-collapse:separate; border-spacing:0; font-size:14px}
+.act th, .act td{padding:10px 10px; border-bottom:1px solid var(--rule); vertical-align:top; text-align:left; background:var(--surface)}
+.act tbody tr:nth-child(even) th, .act tbody tr:nth-child(even) td{background:var(--surface-2)}
+.act thead th{position:sticky; top:0; z-index:2; font-size:13px; font-weight:700; letter-spacing:.02em; color:var(--ink); background:var(--surface-2); border-bottom:2px solid var(--rule-strong); white-space:nowrap}
+.act thead th.act-topc{color:#B98F2E; border-bottom-color:#C9A24B}
+.act tbody th, .act tfoot th{position:sticky; left:0; z-index:1; min-width:78px; border-right:1px solid var(--rule-strong)}
+.act thead th:first-child{left:0; z-index:3; border-right:1px solid var(--rule-strong)}
+.act tbody th b{display:block; font:700 16px/1.2 "IBM Plex Mono",monospace; color:var(--ink)}
+.act-paid{display:block; margin-top:4px; font-style:normal; font-size:11.5px; font-weight:500; color:#3aa76d; white-space:nowrap}
+.act td{min-width:118px}
+.act-top{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:5px}
+.act-top .ac-pill b{font-size:17px}
+.act-res{font:700 15px/1.2 "IBM Plex Mono",monospace; white-space:nowrap; font-variant-numeric:tabular-nums}
+.act-plus{color:#3aa76d}
+.act-minus{color:#e0645a}
+.act-ln{display:block; font:500 13px/1.45 "IBM Plex Mono",monospace; color:var(--ink); white-space:nowrap; font-variant-numeric:tabular-nums}
+.act-ln i{font:500 12px/1 inherit; font-family:inherit; font-style:normal; color:var(--muted)}
+.act-ln em{font-style:normal}
+.act-ln em.act-plus{color:#3aa76d; font-weight:700}
+.act-sm{font-size:12px; color:var(--muted)}
+.act-na{color:var(--muted); font-size:16px; text-align:center !important; vertical-align:middle !important}
+.act tfoot th, .act tfoot td{border-top:2px solid var(--rule-strong); border-bottom:0; background:var(--surface-2)}
+.act tfoot tr + tr th, .act tfoot tr + tr td{border-top:1px solid var(--rule)}
+.act tfoot th{font-size:14px; font-weight:700; color:var(--ink)}
+.act tfoot th small{display:block; margin-top:3px; font-size:11.5px; font-weight:500; color:var(--muted); white-space:normal}
+.act-sum .act-res{font-size:16px}
+@media (max-width:600px){
+  .act{min-width:700px; font-size:13px}
+  .act th, .act td{padding:9px 8px}
+  .act td{min-width:108px}
+  .act tbody th, .act tfoot th{min-width:64px}
+  .act tbody th b{font-size:15px}
+}
+/* окно статистики шире, чтобы таблица помещалась без прокрутки на компьютере */
+@media (min-width:700px){ .ev-box:has(.act){max-width:min(1080px, 96vw); width:min(1080px, 96vw)} }
+.pay-zone{min-height:54px; padding:10px 12px; border:1.5px dashed var(--rule-strong); border-radius:var(--r); background:var(--surface); color:var(--ink); font-size:14px; line-height:1.4; outline:none; overflow:hidden; max-height:80px}
+.pay-zone:empty::before{content:attr(data-ph); color:var(--muted)}
+.pay-zone:focus{border-color:var(--brand-gold)}
+.pay-zone img{display:none}
+.pay-ok{max-width:720px; margin:0 auto 12px; padding:10px 14px; border:1px solid #3aa76d; border-radius:var(--r); background:rgba(58,167,109,.12); color:var(--ink); font-size:14px; line-height:1.45}
+.act tbody tr.act-new th, .act tbody tr.act-new td{background:rgba(58,167,109,.14)}
+.pay-src{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+.pay-src .btn-ev{display:flex; align-items:center; justify-content:center; min-height:44px; height:auto; margin:0; padding:10px 8px; text-align:center; line-height:1.25}
