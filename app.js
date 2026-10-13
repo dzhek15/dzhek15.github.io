@@ -2764,6 +2764,171 @@
   var ACC_KEY = "dzhek-acc", ACC_N = 10;
   function accRead(){ try { return JSON.parse(localStorage.getItem(ACC_KEY)) || {}; } catch(e){ return {}; } }
   function accWrite(o){ try { localStorage.setItem(ACC_KEY, JSON.stringify(o)); } catch(e){} }
+  /* ---------- выплаты тиражей: коэффициенты БалтБета за 9…15 угаданных ----------
+     Выплата строки с k угаданными = цена строки × (K9 + K10 + … + Kk).
+     Свои загрузки хранятся в браузере и перекрывают общий архив data/api/payouts.json. */
+  var PAY_KEY = "dzhek-pay", PAY_KS = [15, 14, 13, 12, 11, 10, 9], payShared = null;
+  function payRead(){ try { return JSON.parse(localStorage.getItem(PAY_KEY)) || {}; } catch(e){ return {}; } }
+  function payWrite(o){ try { localStorage.setItem(PAY_KEY, JSON.stringify(o)); } catch(e){} }
+  function payLoadShared(){
+    if(payShared) return Promise.resolve(payShared);
+    return fetch(MIRROR + "payouts.json?t=" + Date.now(), {cache: "no-store"})
+      .then(function(r){ return r.ok ? r.json() : {}; }).catch(function(){ return {}; })
+      .then(function(j){ payShared = j || {}; return payShared; });
+  }
+  function payFor(n){ var l = payRead()[n]; return (l && l.k) ? l : ((payShared || {})[n] && payShared[n].k ? payShared[n] : null); }
+  function payWin(dist, K, price){
+    var w = 0, cum = 0;
+    for(var k = 9; k <= 15; k++){ cum += Number(K[k]) || 0; w += ((dist && dist[k]) || 0) * cum; }
+    return w * price;
+  }
+  function payNum(x){ return Number(String(x).replace(/\s/g, "").replace(",", ".")); }
+  /* разбор текста таблицы выплат: строки «угадано — вариантов — коэффициент (5 знаков)» */
+  function payParse(text){
+    var t = String(text || "").replace(/\u00a0/g, " ").replace(/[|\[\]]/g, " "), K = {}, C = {}, num = null;
+    var m = t.match(/(?:Тираж|тираж|ТИРАЖ|№|No\.?|N°|Ne)\s*№?\s*(\d{4})/); if(m) num = Number(m[1]);
+    t.split(/\n/).forEach(function(line){
+      var s = line.trim(), cm = s.match(/(\d+)[.,](\d{5})\s*$/);   /* коэффициент — без пробелов, 5 знаков после запятой */
+      if(!cm) return;
+      var rest = s.slice(0, cm.index).trim(), km = rest.match(/^\D*(9|1[0-5])(?:\s+([\d ]+))?\s*$/);
+      if(!km) return;
+      var k = Number(km[1]); if(K[k] !== undefined) return;
+      K[k] = payNum(cm[1] + "." + cm[2]);
+      if(km[2]) C[k] = payNum(km[2]);
+    });
+    if(Object.keys(K).length < 7){           /* столбцы прочитаны по отдельности: берём 7 коэффициентов по порядку 15…9 */
+      var all = t.match(/\d+[.,]\d{5}\b/g) || [];
+      if(all.length === 7){ K = {}; all.forEach(function(v, i){ K[PAY_KS[i]] = payNum(v); }); }
+    }
+    return { num: num, k: K, c: C };
+  }
+  /* общий архив: запись в data/api/payouts.json репозитория сайта ключом владельца (хранится только в его браузере) */
+  var OWN_KEY = "dzhek-owner-gh", PAY_URL = "https://api.github.com/repos/dzhek15/dzhek15.github.io/contents/data/api/payouts.json";
+  function ownTok(){ try { return localStorage.getItem(OWN_KEY) || ""; } catch(e){ return ""; } }
+  function payPush(n, rec){
+    var tok = ownTok(); if(!tok) return Promise.reject(new Error("нет ключа владельца"));
+    var H = { "Authorization": "Bearer " + tok, "Accept": "application/vnd.github+json" };
+    var b64d = function(x){ return decodeURIComponent(escape(atob(String(x).replace(/\n/g, "")))); };
+    var b64e = function(x){ return btoa(unescape(encodeURIComponent(x))); };
+    var attempt = function(left){
+      return fetch(PAY_URL + "?ref=main&t=" + Date.now(), { headers: H, cache: "no-store" }).then(function(r){
+        if(r.status === 404) return { sha: null, data: {} };
+        if(!r.ok) throw new Error(r.status === 401 ? "ключ не принят GitHub" : "GitHub ответил " + r.status);
+        return r.json().then(function(j){ var t = b64d(j.content || ""); return { sha: j.sha, data: t.trim() ? JSON.parse(t) : {} }; });
+      }).then(function(cur){
+        var d = cur.data || {}; if(rec) d[n] = rec; else delete d[n];
+        var body = { message: "Выплаты тиража " + n, content: b64e(JSON.stringify(d, null, 1) + "\n"), branch: "main" };
+        if(cur.sha) body.sha = cur.sha;
+        return fetch(PAY_URL, { method: "PUT", headers: H, body: JSON.stringify(body) }).then(function(r){
+          if((r.status === 409 || r.status === 422) && left > 0) return attempt(left - 1);
+          if(!r.ok) throw new Error(r.status === 401 || r.status === 403 ? "у ключа нет права записи" : "GitHub ответил " + r.status);
+          payShared = d; return d;
+        });
+      });
+    };
+    return attempt(2);
+  }
+  var payOcrBusy = false;
+  function payOcr(file, onMsg, done){
+    var go = function(){
+      var base = new URL("vendor/ocr/", location.href).href;
+      window.Tesseract.recognize(file, "eng", {
+        workerPath: base + "worker.min.js", corePath: base, workerBlobURL: false, langPath: base.replace(/\/$/, ""), gzip: true,
+        logger: function(m){ if(m && m.status === "recognizing text") onMsg("Распознаю… " + Math.round((m.progress || 0) * 100) + "%"); }
+      }).then(function(r){ done(null, r.data.text || ""); }).catch(function(e){ done(String(e && e.message || e)); });
+    };
+    if(window.Tesseract) return go();
+    onMsg("Загружаю распознавание (около 7 МБ, один раз)…");
+    var sc = document.createElement("script"); sc.src = "vendor/ocr/tesseract.min.js";
+    sc.onload = go; sc.onerror = function(){ done("не загрузилась библиотека распознавания"); };
+    document.head.appendChild(sc);
+  }
+  function payPanel(box, nums, onSaved){
+    var store = payRead(), cur = nums.filter(function(n){ return !payFor(n); })[0] || nums[0];
+    var opts = nums.map(function(n){ return '<option value="' + n + '"' + (n === cur ? " selected" : "") + '>' + n + (payFor(n) ? " — загружено" : "") + '</option>'; }).join("");
+    var rows = PAY_KS.map(function(k){
+      return '<tr><th scope="row">' + k + '</th><td><input type="text" inputmode="decimal" class="pay-k" data-k="' + k + '" placeholder="0,00000" autocomplete="off"></td>' +
+        '<td><input type="text" inputmode="numeric" class="pay-c" data-k="' + k + '" placeholder="—" autocomplete="off"></td></tr>';
+    }).join("");
+    box.innerHTML = '<div class="pay-f">' +
+      '<label class="pay-l">Тираж <select id="payDraw">' + opts + '</select></label>' +
+      '<label class="btn-ev pay-file">Скриншот выплат<input type="file" accept="image/*" id="payFile" hidden></label>' +
+      '<details class="pay-txt"><summary>или вставить таблицу текстом</summary><textarea id="payText" rows="5" placeholder="15  0  0,00000&#10;14  2  12345,67890&#10;…"></textarea>' +
+      '<button type="button" class="btn-ev" id="payParse">Разобрать текст</button></details>' +
+      '<p class="ev-note" id="payMsg">Загрузи скриншот таблицы «Угадано событий — Количество вариантов — Коэффициент выплаты» из БалтБета. Цифры можно поправить вручную.</p>' +
+      '<table class="pay-t"><thead><tr><th>Угадано</th><th>Коэффициент</th><th>Вариантов</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+      '<div class="pay-go"><button type="button" class="btn-ev" id="paySave">Сохранить и пересчитать</button>' +
+      '<button type="button" class="btn-ev" id="payDel">Удалить выплаты тиража</button></div>' +
+      '<details class="pay-own"><summary id="payOwnS"></summary>' +
+      '<p class="ev-note">Ключ владельца сайта (GitHub, право записи в репозиторий сайта) хранится только в этом браузере. С ним выплаты сохраняются в общий архив и через минуту видны всем посетителям; без него — только на этом устройстве.</p>' +
+      '<div class="pay-go"><input type="password" id="payTok" class="pay-tok" placeholder="github_pat_…" autocomplete="off">' +
+      '<button type="button" class="btn-ev" id="payTokSave">Запомнить ключ</button><button type="button" class="btn-ev" id="payTokDel">Забыть ключ</button></div></details></div>';
+    var q = function(id){ return box.querySelector("#" + id); }, ocrNum = null;
+    var msg = function(t, warn){ var p = q("payMsg"); p.textContent = t; p.className = warn ? "ev-warn" : "ev-note"; };
+    var fill = function(n){
+      var P = payFor(n); ocrNum = null;
+      box.querySelectorAll(".pay-k").forEach(function(i){ var v = P && P.k[i.dataset.k]; i.value = (v !== undefined && v !== null) ? String(v).replace(".", ",") : ""; });
+      box.querySelectorAll(".pay-c").forEach(function(i){ var v = P && P.c && P.c[i.dataset.k]; i.value = (v !== undefined && v !== null) ? String(v) : ""; });
+      q("payDel").hidden = !(payRead()[n] || (ownTok() && payShared && payShared[n]));
+    };
+    var put = function(r){
+      PAY_KS.forEach(function(k){
+        var ik = box.querySelector('.pay-k[data-k="' + k + '"]'), ic = box.querySelector('.pay-c[data-k="' + k + '"]');
+        if(r.k[k] !== undefined) ik.value = String(r.k[k]).replace(".", ",");
+        if(r.c[k] !== undefined) ic.value = String(r.c[k]);
+      });
+      ocrNum = r.num; var got = Object.keys(r.k).length, sel = Number(q("payDraw").value);
+      if(r.num && r.num !== sel) msg("На скриншоте тираж " + r.num + ", а выбран " + sel + ". Проверь выбор тиража — сохранение заблокировано, пока номера не совпадут.", true);
+      else msg(got === 7 ? "Распознаны все 7 коэффициентов" + (r.num ? " тиража " + r.num : "") + ". Сверь цифры со скриншотом и нажми «Сохранить»." :
+        "Распознано коэффициентов: " + got + " из 7. Допиши недостающие вручную.", got !== 7);
+    };
+    var ownState = function(){
+      var on = !!ownTok();
+      q("payOwnS").textContent = on ? "Общий архив: запись включена" : "Владелец сайта: включить общий архив";
+      q("payTokDel").hidden = !on;
+    };
+    ownState();
+    q("payTokSave").addEventListener("click", function(){
+      var v = q("payTok").value.trim(); if(!v) return;
+      try { localStorage.setItem(OWN_KEY, v); } catch(e){}
+      q("payTok").value = ""; ownState(); msg("Ключ запомнен. Следующее сохранение уйдёт в общий архив.");
+    });
+    q("payTokDel").addEventListener("click", function(){ try { localStorage.removeItem(OWN_KEY); } catch(e){} ownState(); msg("Ключ удалён из этого браузера."); });
+    var share = function(n, rec){
+      if(!ownTok()){ onSaved(); return; }
+      msg("Сохраняю в общий архив…");
+      payPush(n, rec).then(function(){
+        var o = payRead(); delete o[n]; payWrite(o); onSaved();   /* в общем архиве — локальная копия не нужна */
+      }).catch(function(e){ msg("В общий архив не записано (" + e.message + "). Сохранено только на этом устройстве.", true); });
+    };
+    fill(cur);
+    q("payDraw").addEventListener("change", function(){ fill(Number(this.value)); msg("Тираж " + this.value + ": загрузи скриншот или впиши коэффициенты."); });
+    q("payParse").addEventListener("click", function(){ put(payParse(q("payText").value)); });
+    q("payFile").addEventListener("change", function(){
+      var f = this.files && this.files[0]; this.value = ""; if(!f || payOcrBusy) return;
+      payOcrBusy = true;
+      payOcr(f, msg, function(err, text){
+        payOcrBusy = false;
+        if(err){ msg("Не удалось распознать: " + err + ". Впиши коэффициенты вручную.", true); return; }
+        q("payText").value = text; put(payParse(text));
+      });
+    });
+    q("payDel").addEventListener("click", function(){
+      var n = Number(q("payDraw").value), o = payRead(); delete o[n]; payWrite(o);
+      if(ownTok() && payShared && payShared[n]) share(n, null); else onSaved();
+    });
+    q("paySave").addEventListener("click", function(){
+      var n = Number(q("payDraw").value), K = {}, C = {}, bad = [];
+      if(ocrNum && ocrNum !== n){ msg("На скриншоте тираж " + ocrNum + ", выбран " + n + ". Выбери нужный тираж или загрузи другой скриншот.", true); return; }
+      box.querySelectorAll(".pay-k").forEach(function(i){
+        var v = payNum(i.value); if(i.value.trim() === "" || !isFinite(v) || v < 0) bad.push(i.dataset.k); else K[i.dataset.k] = v;
+      });
+      box.querySelectorAll(".pay-c").forEach(function(i){ var v = payNum(i.value); if(i.value.trim() !== "" && isFinite(v)) C[i.dataset.k] = v; });
+      if(bad.length){ msg("Не заполнены коэффициенты за " + bad.join(", ") + " угаданных. Пустые значения не заменяются нулём — впиши 0, если выплаты не было.", true); return; }
+      var rec = { k: K, c: C, at: new Date().toISOString(), src: ocrNum ? "скриншот" : "вручную" };
+      var o = payRead(); o[n] = rec; payWrite(o); share(n, rec);
+    });
+  }
   /* статистика не зависит от лимитов пользователя: только от цены строки и потолка */
   function accSetKey(){ return "max" + LIM_MAX_RUB + "|" + linePrice() + "|v3"; }
   function stratForInfo(info){
@@ -2849,18 +3014,20 @@
         }));
       }).catch(function(){});
     var vp = loadVirt().catch(function(){ return null; });
-    Promise.all([aiH, draws, vp]).then(function(r){
+    Promise.all([aiH, draws, vp, payLoadShared()]).then(function(r){
       var aih = r[0] || {}, vdata = r[2] || {}, el = $("accBox"); if(!el) return;
       var nums = Object.keys(store).map(Number).sort(function(a, b){ return b - a; });
       var keep = {}; nums.slice(0, 40).forEach(function(n){ keep[n] = store[n]; }); accWrite(keep);
       nums = nums.slice(0, ACC_N);
       if(!nums.length){ el.innerHTML = '<p class="ev-warn">Пока не удалось получить итоги прошлых тиражей. Попробуй позже.</p>'; return; }
       var cols = [["ai", "ИИ", "ИИ", "ИИ"], ["hunt", "Охота", "Охота", "Охота на 15"], ["gap", "Расхожд.", "Расх.", "Расхождения"], ["sim", "Симул.", "Сим.", "Симуляция"], ["kel", "Келли", "Келли", "Келли"]], sum = {}, cnt = {};
-      var tot = {}; cols.forEach(function(c){ tot[c[0]] = { lines: 0, rub: 0, n: 0, dist: [] }; for(var k = 0; k <= 15; k++) tot[c[0]].dist.push(0); });
+      var tot = {}; cols.forEach(function(c){ tot[c[0]] = { lines: 0, rub: 0, n: 0, dist: [], win: 0, cost: 0, pn: 0, best: 0 }; for(var k = 0; k <= 15; k++) tot[c[0]].dist.push(0); });
+      var paidN = 0;
       var rub = function(v){ return fmt(Math.round(v)) + " ₽"; };
       var body = nums.map(function(n){
-        var d = store[n], sc = {};
+        var d = store[n], sc = {}, PK = payFor(n), wins = {};
         var price = Number(d.price) > 0 ? Number(d.price) : 30;    /* цена строки на тот тираж, не сегодняшняя */
+        if(PK) paidN++;
         cols.forEach(function(c){
           if(c[0] === "hunt"){
             var vr = vdata[String(n)];
@@ -2877,13 +3044,15 @@
           if(x){
             var t = tot[c[0]]; t.lines += x.vars; t.rub += x.vars * price; t.n++;
             for(var k = 9; k <= 15; k++) t.dist[k] += (x.dist && x.dist[k]) || 0;
+            if(PK){ var w = payWin(x.dist, PK.k, price); wins[c[0]] = w; t.win += w; t.cost += x.vars * price; t.pn++; if(w > t.best) t.best = w; }
           }
         });
-        return '<tr><th scope="row">' + n + '</th>' + cols.map(function(c){
+        return '<tr><th scope="row">' + n + (PK ? '<i class="acc-paid" title="выплаты загружены">₽</i>' : '') + '</th>' + cols.map(function(c){
           var x = sc[c[0]];
           if(!x) return '<td class="acc-na">—</td>';
           sum[c[0]] = (sum[c[0]] || 0) + x.hit; cnt[c[0]] = (cnt[c[0]] || 0) + 1;
-          return '<td><span class="ac-pill' + (x.hit >= 9 ? ' ac-best' : '') + '"><b>' + x.hit + '</b></span><small>' + fmt(x.vars) + '<span class="acc-u"> стр.</span></small><small class="acc-rub">' + rub(x.vars * price) + '</small></td>';
+          return '<td><span class="ac-pill' + (x.hit >= 9 ? ' ac-best' : '') + '"><b>' + x.hit + '</b></span><small>' + fmt(x.vars) + '<span class="acc-u"> стр.</span></small><small class="acc-rub">' + rub(x.vars * price) + '</small>' +
+            (wins[c[0]] !== undefined ? '<small class="acc-win' + (wins[c[0]] > 0 ? ' on' : '') + '">' + (wins[c[0]] > 0 ? '+' + rub(wins[c[0]]) : '0 ₽') + '</small>' : '') + '</td>';
         }).join("") + '</tr>';
       }).join("");
       var avg = {}, topK = null;
@@ -2908,13 +3077,32 @@
               return '<span class="acs-c' + (v ? ' on' : '') + '"><i>' + k + '</i><b>' + (t.n ? fmt(v) : '—') + '</b></span>';
             }).join("") + '</div></div>';
         }).join("") + '</div>';
-      el.innerHTML = '<h3 class="ac-h">Среднее число угаданных матчей</h3><div class="ac-lbs">' + lb + '</div>' +
+      var money = !paidN ? '<p class="ev-note">Выплаты ещё не загружены. Нажми «Загрузить выигрыши» и добавь скриншот таблицы выплат тиража — тогда здесь появится, сколько каждая стратегия выиграла и проиграла.</p>' :
+        '<div class="pay-s">' + cols.filter(function(c){ return tot[c[0]].pn; }).sort(function(x, y){ var a = tot[x[0]], b = tot[y[0]]; return (b.win - b.cost) - (a.win - a.cost); }).map(function(c){
+          var t = tot[c[0]], net = t.win - t.cost;
+          return '<div class="pay-r"><b class="acs-n">' + c[3] + '</b>' +
+            '<span class="acs-v"><i>Потрачено</i><b>' + rub(t.cost) + '</b></span>' +
+            '<span class="acs-v"><i>Выиграно</i><b>' + rub(t.win) + '</b></span>' +
+            '<span class="acs-v"><i>Итог</i><b class="' + (net >= 0 ? 'pay-plus' : 'pay-minus') + '">' + (net >= 0 ? '+' : '−') + rub(Math.abs(net)) + '</b></span>' +
+            '<span class="acs-v"><i>Возврат</i><b>' + Math.round(t.cost ? t.win / t.cost * 100 : 0) + '%</b></span>' +
+            '<span class="acs-v"><i>Тиражей</i><b>' + t.pn + '</b></span></div>';
+        }).join("") + '</div>';
+      el.innerHTML = '<div class="pay-go pay-top"><button type="button" class="btn-ev" id="payOpen">Загрузить выигрыши</button></div><div id="payBox" class="pay-box" hidden></div>' +
+        '<h3 class="ac-h">Среднее число угаданных матчей</h3><div class="ac-lbs">' + lb + '</div>' +
         '<p class="ac-leg"><span class="ac-pill ac-best"><b>9+</b></span> результат от 9 до 15 угаданных</p>' +
         '<div class="acc-wrap"><table class="acc"><thead><tr><th>Тираж</th>' + cols.map(function(c){ return '<th' + (c[0] === topK ? ' class="ac-topc"' : '') + '><span class="acc-l">' + c[1] + '</span><span class="acc-s">' + c[2] + '</span></th>'; }).join("") +
         '</tr></thead><tbody>' + body + '</tbody><tfoot>' + foot + '</tfoot></table></div>' +
+        '<h3 class="ac-h ac-h2">Выигрыши и проигрыши' + (paidN ? ' за ' + paidN + ' ' + plural(paidN, "тираж", "тиража", "тиражей") + ' с выплатами' : '') + '</h3>' + money +
+        (paidN ? '<p class="ev-note ac-fn">Выигрыш строки = цена строки × сумма коэффициентов от 9 до числа угаданных. «Потрачено» и «Выиграно» считаются только по тиражам, где загружены выплаты (₽ рядом с номером). Для Расхождений, Симуляции и Келли — купон при максимальном лимите, как в таблице выше. Это расчёт по коэффициентам, а не фактический платёж оператора.</p>' : '') +
         '<h3 class="ac-h ac-h2">Строки по числу угаданных за ' + nums.length + ' ' + plural(nums.length, "тираж", "тиража", "тиражей") + '</h3>' + sumT +
         '<p class="ev-note ac-fn">Одна строка — одна полная комбинация из 15 одиночных исходов. Двойники и тройники учтены раскрытием комбинаций. Столбцы 9–15 — сколько строк угадали ровно столько матчей; «Сумма» — строки × цена строки того тиража.</p>' +
         '<p class="ev-note ac-fn">Число в верхней таблице: сколько матчей из 15 угадала лучшая строка, под ним строки и сумма купона. У ИИ это строки брифа 13 из 15 (то, что реально ставится), у Охоты её готовые строки; оба взяты из сохранённых на тираж данных. Результаты Расхождений, Симуляции и Келли рассчитаны при максимальном доступном лимите бюджета (' + rub(LIM_MAX_RUB) + '), указана фактическая стоимость сформированных купонов. Купон собирается по линии и долям на закрытие приёма, итоги матчей в расчёт не входят; посчитанный купон хранится в браузере и после появления результатов не пересобирается. «—» — купона не было.</p>';
+      var pb = $("payBox");
+      $("payOpen").addEventListener("click", function(){
+        if(!pb.hidden){ pb.hidden = true; return; }
+        pb.hidden = false; payPanel(pb, nums, function(){ showAcc(back); });
+        pb.scrollIntoView({block: "nearest"});
+      });
     });
   }
   var AI_SN = [["gap", "Расхождения"], ["sim", "Симуляция"], ["kel", "Келли"]];
@@ -5583,7 +5771,9 @@
   });
   /* адрес вида #s=код: достаём набор с сервера и дальше работаем как со ссылкой #vs= */
   (function(){
-    var m = String(location.hash || "").match(/^#s=([A-Za-z0-9_-]{6,16})$/);
+    var hh = String(location.hash || "");
+    if(!/^#s=/.test(hh) && /^#s(%3D|=)|[?&]s=/i.test(hh + location.search)){ hh = linkNorm(hh + location.search).replace(/^[^#]*/, ""); }
+    var m = hh.match(/^#s=([A-Za-z0-9_-]{6,16})/);
     if(!m) return;
     shortGet(m[1]).then(function(j){
       var parts = String(j.d).split(".").filter(Boolean);
@@ -6959,6 +7149,14 @@
     '<button type="submit" class="pc-btn">Открыть</button></form>';
   var PC_BTNS = '<button type="button" class="pc-btn" id="pcLoad">Загрузить CSV</button><button type="button" class="pc-btn" id="pcLinkBtn">Загрузить ссылку</button>';
   var pcPasteBusy = false;
+  /* ссылку могли переслать с искажениями: мессенджер закодировал # и =, вставили только код, адрес с ?s= */
+  function linkNorm(t){
+    var v = String(t || "").trim();
+    for(var i = 0; i < 2 && /%(23|3D|3d|2E|2e)/.test(v); i++){ try { v = decodeURIComponent(v); } catch(e){ v = v.replace(/%23/g, "#").replace(/%3D/gi, "=").replace(/%2E/gi, "."); } }
+    v = v.replace(/[?&](s|v|vs)=/g, "#$1=");
+    if(/^[A-Za-z0-9_-]{6,16}$/.test(v)) v = "#s=" + v;
+    return v;
+  }
   function pcPasteBind(){
     var f = $("pcPaste"); if(!f) return;
     $("pcLinkBtn").addEventListener("click", function(){
@@ -6975,7 +7173,7 @@
     });
     f.addEventListener("submit", function(e){
       e.preventDefault();
-      var v = String($("pcUrl").value || "").trim();
+      var raw = String($("pcUrl").value || "").trim(), v = linkNorm(raw);
       /* короткие ссылки #s=код сначала превращаем в обычные #vs= (набор берём с сервера) */
       var sIds = v.match(/#s=[A-Za-z0-9_-]{6,16}/g);
       if(sIds && !pcPasteBusy){
@@ -7013,7 +7211,7 @@
       if(!list.length){
         pcsv.msgAt = Date.now();
         pcsv.msg = other ? "Это ссылки на текущий тираж №" + state.tirazh + " — их открывают в самом купоне, а не в просмотре."
-                         : "Это не ссылка на варианты: нужна ссылка вида …#v=5017-…";
+                         : "Это не ссылка на варианты: нужна ссылка вида …#s=код или …#v=5017-…" + (raw ? " Вставлено: «" + (raw.length > 70 ? raw.slice(0, 70) + "…" : raw) + "»." : "");
         renderPrevCsv(); return;
       }
       var k = 0, total = list.length;
@@ -8101,7 +8299,20 @@
     if(document.hidden) return;
     lastAuto = 0; lastPrev = 0;
     setTimeout(autoTick, 300);
+    verCheck();
   });
+  /* приложение с главного экрана может неделями жить без перезагрузки: при возврате сверяем версию сайта */
+  var verAt = Date.now();
+  function verCheck(){
+    if(Date.now() - verAt < 5 * 60000 || typeof fetch !== "function") return;
+    verAt = Date.now();
+    var mine = (String((document.querySelector('script[src*="app.js"]') || {}).src || "").match(/v=([\w.-]+)/) || [])[1];
+    if(!mine) return;
+    fetch("index.html?t=" + Date.now(), { cache: "no-store" }).then(function(r){ return r.ok ? r.text() : ""; }).then(function(h){
+      var cur = (h.match(/app\.js\?v=([\w.-]+)/) || [])[1];
+      if(cur && cur !== mine){ try { ujFlush(); } catch(e){} location.reload(); }
+    }).catch(function(){});
+  }
   setInterval(autoTick, 10 * 1000);
   function autoTick(){
     try{

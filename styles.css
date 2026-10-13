@@ -2544,3 +2544,35 @@ body.is-prev .pct-col.hit b,body.is-prev .kf-col.hit{color:var(--ink); font-weig
 .acs-c.on i, .acs-c.on b{color:#1B1608}
 @media (max-width:360px){ .acs-r{padding:8px 7px 7px} .acs-top{gap:5px} .acs-n{font-size:12px} .acs-v b{font-size:11px} .acs-c b{font-size:9.5px; white-space:nowrap; overflow-wrap:normal} .acs-k{gap:3px} }
 @media (max-width:420px){ .acc td small.acc-rub{font-size:9px} }
+
+/* ---------- выплаты тиражей и выигрыши стратегий ---------- */
+.pay-top{display:flex; justify-content:center; margin:0 0 12px}
+.pay-box{max-width:640px; margin:0 auto 16px; padding:12px; border:1px solid var(--brand-gold); border-radius:var(--r); background:var(--surface-2)}
+.pay-f{display:grid; gap:10px}
+.pay-l{display:flex; align-items:center; gap:8px; font-size:14px}
+.pay-l select{flex:1; min-width:0; padding:8px; border:1px solid var(--rule); border-radius:var(--r); background:var(--surface); color:var(--ink); font:inherit}
+.pay-file{display:block; text-align:center; cursor:pointer}
+.pay-txt summary{cursor:pointer; font-size:13px; color:var(--muted)}
+.pay-txt textarea{width:100%; box-sizing:border-box; margin:8px 0; padding:8px; border:1px solid var(--rule); border-radius:var(--r); background:var(--surface); color:var(--ink); font:13px/1.4 ui-monospace,monospace}
+.pay-t{width:100%; border-collapse:collapse; font-size:14px}
+.pay-t th, .pay-t td{padding:4px 6px; border-bottom:1px solid var(--rule); text-align:left}
+.pay-t thead th{font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); font-weight:600}
+.pay-t input{width:100%; box-sizing:border-box; padding:7px 8px; border:1px solid var(--rule); border-radius:var(--r); background:var(--surface); color:var(--ink); font:inherit; font-variant-numeric:tabular-nums}
+.pay-go{display:flex; flex-wrap:wrap; gap:8px; justify-content:center}
+.pay-go .btn-ev{flex:1 1 200px}
+.pay-s{display:grid; gap:8px; max-width:640px; margin:0 auto}
+.pay-r{display:grid; grid-template-columns:minmax(0,1.2fr) repeat(5, minmax(0,1fr)); align-items:end; gap:6px; padding:9px 10px; border:1px solid var(--rule); border-radius:var(--r); background:var(--surface-2)}
+.pay-r .acs-v b{font-variant-numeric:tabular-nums; font-size:13px}
+.pay-r .acs-v b.pay-plus{color:#3aa76d}
+.pay-r .acs-v b.pay-minus{color:#e0645a}
+.acc-win{display:block; font-size:10.5px; color:var(--muted); font-variant-numeric:tabular-nums}
+.acc-win.on{color:#2e8b57; font-weight:700}
+.acc-paid{font-style:normal; margin-left:3px; font-size:10px; color:var(--brand-gold); vertical-align:super}
+@media (max-width:560px){
+  .pay-r{grid-template-columns:repeat(3, minmax(0,1fr))}
+  .pay-r .acs-n{grid-column:1 / -1}
+  .pay-r .acs-v{text-align:left}
+}
+.pay-own summary{cursor:pointer; font-size:13px; color:var(--muted)}
+.pay-own[open] summary{margin-bottom:6px}
+.pay-tok{flex:1 1 200px; min-width:0; padding:9px; border:1px solid var(--rule); border-radius:var(--r); background:var(--surface); color:var(--ink); font:inherit}
