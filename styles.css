@@ -2706,3 +2706,6 @@ body.is-prev .pct-col.hit b,body.is-prev .kf-col.hit{color:var(--ink); font-weig
 .ai-run-own{margin-top:12px; padding:10px 12px; border:1px solid var(--rule); border-radius:10px}
 .ai-run-own .ev-note{margin:6px 0 10px}
 .ai-run-own .btn[disabled]{opacity:.5}
+/* идёт разбор ИИ: кнопки ИИ выключены, над купоном — заметка */
+.ai-btn.ai-wait{border-style:dashed}
+.ai-run-note{margin:0 0 8px; padding:8px 12px; border:1px solid var(--brand-gold); border-radius:10px; font-size:13px; line-height:1.4; color:var(--brand-gold); background:rgba(212,175,55,.06)}

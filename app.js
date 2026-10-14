@@ -3592,9 +3592,41 @@
   }
   /* нет разбора на этот тираж — кнопка серая и не нажимается, место под неё остаётся */
   function aiBtnState(b, idx){
-    var ok = !!aiFor(ai.data, idx);
+    var ok = !aiRun.active && !!aiFor(ai.data, idx);
     b.disabled = !ok;
-    b.title = ok ? "Короткий разбор матча от ИИ" : "Разбор не готов";
+    b.classList.toggle("ai-wait", aiRun.active);
+    b.title = aiRun.active ? "Идёт разбор ИИ — кнопка включится, когда он закончится и данные будут на сайте" : ok ? "Короткий разбор матча от ИИ" : "Разбор не готов";
+  }
+  /* Пока идёт разбор ИИ (ai_status.json «run», для владельца — ещё и состояние запуска в GitHub), все кнопки ИИ
+     выключены: на сайте может лежать прошлый разбор, который сейчас заменится. Раз в минуту проверяем состояние;
+     когда разбор закончился, заново загружаем разбор, бриф, историю, Охоту и «Охоту · с ИИ» и включаем кнопки. */
+  var aiRun = { active: false, since: "", timer: 0 }, AI_BUST = 0;
+  function aiRunPoll(){
+    clearTimeout(aiRun.timer);
+    var t = Date.now();
+    Promise.all([
+      fetch(MIRROR + "ai_status.json?t=" + t, { cache: "no-store" }).then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; }),
+      ownTok() ? fetch(AI_WF + "/runs?per_page=1&t=" + t, { headers: aiRunHdr(), cache: "no-store" }).then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; }) : null
+    ]).then(function(r){
+      var st = r[0], gr = r[1] && r[1].workflow_runs && r[1].workflow_runs[0];
+      var act = !!(st && st.state === "run" && ageMin(st.start) <= 70) || !!(gr && gr.status !== "completed" && ageMin(gr.created_at) <= 70);
+      var was = aiRun.active;
+      aiRun.active = act; aiRun.since = act ? (st && st.state === "run" ? st.start : gr.run_started_at || gr.created_at) : "";
+      if(act !== was) aiRunChanged(was && !act);
+      aiRun.timer = setTimeout(aiRunPoll, act ? 60000 : 5 * 60000);
+    });
+  }
+  function aiRunChanged(finished){
+    document.body.classList.toggle("ai-running", aiRun.active);
+    var nt = $("aiRunNote");
+    if(nt){ nt.hidden = !aiRun.active; nt.textContent = aiRun.active ? "Идёт разбор ИИ" + (aiRun.since ? ", начат в " + fmtStamp(aiRun.since, true) : "") + ". Кнопки ИИ и «Собрать с ИИ» включатся, когда он закончится и данные будут на сайте." : ""; }
+    if(!finished){ aiBtnsUpdate(); try { render(); } catch(e){} return; }
+    AI_BUST = Date.now();
+    ai.at = 0; aiHist.at = 0; aiArch.at = 0; virtAi.at = 0; virt.at = 0;
+    Promise.all([loadAi(true), loadAiHist(), loadAiArch(), loadVirtAi(), loadVirt(true)]).then(function(){
+      AI_BUST = 0; try { aiCmp.v = null; } catch(e){}
+      aiBtnsUpdate(); try { render(); } catch(e){}
+    }, function(){ AI_BUST = 0; aiBtnsUpdate(); });
   }
   function aiBtnsUpdate(){
     [].slice.call(document.querySelectorAll(".ai-btn")).forEach(function(b){ aiBtnState(b, Number(b.getAttribute("data-idx"))); });
@@ -3616,7 +3648,7 @@
     if(aiHist.data && Date.now() - aiHist.at < 10 * 60000) return Promise.resolve(aiHist.data);
     if(aiHist.loading) return aiHist.loading;
     if(typeof fetch !== "function") return Promise.resolve(null);
-    aiHist.loading = fetch(MIRROR + "ai_hist.json?t=" + Math.floor(Date.now() / 600000))
+    aiHist.loading = fetch(MIRROR + "ai_hist.json?t=" + (AI_BUST || Math.floor(Date.now() / 600000)), AI_BUST ? {cache: "no-store"} : undefined)
       .then(function(r){ return r.ok ? r.json() : null; })
       .then(function(j){ aiHist.loading = null; if(j){ aiHist.data = j; aiHist.at = Date.now(); } return aiHist.data; })
       .catch(function(){ aiHist.loading = null; return aiHist.data; });
@@ -3629,7 +3661,7 @@
     if(aiArch.data && Date.now() - aiArch.at < 10 * 60000) return Promise.resolve(aiArch.data);
     if(aiArch.loading) return aiArch.loading;
     if(typeof fetch !== "function") return Promise.resolve(null);
-    aiArch.loading = fetch(MIRROR + "ai_arch.json?t=" + Math.floor(Date.now() / 600000))
+    aiArch.loading = fetch(MIRROR + "ai_arch.json?t=" + (AI_BUST || Math.floor(Date.now() / 600000)), AI_BUST ? {cache: "no-store"} : undefined)
       .then(function(r){ return r.ok ? r.json() : null; })
       .then(function(j){ aiArch.loading = null; if(j){ aiArch.data = j; aiArch.at = Date.now(); } return aiArch.data; })
       .catch(function(){ aiArch.loading = null; return aiArch.data; });
@@ -3654,7 +3686,7 @@
     if(virtAi.data && Date.now() - virtAi.at < 10 * 60000) return Promise.resolve(virtAi.data);
     if(virtAi.loading) return virtAi.loading;
     if(typeof fetch !== "function") return Promise.resolve(null);
-    virtAi.loading = fetch(MIRROR + "virt_ai.json?t=" + Math.floor(Date.now() / 600000))
+    virtAi.loading = fetch(MIRROR + "virt_ai.json?t=" + (AI_BUST || Math.floor(Date.now() / 600000)), AI_BUST ? {cache: "no-store"} : undefined)
       .then(function(r){ return r.ok ? r.json() : null; })
       .then(function(j){ virtAi.loading = null; if(j){ virtAi.data = j; virtAi.at = Date.now(); } return virtAi.data; })
       .catch(function(){ virtAi.loading = null; return virtAi.data; });
@@ -3730,6 +3762,7 @@
     return b;
   }
   function showAi(m, idx){
+    if(aiRun.active) return;
     $("evTitle").textContent = "Разбор ИИ · " + m.home + " — " + m.away;
     $("evBody").innerHTML = '<div id="aiBox"><p class="ev-note">Загружаю…</p></div>' +
       '';
@@ -5385,14 +5418,14 @@
     var form = (sh.d ? sh.d + " дв" : "") + (sh.d && sh.t ? " + " : "") + (sh.t ? sh.t + " тр" : "");
     return '<div class="bf-v' + (cur ? ' cur' : '') + '"><div class="bf-i"><div class="bf-h"><span class="bf-o">' + sh.s + ' ' + (sh.s === 1 ? 'ординар' : 'ординара') + '</span><b>' + form + '</b></div>' +
       '<div class="bf-m"><span>' + cov + ' из 45</span><span>' + fmt(sh.rows) + ' ' + plural(sh.rows, 'строка', 'строки', 'строк') + '</span><span>' + fmt(sh.rows * price) + ' ₽</span><span class="bf-p">' + sh.ch + '</span></div></div>' +
-      '<button type="button" class="gap-set bf-ai" data-g="' + g + '" data-s="' + sh.s + '" data-d="' + sh.d + '" data-t="' + sh.t + '"' + (aiOk ? '' : ' disabled title="Разбор ИИ на этот тираж ещё не готов"') + '>Собрать с ИИ</button></div>';
+      '<button type="button" class="gap-set bf-ai" data-g="' + g + '" data-s="' + sh.s + '" data-d="' + sh.d + '" data-t="' + sh.t + '"' + (aiOk ? '' : ' disabled title="' + (aiRun.active ? 'Идёт разбор ИИ — включится после публикации' : 'Разбор ИИ на этот тираж ещё не готов') + '"') + '>Собрать с ИИ</button></div>';
   }
   document.addEventListener("toggle", function(e){
     var t = e.target; if(t && t.classList && t.classList.contains("brief-expl")) window.__briefExplOpen = t.open;
   }, true);
   function briefRuleBox(one, cs){
     var F = BRIEF_FORMS[briefTab] || BRIEF_FORMS[13], g = briefTab;
-    var aiOk = !!aiPlan(ai.data) && state.matches.length === 15;
+    var aiOk = !aiRun.active && !!aiPlan(ai.data) && state.matches.length === 15;
     var anyExact = false;
     F.groups.forEach(function(gr){ gr.shapes.forEach(function(sh){ if(cs && sh.s === cs.s && sh.d === cs.d && sh.t === cs.t) anyExact = true; }); });
     var list = F.groups.map(function(gr, gi){
@@ -9793,6 +9826,7 @@
   setTimeout(checkFsVoids, 4000);
   loadAi().then(aiBtnsUpdate);
   setInterval(function(){ loadAi().then(aiBtnsUpdate); }, 30 * 60000);
+  aiRunPoll();
   setInterval(checkFsVoids, 10 * 60000);
   loadTeamDb();
   setInterval(loadTeamDb, 3600000);
