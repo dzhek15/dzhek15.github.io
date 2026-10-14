@@ -431,6 +431,9 @@
 "комо": {
 "f": "4pxypIS0-hpmw8K1h.png"
 },
+"копенгаген": {
+"f": "Gbsca9AN-xv6lkb7q.png"
+},
 "кордоба": {
 "f": "fTto7LkC-4YF9PAyB.png"
 },
@@ -513,6 +516,9 @@
 "лос андес": {
 "f": "UqMXyZoe-8OsOmX8t.png"
 },
+"лугано": {
+"f": "M3PFqTAN-CA35gjSs.png"
+},
 "магриб фес": {
 "c": [
 "#ffff01",
@@ -532,11 +538,20 @@
 "мальорка": {
 "f": "WKsw8cne-rmDEjevK.png"
 },
+"маниса беледиеспор": {
+"f": "rD05b4AN-GC3BM98o.png"
+},
+"мансфилд таун": {
+"f": "be5DZHCN-tYqwR1Mb.png"
+},
 "манчестер сити": {
 "f": "0vgscFU0-lQuhqN8N.png"
 },
 "манчестер юнайтед": {
 "f": "GhGV3qjT-h2pPXz3k.png"
+},
+"марсель": {
+"f": "t6Kb5X76-AcP8ZdxL.png"
 },
 "мб руиссе": {
 "f": "GEMJ49CN-2wF033pH.png"
@@ -605,11 +620,20 @@
 ],
 "id": 457
 },
+"оксфорд юнайтед": {
+"f": "Ige65FiT-6qsP6K6r.png"
+},
 "олесунн": {
 "f": "88VSvrWH-QBQwYJis.png"
 },
+"олимпиакос": {
+"f": "Ik1Usole-lzmp9FUJ.png"
+},
 "олл бойз": {
 "f": "EDM4G0jT-OzQboFJC.png"
+},
+"омония никосия": {
+"f": "63i3lcSq-8GeT5Kmk.png"
 },
 "операрио пр": {
 "f": "p0AtzGQq-vm8qH06L.png"
@@ -668,6 +692,9 @@
 "#214c97"
 ],
 "id": 718
+},
+"реал сосьедад": {
+"f": "rcAkl5le-vJb36ZBF.png"
 },
 "реджана": {
 "f": "h4Rp5mAN-xpwwMV0F.png"
@@ -755,8 +782,17 @@
 ],
 "id": 129
 },
+"северсталь": {
+"f": "AiYJYzT0-xIWWfwN7.png"
+},
 "севилья": {
 "f": "EcTGi086-tIT0KyhE.png"
+},
+"сельта": {
+"f": "INW8oRBN-SOY3p1Si.png"
+},
+"сент-жиллуаз": {
+"f": "fkZqVUUH-KrZtIamS.png"
 },
 "серро монтевидео": {
 "f": "tl6sskT0-dUH9C2gd.png"
@@ -847,6 +883,9 @@
 "университатя клуж": {
 "f": "vqp1ptT0-v1mKniN8.png"
 },
+"университатя крайова": {
+"f": "nyNLzxUH-CKjtpaMt.png"
+},
 "унион берлин": {
 "f": "0OMJUule-ncmj9JbF.png"
 },
@@ -914,6 +953,9 @@
 "херрестадс": {
 "f": "W8KVFClC-bR54g5xh.png"
 },
+"хетафе": {
+"f": "hGMWMdT0-YmCZKGcR.png"
+},
 "химнасия м(р)": {
 "f": "b7L1PmVH-xGopHxTO.png"
 },
@@ -925,6 +967,12 @@
 },
 "хувентуд лп": {
 "f": "Ewu5CRlC-WIGOXbOL.png"
+},
+"целе": {
+"f": "dzJvOb96-juuH5vx4.png"
+},
+"црвена звезда": {
+"f": "SCYnmQR0-MyLh3sBh.png"
 },
 "чатем таун": {
 "f": "2DNFAXS0-vZlrO7BD.png"
@@ -1005,6 +1053,9 @@
 "энвигадо": {
 "f": "461l7eCN-2XZjQRJG.png"
 },
+"эрокспор": {
+"f": "CU5OgwRq-SIclczL4.png"
+},
 "эспаньол": {
 "f": "QeCoIpXH-Msjm1Bq4.png"
 },
@@ -1019,6 +1070,9 @@
 },
 "эшторил(23)": {
 "f": "EuicW7oe-WEIjXBWa.png"
+},
+"ювентус": {
+"f": "AufWJrhT-0nz5yHcE.png"
 },
 "юк дублин": {
 "c": [
