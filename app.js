@@ -6724,9 +6724,11 @@
     var t = Math.floor(Date.now() / 60000);
     return Promise.all([
       jget(MIRROR + "status.json?t=" + t), jget(MIRROR + "news.json?t=" + t),
-      jget(MIRROR + "sites.json?t=" + t), jget(GH_RUNS)
+      jget(MIRROR + "sites.json?t=" + t), jget(GH_RUNS),
+      jget(MIRROR + "ai_status.json?t=" + t), jget(MIRROR + "ai.json?t=" + t)
     ]).then(function(r){
       var st = r[0] || {}, nw = r[1], si = r[2], gh = r[3] && r[3].workflow_runs && r[3].workflow_runs[0];
+      var as = r[4] || null, aj = r[5] || null;
       var rows = [];
       /* уровень: 0 — норма, 1 — запаздывает, 2 — проблема */
       /* расписание feed.yml GitHub выполняет с большими пропусками (часами), а данные снимает цепочка keepalive:
@@ -6757,8 +6759,25 @@
       var sl = !si ? 1 : String(si.number) !== cur ? 1 : 0;
       rows.push({ n: "Сайты команд", d: "Wikidata, для новых команд тиража", at: si && si.at, lv: sl,
         s: !si ? "файла нет" : String(si.number) !== cur ? "собраны для тиража №" + si.number : "готовы" });
+      /* разбор ИИ по расписанию (11:00 МСК): цепочка разбора пишет ai_status.json — «идёт» при старте,
+         «готово» или «ошибка» в конце. Зелёный — проведён для текущего тиража, жёлтый — идёт,
+         красный — не начался или прервался. */
+      (function(){
+        var curN = String(state.tirazh || ""), done = aj && String(aj.number) === curN && curN !== "";
+        var stT = as && as.start ? fmtStamp(as.start, true) : "", sameDraw = as && (!as.number || String(as.number) === curN);
+        var msk = new Date(Date.now() + 3 * 3600000), beforeSched = msk.getUTCHours() < 11;
+        var lv, sTxt, at;
+        if(done){ lv = 0; at = aj.at || (as && as.end); sTxt = "проведён для тиража №" + curN + (as && as.start && sameDraw ? ", начало " + stT : ""); }
+        else if(as && as.state === "run" && ageMin(as.start) <= 60){ lv = 1; at = as.start; sTxt = "идёт, начало " + stT; }
+        else if(as && as.state === "run"){ lv = 2; at = as.start; sTxt = "начался в " + stT + ", но больше часа без итога — похоже, прервался"; }
+        else if(as && as.state === "fail" && ageMin(as.start) <= 20 * 60){ lv = 2; at = as.end || as.start; sTxt = "прервался с ошибкой, начало " + stT; }
+        else { lv = 2; at = null; sTxt = "не начался" + (beforeSched ? " — запуск в 11:00 МСК" : " — GitHub ещё не запустил задание (по расписанию 11:00 МСК)") +
+          (aj && aj.number ? "; последний разбор — тираж №" + aj.number : ""); }
+        rows.push({ n: "Разбор ИИ по расписанию", d: "каждый день в 11:00 МСК", at: at, lv: lv, s: sTxt, quiet: !done && beforeSched && !(as && as.state === "run") });
+      })();
       dstat = { at: Date.now(), res: rows };
-      var worst = rows.reduce(function(x, y){ return Math.max(x, y.lv); }, 0);
+      /* до 11:00 МСК «не начался» — это норма, точку на кнопке он не красит */
+      var worst = rows.reduce(function(x, y){ return y.quiet ? x : Math.max(x, y.lv); }, 0);
       var dot = $("dataDot");
       if(dot) dot.className = "data-dot lv" + worst;
       var b = $("btnFeedSt");
