@@ -1,1 +1,1 @@
-{"state": "fail", "start": "2026-10-14T09:23:51Z", "event": "workflow_dispatch", "number": 5036, "end": "2026-10-14T09:25:38Z"}
+{"state": "run", "start": "2026-10-14T09:28:33Z", "event": "workflow_dispatch"}
