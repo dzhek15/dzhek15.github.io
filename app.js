@@ -6725,10 +6725,12 @@
     return Promise.all([
       jget(MIRROR + "status.json?t=" + t), jget(MIRROR + "news.json?t=" + t),
       jget(MIRROR + "sites.json?t=" + t), jget(GH_RUNS),
-      jget(MIRROR + "ai_status.json?t=" + t), jget(MIRROR + "ai.json?t=" + t)
+      jget(MIRROR + "ai_status.json?t=" + t), jget(MIRROR + "ai.json?t=" + t),
+      ownTok() ? fetch(AI_WF + "/runs?per_page=1&t=" + t, { headers: aiRunHdr(), cache: "no-store" }).then(function(x){ return x.ok ? x.json() : null; }).catch(function(){ return null; }) : null
     ]).then(function(r){
       var st = r[0] || {}, nw = r[1], si = r[2], gh = r[3] && r[3].workflow_runs && r[3].workflow_runs[0];
-      var as = r[4] || null, aj = r[5] || null;
+      var as = r[4] || null, aj = r[5] || null, gr = r[6] && r[6].workflow_runs && r[6].workflow_runs[0] || null;
+      aiLive = { as: as, aj: aj, gr: gr };
       var rows = [];
       /* уровень: 0 — норма, 1 — запаздывает, 2 — проблема */
       /* расписание feed.yml GitHub выполняет с большими пропусками (часами), а данные снимает цепочка keepalive:
@@ -6767,13 +6769,18 @@
         var stT = as && as.start ? fmtStamp(as.start, true) : "", sameDraw = as && (!as.number || String(as.number) === curN);
         var msk = new Date(Date.now() + 3 * 3600000), beforeSched = msk.getUTCHours() * 60 + msk.getUTCMinutes() < 11 * 60 + 7;
         var lv, sTxt, at;
-        if(done){ lv = 0; at = aj.at || (as && as.end); sTxt = "проведён для тиража №" + curN + (as && as.start && sameDraw ? ", начало " + stT : ""); }
-        else if(as && as.state === "run" && ageMin(as.start) <= 60){ lv = 1; at = as.start; sTxt = "идёт, начало " + stT; }
+        var grAct = gr && gr.status !== "completed", grHow = gr && (gr.event === "schedule" ? "по расписанию" : "запущен вами");
+        if(grAct){ lv = 1; at = gr.run_started_at || gr.created_at;
+          sTxt = (gr.status === "in_progress" ? "идёт (" + grHow + "), начало " : "в очереди у GitHub (" + grHow + "), поставлен в ") + fmtStamp(at, true) +
+            (done ? "; сейчас на сайте разбор, опубликованный в " + fmtStamp(aj.at, true) + ", он будет заменён" : ""); }
+        else if(as && as.state === "run" && ageMin(as.start) <= 60){ lv = 1; at = as.start; sTxt = "идёт (" + (as.event === "schedule" ? "по расписанию" : "запущен вручную") + "), начало " + stT +
+            (done ? "; сейчас на сайте разбор, опубликованный в " + fmtStamp(aj.at, true) + ", он будет заменён" : ""); }
+        else if(done){ lv = 0; at = aj.at || (as && as.end); sTxt = "проведён для тиража №" + curN + (as && as.start && sameDraw ? " (" + (as.event === "schedule" ? "по расписанию" : "вручную") + "), начало " + stT + (as.end ? ", опубликован " + fmtStamp(as.end, true) : "") : ", опубликован " + fmtStamp(aj.at, true)) + "; автозапуск сегодня больше не нужен"; }
         else if(as && as.state === "run"){ lv = 2; at = as.start; sTxt = "начался в " + stT + ", но больше часа без итога — похоже, прервался"; }
         else if(as && as.state === "fail" && ageMin(as.start) <= 20 * 60){ lv = 2; at = as.end || as.start; sTxt = "прервался с ошибкой, начало " + stT; }
         else { lv = 2; at = null; sTxt = "не начался" + (beforeSched ? " — запуск в 11:07 МСК" : " — GitHub ещё не запустил задание (по расписанию 11:07, запасной запуск в 12:37 МСК)") +
           (aj && aj.number ? "; последний разбор — тираж №" + aj.number : ""); }
-        rows.push({ n: "Разбор ИИ по расписанию", d: "каждый день в 11:07 МСК, запасной запуск в 12:37", at: at, lv: lv, s: sTxt, quiet: !done && beforeSched && !(as && as.state === "run") });
+        rows.push({ n: "Разбор ИИ", d: "каждый день в 11:07 МСК, запасной запуск в 12:37", at: at, lv: lv, s: sTxt, quiet: !done && beforeSched && !(as && as.state === "run") });
       })();
       dstat = { at: Date.now(), res: rows };
       /* до 11:00 МСК «не начался» — это норма, точку на кнопке он не красит */
@@ -6799,13 +6806,14 @@
       }).join("") + '</ul>' +
       '<p class="ev-note">Время — московское. Основной источник — totobrief, запасной — stavka.tv: если один молчит, сайт берёт данные из другого и из зеркала на GitHub.</p>' +
       (ownTok() ? '<div class="ai-run-own"><b>Разбор ИИ — только для владельца</b><p class="ev-note" id="aiRunSt">Узнаю у GitHub…</p>' +
-        '<button type="button" class="btn" id="aiRunGo">Запустить разбор сейчас</button></div>' : '');
+        '<button type="button" class="btn" id="aiRunGo" disabled>Запустить разбор сейчас</button>' +
+        '<p class="ev-note">Пока идёт разбор, новый запустить нельзя. Если текущий тираж уже разобран — вашим запуском или по расписанию, — автозапуск в 11:07 и 12:37 его пропускает.</p></div>' : '');
       if(ownTok()){ aiRunStatus(); $("aiRunGo").onclick = aiRunStart; }
     });
   }
   /* Кнопка владельца: запуск разбора ИИ (workflow_dispatch в закрытом репозитории dzhek15-ai) и его
      настоящее состояние по API GitHub. Нужен ключ владельца с доступом к dzhek15-ai и правом Actions: Read and write. */
-  var AI_WF = "https://api.github.com/repos/dzhek15/dzhek15-ai/actions/workflows/razbor.yml";
+  var AI_WF = "https://api.github.com/repos/dzhek15/dzhek15-ai/actions/workflows/razbor.yml", aiLive = null;
   function aiRunHdr(){ return { Authorization: "Bearer " + ownTok(), Accept: "application/vnd.github+json" }; }
   var AI_NOKEY = "Ключ владельца не пускает к разбору: откройте ключ на GitHub (Settings → Developer settings → Fine-grained tokens), в Repository access добавьте dzhek15-ai, в Permissions → Actions поставьте Read and write и сохраните. Значение ключа не меняется, вводить его заново не нужно.";
   function aiRunStatus(){
@@ -6816,22 +6824,29 @@
         var x = j.workflow_runs && j.workflow_runs[0];
         if(!x){ el.textContent = "Запусков ещё не было."; return; }
         var how = x.event === "schedule" ? "по расписанию" : "вручную";
-        var st = x.status === "completed" ? (x.conclusion === "success" ? "завершён успешно" : "завершён с ошибкой (" + x.conclusion + ")")
+        var dur = (Date.parse(x.updated_at) - Date.parse(x.run_started_at || x.created_at)) / 60000;
+        var st = x.status === "completed" ? (x.conclusion === "success" ? (dur < 3 ? "пропущен — тираж уже был разобран или шёл другой разбор" : "завершён успешно") : "завершён с ошибкой (" + x.conclusion + ")")
           : x.status === "in_progress" ? "идёт" : "в очереди у GitHub";
         el.textContent = "Последний запуск (" + how + "): " + st + ", начало " + fmtStamp(x.run_started_at || x.created_at, true) +
           (x.status === "completed" ? ", конец " + fmtStamp(x.updated_at, true) : "") + ".";
-        var go = $("aiRunGo"); if(go) go.disabled = x.status !== "completed";
-        if(x.status !== "completed") setTimeout(aiRunStatus, 30000);
+        var L = aiLive || {}, stRun = L.as && L.as.state === "run" && ageMin(L.as.start) <= 60;
+        var go = $("aiRunGo"); if(go) go.disabled = x.status !== "completed" || stRun;
+        if(stRun && x.status === "completed") el.textContent += " На сайте отмечен идущий разбор с " + fmtStamp(L.as.start, true) + " — запуск откроется, когда он закончится.";
+        if(x.status !== "completed") setTimeout(function(){ if($("aiRunSt") && $("evTitle").textContent === "Состояние данных") showData(); }, 30000);
       })
       .catch(function(e){ el.textContent = e.message === "nokey" ? AI_NOKEY : "Не удалось узнать состояние: " + e.message; });
   }
   function aiRunStart(){
     var go = $("aiRunGo"), el = $("aiRunSt");
-    if(!confirm("Запустить разбор ИИ сейчас? Он опубликует разбор и купоны текущего тиража на сайте.")) return;
+    var L = aiLive || {}, cur = String(state.tirazh || "");
+    var msg = L.aj && String(L.aj.number) === cur && cur
+      ? "Разбор тиража №" + cur + " уже опубликован в " + fmtStamp(L.aj.at, true) + ". Запустить заново? Новый разбор заменит его вместе с ИИ-брифом."
+      : "Запустить разбор тиража №" + cur + " сейчас? Он опубликует разбор и купоны на сайте, автозапуск сегодня после этого не нужен.";
+    if(!confirm(msg)) return;
     go.disabled = true; el.textContent = "Отправляю запуск…";
     fetch(AI_WF + "/dispatches", { method: "POST", headers: aiRunHdr(), body: JSON.stringify({ ref: "main", inputs: { publish: true } }) })
       .then(function(r){ if(r.status === 401 || r.status === 403 || r.status === 404) throw new Error("nokey"); if(r.status !== 204) throw new Error("GitHub ответил " + r.status); })
-      .then(function(){ el.textContent = "Запуск принят. Через минуту здесь появится его состояние."; setTimeout(aiRunStatus, 20000); })
+      .then(function(){ el.textContent = "Запуск принят, GitHub ставит его в очередь. Через 20 секунд здесь появится состояние."; setTimeout(function(){ aiRunStatus(); if($("evTitle").textContent === "Состояние данных") showData(); }, 20000); })
       .catch(function(e){ go.disabled = false; el.textContent = e.message === "nokey" ? AI_NOKEY : "Запуск не прошёл: " + e.message; });
   }
   function showFeed(){
