@@ -1751,7 +1751,9 @@
      совпадение (иначе «Ротерем Юнайтед» пройдёт по слову «Юнайтед» и получит «Манчестер Юнайтед») */
   var FS_GENERIC = { "фк":1, "ск":1, "сити":1, "таун":1, "юнайтед":1, "атлетик":1, "атлетико":1,
     "роверс":1, "депортиво":1, "реал":1, "интер":1, "олимпик":1, "спортинг":1, "насьональ":1,
-    "юниор":1, "юнион":1, "динамо":1, "спартак":1, "локомотив":1, "рейнджерс":1 };
+    "юниор":1, "юнион":1, "динамо":1, "спартак":1, "локомотив":1, "рейнджерс":1,
+    /* арабский артикль: «Аль» входит в «Альбион», «Мальдонадо» — подменял матчи Азии */
+    "аль":1, "эль":1, "ель":1 };
   function fsWords(name){
     return String(name || "").toLowerCase().replace(/ё/g, "е").split(/[^a-zа-я0-9]+/).filter(function(w){ return w.length >= 3; });
   }
@@ -1871,13 +1873,21 @@
      (более короткого) кандидата нашлись в запросе */
   /* клубы, которые на Flashscore называются совсем иначе (переименование, аббревиатура) */
   var FS_ALIAS = { "телеком египет": ["WE SC", "Telecom Egypt"], "юк дублин": ["ЮКД", "UCD"], "юкд": ["ЮК Дублин"] };
-  function fsNameOk(queryClean, queryCore, candidateName){
+  /* «Аль-Таавун (Сау)», «Аль-Раян (Кат)»: пометка страны у Flashscore — не часть названия */
+  function fsNoCountry(name){ return String(name || "").replace(/\s*\((?![жб]\)|\d)[А-Яа-яЁёA-Za-z]{2,4}\)\s*$/, "").trim(); }
+  function fsNameOk(queryClean, queryCore, candidateName, candidateSlug){
     if(fsTag(queryClean) !== fsTag(candidateName)) return false;
     var al = FS_ALIAS[String(queryClean || "").toLowerCase().replace(/ё/g, "е")];
     if(al && al.some(function(x){ return x.toLowerCase() === String(candidateName || "").toLowerCase(); })) return true;
     if(fsMatches(queryCore, candidateName)) return true;
-    var candCore = fsCoreWords(candidateName);
-    return !!(candCore.length && fsMatches(candCore, queryClean));
+    var candCore = fsCoreWords(fsNoCountry(candidateName));
+    if(candCore.length && fsMatches(candCore, queryClean)) return true;
+    /* латинский адрес команды: «Гол Гохар» у Flashscore называется «Сирьян», но адрес — gol-gohar */
+    if(candidateSlug && queryCore.length){
+      var slugW = String(candidateSlug).toLowerCase().split(/[^a-z0-9]+/).filter(function(w){ return w.length >= 3; });
+      if(slugW.length && queryCore.every(function(w){ var l = translit(w).toLowerCase(); return slugW.some(function(x){ return fsWordSimilar(l, x); }); })) return true;
+    }
+    return false;
   }
   /* пара «дом/гости» у источника иногда переставлена относительно тиража — проверяем
      совпадение обеих команд и в прямом, и в обратном порядке. Женский матч — кандидат
@@ -1891,19 +1901,68 @@
       for(var j = 0; j < g.matches.length; j++){
         var mm = g.matches[j];
         if(isWomen && !leagueW && !(/\(ж\)/i.test(mm.home) && /\(ж\)/i.test(mm.away))) continue;
-        if(fsNameOk(hClean, hCore, mm.home) && fsNameOk(aClean, aCore, mm.away))
+        if(fsNameOk(hClean, hCore, mm.home, mm.hSlug) && fsNameOk(aClean, aCore, mm.away, mm.aSlug))
           return { h: { url: mm.hSlug, id: mm.hId, logo: mm.hLogo }, a: { url: mm.aSlug, id: mm.aId, logo: mm.aLogo }, mid: mm.id, ts: mm.ts, st: mm.st, sc: mm.sc, hs: mm.hs, as: mm.as, ao: mm.ao, bx: mm.bx };
-        if(fsNameOk(hClean, hCore, mm.away) && fsNameOk(aClean, aCore, mm.home))
+        if(fsNameOk(hClean, hCore, mm.away, mm.aSlug) && fsNameOk(aClean, aCore, mm.home, mm.hSlug))
           return { h: { url: mm.aSlug, id: mm.aId, logo: mm.aLogo }, a: { url: mm.hSlug, id: mm.hId, logo: mm.hLogo }, mid: mm.id, ts: mm.ts, st: mm.st, sc: mm.sc, hs: mm.as, as: mm.hs, ao: mm.ao, bx: mm.bx };
       }
     }
     return null;
   }
 
-  function fsLookup(m, all){
+  /* окно времени тиража: ended_at у оператора бывает и через 3–4 часа после начала первых
+     матчей, а последние идут до ~2 суток позже — матч тех же команд в другой день
+     (кубок, переигровка) в окно не попадёт */
+  function fsWin(m){
+    var p = state.prev, dl = (p && p.matches && p.matches.indexOf(m) >= 0) ? p.deadline : state.deadline;
+    var t = Date.parse(dl || ""); if(!isFinite(t)) return null;
+    t = Math.floor(t / 1000); return [t - 14 * 3600, t + 50 * 3600];
+  }
+  function fsInWin(groups, w){
+    if(!w) return groups;
+    return groups.map(function(g){ return { country: g.country, league: g.league, matches: g.matches.filter(function(mm){ var x = Number(mm.ts); return !x || (x >= w[0] && x <= w[1]); }) }; })
+      .filter(function(g){ return g.matches.length; });
+  }
+  /* слова названия + латинский адрес команды; нечёткое сравнение по слову —
+     «Иттихад Танжер» ↔ «ИР Анже» (ir-tanger), «Магриб Фес» ↔ «Магреб Фес» */
+  function fsSideScore(query, name, slug){
+    var q = fsCoreWords(fsClean(query)), c = fsCoreWords(fsNoCountry(name)), sl = String(slug || "").toLowerCase().split(/[^a-z0-9]+/).filter(function(w){ return w.length >= 3; });
+    var sc = 0;
+    q.forEach(function(w){
+      var l = translit(w).toLowerCase(), ok = false;
+      var sim = function(a, b){ if(a === b) return true; if(a.length < 4 || b.length < 4) return false; return a.indexOf(b) >= 0 || b.indexOf(a) >= 0 || fsDist(a, b) <= Math.ceil(Math.max(a.length, b.length) * 0.25); };
+      c.forEach(function(x){ if(sim(w, x)) ok = true; });
+      sl.forEach(function(x){ if(sim(l, x)) ok = true; });
+      if(ok) sc++;
+    });
+    return sc;
+  }
+  /* последний шаг: турнир страны (или континента для еврокубков и Азии) в окне тиража,
+     у обеих команд — хоть одно похожее слово; берём лучший, только если он один */
+  function fsFindFuzzy(groups, m, isWomen){
+    var best = null, bestSc = 0, tie = false;
+    groups.forEach(function(g){
+      var leagueW = /жен/i.test(g.league || "");
+      g.matches.forEach(function(mm){
+        if(isWomen && !leagueW && !(/\(ж\)/i.test(mm.home) && /\(ж\)/i.test(mm.away))) return;
+        if(fsTag(fsClean(m.home)) !== fsTag(mm.home) || fsTag(fsClean(m.away)) !== fsTag(mm.away)) return;
+        var a = fsSideScore(m.home, mm.home, mm.hSlug), b = fsSideScore(m.away, mm.away, mm.aSlug);
+        if(!a || !b) return;
+        var sc = a + b;
+        if(sc > bestSc){ bestSc = sc; best = mm; tie = false; } else if(sc === bestSc) tie = true;
+      });
+    });
+    if(!best || tie) return null;
+    return { h: { url: best.hSlug, id: best.hId, logo: best.hLogo }, a: { url: best.aSlug, id: best.aId, logo: best.aLogo }, mid: best.id, ts: best.ts, st: best.st, sc: best.sc, hs: best.hs, as: best.as, ao: best.ao, bx: best.bx };
+  }
+  function fsLookup(m, allIn){
     var isWomen = fsIsWomen(m.home) || fsIsWomen(m.away);
     var country = fsCountry(m.league);
+    var all = fsInWin(allIn || [], fsWin(m));
+    if(!all.length) all = allIn || [];
     var mine = country ? all.filter(function(g){ return g.country === country; }) : null;
+    var cont = /^([^.]+)\./.exec(String(m.league || "")), contU = cont ? cont[1].trim().toUpperCase() : "";
+    var region = country ? mine : (contU ? all.filter(function(g){ return String(g.league || "").toUpperCase().indexOf(contU + ":") === 0; }) : null);
     var found = null;
     /* сначала точные названия (страна, потом все), затем нечёткие, затем одна команда */
     [true, false].some(function(strict){
@@ -1915,6 +1974,7 @@
     FS_STRICT = true;
     if(!found && mine) found = fsFindOneSide(mine, m.home, m.away, isWomen);
     FS_STRICT = false;
+    if(!found && region && region.length) found = fsFindFuzzy(region, m, isWomen);
     return found;
   }
   /* запасной путь: в турнирах нужной страны совпала только одна команда, а вторая на
@@ -2375,10 +2435,13 @@
     }).catch(function(e){ fsLiveBusy = false; dbgLog("err", "лента: " + (e && e.message || e)); });
   }
   setInterval(fsLiveTick, 5000);
+  /* версия поиска матча: время, найденное прежним поиском (бывал чужой матч), пересчитываем */
+  var FS_MV = 2;
+  function fsTimeStale(m){ return !m.time || m.fsV !== FS_MV; }
   function attachFsTimes(){
     if(!state.matches.length || typeof fetch !== "function") return;
     var need = {};
-    state.matches.forEach(function(m){ if(!m.time) need[fsFeedSport(m.league)] = true; });
+    state.matches.forEach(function(m){ if(fsTimeStale(m)) need[fsFeedSport(m.league)] = true; });
     var sports = Object.keys(need);
     if(!sports.length) return;
     var loadKeys = [];
@@ -2386,20 +2449,22 @@
     Promise.all(loadKeys.map(function(k){
       var p = k.split("|");
       return fsLoadDay(p[0], p[1]);
-    })).then(function(results){
-      var bySport = {};
+    }).concat(sports.map(function(k){ return fsDrawMirror(k); }))).then(function(results){
+      var bySport = {}, mir = {};
       loadKeys.forEach(function(k, i){
         var sportKey = k.split("|")[0];
         bySport[sportKey] = (bySport[sportKey] || []).concat(results[i]);
       });
+      sports.forEach(function(k, i){ mir[k] = results[loadKeys.length + i] || []; });
       var changed = false;
       state.matches.forEach(function(m){
-        if(m.time) return;
-        var all = bySport[fsFeedSport(m.league)];
-        if(!all) return;
-        var found = fsLookup(m, all);
+        if(!fsTimeStale(m)) return;
+        var sk = fsFeedSport(m.league), all = bySport[sk] || [], mr = mir[sk] || [];
+        if(!all.length && !mr.length) return;          /* ленты нет совсем — ничего не трогаем */
+        var found = (all.length && fsLookup(m, all)) || (mr.length && fsLookup(m, mr)) || null;
         var tt2 = found ? fsFmtTime(found.ts) : "";
-        if(tt2){ m.time = tt2; changed = true; }
+        if(tt2){ if(m.time !== tt2) changed = true; m.time = tt2; m.fsV = FS_MV; }
+        else if(m.time && m.fsV !== FS_MV){ m.time = ""; m.fsV = FS_MV; changed = true; }   /* старое время было от чужого матча */
       });
       if(changed){ save(); render(); }
     }).catch(function(){});
@@ -8145,19 +8210,22 @@
      (он отдаёт только сегодня и завтра, поэтому вчерашние матчи дозаполнятся, пока они в фиде) */
   function attachPrevTimes(){
     var p = state.prev;
-    if(!p || typeof fetch !== "function" || p.matches.every(function(m){ return m.time; })) return;
+    if(!p || typeof fetch !== "function" || !p.matches.some(fsTimeStale)) return;
     var sports = {};
-    p.matches.forEach(function(m){ if(!m.time) sports[fsFeedSport(m.league)] = true; });
+    p.matches.forEach(function(m){ if(fsTimeStale(m)) sports[fsFeedSport(m.league)] = true; });
     var keys = Object.keys(sports);
-    Promise.all(keys.map(function(k){ return Promise.all([fsLoadDay(k, 0), fsLoadDay(k, 1)]); })).then(function(rs){
+    Promise.all(keys.map(function(k){ return Promise.all([fsLoadDay(k, 0), fsLoadDay(k, 1), fsDrawMirror(k)]); })).then(function(rs){
       if(state.prev !== p) return;
-      var by = {}, changed = false;
-      keys.forEach(function(k, i){ by[k] = rs[i][0].concat(rs[i][1]); });
+      var by = {}, mir = {}, changed = false;
+      keys.forEach(function(k, i){ by[k] = rs[i][0].concat(rs[i][1]); mir[k] = rs[i][2] || []; });
       p.matches.forEach(function(m){
-        if(m.time) return;
-        var f = fsLookup(m, by[fsFeedSport(m.league)] || []);
+        if(!fsTimeStale(m)) return;
+        var sk = fsFeedSport(m.league), all = by[sk] || [], mr = mir[sk] || [];
+        if(!all.length && !mr.length) return;
+        var f = (all.length && fsLookup(m, all)) || (mr.length && fsLookup(m, mr)) || null;
         var t = f ? fsFmtTime(f.ts) : "";
-        if(t){ m.time = t; changed = true; }
+        if(t){ if(m.time !== t) changed = true; m.time = t; m.fsV = FS_MV; }
+        else if(m.time && m.fsV !== FS_MV){ m.time = ""; m.fsV = FS_MV; changed = true; }
       });
       if(changed){ save(); if(state.viewPrev) render(); }
     }).catch(function(){});

@@ -66,8 +66,13 @@ def norm_tokens(name):
     return {w for w in t.split() if len(w) >= 4 and not w.isdigit()}
 
 
+DRAW_REG = set()   # страны и континенты турниров тиража: «марокко», «азия», «европа»
+
+
 def draw_tokens():
-    """Слова из названий команд актуального и прошлого тиража — по ним отбираем матчи из ленты."""
+    """Слова из названий команд актуального и прошлого тиража — по ним отбираем матчи из ленты.
+    Заодно запоминаем страны турниров (DRAW_REG): команда на Flashscore может называться совсем
+    иначе («Иттихад Танжер» — «ИР Анже»), поэтому все матчи турнира этой страны тоже берём."""
     toks = set()
     try:
         import json
@@ -81,6 +86,9 @@ def draw_tokens():
             for e in (info.get("data", info).get("events") or []):
                 for side in re.split(r"\s+[—–-]\s+", e.get("name", "")):
                     toks |= norm_tokens(side)
+                c = str(e.get("championship") or "").split(".")[0].strip().lower().replace("ё", "е")
+                if c:
+                    DRAW_REG.add(c)
     except Exception as e:
         print("fslive: тираж не прочитан", e)
     return toks
@@ -99,7 +107,10 @@ def build_draw(text, toks):
             if kv.get("ZY") or kv.get("ZA"):
                 head = "ZY÷%s¬ZA÷%s" % (kv.get("ZY", ""), kv.get("ZA", "")); keep_head = False
             continue
-        if not (norm_tokens(kv.get("AE", "")) & toks or norm_tokens(kv.get("AF", "")) & toks):
+        hz = (head or "").lower().replace("ё", "е")
+        zy = re.search(r"zy÷([^¬]*)", hz); za = re.search(r"za÷([^:¬]*)", hz)
+        reg = (zy.group(1).strip() if zy else "") in DRAW_REG or (za.group(1).strip() if za else "") in DRAW_REG
+        if not (reg or norm_tokens(kv.get("AE", "")) & toks or norm_tokens(kv.get("AF", "")) & toks):
             continue
         out[kv["AA"]] = (head, "¬".join("%s÷%s" % (k, kv[k]) for k in DKEEP if k in kv), int(kv.get("AD") or 0))
     return out
