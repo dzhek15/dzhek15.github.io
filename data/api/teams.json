@@ -282,6 +282,9 @@
 "гент": {
 "f": "hr2efhUH-ETUaLGDL.png"
 },
+"герта": {
+"f": "j1FIuRAN-M145xF2s.png"
+},
 "гимназия мендоса": {
 "f": "0t8y58VH-Uyu9KPIO.png"
 },
@@ -290,6 +293,9 @@
 },
 "греббестад": {
 "f": "ttDGsWlC-ng1fW8Y5.png"
+},
+"гренобль": {
+"f": "vmEDOI6k-Q5NSJFyH.png"
 },
 "гронинген": {
 "f": "AJOIh8jT-Mm3KkBrA.png"
@@ -321,6 +327,9 @@
 "депортес киндио": {
 "f": "hnMl4qS0-Eam1BfjK.png"
 },
+"депортиво ла-корунья": {
+"f": "zgKWiuA6-hlsaa9q3.png"
+},
 "депортиво майпу": {
 "f": "zHqEmw86-YVz5bmme.png"
 },
@@ -332,6 +341,9 @@
 },
 "дерби каунти": {
 "f": "xrSu4XPq-jJPRA9H4.png"
+},
+"дерри сити": {
+"f": "hGznfOlC-KjwWdukB.png"
 },
 "дижон": {
 "f": "IVjOpykC-6qsP6K6r.png"
@@ -347,6 +359,9 @@
 },
 "дордрехт": {
 "f": "jLzHsbCN-GMtbjGer.png"
+},
+"дроэда юнайтед": {
+"f": "0UKbJ3gT-d6RqtYPb.png"
 },
 "дуйсбург": {
 "f": "OM3Hzcne-llQ95ECr.png"
@@ -479,6 +494,9 @@
 "лас-пальмас": {
 "f": "n3rngiU0-d6gaf9ua.png"
 },
+"ле ман": {
+"f": "Gn28qiBN-6eLumV4t.png"
+},
 "леванте": {
 "f": "0dmWDDBN-QqzX7amJ.png"
 },
@@ -583,6 +601,9 @@
 "мотор люблин": {
 "f": "tYLJDqiC-joADG9On.png"
 },
+"нанси": {
+"f": "bwZ427R0-Q15G9lAm.png"
+},
 "наполи": {
 "f": "tSuMfRjT-Stb48WaO.png"
 },
@@ -619,6 +640,9 @@
 "#000000"
 ],
 "id": 457
+},
+"нюрнберг": {
+"f": "YiDhmqT0-ncmj9JbF.png"
 },
 "оксфорд юнайтед": {
 "f": "Ige65FiT-6qsP6K6r.png"
@@ -677,6 +701,9 @@
 "радомяк радом": {
 "f": "xI6zlACN-A9opURNC.png"
 },
+"раннерс": {
+"f": "jo4PkjlC-6aHynWQH.png"
+},
 "расинг кордоба": {
 "f": "OIioRs7k-EmXlTVY2.png"
 },
@@ -728,6 +755,9 @@
 ],
 "id": 73
 },
+"ротор": {
+"f": "2JA8ailC-2DyrOlFn.png"
+},
 "рочдэйл": {
 "c": [
 "#283e9a",
@@ -772,6 +802,9 @@
 "сарыер": {
 "f": "lhDxhGkC-WdqsldXR.png"
 },
+"сассуоло": {
+"f": "QckzxM7k-6wQxUsZL.png"
+},
 "саутгемптон": {
 "f": "2VvVDtSq-raLYxovi.png"
 },
@@ -805,6 +838,9 @@
 },
 "славия прага": {
 "f": "nsu4mohT-8nl9JmVC.png"
+},
+"сочи": {
+"f": "hW5ZOm8k-Srennq2k.png"
 },
 "сошо": {
 "f": "xGAjiOiT-GU4hlIMk.png"
@@ -870,6 +906,9 @@
 "#424042"
 ],
 "id": 16498
+},
+"тулуза": {
+"f": "AskYUH8k-COxgbCEm.png"
 },
 "удинезе": {
 "f": "277EtfPq-SYw7EcY6.png"
@@ -937,6 +976,12 @@
 ],
 "id": 3179
 },
+"фортуна кельн": {
+"f": "dAR8o26k-4vL7JG21.png"
+},
+"фросиноне": {
+"f": "p0q5GtjC-t4GQxEM5.png"
+},
 "фулхэм": {
 "f": "fkbYUWme-ImMEe0UF.png"
 },
@@ -970,6 +1015,9 @@
 },
 "хольштайн киль": {
 "f": "8K98UZoe-EcK7yLm6.png"
+},
+"хорсенс": {
+"f": "x2r8aDjC-hGuhahGg.png"
 },
 "хоффенхайм ii": {
 "f": "b7u4PPQq-rXAAgEQl.png"
@@ -1061,6 +1109,9 @@
 },
 "энвигадо": {
 "f": "461l7eCN-2XZjQRJG.png"
+},
+"энерги коттбус": {
+"f": "CrORMNS0-YaIORIpO.png"
 },
 "эрокспор": {
 "f": "CU5OgwRq-SIclczL4.png"
