@@ -31,6 +31,9 @@
 ],
 "id": 1360
 },
+"акрон": {
+"f": "KMPtnkVH-pKNNHowf.png"
+},
 "аль вакра": {
 "f": "SnuouIkC-Kpjn53r9.png"
 },
@@ -89,6 +92,9 @@
 "атланта": {
 "f": "rVNPCcSq-l42IwVUF.png"
 },
+"атлетик бильбао": {
+"f": "GUtNYAWH-vJb36ZBF.png"
+},
 "атлетик тетуан": {
 "c": [
 "#fe0202",
@@ -111,6 +117,9 @@
 "#482d2e"
 ],
 "id": 3846
+},
+"аугсбург": {
+"f": "Qgbz4piC-Qmnf8wEL.png"
 },
 "ахмат": {
 "f": "S2sd8fXH-pGHenz7m.png"
@@ -245,6 +254,9 @@
 "вест бромвич альбион": {
 "f": "QsGXnZjC-ImMEe0UF.png"
 },
+"вест хэм": {
+"f": "YeSfKGlC-Q9DJHs4l.png"
+},
 "видад темара": {
 "f": "CC9Gx2lC-Gtyfdpte.png"
 },
@@ -297,6 +309,9 @@
 "гренобль": {
 "f": "vmEDOI6k-Q5NSJFyH.png"
 },
+"гринок мортон": {
+"f": "S0UAmH96-bDGTe4kB.png"
+},
 "гронинген": {
 "f": "AJOIh8jT-Mm3KkBrA.png"
 },
@@ -310,12 +325,18 @@
 ],
 "id": 3969
 },
+"данди юнайтед": {
+"f": "GGwsSEA6-hEvkcVY1.png"
+},
 "дандолк": {
 "c": [
 "#201d1b",
 "#cf1f19"
 ],
 "id": 584
+},
+"данфермлайн": {
+"f": "lxxL3zhT-vZ6gsKf8.png"
 },
 "де графсхап": {
 "c": [
@@ -347,6 +368,9 @@
 },
 "дижон": {
 "f": "IVjOpykC-6qsP6K6r.png"
+},
+"динамо махачкала": {
+"f": "02C3UMA6-ddrVAaIL.png"
 },
 "динамо минск": {
 "f": "Q5LavxT0-nexJVvF1.png"
@@ -430,6 +454,9 @@
 ],
 "id": 11328
 },
+"килмарнок": {
+"f": "6HG2JU96-xAfKntqE.png"
+},
 "клуб регатас бразил": {
 "f": "8biwxljT-6oItt2Br.png"
 },
@@ -478,6 +505,9 @@
 ],
 "id": 1363
 },
+"куинс парк": {
+"f": "6VPH0H86-b3iJIZkd.png"
+},
 "куяба": {
 "f": "UudlC76k-CWl52SGk.png"
 },
@@ -516,11 +546,17 @@
 "ливерпуль": {
 "f": "nBClzyne-KCp4zq5F.png"
 },
+"ливингстон": {
+"f": "MFFXzn6k-2DP8WX23.png"
+},
 "лиллестрем": {
 "f": "rqNEwqQq-zTAC7Vhk.png"
 },
 "лион": {
 "f": "bkuX6RS0-GU4hlIMk.png"
+},
+"локомотив москва": {
+"f": "8SEEGmDN-MZsLC2vU.png"
 },
 "локомотив ярославль": {
 "f": "d2XBiSjC-bcMBxKZi.png"
@@ -597,6 +633,9 @@
 },
 "морейренсе": {
 "f": "4rouTHVH-xjC3FA5b.png"
+},
+"мотервелл": {
+"f": "nLYJxcCN-xGFNNID8.png"
 },
 "мотор люблин": {
 "f": "tYLJDqiC-joADG9On.png"
@@ -823,6 +862,9 @@
 },
 "сельта": {
 "f": "INW8oRBN-SOY3p1Si.png"
+},
+"сент-джонстон": {
+"f": "2y2OuRlC-t8MCLngT.png"
 },
 "сент-жиллуаз": {
 "f": "fkZqVUUH-KrZtIamS.png"
@@ -1052,6 +1094,9 @@
 },
 "шабаб аль-ордон": {
 "f": "vq5lx3Qq-dvq5wjeM.png"
+},
+"шальке 04": {
+"f": "jy0u6bgT-I7p2Damb.png"
 },
 "шаморин": {
 "f": "2mO4H05k-xtVmNEr4.png"
