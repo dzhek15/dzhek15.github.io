@@ -27,6 +27,8 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
 
       - name: Цикл снятия данных
+        env:
+          AI_RUN_TOKEN: ${{ secrets.AI_RUN_TOKEN }}
         run: |
           git config user.name "feed-mirror"
           git config user.email "feed-mirror@users.noreply.github.com"
@@ -55,6 +57,8 @@ jobs:
             if [ $((n % 5)) -eq 0 ]; then
               # раз в 5 минут: полный снимок (с файлами тиража), время снимка обновляется всегда
               FSLIVE_FORCE=1 python3 scripts/fslive.py || true
+              # автозапуск разбора ИИ: расписание GitHub в закрытом репозитории опаздывает на часы
+              python3 scripts/ai_kick.py || true
               if [ $((n % 30)) -eq 0 ]; then
                 kind="feed"
                 python3 scripts/feed.py || true

@@ -1,6 +1,6 @@
 {
   "name": "dzhek15-android",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "scripts": {"prepare:web": "node prepare-web.mjs"},
   "dependencies": {"@capacitor/core": "8.0.0", "@capacitor/android": "8.0.0"},

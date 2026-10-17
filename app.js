@@ -2646,7 +2646,7 @@
     return (j && String(j.number) === String(state.tirazh) && j.m && j.m[idx]) || null;
   }
   /* оформление текста разбора: счета, даты, очки, цитаты, роли в скобках */
-  var AI_SEC = { "Прошлые игры": "past", "Следующие игры": "next", "Кубок": "cup", "На кону": "stake", "Составы и отсутствующие": "lineup", "Тренеры и настроение": "coach", "Неочевидная деталь": "hid", "Неочевидные детали, наблюдения": "hid" };
+  var AI_SEC = { "Прошлые игры": "past", "Следующие игры": "next", "Кубок": "cup", "На кону": "stake", "Составы и отсутствующие": "lineup", "Тренеры и настроение": "coach", "Прогнозы людей (Betzona)": "bz", "Неочевидная деталь": "hid", "Неочевидные детали, наблюдения": "hid" };
   function aiBlkKind(h){
     h = String(h || "");
     return (h.indexOf("решает") >= 0 || h === "Факты") ? "main" : h.indexOf("Цена") >= 0 ? "risk" : h.indexOf("Человеческий") >= 0 ? "human" : "other";
@@ -2682,7 +2682,7 @@
     return a + b + '<p class="ai-cal-lg"><span class="ai-st">Красный</span> соперник сильнее или выше в таблице, <span class="ai-wk">зелёный</span> слабее или ниже, без цвета класс не определён. <span class="ai-euk">Синим</span> выделены еврокубки. Название команды стоит слева от тире в домашней игре и справа в гостевой.</p>';
   }
   function aiPara(x, r){
-    var m = /^(Прошлые игры|Следующие игры|Кубок|На кону|Составы и отсутствующие|Тренеры и настроение|Неочевидная деталь|Неочевидные детали, наблюдения):\s*([\s\S]*)$/.exec(x);
+    var m = /^(Прошлые игры|Следующие игры|Кубок|На кону|Составы и отсутствующие|Тренеры и настроение|Прогнозы людей \(Betzona\)|Неочевидная деталь|Неочевидные детали, наблюдения):\s*([\s\S]*)$/.exec(x);
     /* «Прошлые игры» на сайте не показываем: уже сыгранные матчи только мешают читать разбор (решение 09.10.2026) */
     if(m && m[1] === "Прошлые игры") return "";
     if(m && m[1] === "Следующие игры" && r && r.n){
@@ -2693,6 +2693,18 @@
     if(m && m[1] === "Составы и отсутствующие" && r){
       var lu = aiLineup(m[2], r);
       if(lu) return '<div class="ai-sec ai-s-lineup"><span class="ai-lb">Составы и отсутствующие</span>' + lu + '</div>';
+    }
+    if(m && m[1] === "Прогнозы людей (Betzona)"){
+      var it = m[2].split(" • "), src = "", li = [];
+      it.forEach(function(y){
+        var u = /^Источник:\s*(https:\/\/betzona\.ru\/\S+)$/.exec(y.trim());
+        if(u) src = u[1]; else if(y.trim()) li.push(y.trim());
+      });
+      var none = li.length === 1 && /нет прогноза|не ответил/.test(li[0]);
+      return '<div class="ai-sec ai-s-bz"><span class="ai-lb">Прогнозы людей (Betzona)</span>' +
+        (none ? '<p class="ai-bz-none">' + escHtml(li[0].charAt(0).toUpperCase() + li[0].slice(1)) + '</p>' :
+          '<ul class="ai-bz">' + li.map(function(y){ return '<li>' + escHtml(y) + '</li>'; }).join("") + '</ul>') +
+        (src ? '<p class="ai-bz-src"><a href="' + escHtml(src) + '" target="_blank" rel="noopener">Открыть на betzona.ru</a></p>' : '') + '</div>';
     }
     if(m && AI_SEC[m[1]]){
       return '<div class="ai-sec ai-s-' + AI_SEC[m[1]] + '"><span class="ai-lb">' + escHtml(m[1]) + '</span><p>' + aiFmt(escHtml(m[2].charAt(0).toUpperCase() + m[2].slice(1))) + '</p></div>';
@@ -2716,7 +2728,7 @@
   }
   function escRe(x){ return String(x).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
   /* порядок чтения: ставка матча, составы, настроение, кубок, календарь, неочевидное, главное */
-  var AI_ORD = ["На кону", "Составы и отсутствующие", "Тренеры и настроение", "Кубок", "Следующие игры", "Неочевидная деталь", "Неочевидные детали, наблюдения", "Главное"];
+  var AI_ORD = ["На кону", "Составы и отсутствующие", "Тренеры и настроение", "Прогнозы людей (Betzona)", "Кубок", "Следующие игры", "Неочевидная деталь", "Неочевидные детали, наблюдения", "Главное"];
   function aiOrder(ps){
     var rank = function(x){
       var m = /^([^:]{3,40}):/.exec(x), k = m ? AI_ORD.indexOf(m[1]) : -1;
@@ -6849,10 +6861,17 @@
   var AI_WF = "https://api.github.com/repos/dzhek15/dzhek15-ai/actions/workflows/razbor.yml", aiLive = null;
   function aiRunHdr(){ return { Authorization: "Bearer " + ownTok(), Accept: "application/vnd.github+json" }; }
   var AI_NOKEY = "Ключ владельца не пускает к разбору: откройте ключ на GitHub (Settings → Developer settings → Fine-grained tokens), в Repository access добавьте dzhek15-ai, в Permissions → Actions поставьте Read and write и сохраните. Значение ключа не меняется, вводить его заново не нужно.";
+  /* что именно не так с ключом — по ответу GitHub */
+  function aiNoKey(code){
+    var why = code === "401" ? "GitHub не принимает ключ (401): он отозван, просрочен или в этом браузере сохранён другой ключ — введите ключ владельца заново в окне выплат."
+      : code === "404" ? "GitHub не показывает ключу репозиторий dzhek15-ai (404): в настройках ключа, в Repository access, должен быть отмечен dzhek15-ai."
+      : "У ключа нет права на задания (403): в настройках ключа, в Permissions, должно быть «Действия» (Actions) — «Чтение и запись».";
+    return why + " Ключ меняется на github.com/settings/personal-access-tokens → ваш ключ → «Изменить» в разделе доступа → «Обновить». Значение ключа при этом не меняется.";
+  }
   function aiRunStatus(){
     var el = $("aiRunSt"); if(!el) return;
     fetch(AI_WF + "/runs?per_page=1&t=" + Date.now(), { headers: aiRunHdr(), cache: "no-store" })
-      .then(function(r){ if(r.status === 401 || r.status === 403 || r.status === 404) throw new Error("nokey"); if(!r.ok) throw new Error("GitHub ответил " + r.status); return r.json(); })
+      .then(function(r){ if(r.status === 401 || r.status === 403 || r.status === 404) throw new Error("nokey" + r.status); if(!r.ok) throw new Error("GitHub ответил " + r.status); return r.json(); })
       .then(function(j){
         var x = j.workflow_runs && j.workflow_runs[0];
         if(!x){ el.textContent = "Запусков ещё не было."; return; }
@@ -6867,7 +6886,7 @@
         if(stRun && x.status === "completed") el.textContent += " На сайте отмечен идущий разбор с " + fmtStamp(L.as.start, true) + " — запуск откроется, когда он закончится.";
         if(x.status !== "completed") setTimeout(function(){ if($("aiRunSt") && $("evTitle").textContent === "Состояние данных") showData(); }, 30000);
       })
-      .catch(function(e){ el.textContent = e.message === "nokey" ? AI_NOKEY : "Не удалось узнать состояние: " + e.message; });
+      .catch(function(e){ el.textContent = /^nokey/.test(e.message) ? aiNoKey(e.message.slice(5)) : "Не удалось узнать состояние: " + e.message; });
   }
   function aiRunStart(){
     var go = $("aiRunGo"), el = $("aiRunSt");
@@ -6878,9 +6897,9 @@
     if(!confirm(msg)) return;
     go.disabled = true; el.textContent = "Отправляю запуск…";
     fetch(AI_WF + "/dispatches", { method: "POST", headers: aiRunHdr(), body: JSON.stringify({ ref: "main", inputs: { publish: true } }) })
-      .then(function(r){ if(r.status === 401 || r.status === 403 || r.status === 404) throw new Error("nokey"); if(r.status !== 204) throw new Error("GitHub ответил " + r.status); })
+      .then(function(r){ if(r.status === 401 || r.status === 403 || r.status === 404) throw new Error("nokey" + r.status); if(r.status !== 204) throw new Error("GitHub ответил " + r.status); })
       .then(function(){ el.textContent = "Запуск принят, GitHub ставит его в очередь. Через 20 секунд здесь появится состояние."; setTimeout(function(){ aiRunStatus(); if($("evTitle").textContent === "Состояние данных") showData(); }, 20000); })
-      .catch(function(e){ go.disabled = false; el.textContent = e.message === "nokey" ? AI_NOKEY : "Запуск не прошёл: " + e.message; });
+      .catch(function(e){ go.disabled = false; el.textContent = /^nokey/.test(e.message) ? aiNoKey(e.message.slice(5)) : "Запуск не прошёл: " + e.message; });
   }
   function showFeed(){
     var wrap = $("tkFeedWrap");
@@ -7707,8 +7726,10 @@
   /* заголовок блока: у ссылки — сумма, у файла — имя файла и сумма */
   function pcsvHead(){
     var st = pcsv.sets[pcsv.act]; if(!st) return pcsv.name;
-    return st.link ? pcsvLabel(st) : st.name + " · " + pcsvLabel(st);
+    return st.link ? pcsvLabel(st) : pcsvNm(st.name) + " · " + pcsvLabel(st);
   }
+  /* имя файла для показа: без «.csv», подчёркивания — пробелами */
+  function pcsvNm(n){ return String(n || "").replace(/\.csv$/i, "").replace(/_+/g, " ").trim() || "файл"; }
   function pcsvStore(){
     var all = pcsvAll();
     /* храним только строки файла (с допами) — варианты разворачиваются при открытии; удаляются только кнопкой «Убрать» */
@@ -8039,7 +8060,7 @@
         if(mv && Date.now() - mv.at < 90000) tr = '<u class="' + (mv.d > 0 ? "up" : "dn") + '">' + (mv.d > 0 ? "▲" : "▼") + Math.abs(mv.d) + '</u>';
         h += '<button type="button" role="tab" class="pc-rk' + (q.out ? " out" : "") + (q.i === pcsv.act ? " on" : "") + (k < 3 && pe ? " m" + (k + 1) : "") + '" data-t="' + q.i + '" data-id="' + q.i + '" aria-pressed="' + (q.i === pcsv.act) + '" title="' + escHtml(st.link ? "Ссылка · " + pcsvLabel(st) : st.name) + ' · ' + fmt(st.rows.length) + ' вар.">' +
           '<span class="rk-p"><b>' + (k + 1) + '</b>' + tr + '</span>' +
-          '<span class="rk-n"><b>' + escHtml(pcsvLabel(st)) + '</b><small>' + (q.out ? '<span class="rk-x" title="Набор выбыл: ни один вариант уже не наберёт ' + PAY + '+">\u00d7</span> ' : '') + (st.virt ? '<em class="rk-ai rk-hunt">Охота</em>' + RK_VT : st.ai ? '<em class="rk-ai">ИИ</em>' + RK_VT : st.link ? "" : escHtml(st.name) + " · ") + '<span class="rk-cnt">' + fmt(st.rows.length) + ' вар.</span></small></span>' +
+          '<span class="rk-n"><b>' + escHtml(pcsvLabel(st)) + '</b>' + (st.link || st.virt || st.ai ? '' : '<span class="rk-fn">' + escHtml(pcsvNm(st.name)) + '</span>') + '<small>' + (q.out ? '<span class="rk-x" title="Набор выбыл: ни один вариант уже не наберёт ' + PAY + '+">\u00d7</span> ' : '') + (st.virt ? '<em class="rk-ai rk-hunt">Охота</em>' + RK_VT : st.ai ? '<em class="rk-ai">ИИ</em>' + RK_VT : "") + '<span class="rk-cnt">' + fmt(st.rows.length) + ' вар.</span></small></span>' +
           '<span class="rk-v">' + (pe ? '<i class="cn" data-k="' + q.i + 'b">' + q.b + '</i><small> из ' + pe + '</small>' : '—') + '</span>' +
           '<span class="rk-v' + (q.w ? " ok" : "") + '"><i class="cn" data-k="' + q.i + 'w">' + fmt(q.w) + '</i></span><span class="rk-v"><i class="cn" data-k="' + q.i + 'a">' + fmt(q.a) + '</i></span>' +
           '<span class="rk-bar" data-w="' + (n ? Math.round(q.b / n * 100) : 0) + '" data-pay="' + (n ? Math.round(PAY / n * 100) : 60) + '"><i></i><u></u></span></button>';

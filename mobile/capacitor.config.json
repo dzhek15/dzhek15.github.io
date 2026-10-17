@@ -2,5 +2,6 @@
   "appId": "io.github.dzhek15.app",
   "appName": "ДЖЕК 15",
   "webDir": "www",
+  "server": {"url": "https://dzhek15.github.io/", "cleartext": false},
   "android": {"allowMixedContent": false}
 }
