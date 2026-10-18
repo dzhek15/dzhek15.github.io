@@ -2,6 +2,9 @@
 "абу каир семад": {
 "f": "QR8L3SPq-Mspxaqeq.png"
 },
+"абха": {
+"f": "Es2EU686-E9j3kB6r.png"
+},
 "аваи": {
 "c": [
 "#036a9c",
@@ -45,6 +48,9 @@
 },
 "аль талаба": {
 "f": "bay8sT96-2g5GC7oP.png"
+},
+"аль хулуд": {
+"f": "WM6Wtcme-4hpwfka3.png"
 },
 "аль шорта багдад": {
 "f": "MqYZZSlC-WnGqjgF8.png"
@@ -145,6 +151,9 @@
 "бедфорд таун": {
 "f": "xWM4CmRq-2eETkRai.png"
 },
+"бейтар иерусалим": {
+"f": "Q3L4JfQq-llM9Ws6j.png"
+},
 "белграно": {
 "f": "htqgPrT0-jXvNrLYt.png"
 },
@@ -156,6 +165,9 @@
 },
 "бетис": {
 "f": "YV7lpDU0-zkU5wiAr.png"
+},
+"бешикташ": {
+"f": "vPefzDlC-OnrtpsZ9.png"
 },
 "блэкберн роверс": {
 "f": "AHfWnRCN-ImMEe0UF.png"
@@ -272,6 +284,9 @@
 "вест хэм": {
 "f": "YeSfKGlC-Q9DJHs4l.png"
 },
+"виборг": {
+"f": "UeRHp07k-fevSzE3L.png"
+},
 "видад темара": {
 "f": "CC9Gx2lC-Gtyfdpte.png"
 },
@@ -366,6 +381,9 @@
 ],
 "id": 199
 },
+"дегерфорс": {
+"f": "ILVN6RhT-byiRP7dH.png"
+},
 "депортес киндио": {
 "f": "hnMl4qS0-Eam1BfjK.png"
 },
@@ -458,6 +476,12 @@
 "кайсериспор": {
 "f": "UVNRzET0-Y99esCPN.png"
 },
+"кальмар": {
+"f": "jied0PBN-CSvriyX1.png"
+},
+"кальяри": {
+"f": "tSQII3hT-McvX4bye.png"
+},
 "кан": {
 "c": [
 "#26355e",
@@ -477,6 +501,9 @@
 "#528161"
 ],
 "id": 11328
+},
+"кечиоренгюджю": {
+"f": "QkiiiG8k-WnYupC54.png"
 },
 "килмарнок": {
 "f": "6HG2JU96-xAfKntqE.png"
@@ -613,6 +640,9 @@
 "майнц": {
 "f": "tbR3gUTH-EoYxhN5r.png"
 },
+"маккаби тель-авив": {
+"f": "vifKdrkC-EgfVDm2G.png"
+},
 "маклсфилд таун": {
 "f": "YNfQpCiT-rZPjZPfl.png"
 },
@@ -646,6 +676,9 @@
 "мидлсбро": {
 "f": "p6waIw86-MgUZUr6h.png"
 },
+"мидтьюлланд": {
+"f": "QP9aS1AN-SMam5gj4.png"
+},
 "миллуолл": {
 "f": "KE2n7iVH-prpZfVqU.png"
 },
@@ -658,11 +691,17 @@
 "монако": {
 "f": "n3jLkyne-0SFGJsPk.png"
 },
+"монпелье": {
+"f": "ANGNZlQq-n3xBmVJB.png"
+},
 "монтевидео сити торке": {
 "f": "YD3L0x6k-hOX9sHW0.png"
 },
 "монтевидео уондерерс": {
 "f": "GxuaZV9N-zFwegNb8.png"
+},
+"монца": {
+"f": "Mk897YAN-8zvPU7k3.png"
 },
 "морейренсе": {
 "f": "4rouTHVH-xjC3FA5b.png"
@@ -672,6 +711,9 @@
 },
 "мотор люблин": {
 "f": "tYLJDqiC-joADG9On.png"
+},
+"мугласпор": {
+"f": "U9oZvNT0-Ukh5nnRo.png"
 },
 "нанси": {
 "f": "bwZ427R0-Q15G9lAm.png"
@@ -737,6 +779,9 @@
 "операрио пр": {
 "f": "p0AtzGQq-vm8qH06L.png"
 },
+"оренбург": {
+"f": "ncqbSJUH-2aQho05a.png"
+},
 "орсомарсо": {
 "f": "nJOU79BN-OQvTHdKn.png"
 },
@@ -745,6 +790,9 @@
 },
 "париж": {
 "f": "S85qoCiT-AelKXger.png"
+},
+"парма": {
+"f": "WI9nVggT-fydXzLY6.png"
 },
 "петровац": {
 "f": "UFVX1R86-ABpmWgn7.png"
@@ -778,6 +826,9 @@
 },
 "радомяк радом": {
 "f": "xI6zlACN-A9opURNC.png"
+},
+"райо вальекано": {
+"f": "QyKcNfhT-EPWyZtpb.png"
 },
 "раннерс": {
 "f": "jo4PkjlC-6aHynWQH.png"
@@ -825,6 +876,12 @@
 },
 "риу аве": {
 "f": "06rYX486-pjxqSmk4.png"
+},
+"родез": {
+"f": "GAe6vS7k-lrqg4wyC.png"
+},
+"родина": {
+"f": "GUISmY76-Cn9ZORqk.png"
 },
 "рома": {
 "f": "j31Z1pne-GtNb9h2q.png"
@@ -905,6 +962,9 @@
 "сельта": {
 "f": "INW8oRBN-SOY3p1Si.png"
 },
+"сельта б": {
+"f": "OYnX3M6k-xd1MqkTp.png"
+},
 "сент-джонстон": {
 "f": "2y2OuRlC-t8MCLngT.png"
 },
@@ -922,6 +982,9 @@
 },
 "славия прага": {
 "f": "nsu4mohT-8nl9JmVC.png"
+},
+"смуха": {
+"f": "6DEg1o86-Y1Z3w2bI.png"
 },
 "сочи": {
 "f": "hW5ZOm8k-Srennq2k.png"
@@ -981,6 +1044,9 @@
 "торренше(23)": {
 "f": "KOKwWI76-rHbwrlwa.png"
 },
+"трабзонспор": {
+"f": "2sVavKoe-6otfaYAk.png"
+},
 "тренто": {
 "f": "fizrpR5k-l4rv6VQk.png"
 },
@@ -1036,6 +1102,9 @@
 },
 "усм алжир": {
 "f": "Qsg1H1jC-dYgRyyJN.png"
+},
+"фатих карагюмрюк": {
+"f": "236tUEA6-dhK4x4oH.png"
 },
 "фейеноорд": {
 "f": "Ag6J0jT0-Wz6bfhxO.png"
