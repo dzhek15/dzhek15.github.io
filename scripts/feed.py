@@ -70,8 +70,8 @@ def rd(name, default):
 
 
 def wr(name, obj):
-    os.makedirs(OUT, exist_ok=True)
     p = os.path.join(OUT, name)
+    os.makedirs(os.path.dirname(p), exist_ok=True)
     new = json.dumps(obj, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
     old = None
     if os.path.exists(p):
@@ -116,6 +116,51 @@ def snap_totobrief():
         except Exception as e:
             log("drawing-info", r.get("id"), "не снялся:", e)
     return pages, infos
+
+
+# ---------------------------------------------------------------- Фонбет
+FON_DIR = "fon"      # зеркало Фонбета отдельно: data/api/fon/drawings-N.json, drawing-info-ID.json
+FON_PAGES = 2        # страниц списка для сайта (100 тиражей)
+FON_KEEP = 6         # drawing-info: открытые + последние завершённые
+
+
+def snap_fonbet():
+    """Снимок тиражей Фонбета (totobrief, лента fonbet-main). Возвращает число изменённых файлов.
+    Ничего не трогает в зеркале Балтбета; сбой не мешает остальному."""
+    try:
+        pages = []
+        for p in range(1, FON_PAGES + 1):
+            j = jget(TB + "fonbet-main/drawings?page=%d" % p)
+            pages.append(j)
+            if not (j or {}).get("data"):
+                break
+        rows = (pages[0] or {}).get("data") or []
+        if not rows:
+            raise RuntimeError("пустой список тиражей Фонбета")
+        want = [r for r in rows if r.get("status") != "finished"]
+        want += [r for r in rows if r.get("status") == "finished"][: max(2, FON_KEEP - len(want))]
+        infos = {}
+        for r in want:
+            try:
+                infos[str(r["id"])] = jget(TB + "drawing-info/%s" % r["id"])
+            except Exception as e:
+                log("Фонбет: drawing-info", r.get("id"), "не снялся:", e)
+        changed = 0
+        for i, pg in enumerate(pages):
+            changed += wr("%s/drawings-%d.json" % (FON_DIR, i + 1), pg)
+        for k, v in infos.items():
+            changed += wr("%s/drawing-info-%s.json" % (FON_DIR, k), v)
+        d = os.path.join(OUT, FON_DIR)
+        for fn in os.listdir(d):
+            m = re.match(r"drawing-info-([\w-]+)\.json$", fn)
+            if m and m.group(1) not in infos:
+                os.remove(os.path.join(d, fn))
+                changed += 1
+        log("Фонбет: %d страниц, %d drawing-info, изменено %d" % (len(pages), len(infos), changed))
+        return changed
+    except Exception as e:
+        log("Фонбет недоступен:", repr(e))
+        return 0
 
 
 # ---------------------------------------------------------------- stavka.tv
@@ -779,6 +824,7 @@ def main():
             removed = True
 
     changed = (1 if removed else 0) + (1 if hist_changed else 0)
+    changed += snap_fonbet()
     try:
         changed += update_news(infos)
     except Exception as e:

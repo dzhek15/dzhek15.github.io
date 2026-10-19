@@ -2,7 +2,46 @@
   "use strict";
   var C = window.CONFIG;
   var OUT = C.OUT;
-  var KEY = C.STORAGE_KEY;
+  /* ---------- букмекер: Балтбет или Фонбет ----------
+     Выбор хранится в браузере; ?bk=fonbet / ?bk=baltbet в адресе — переключить сразу.
+     У Фонбета своя лента totobrief, своё зеркало (fon-…) и своё хранилище купонов (…-fon). */
+  var BKID = "baltbet";
+  try{
+    var bkQ = /[?&]bk=(baltbet|fonbet)\b/.exec(location.search);
+    if(bkQ){ BKID = bkQ[1]; localStorage.setItem(C.BOOK_KEY, BKID); }
+    else if(localStorage.getItem(C.BOOK_KEY) === "fonbet") BKID = "fonbet";
+  }catch(e){}
+  var BK = C.BOOKS[BKID], FON = BKID === "fonbet";
+  var BKL = BK.slug + "/drawings?page=";
+  if(BK.share) C.EV_SHARE = BK.share;
+  if(FON){ C.EV_JACK14 = 0; C.EV_JACK15 = 1; }
+  document.documentElement.setAttribute("data-bk", BKID);
+  /* переключатель на обложке: запоминаем выбор и перезагружаем страницу — у Фонбета свои тиражи и купоны */
+  function bkSwInit(){
+    var sw = document.getElementById("bkSw");
+    if(!sw) return;
+    [].slice.call(sw.querySelectorAll("button[data-bk]")).forEach(function(b){
+      var on = b.getAttribute("data-bk") === BKID;
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+      b.addEventListener("click", function(){
+        var to = b.getAttribute("data-bk");
+        if(to === BKID) return;
+        try{ localStorage.setItem(C.BOOK_KEY, to); }catch(e){}
+        var u = location.pathname + location.search.replace(/([?&])bk=\w+&?/, "$1").replace(/[?&]$/, "") + location.hash;
+        location.replace(u);
+      });
+    });
+    /* у Фонбета разбора ИИ нет: панель над таблицей просмотра — просто «Матчи тиража» */
+    if(FON){
+      var bar = document.getElementById("aiTblBar"), bt = bar && bar.querySelector(".aitbl-t");
+      if(bt) bt.textContent = "Матчи тиража";
+      [].slice.call(bar ? bar.querySelectorAll(".aitbl-v, .aitbl-s") : []).forEach(function(x){ x.hidden = true; x.style.display = "none"; });
+    }
+    var bf = document.getElementById("btnFetch");
+    if(bf) bf.title = "Забрать актуальный тираж " + BK.title + "а с totobrief";
+  }
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", bkSwInit); else bkSwInit();
+  var KEY = C.STORAGE_KEY + BK.sfx;
   var MAX_CSV = C.MAX_CSV;
   var book = null;          /* открытый CSV: {name, rows:[["1","X",...]], idx} — только в памяти вкладки */
   var ZMIN = C.ZOOM_MIN, ZMAX = C.ZOOM_MAX, ZSTEP = C.ZOOM_STEP;
@@ -54,7 +93,7 @@
   function seedState(){
     return {
       tirazh: "5006",
-      price: 30,
+      price: BK.price,
       target: 0,
       rolls: 0,
       deadline: "",
@@ -109,7 +148,7 @@
   state.zoom = Math.round(Math.max(ZMIN, Math.min(ZMAX, state.zoom)) * 100) / 100;
   state.target = Number(state.target);
   if(!isFinite(state.target) || state.target < 0) state.target = 0;
-  state.price = Number(state.price); if(!isFinite(state.price) || state.price <= 0) state.price = 30;
+  state.price = Number(state.price); if(!isFinite(state.price) || state.price <= 0) state.price = BK.price;
   state.rolls = Number(state.rolls); if(!isFinite(state.rolls) || state.rolls < 0) state.rolls = 0;
   state.spent = Number(state.spent); if(!isFinite(state.spent) || state.spent < 0) state.spent = 0;
   state.spins = Math.floor(Number(state.spins)); if(!isFinite(state.spins) || state.spins < 1) state.spins = 1;
@@ -139,7 +178,7 @@
      Корзину храним как список id вариантов + общий словарь самих вариантов (не копии целиком).
      Стопка живёт до 300 шагов, последние 25 переживают перезагрузку страницы. */
   var UJ = { back: [], fwd: [], ent: {}, last: null, lastFp: "", busy: false, q: false, pt: 0, n: 0, gKey: "", gAt: 0, silent: false, MAX: 300, KEEP: 25 };
-  var UJ_KEY = "dzhek-undo1";
+  var UJ_KEY = "dzhek-undo1" + BK.sfx;
   function ujNewId(){ UJ.n++; return "e" + Date.now().toString(36) + UJ.n.toString(36) + Math.floor(Math.random() * 1296).toString(36); }
   function ujTime(){ return new Date().toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" }); }
   function ujId(){ return state.matches.map(function(m){ return (m.id || "") + "|" + m.home + "|" + m.away; }).join("~"); }
@@ -335,11 +374,14 @@
 
   /* Момент первого матча тиража в московском времени, независимо от часового пояса зрителя.
      Дата в строках вида «13.09», время «16:30». МСК = UTC+3. */
-  /* «2026-09-14T20:00:00Z» у totobrief — это московское время, а не UTC */
+  /* «2026-09-14T20:00:00Z» у totobrief для Балтбета — это московское время, а не UTC.
+     У Фонбета время настоящее UTC: ended_at совпадает с start_at первого матча, а start_at
+     сходится с Flashscore только как UTC («Родина — Оренбург» 16:30 = 19:30 МСК). */
+  var TB_OFS = FON ? 0 : 3;
   function mskIso(iso){
     var m = String(iso || "").match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
     if(!m) return null;
-    return Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4] - 3, +m[5]);
+    return Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4] - TB_OFS, +m[5]);
   }
 
   function kickoffMs(){
@@ -1101,7 +1143,7 @@
       $("evBack").hidden = false;
       return;
     }
-    var price = Number(state.price) || 30;
+    var price = Number(state.price) || BK.price;
     var poolNow = Number(state.poolSum) || 0;
     var typical = Number(state.poolTypical) || 0;
     /* приём ещё идёт — выплаты будут из ИТОГОВОГО фонда, а не из того, что собрано сейчас */
@@ -1245,7 +1287,7 @@
       $("evBack").hidden = false;
       return;
     }
-    var price = Number(state.price) || 30;
+    var price = Number(state.price) || BK.price;
     var poolNow = Number(state.poolSum) || 0;
     var typical = Number(state.poolTypical) || 0;
     var projected = (typical && poolNow < typical * 0.6);
@@ -1614,6 +1656,7 @@
      с линией конторы, долями пула и итогом. Отсюда — история команды по клику на название. */
   var hist = { ev: [], at: 0, loading: false, count: 0 };
   function loadHist(){
+    if(FON) return;   /* history.json — тиражи Балтбета */
     if(hist.loading || typeof fetch !== "function") return;
     if(hist.at && Date.now() - hist.at < 6 * 3600 * 1000) return;
     hist.loading = true;
@@ -2162,6 +2205,7 @@
   var SRC_TB = 1, SRC_MIR = 2, SRC_FEED = 3, SRC_NAME = { 1: "totobrief", 2: "снимок", 3: "лента" };
   function scPair(x){ var r = /(\d+)\D+(\d+)/.exec(x || ""); return r ? [+r[1], +r[2]] : null; }
   function mergeScore(m, sc){
+    if(FON && m.resFs && !sc) return;   /* у Фонбета totobrief счёта не даёт — не стираем счёт из Flashscore */
     noteScore(m, sc, SRC_TB, Date.now());
     if(m.res){ delete m.fsAt; delete m.fsPh; }
   }
@@ -2416,6 +2460,12 @@
         m.fsAt = mir ? grp.ts : Date.now(); m.fsMir = mir;
         if(f.st === "3"){
           if(!m.fsEnd){ m.fsEnd = m.fsAt; changed = true; }
+          /* Фонбет: итогов у totobrief нет — исход берём по финальному счёту Flashscore (основное время, код «3») */
+          if(FON && !m.res){
+            var h9 = +f.hs, a9 = +f.as;
+            m.res = h9 > a9 ? "1" : (h9 < a9 ? "2" : "X"); m.resFs = 1; m.score = sc; changed = true;
+            dbgLog("score", dbgTag(m) + ": итог по Flashscore " + sc + " → " + m.res);
+          }
           if(!mir && noteScore(m, sc, SRC_FEED, Date.now())) changed = true;
           return;
         }
@@ -2626,6 +2676,7 @@
      чтобы правки разбора были видны сразу, а не через полчаса */
   function aiSig(j){ return j ? String(j.number) + "|" + (j.at || "") + "|" + JSON.stringify(j.m || []).length : ""; }
   function loadAi(fresh){
+    if(FON) return Promise.resolve(null);   /* разбор ИИ пока делается только для Балтбета */
     if(ai.data && Date.now() - ai.at < (fresh ? 60000 : 30 * 60000)) return Promise.resolve(ai.data);
     if(ai.loading) return ai.loading;
     if(typeof fetch !== "function") return Promise.resolve(null);
@@ -2842,17 +2893,18 @@
      Стратегии считаются тем же кодом, что и в купоне, по линии и долям на закрытие
      тиража. Посчитанное хранится в браузере, так что таблица не теряет тиражи,
      которые уже ушли из ленты. */
-  var ACC_KEY = "dzhek-acc", ACC_N = 10;
+  var ACC_KEY = "dzhek-acc" + BK.sfx, ACC_N = 10;
   function accRead(){ try { return JSON.parse(localStorage.getItem(ACC_KEY)) || {}; } catch(e){ return {}; } }
   function accWrite(o){ try { localStorage.setItem(ACC_KEY, JSON.stringify(o)); } catch(e){} }
   /* ---------- выплаты тиражей: коэффициенты БалтБета за 9…15 угаданных ----------
      Выплата строки с k угаданными = цена строки × (K9 + K10 + … + Kk).
      Свои загрузки хранятся в браузере и перекрывают общий архив data/api/payouts.json. */
-  var PAY_KEY = "dzhek-pay", PAY_KS = [15, 14, 13, 12, 11, 10, 9], payShared = null;
+  var PAY_KEY = "dzhek-pay" + BK.sfx, PAY_KS = [15, 14, 13, 12, 11, 10, 9], payShared = null;
   function payRead(){ try { return JSON.parse(localStorage.getItem(PAY_KEY)) || {}; } catch(e){ return {}; } }
   function payWrite(o){ try { localStorage.setItem(PAY_KEY, JSON.stringify(o)); } catch(e){} }
   var payAt = 0;
   function payLoadShared(){
+    if(FON){ payShared = payShared || {}; return Promise.resolve(payShared); }   /* общий архив выплат — только Балтбет */
     if(payShared && Date.now() - payAt < 30000) return Promise.resolve(payShared);   /* приложение на телефоне живёт часами — перечитываем архив */
     payAt = Date.now();
     return fetch(MIRROR + "payouts.json?t=" + Date.now(), {cache: "no-store"})
@@ -3014,7 +3066,7 @@
   function payScores(t){ var a = [], m, re = /(?:^|[^\d:])(\d)\s*:\s*(\d)(?![\d:])/g; while((m = re.exec(t))) a.push(m[1] + ":" + m[2]); return a; }
   function payIdentify(text, nums){
     var sc = payScores(text); if(sc.length < 8) return Promise.resolve(null);
-    return apiFetch("baltbet-main/drawings?page=1").then(function(r){ return r.ok ? r.json() : null; }).then(function(j){
+    return apiFetch(BKL + "1").then(function(r){ return r.ok ? r.json() : null; }).then(function(j){
       var rows = ((j && j.data) || []).filter(function(d){ return nums.indexOf(Number(d.number)) >= 0; });
       return Promise.all(rows.map(function(d){
         return apiFetch("drawing-info/" + d.id).then(function(r){ return r.ok ? r.json() : null; }).then(function(j2){
@@ -3217,7 +3269,7 @@
     var aiH = fetch(MIRROR + "ai_hist.json?t=" + Date.now(), {cache: "no-store"})
       .then(function(r){ return r.ok ? r.json() : {}; }).catch(function(){ return {}; });
     /* итоги — по всем тиражам с загруженными выплатами; без выплат — только последние ACC_N */
-    var draws = Promise.all([apiFetch("baltbet-main/drawings?page=1").then(function(r){ return r.ok ? r.json() : null; }), payLoadShared()])
+    var draws = Promise.all([apiFetch(BKL + "1").then(function(r){ return r.ok ? r.json() : null; }), payLoadShared()])
       .then(function(rr){ var j = rr[0];
         /* «expected» — матчи сыграны, оператор ещё не закрыл тираж: берём, если известны все итоги */
         var rows = ((j && j.data) || []).filter(function(d){ return d.status === "finished" || d.status === "expected"; })
@@ -3263,7 +3315,7 @@
       var D = {};
       nums.forEach(function(n){
         var d = store[n], sc = {}, PK = payFor(n);
-        var price = Number(d.price) > 0 ? Number(d.price) : 30;    /* цена строки на тот тираж, не сегодняшняя */
+        var price = Number(d.price) > 0 ? Number(d.price) : BK.price;    /* цена строки на тот тираж, не сегодняшняя */
         if(PK) paidN++;
         var row = { price: price, PK: PK, s: {}, unpub: !!(vdata[String(n)] && vdata[String(n)].unpub) };
         cols.forEach(function(c){
@@ -3683,6 +3735,7 @@
      в просмотре идут в рейтинг с пометкой «виртуальный» — на деньги не ставятся, нужны для отслеживания */
   var virt = { data: null, at: 0, loading: null };
   function loadVirt(fresh){
+    if(FON) return Promise.resolve(null);
     if(virt.data && Date.now() - virt.at < (fresh ? 60000 : 10 * 60000)) return Promise.resolve(virt.data);
     if(virt.loading) return virt.loading;
     if(typeof fetch !== "function") return Promise.resolve(null);
@@ -3695,6 +3748,7 @@
   /* обучение «Охота · с ИИ»: та же Охота, вероятности поправлены выводами разбора ИИ (virt_ai.json) */
   var virtAi = { data: null, at: 0, loading: null };
   function loadVirtAi(){
+    if(FON) return Promise.resolve(null);
     if(virtAi.data && Date.now() - virtAi.at < 10 * 60000) return Promise.resolve(virtAi.data);
     if(virtAi.loading) return virtAi.loading;
     if(typeof fetch !== "function") return Promise.resolve(null);
@@ -5079,7 +5133,7 @@
 
   /* фонд, суперприз и число строк — та же логика, что в «Оценить купон» */
   function evScene(){
-    var price = Number(state.price) || 30;
+    var price = Number(state.price) || BK.price;
     var poolNow = Number(state.poolSum) || 0;
     var typical = Number(state.poolTypical) || 0;
     var fund = (typical && poolNow < typical * 0.6) ? typical : poolNow;
@@ -5245,7 +5299,7 @@
     return { sets: sets, bad: bad };
   }
 
-  function briefPrice(){ return Number(state.price) > 0 ? Number(state.price) : 30; }
+  function briefPrice(){ return Number(state.price) > 0 ? Number(state.price) : BK.price; }
   /* имя CSV «Бриф <режим>, <N> строк - <сумма>р»: режим = вер-ть (с учётом вероятностей), исход (все исходы поровну), МАХ 15 (максимум шанса) */
   /* имя CSV из кнопок выгрузки: «по 1 купону, 140 строк - 4200р» и «допы, 12 строк - 4200р» */
   function csvNameSum(kind, rows, sum){ return kind + ", " + rows + " строк - " + sum + "р.csv"; }
@@ -5815,7 +5869,7 @@
   /* сводка по открытому файлу/ссылке: сколько стоит и как распределены исходы */
   function bookSummary(){
     if(!book || !book.rows.length) return;
-    var N = book.rows.length, L = bookPages().length, price = Number(state.price) || 30;
+    var N = book.rows.length, L = bookPages().length, price = Number(state.price) || BK.price;
     var esc = function(t){ return String(t == null ? "" : t).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]; }); };
     var h = '<p class="ev-lead"><b>' + fmt(N) + '</b> вариант(ов)' + (L > 1 && L !== N ? ' в ' + fmt(L) + ' строк(е)' : '') +
             ' · по ' + fmt(price) + '&nbsp;₽ — <b>' + fmt(N * price) + '&nbsp;₽</b>.</p>';
@@ -6371,6 +6425,8 @@
   function evRes(e, info){
     var r = normOut(e && e.result);
     if(r) return r;
+    /* totobrief не отдаёт итоги Фонбета вовсе — пустой итог там не значит «матч отменён» */
+    if(FON) return "";
     return (info && info.status === "finished") ? VOID : "";
   }
   /* попал ли исход строки/клетки в итог: отменённый матч засчитан всем */
@@ -6503,7 +6559,7 @@
   function bookExport(sys){
     /* цена — из самого файла (первое поле первой строки), иначе из поля «Стоимость купона», минимум 30 */
     var fp = book.text ? Number(String(book.text).split(/\r?\n/)[0].split(";")[0].trim()) : NaN;
-    var price = (fp >= 30 && fp <= 1000) ? fp : (Number(state.price) >= 30 ? Number(state.price) : 30);
+    var price = (fp >= BK.price && fp <= 1000) ? fp : (Number(state.price) >= BK.price ? Number(state.price) : BK.price);
     var nm = String(book.name || "варианты").replace(/\.csv$/i, "").replace(/[\\\/:*?"<>|·№]+/g, " ").trim().replace(/\s+/g, "_");
     if(sys && book.text){
       /* файл отдаём как есть, но первое поле каждой строки приводим к цене ОДНОГО варианта:
@@ -6513,8 +6569,8 @@
         if(f.length < 16) return ln;
         var v = Number(String(f[0]).trim()), n = 1;
         for(var k = 1; k < f.length; k++){ var t = String(f[k]).trim(); if(t) n *= t.length; }
-        var one = (n > 1 && v >= 30 * n && v % n === 0) ? v / n : v;
-        f[0] = String(one >= 30 ? one : 30);
+        var one = (n > 1 && v >= BK.price * n && v % n === 0) ? v / n : v;
+        f[0] = String(one >= BK.price ? one : BK.price);
         return f.join(";");
       }).join("\n") + "\n";
       return { csv: fixed,
@@ -6714,10 +6770,10 @@
   var MIRROR = C.MIRROR_PATH;
   var feed = { src: "", statusAt: 0, status: null };
   function mirrorPath(path){
-    var m = /^baltbet-main\/drawings\?page=(\d+)$/.exec(path);
-    if(m) return MIRROR + "drawings-" + m[1] + ".json";
+    var m = /^[\w-]+\/drawings\?page=(\d+)$/.exec(path);
+    if(m) return MIRROR + BK.mir + "drawings-" + m[1] + ".json";
     m = /^drawing-info\/([\w-]+)$/.exec(path);
-    if(m) return MIRROR + "drawing-info-" + m[1] + ".json";
+    if(m) return MIRROR + BK.mir + "drawing-info-" + m[1] + ".json";
     return null;
   }
   function apiFetch(path){
@@ -6957,7 +7013,8 @@
       var np = mkPct(q); if(np) m.pct = np;
       if(q.norm_win_1 != null) m.kf = [q.norm_win_1, q.norm_draw, q.norm_win_2];
       /* сыгранные матчи: фактический исход и счёт приезжают в том же ответе */
-      m.res = evRes(evs[i], info);
+      var r7 = evRes(evs[i], info);
+      if(r7 || !m.resFs) m.res = r7;        /* итог Фонбета из Flashscore пустым ответом totobrief не стираем */
       mergeScore(m, evs[i].score || "");
     }
     state.resAt = Date.now();          /* когда данные с totobrief пришли в последний раз */
@@ -7001,7 +7058,7 @@
     histLoading = true;
     var jobs = [];
     for(var p = 2; p <= HIST_PAGES; p++){
-      jobs.push(apiFetch("baltbet-main/drawings?page=" + p)
+      jobs.push(apiFetch(BKL + p)
         .then(function(r){ return r.ok ? r.json() : null; })
         .then(function(j){ return (j && j.data) || []; })
         .catch(function(){ return []; }));
@@ -7055,10 +7112,15 @@
       var t = splitTeams(e.name);
       if(!t) return;
       var q = e.quotes || {};
+      var st0 = FON ? /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/.exec(e.start_at || "") : null, d0 = null;
+      if(st0) d0 = new Date(Date.UTC(+st0[1], +st0[2] - 1, +st0[3], +st0[4] + 3, +st0[5]));   /* UTC → МСК */
+      var p2 = function(x){ return (x < 10 ? "0" : "") + x; };
       list.push({
         id: "api" + info.id + "_" + i,
-        date: "", time: "",
-        league: e.championship || "",
+        date: d0 ? p2(d0.getUTCDate()) + "." + p2(d0.getUTCMonth() + 1) : "",
+        time: d0 ? p2(d0.getUTCHours()) + ":" + p2(d0.getUTCMinutes()) : "",
+        /* Фонбет: «Football. Russia. Premier League. Season 26/27» → «Russia. Premier League» */
+        league: String(e.championship || "").replace(/^Football\.\s*/i, "").replace(/\.\s*Season\s+[\d\/\-]+\s*$/i, ""),
         home: t[0], away: t[1],
         picks: {"1":false,"X":false,"2":false},
         pool: OUT.slice(),
@@ -7152,7 +7214,8 @@
         if(evs.length !== p.matches.length) return;
         var sig0 = prevSig(p);
         evs.forEach(function(e, i){
-          p.matches[i].res = evRes(e, info);
+          var r8 = evRes(e, info);
+          if(r8 || !p.matches[i].resFs) p.matches[i].res = r8;
           mergeScore(p.matches[i], e.score || "");
         });
         p.at = Date.now();
@@ -7180,7 +7243,7 @@
   }
   /* загрузить в просмотр любой закрытый тираж по номеру (для сохранённых вариантов старых тиражей) */
   function prevLoad(wantN, open, fail){
-    apiFetch("baltbet-main/drawings?page=1")
+    apiFetch(BKL + "1")
       .then(function(r){ return r.ok ? r.json() : null; })
       .then(function(j){
         var rows = (j && j.data) || [], d = null, i;
@@ -7219,7 +7282,7 @@
       })
       .catch(function(){ if(fail) fail(); });
   }
-  var PVUI_KEY = "dzhek-pvui", pvFlt = "all", pvFltTir = "";
+  var PVUI_KEY = "dzhek-pvui" + BK.sfx, pvFlt = "all", pvFltTir = "";
   var pvOpen = (function(){
     try{
       var u = JSON.parse(localStorage.getItem(PVUI_KEY) || "null");
@@ -7472,7 +7535,7 @@
 
   /* ---------- CSV в прошлом тираже: весь купон и варианты по 30 — следить за угаданными ----------
      Файл читается только здесь и хранится в браузере (последние 60 тиражей — для статистики «Мои CSV»), купон не трогает. */
-  var PCSV_KEY = "dzhek-prevcsv", PCSV_PAGE = 30;
+  var PCSV_KEY = "dzhek-prevcsv" + BK.sfx, PCSV_PAGE = 30;
   /* наборов вариантов на тираж может быть несколько (файлы и ссылки) — переключаются вкладками */
   var pcsv = { tir: null, sets: [], act: 0, name: "", rows: [], sys: [], page: 0, sort: "hits" };
   function pcsvUse(i){
@@ -7622,7 +7685,7 @@
     if(PCSV_DB || PCSV_DBFAIL || !window.indexedDB){ if(!PCSV_DB) PCSV_DBFAIL = true; cb(PCSV_DB); return; }
     var done = false, fin = function(db){ if(done) return; done = true; if(!db) PCSV_DBFAIL = true; PCSV_DB = db || null; cb(PCSV_DB); };
     try{
-      var rq = indexedDB.open("dzhek-prevcsv", 1);
+      var rq = indexedDB.open(PCSV_KEY, 1);
       rq.onupgradeneeded = function(){ try{ rq.result.createObjectStore("sets"); }catch(e){} };
       rq.onsuccess = function(){ fin(rq.result); };
       rq.onerror = rq.onblocked = function(){ fin(null); };
@@ -7953,6 +8016,7 @@
     return miss.length ? miss : null;
   }
   function pcNoAiNote(p){
+    if(FON) return p && p.cur ? '<p class="pc-noai" id="pcNoAi">Разбор ИИ, «ИИ-бриф» и «Охота на 15» пока делаются только для Балтбета.</p>' : "";
     var miss = curAiMissing(p);
     if(!miss) return "";
     var tx = miss.length > 1 ? "ИИ-разбор на этот тираж не проведён: купоны «ИИ-бриф» и «Охота на 15» появятся здесь сразу после разбора."
@@ -7960,7 +8024,7 @@
     return '<p class="pc-noai" id="pcNoAi">' + tx + '</p>';
   }
   function curAiPollSync(p){
-    if(curAiMissing(p)){
+    if(!FON && curAiMissing(p)){
       if(curAiPoll) return;
       curAiPoll = setInterval(function(){
         var q = state.prev;
@@ -8466,7 +8530,7 @@
     var firstRows = null;
     /* одна страница выгрузки — 50 тиражей; если ищем конкретный номер, идём глубже */
     function grab(page){
-      return apiFetch("baltbet-main/drawings?page=" + page)
+      return apiFetch(BKL + page)
         .then(function(r){ if(!r.ok) throw new Error("список тиражей: " + r.status); return r.json(); })
         .then(function(j){
           var rows = (j && j.data) || [];
@@ -8705,7 +8769,7 @@
      одна строка с допами. Корзина идёт в файл, только если купон не заполнен —
      иначе человек собирает систему, а получает старые броски. */
   function buildCsvSys(){
-    var price = Number(state.price) > 0 ? Number(state.price) : 30;
+    var price = Number(state.price) > 0 ? Number(state.price) : BK.price;
     var sep = state.csvSep === "; " ? "; " : ";";
     /* первое поле — ВСЕГДА цена одного варианта (30 ₽); БалтБет сам умножает её на число комбинаций */
     var lines = [], src = "";
@@ -8808,7 +8872,7 @@
       ": строк " + out.rows + ", комбинаций " + fmt(combos) +
       ", цена одного варианта " + out.price + " ₽, итого " + fmt(combos * out.price) +
       " ₽. Исходы записаны слитно.";
-    if(!(Number(state.price) > 0)) note += " Поле «Стоимость купона» пустое, поставил минимальные 30 ₽.";
+    if(!(Number(state.price) > 0)) note += " Поле «Стоимость купона» пустое, поставил минимальные " + BK.price + " ₽.";
     if(out.src === "купон" && state.played.length)
       note += " В корзине лежит " + state.played.length + " вариант(ов) — они в этот файл НЕ вошли.";
     $("expNote").textContent = note;
@@ -9164,7 +9228,7 @@
      В списке все такие суммы до 17 280 ₽ без повторов. Выбранная сумма — потолок,
      а не обязательный расход. Строка — одна полная комбинация из 15 одиночных исходов. */
   var LIM_MAX_RUB = 17280, KELLY_BANK = 30000;
-  function linePrice(){ var p = Number(state.price); return p > 0 ? p : 30; }
+  function linePrice(){ var p = Number(state.price); return p > 0 ? p : BK.price; }
   function limitList(price){
     var seen = {}, out = [];
     for(var d = 0; d <= 15; d++) for(var t = 0; t <= 15 - d; t++){
@@ -9858,9 +9922,9 @@
       var P = state.viewPrev && state.prev ? state.prev : null;
       if(P) return { matches: P.matches, tirazh: P.tirazh, prev: true, deadline: P.deadline || "",
                jackpot: Number(P.jack) || Number(((state.drawByNo || {})[P.tirazh] || {}).jack) || 0,
-               kickoff: 0, played: state.played, price: Number(state.price) || 30, viewPrev: true, book: !!book };
+               kickoff: 0, played: state.played, price: Number(state.price) || BK.price, viewPrev: true, book: !!book };
       return { matches: state.matches, tirazh: state.tirazh, jackpot: Number(state.jackpot) || 0,
-               kickoff: kickoffMs(), played: state.played, price: Number(state.price) || 30,
+               kickoff: kickoffMs(), played: state.played, price: Number(state.price) || BK.price,
                viewPrev: !!state.viewPrev, book: !!book };
     },
     team: teamInfo, emb: mkEmb, embSrc: embSrc, fmt: fmt,

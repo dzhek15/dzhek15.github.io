@@ -1331,6 +1331,15 @@ body.is-prev .row .pick.mine-hit{outline-color:var(--brand-gold)}
 .cv-in{display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); grid-template-areas:"l logo r";
   align-items:center; column-gap:28px; padding:16px 32px 14px}
 .cv-foot{display:flex; justify-content:center; padding:10px 14px 12px; border-top:1px solid rgba(201,162,75,.22)}
+/* переключатель букмекера на обложке */
+.bk-sw{display:flex; justify-content:center; gap:0; margin:12px auto 0; width:max-content; max-width:calc(100% - 24px);
+  border:1px solid rgba(201,162,75,.6); border-radius:999px; overflow:hidden; background:rgba(10,8,6,.45)}
+.bk-sw button{appearance:none; border:0; margin:0; padding:7px 18px; min-height:34px; cursor:pointer; background:transparent;
+  color:rgba(243,234,210,.78); font:600 13px/1 "Oswald","Chivo",sans-serif; letter-spacing:.14em; text-transform:uppercase}
+.bk-sw button + button{border-left:1px solid rgba(201,162,75,.45)}
+.bk-sw button[aria-pressed="true"]{background:linear-gradient(180deg,#e3b955,#b98d39); color:#1a1410; cursor:default}
+.bk-sw button:not([aria-pressed="true"]):hover{color:#f6dd95; background:rgba(201,162,75,.12)}
+.bk-sw button:focus-visible{outline:2px solid #f6dd95; outline-offset:-3px}
 .cover .logo{grid-area:logo; height:150px; margin:0; filter:drop-shadow(0 6px 16px rgba(0,0,0,.55))}
 .cv-l{grid-area:l; text-align:left; min-width:0}
 .cv-r{grid-area:r; text-align:right; min-width:0}
