@@ -8852,6 +8852,146 @@
   /* настройки «сумма в строке» и «разделитель» убраны с экрана: остаются прежние значения
      из state (сумма в строке теперь всегда цена одного варианта, разделитель «;»), поменять можно только в коде */
 
+  /* ---------- Фонбет: бриф «по купонам» ----------
+     Загрузки пакета/CSV у Фонбета нет: один купон СУПЕР15 — всегда полная система
+     (1–3 исхода в каждом матче, каждый вариант считается отдельно, 50 ₽ за вариант).
+     Набор вариантов делим на наименьшее число таких систем: варианты, которые отличаются
+     только в одном матче, склеиваются в один купон с несколькими исходами там; повторяем,
+     пока есть что склеивать. Купоны не пересекаются и дают ровно исходные варианты. */
+  var FCP_BIT = { "1": 1, "X": 2, "2": 4 }, FCP_KEY = "dzhek-fonput";
+  function fcpRows(){
+    var csv = book ? bookExport(false).csv : buildCsv();
+    if(!csv) return null;
+    var seen = {}, out = [], bad = 0;
+    csv.replace(/\r\n?/g, "\n").split("\n").forEach(function(ln){
+      if(!ln.trim()) return;
+      var f = ln.split(";").slice(1).map(function(x){ return String(x).trim().toUpperCase().replace("Х", "X"); });
+      if(f.length !== 15 || f.some(function(x){ return !FCP_BIT[x]; })){ bad++; return; }
+      var k = f.join("");
+      if(seen[k]) return;
+      seen[k] = 1; out.push(f.map(function(x){ return FCP_BIT[x]; }));
+    });
+    return { rows: out, bad: bad };
+  }
+  function fcpMergeOnce(cubes, order){
+    var changed = true;
+    while(changed){
+      changed = false;
+      for(var oi = 0; oi < order.length; oi++){
+        var pos = order[oi], grp = {}, keys = [];
+        for(var i = 0; i < cubes.length; i++){
+          var c = cubes[i], k = c.slice(0, pos).join(",") + "|" + c.slice(pos + 1).join(",");
+          if(!grp[k]){ grp[k] = []; keys.push(k); }
+          grp[k].push(c);
+        }
+        if(keys.length === cubes.length) continue;
+        var nx = [];
+        keys.forEach(function(k){
+          var g = grp[k];
+          if(g.length === 1){ nx.push(g[0]); return; }
+          var m = g[0].slice(); for(var j = 1; j < g.length; j++) m[pos] |= g[j][pos];
+          nx.push(m);
+        });
+        cubes = nx; changed = true;
+      }
+    }
+    return cubes;
+  }
+  function fcpSize(c){ var n = 1; c.forEach(function(b){ n *= (b & 1 ? 1 : 0) + (b & 2 ? 1 : 0) + (b & 4 ? 1 : 0); }); return n; }
+  function fcpSplit(rows){
+    var best = null, base = []; for(var i = 0; i < 15; i++) base.push(i);
+    var seed = 7;
+    function rnd(){ seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; }
+    var tries = rows.length > 6000 ? 4 : (rows.length > 1500 ? 10 : 30);
+    for(var t = 0; t < tries; t++){
+      var ord = base.slice();
+      if(t === 1) ord.reverse();
+      else if(t > 1) for(var a = ord.length - 1; a > 0; a--){ var b = Math.floor(rnd() * (a + 1)), x = ord[a]; ord[a] = ord[b]; ord[b] = x; }
+      var r = fcpMergeOnce(rows.map(function(c){ return c.slice(); }), ord);
+      if(!best || r.length < best.length) best = r;
+    }
+    /* проверка: купоны в сумме дают ровно исходные варианты, без повторов и лишних */
+    var want = {}, got = 0, okk = true;
+    rows.forEach(function(c){ want[c.join("")] = 1; });
+    best.forEach(function(c){
+      (function rec(i, acc){
+        if(!okk) return;
+        if(i === 15){ var k = acc.join(""); if(want[k] !== 1) okk = false; else { want[k] = 2; got++; } return; }
+        [1, 2, 4].forEach(function(b){ if(c[i] & b){ acc.push(b); rec(i + 1, acc); acc.pop(); } });
+      })(0, []);
+    });
+    if(!okk || got !== rows.length) return null;
+    best.sort(function(a, b){ return fcpSize(b) - fcpSize(a); });
+    return best;
+  }
+  function fcpPl(n, a, b, c){ var m = n % 100, k = n % 10; return fmt(n) + " " + (m > 10 && m < 20 ? c : k === 1 ? a : (k >= 2 && k <= 4 ? b : c)); }
+  function fcpCell(b){ return (b & 1 ? "1" : "") + (b & 2 ? "X" : "") + (b & 4 ? "2" : ""); }
+  function fcpSig(cubes){ var h = 0, s = cubes.map(function(c){ return c.join(""); }).join("."); for(var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return String(h); }
+  function fcpPut(){ try{ return JSON.parse(localStorage.getItem(FCP_KEY) || "{}") || {}; }catch(e){ return {}; } }
+  function fcpOpen(){
+    var src = fcpRows();
+    $("evTitle").textContent = "Бриф по купонам Фонбета";
+    var box = $("evBody");
+    if(!src || !src.rows.length){
+      box.innerHTML = '<p>Нечего раскладывать: корзина пуста, а в купоне есть матчи без исхода. Положи варианты в корзину или открой CSV.</p>';
+      $("evBack").hidden = false; return;
+    }
+    var cubes = fcpSplit(src.rows);
+    if(!cubes){ box.innerHTML = '<p>Не получилось разложить варианты без ошибок — выгрузка остановлена, чтобы не поставить лишнего.</p>'; $("evBack").hidden = false; return; }
+    var price = briefPrice(), tir = String(state.tirazh || ""), sig = fcpSig(cubes);
+    var put = fcpPut(), mine = (put[tir] && put[tir].sig === sig) ? put[tir].on || [] : [];
+    var nVar = src.rows.length, sizes = {};
+    cubes.forEach(function(c){ var n = fcpSize(c); sizes[n] = (sizes[n] || 0) + 1; });
+    var szTxt = Object.keys(sizes).map(Number).sort(function(a, b){ return b - a; })
+      .map(function(n){ return fcpPl(sizes[n], "купон", "купона", "купонов") + " на " + fcpPl(n, "вариант", "варианта", "вариантов"); }).join(", ");
+    var h = '<div class="fcp-sum"><b>' + fcpPl(cubes.length, "купон", "купона", "купонов") + '</b> · <b>' + fcpPl(nVar, "вариант", "варианта", "вариантов") + '</b> · <b>' + fmt(nVar * price) + ' ₽</b> при ' + price + ' ₽ за вариант</div>' +
+      '<p class="fcp-note">Источник: ' + escHtml(book ? "открытый файл «" + book.name + "»" : (state.played.length ? "корзина" : "купон с экрана")) +
+      '. Купоны: ' + szTxt + '. В каждом купоне отметь в Фонбете указанные исходы по номерам матчей — сайт проверил, что вместе купоны дают ровно эти ' + fcpPl(nVar, "вариант", "варианта", "вариантов") +
+      ', без повторов и лишних.' + (src.bad ? ' Пропущено строк не из 15 исходов: ' + src.bad + '.' : '') + '</p>' +
+      (cubes.length > 1 && cubes.length >= nVar * 0.8 ? '<p class="fcp-warn">Варианты почти не склеиваются: в брифе они отличаются друг от друга минимум в двух матчах — так бриф и экономит деньги. Два таких варианта одной системой не поставить, поэтому почти каждый вариант — отдельный купон. Склеиваются только системы и «допы» из корзины.</p>' : '') +
+      '<p class="fcp-prog" id="fcpProg"></p>' +
+      '<details class="fcp-legend"><summary>Матчи тиража №' + escHtml(tir) + '</summary><ol>' +
+      state.matches.map(function(m){ return '<li>' + escHtml(m.home + " — " + m.away) + '</li>'; }).join("") + '</ol></details>' +
+      '<div class="fcp-list">';
+    cubes.forEach(function(c, i){
+      var n = fcpSize(c), on = mine.indexOf(i) >= 0;
+      h += '<div class="fcp-c' + (on ? ' on' : '') + '" data-i="' + i + '"><div class="fcp-h"><label><input type="checkbox" data-i="' + i + '"' + (on ? ' checked' : '') + '> Купон ' + (i + 1) + '</label>' +
+        '<span>' + fmt(n) + ' вар. · ' + fmt(n * price) + ' ₽</span></div><div class="fcp-g">' +
+        c.map(function(b, k){ var m = state.matches[k] || {}, v = fcpCell(b);
+          return '<span class="fcp-x' + (v.length > 1 ? ' m' + v.length : '') + '" title="' + escHtml((k + 1) + ". " + (m.home || "") + " — " + (m.away || "")) + '"><i>' + (k + 1) + '</i>' + v + '</span>'; }).join("") +
+        '</div></div>';
+    });
+    h += '</div><div class="acts fcp-acts"><button type="button" id="fcpTxt">Скачать списком (.txt)</button><button type="button" id="fcpReset">Снять все галочки</button></div>';
+    box.innerHTML = h;
+    function prog(){
+      var on = [].slice.call(box.querySelectorAll('.fcp-c input:checked')).map(function(x){ return +x.getAttribute("data-i"); });
+      var sumV = on.reduce(function(a, i){ return a + fcpSize(cubes[i]); }, 0);
+      $("fcpProg").textContent = "Поставлено: " + on.length + " из " + cubes.length + " купонов, " + fmt(sumV) + " из " + fmt(nVar) + " вариантов, " + fmt(sumV * price) + " ₽ из " + fmt(nVar * price) + " ₽.";
+      var all = fcpPut(); all[tir] = { sig: sig, on: on };
+      Object.keys(all).sort(function(a, b){ return +b - +a; }).slice(10).forEach(function(k){ delete all[k]; });
+      try{ localStorage.setItem(FCP_KEY, JSON.stringify(all)); }catch(e){}
+    }
+    [].slice.call(box.querySelectorAll('.fcp-c input')).forEach(function(cb){
+      cb.addEventListener("change", function(){ cb.closest(".fcp-c").classList.toggle("on", cb.checked); prog(); });
+    });
+    $("fcpReset").addEventListener("click", function(){
+      [].slice.call(box.querySelectorAll('.fcp-c input')).forEach(function(cb){ cb.checked = false; cb.closest(".fcp-c").classList.remove("on"); }); prog();
+    });
+    $("fcpTxt").addEventListener("click", function(){
+      var L = ["Фонбет СУПЕР15, тираж №" + tir + ": " + cubes.length + " купонов, " + nVar + " вариантов, " + (nVar * price) + " ₽ (" + price + " ₽ за вариант)", ""];
+      state.matches.forEach(function(m, k){ L.push((k + 1) + ". " + m.home + " — " + m.away); });
+      L.push("");
+      cubes.forEach(function(c, i){
+        var n = fcpSize(c);
+        L.push("Купон " + (i + 1) + " — " + n + " вар., " + (n * price) + " ₽: " + c.map(function(b, k){ return (k + 1) + ":" + fcpCell(b); }).join("  "));
+      });
+      plainDownload(L.join("\n") + "\n", "Фонбет_" + tir + "_по_купонам_" + cubes.length + "_купонов_" + (nVar * price) + "р.txt");
+    });
+    prog();
+    $("evBack").hidden = false;
+  }
+  if($("btnFonCp")) $("btnFonCp").addEventListener("click", fcpOpen);
+
   $("btnCsvSys").addEventListener("click", function(){
     if(book){
       var bx = bookExport(true);
