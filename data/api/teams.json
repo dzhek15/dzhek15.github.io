@@ -133,6 +133,9 @@
 "аугсбург": {
 "f": "Qgbz4piC-Qmnf8wEL.png"
 },
+"афк уимблдон": {
+"f": "hjCWBER0-t88KnYHu.png"
+},
 "ахмат": {
 "f": "S2sd8fXH-pGHenz7m.png"
 },
@@ -147,6 +150,9 @@
 },
 "барранкилья": {
 "f": "4On2CIR0-WMQ3R7Tc.png"
+},
+"барселона": {
+"f": "jZ8dSYS0-fcDVLdrL.png"
 },
 "бедфорд таун": {
 "f": "xWM4CmRq-2eETkRai.png"
@@ -163,6 +169,9 @@
 "бернли": {
 "f": "xO3nES96-6PhTI7J6.png"
 },
+"бертон альбион": {
+"f": "rmH7hZUH-fRl4OAmn.png"
+},
 "бетис": {
 "f": "YV7lpDU0-zkU5wiAr.png"
 },
@@ -171,6 +180,9 @@
 },
 "блэкберн роверс": {
 "f": "AHfWnRCN-ImMEe0UF.png"
+},
+"блэкпул": {
+"f": "xY13hkDN-SEFeTdWk.png"
 },
 "богемиан": {
 "c": [
@@ -405,6 +417,9 @@
 "дерри сити": {
 "f": "hGznfOlC-KjwWdukB.png"
 },
+"джиллингем": {
+"f": "tryicj8k-4zecB0bR.png"
+},
 "дижон": {
 "f": "IVjOpykC-6qsP6K6r.png"
 },
@@ -495,6 +510,9 @@
 "кельн": {
 "f": "KMphsCCN-86lnAaq9.png"
 },
+"кембридж юнайтед": {
+"f": "QJz1sBS0-dMP0tgfF.png"
+},
 "керри": {
 "c": [
 "#054b26",
@@ -551,6 +569,9 @@
 },
 "кристал пэлас": {
 "f": "GfkvlLmC-drybTCiH.png"
+},
+"кроли таун": {
+"f": "Sp2BMgme-4zecB0bR.png"
 },
 "кру александра": {
 "c": [
@@ -682,6 +703,9 @@
 "миллуолл": {
 "f": "KE2n7iVH-prpZfVqU.png"
 },
+"милтон кинс донс": {
+"f": "8rEwqe6k-M3ipZ1T5.png"
+},
 "мк оран": {
 "f": "4O8X4ejC-WEM4tWjn.png"
 },
@@ -736,8 +760,14 @@
 "норвич": {
 "f": "GvTpbCjC-tCGtX12c.png"
 },
+"нортгемптон таун": {
+"f": "UNNonLS0-zVge1dyc.png"
+},
 "ноттингем форест": {
 "f": "86ODdyle-ImKwLTtA.png"
+},
+"ноттс каунти": {
+"f": "pz74j1AN-Ot1eTKZF.png"
 },
 "нуэва чикаго": {
 "f": "44c5ZQ76-ClnEoGMd.png"
@@ -763,6 +793,9 @@
 },
 "оксфорд юнайтед": {
 "f": "Ige65FiT-6qsP6K6r.png"
+},
+"олдэм атлетик": {
+"f": "b9OHuPiT-COrVKGUD.png"
 },
 "олесунн": {
 "f": "88VSvrWH-QBQwYJis.png"
@@ -808,6 +841,12 @@
 },
 "платенсе(р)": {
 "f": "zDDx8C76-4SMicvEk.png"
+},
+"плимут аргайл": {
+"f": "Q1DeL996-K69GRxHq.png"
+},
+"порт вейл": {
+"f": "OvhRMHme-hE2XjgkL.png"
 },
 "портсмут": {
 "f": "nHzBM186-nkTKkN30.png"
@@ -986,6 +1025,9 @@
 "смуха": {
 "f": "6DEg1o86-Y1Z3w2bI.png"
 },
+"солфорд": {
+"f": "2izb5TUH-QTmTeIrb.png"
+},
 "сочи": {
 "f": "hW5ZOm8k-Srennq2k.png"
 },
@@ -1003,6 +1045,9 @@
 },
 "спортинг хихон": {
 "f": "ziVpaDjC-IDZgZhUt.png"
+},
+"стивенидж": {
+"f": "tEm3imlC-UFetIaxJ.png"
 },
 "сток сити": {
 "f": "hfCH0SA6-KpUCBoUk.png"
@@ -1047,6 +1092,9 @@
 "трабзонспор": {
 "f": "2sVavKoe-6otfaYAk.png"
 },
+"транмир роверс": {
+"f": "MRWk2GR0-bgElVuX9.png"
+},
 "тренто": {
 "f": "fizrpR5k-l4rv6VQk.png"
 },
@@ -1062,6 +1110,9 @@
 },
 "удинезе": {
 "f": "277EtfPq-SYw7EcY6.png"
+},
+"уиком уондерерс": {
+"f": "hKlkKIUH-bgElVuX9.png"
 },
 "уингейт энд финчли": {
 "f": "YcfjAdS0-IJlrPRxF.png"
@@ -1087,6 +1138,9 @@
 "#feee51"
 ],
 "id": 14806
+},
+"уолсолл": {
+"f": "xfTmKAjT-bgElVuX9.png"
 },
 "уоркингтон": {
 "f": "M98O1gjT-2PBXgRPe.png"
@@ -1131,6 +1185,9 @@
 "#a59798"
 ],
 "id": 3179
+},
+"флитвуд": {
+"f": "EaWjWMle-2iK9htx0.png"
 },
 "фортуна кельн": {
 "f": "dAR8o26k-4vL7JG21.png"
@@ -1227,11 +1284,20 @@
 "шахтер": {
 "f": "fLOld9A6-YmCZKGcR.png"
 },
+"шеффилд уэнсдэй": {
+"f": "GpiRvDoe-KxUliwTt.png"
+},
 "шеффилд юнайтед": {
 "f": "8nXNvlA6-WAMhW87U.png"
 },
 "шинник": {
 "f": "x8Vr5LAN-rB3ucgaU.png"
+},
+"шрусбери таун": {
+"f": "hbRQ86WH-MeJKaU2T.png"
+},
+"штутгарт": {
+"f": "fgQWGn86-f1Z3XxZa.png"
 },
 "штутгарт ii": {
 "f": "jmV63YUH-l4Wf0Y7A.png"
