@@ -5955,6 +5955,18 @@
     return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
   }
 
+  /* имя набора в ссылке: отдельный кусок «n…» перед набором (UTF-8 в base64url) */
+  var linkNames = {};
+  function linkNameEnc(nm){ try{ return "n" + b64u(new TextEncoder().encode(String(nm || "").slice(0, 80))); }catch(e){ return ""; } }
+  function linkParts(arr){
+    var out = [], nm = "";
+    (arr || []).forEach(function(x){
+      if(String(x).charAt(0) === "n"){ try{ nm = new TextDecoder().decode(unb64u(String(x).slice(1))); }catch(e){ nm = ""; } return; }
+      if(nm){ linkNames[x] = nm; nm = ""; }
+      out.push(x);
+    });
+    return out;
+  }
   function unb64u(str){
     var s = String(str).replace(/-/g, "+").replace(/_/g, "/");
     while(s.length % 4) s += "=";
@@ -6260,7 +6272,7 @@
     /* длинная ссылка в ?vs= (так её не режут мессенджеры) */
     if(!/^#vs?=/.test(h) && /[?&]vs?=/.test(location.search)) h = linkNorm(location.search).replace(/^[^#]*/, "").replace(/&.*$/, "");
     var ms = h.match(/^#vs=([^-]*)-([A-Za-z0-9\-_.]+)$/);
-    if(ms) return { tirazh: decodeURIComponent(ms[1]), multi: ms[2].split(".").filter(Boolean) };
+    if(ms) return { tirazh: decodeURIComponent(ms[1]), multi: linkParts(ms[2].split(".").filter(Boolean)) };
     var m = h.match(/^#v=([^-]*)-([A-Za-z0-9\-_]+)$/);
     return m ? { tirazh: decodeURIComponent(m[1]), payload: m[2] } : null;
   })();
@@ -6376,7 +6388,7 @@
     if(!m) return;
     var waitSaid = false;
     shortGet(m[1], function(){ if(!waitSaid){ waitSaid = true; say("Набор по ссылке ещё публикуется на сайте — подождите до двух минут, он откроется сам."); } }).then(function(j){
-      var parts = String(j.d).split(".").filter(Boolean);
+      var parts = linkParts(String(j.d).split(".").filter(Boolean));
       pendingBook = { tirazh: String(j.t), multi: parts };
       if(pullDone) tryPending();          /* иначе ссылку разберёт тот, кто закончит подтяжку тиража */
     }, function(e){
@@ -6391,7 +6403,7 @@
     var N = (state.prev && state.prev.matches.length) || state.matches.length || 15;
     varsDecode(p.payload, N, function(rows, pages){
       if(!rows){ say("Ссылку со списком вариантов развернуть не удалось — похоже, адрес обрезался при пересылке."); if(p.next) p.next(); return; }
-      var add = pcsvAddTo(String(p.tirazh), { link: 1, rows: rows.map(function(r){ return r.join(""); }),
+      var add = pcsvAddTo(String(p.tirazh), { link: 1, lname: linkNames[p.payload] || "", rows: rows.map(function(r){ return r.join(""); }),
                           sys: (pages || rows).map(function(pg){ return pg.join(","); }) });
       try{ history.replaceState(null, "", linkCleanUrl()); }catch(e){}
       pcsv.msgAt = Date.now();
@@ -7546,7 +7558,7 @@
   function pcsvEnsure(tir){
     if(pcsv.tir === tir) return;
     var saved = pcsvAll()[tir] || null, sets = [];
-    if(saved && saved.sets) sets = saved.sets.map(function(st){ return { name: st.name, link: st.link || 0, sys: st.sys || [], rows: st.rows || pcsvExpand(st.sys || []), at: st.at || 0, late: st.late || 0 }; });
+    if(saved && saved.sets) sets = saved.sets.map(function(st){ return { name: st.name, link: st.link || 0, lname: st.lname || 0, sys: st.sys || [], rows: st.rows || pcsvExpand(st.sys || []), at: st.at || 0, late: st.late || 0 }; });
     else if(saved && saved.rows) sets = [{ name: saved.name || "Файл", rows: saved.rows, sys: saved.sys || saved.rows }];
     pcsv = { tir: tir, sets: sets, act: 0, page: 0, sort: pcsv.sort || "hits", view: pcsv.view, msg: pcsv.msg, msgAt: pcsv.msgAt };
     pcsvUse(saved && saved.act < sets.length ? saved.act : 0);
@@ -7638,15 +7650,15 @@
   /* добавить набор к любому тиражу: к открытому — сразу, к другому — в сохранённые */
   function pcsvAddTo(tir, set){
     if(pcsv.tir === tir){
-      if(set.link) set.name = "Ссылка " + (pcsv.sets.filter(function(x){ return x.link; }).length + 1);
+      if(set.link) set.name = set.lname || "Ссылка " + (pcsv.sets.filter(function(x){ return x.link; }).length + 1);
       var r = pcsvAdd(set); return { dup: r.dup, name: pcsvLabel(pcsv.sets[pcsv.act]) || pcsv.name };
     }
     var all = pcsvAll(), e = all[tir] || { sets: [], act: 0 };
     if(!e.sets) e = { sets: e.rows ? [{ name: e.name || "Файл", sys: e.sys || e.rows }] : [], act: 0 };
     var sig = (set.sys || []).join("|");
     for(var i = 0; i < e.sets.length; i++) if((e.sets[i].sys || []).join("|") === sig){ e.act = i; all[tir] = e; pcsvPut(tir); return { dup: true, name: e.sets[i].name }; }
-    var nm = set.link ? "Ссылка " + (e.sets.filter(function(x){ return x.link; }).length + 1) : set.name;
-    e.sets.push({ name: nm, link: set.link || 0, sys: set.sys, at: Date.now(), late: pcsvTirDone(tir) ? 1 : 0 }); e.act = e.sets.length - 1; e.at = Date.now();
+    var nm = set.link ? set.lname || "Ссылка " + (e.sets.filter(function(x){ return x.link; }).length + 1) : set.name;
+    e.sets.push({ name: nm, link: set.link || 0, lname: set.lname ? 1 : 0, sys: set.sys, at: Date.now(), late: pcsvTirDone(tir) ? 1 : 0 }); e.act = e.sets.length - 1; e.at = Date.now();
     all[tir] = e;
     pcsvPut(tir);
     return { dup: false, name: set.link ? fmt(pcsvExpand(set.sys || []).length * (Number(state.price) || 0)) + " ₽" : nm };
@@ -7789,7 +7801,7 @@
   /* заголовок блока: у ссылки — сумма, у файла — имя файла и сумма */
   function pcsvHead(){
     var st = pcsv.sets[pcsv.act]; if(!st) return pcsv.name;
-    return st.link ? pcsvLabel(st) : pcsvNm(st.name) + " · " + pcsvLabel(st);
+    return st.link && !st.lname ? pcsvLabel(st) : pcsvNm(st.name) + " · " + pcsvLabel(st);
   }
   /* имя файла для показа: без «.csv», подчёркивания — пробелами */
   function pcsvNm(n){ return String(n || "").replace(/\.csv$/i, "").replace(/_+/g, " ").trim() || "файл"; }
@@ -7800,7 +7812,7 @@
     pcsv.sets.forEach(function(st, q){ if(q < pcsv.act && !st.ai) actM++; });
     var kept = (all[pcsv.tir] && all[pcsv.tir].kept) || null;
     if(mine.length) all[pcsv.tir] = { act: Math.min(actM, mine.length - 1), at: Date.now(),
-      sets: mine.map(function(st){ return { name: st.name, link: st.link || 0, sys: st.sys, at: st.at || 0, late: st.late || 0 }; }) };
+      sets: mine.map(function(st){ return { name: st.name, link: st.link || 0, lname: st.lname ? 1 : 0, sys: st.sys, at: st.at || 0, late: st.late || 0 }; }) };
     else if(kept) all[pcsv.tir] = { act: 0, at: Date.now(), sets: [] };
     else delete all[pcsv.tir];
     if(kept) all[pcsv.tir].kept = kept;
@@ -7908,8 +7920,9 @@
       var reS = /#vs=([^-&#\s]*)-([A-Za-z0-9\-_.]+)/g, ms2;
       while((ms2 = reS.exec(v))){
         var t2 = decodeURIComponent(ms2[1]);
-        if(Number(t2) < Number(state.tirazh)) ms2[2].split(".").filter(Boolean).forEach(function(pl){ list.push({ tirazh: t2, payload: pl }); });
-        else if(Number(t2) === Number(state.tirazh)) ms2[2].split(".").filter(Boolean).forEach(function(pl){ cur.push(pl); });
+        var lp2 = linkParts(ms2[2].split(".").filter(Boolean));
+        if(Number(t2) < Number(state.tirazh)) lp2.forEach(function(pl){ list.push({ tirazh: t2, payload: pl }); });
+        else if(Number(t2) === Number(state.tirazh)) lp2.forEach(function(pl){ cur.push(pl); });
         else other++;
       }
       v = v.replace(reS, " ");
@@ -7949,7 +7962,7 @@
         varsEncode(st.rows, function(p){ if(p) res(p); else rej(new Error("pack")); }, pages.length ? pages : null);
       });
     })).then(function(list){
-      var packed = list.join("."), base = location.origin + location.pathname;
+      var packed = list.map(function(pl, q){ var nm = sets[q].link && !sets[q].lname ? "" : linkNameEnc(pcsvNm(sets[q].name)); return (nm ? nm + "." : "") + pl; }).join("."), base = location.origin + location.pathname;
       /* адрес в ?…, а не в #…: мессенджеры (MAX и др.) обрезают ссылку на «#» или делают из «#s» хэштег */
       var longUrl = base + "?vs=" + encodeURIComponent(tir || "") + "-" + packed;
       /* у владельца — короткая ссылка, набор лежит на сайте. У остальных сервер ссылок (Cloudflare) из РФ часто недоступен,
@@ -8122,9 +8135,9 @@
       sc.forEach(function(q, k){
         var st = pcsv.sets[q.i], mv = rk.mv[q.i], tr = "";
         if(mv && Date.now() - mv.at < 90000) tr = '<u class="' + (mv.d > 0 ? "up" : "dn") + '">' + (mv.d > 0 ? "▲" : "▼") + Math.abs(mv.d) + '</u>';
-        h += '<button type="button" role="tab" class="pc-rk' + (q.out ? " out" : "") + (q.i === pcsv.act ? " on" : "") + (k < 3 && pe ? " m" + (k + 1) : "") + '" data-t="' + q.i + '" data-id="' + q.i + '" aria-pressed="' + (q.i === pcsv.act) + '" title="' + escHtml(st.link ? "Ссылка · " + pcsvLabel(st) : st.name) + ' · ' + fmt(st.rows.length) + ' вар.">' +
+        h += '<button type="button" role="tab" class="pc-rk' + (q.out ? " out" : "") + (q.i === pcsv.act ? " on" : "") + (k < 3 && pe ? " m" + (k + 1) : "") + '" data-t="' + q.i + '" data-id="' + q.i + '" aria-pressed="' + (q.i === pcsv.act) + '" title="' + escHtml(st.link && !st.lname ? "Ссылка · " + pcsvLabel(st) : pcsvNm(st.name)) + ' · ' + fmt(st.rows.length) + ' вар.">' +
           '<span class="rk-p"><b>' + (k + 1) + '</b>' + tr + '</span>' +
-          '<span class="rk-n"><b>' + escHtml(pcsvLabel(st)) + '</b>' + (st.link || st.virt || st.ai ? '' : '<span class="rk-fn">' + escHtml(pcsvNm(st.name)) + '</span>') + '<small>' + (q.out ? '<span class="rk-x" title="Набор выбыл: ни один вариант уже не наберёт ' + PAY + '+">\u00d7</span> ' : '') + (st.virt ? '<em class="rk-ai rk-hunt">Охота</em>' + RK_VT : st.ai ? '<em class="rk-ai">ИИ</em>' + RK_VT : "") + '<span class="rk-cnt">' + fmt(st.rows.length) + ' вар.</span></small></span>' +
+          '<span class="rk-n"><b>' + escHtml(pcsvLabel(st)) + '</b>' + ((st.link && !st.lname) || st.virt || st.ai ? '' : '<span class="rk-fn">' + escHtml(pcsvNm(st.name)) + '</span>') + '<small>' + (q.out ? '<span class="rk-x" title="Набор выбыл: ни один вариант уже не наберёт ' + PAY + '+">\u00d7</span> ' : '') + (st.virt ? '<em class="rk-ai rk-hunt">Охота</em>' + RK_VT : st.ai ? '<em class="rk-ai">ИИ</em>' + RK_VT : "") + '<span class="rk-cnt">' + fmt(st.rows.length) + ' вар.</span></small></span>' +
           '<span class="rk-v">' + (pe ? '<i class="cn" data-k="' + q.i + 'b">' + q.b + '</i><small> из ' + pe + '</small>' : '—') + '</span>' +
           '<span class="rk-v' + (q.w ? " ok" : "") + '"><i class="cn" data-k="' + q.i + 'w">' + fmt(q.w) + '</i></span><span class="rk-v"><i class="cn" data-k="' + q.i + 'a">' + fmt(q.a) + '</i></span>' +
           '<span class="rk-bar" data-w="' + (n ? Math.round(q.b / n * 100) : 0) + '" data-pay="' + (n ? Math.round(PAY / n * 100) : 60) + '"><i></i><u></u></span></button>';
@@ -8459,7 +8472,7 @@
       }
       varsDecode(payloads[k++], N, function(rows, pages){
         if(rows){
-          pcsvAddTo(String(tir), { link: 1, rows: rows.map(function(r){ return r.join(""); }),
+          pcsvAddTo(String(tir), { link: 1, lname: linkNames[payloads[k - 1]] || "", rows: rows.map(function(r){ return r.join(""); }),
                                    sys: (pages || rows).map(function(pg){ return pg.join(","); }) });
           added++;
         }
