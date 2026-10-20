@@ -5340,6 +5340,91 @@
     return { added: add.length, dup: dup };
   }
 
+  /* ---------- Добивка к брифу ----------
+     Система с гарантией не трогается: бюджет сверх её цены уходит в отдельные строки
+     того же купона, самые вероятные по линии конторы (с поправкой по истории), без повторов системы.
+     Каждая такая строка — ещё одна комбинация, которая при попадании даёт 15 из 15; гарантия остаётся прежней. */
+  var briefExtraBudget = {}, briefExtraG = 0;
+  var BRIEF_EXTRA_MAX = 20000;
+  function briefTopLines(sets, K, skip){
+    var P = briefProbs(), n = sets.length;
+    var ord = sets.map(function(st, i){
+      var w = st.map(function(o){ var v = P[i] ? P[i][o] : 1 / 3; return { o: o, l: Math.log(Math.max(v, 1e-9)) }; });
+      w.sort(function(a, b){ return b.l - a.l || a.o - b.o; });
+      return w;
+    });
+    var base = 0; ord.forEach(function(w){ base += w[0].l; });
+    var heap = [];
+    function push(x){ heap.push(x); var i = heap.length - 1; while(i > 0){ var p = (i - 1) >> 1; if(heap[p].l >= heap[i].l) break; var t = heap[p]; heap[p] = heap[i]; heap[i] = t; i = p; } }
+    function pop(){ var top = heap[0], last = heap.pop(); if(heap.length){ heap[0] = last; var i = 0; for(;;){ var a = 2 * i + 1, b = a + 1, m = i; if(a < heap.length && heap[a].l > heap[m].l) m = a; if(b < heap.length && heap[b].l > heap[m].l) m = b; if(m === i) break; var t = heap[m]; heap[m] = heap[i]; heap[i] = t; i = m; } } return top; }
+    var z = []; for(var i = 0; i < n; i++) z.push(0);
+    push({ ix: z, l: base, last: 0 });
+    var out = [], guard = 0;
+    while(heap.length && out.length < K && guard < 4 * (K + skip.size + 10)){
+      guard++;
+      var c = pop();
+      var line = c.ix.map(function(k, i){ return ord[i][k].o; });
+      if(!skip.has(line.join(""))) out.push(line);
+      for(var j = c.last; j < n; j++){
+        if(c.ix[j] + 1 < ord[j].length){
+          var nx = c.ix.slice(); nx[j]++;
+          push({ ix: nx, l: c.l - ord[j][c.ix[j]].l + ord[j][nx[j]].l, last: j });
+        }
+      }
+    }
+    return out;
+  }
+  function briefExtraLines(sets, g){
+    var res = briefCache(sets)["g" + g]; if(!res || !res.lines) return null;
+    var price = briefPrice(), U = 1; sets.forEach(function(st){ U *= st.length; });
+    var min = res.rows * price, b = Math.max(min, Number(briefExtraBudget[g]) || min);
+    var k = Math.min(Math.floor((b - min) / price), U - res.rows, BRIEF_EXTRA_MAX);
+    var skip = new Set(res.lines.map(function(L){ return L.join(""); }));
+    var add = k > 0 ? briefTopLines(sets, k, skip) : [];
+    return { sys: res.lines, add: add, min: min, U: U, all: res.lines.concat(add) };
+  }
+  function briefExtraBox(sets){
+    var built = [];
+    for(var g = 14; g >= 9; g--){ var r = briefCache(sets)["g" + g]; if(r && r.lines) built.push(g); }
+    if(!built.length) return '<div id="briefExtra"></div>';
+    if(built.indexOf(briefExtraG) < 0) briefExtraG = built[0];
+    var g = briefExtraG, x = briefExtraLines(sets, g), price = briefPrice();
+    var b = Math.max(x.min, Number(briefExtraBudget[g]) || x.min);
+    var h = '<div id="briefExtra" class="brief-extra"><h3>Добивка</h3>' +
+      '<p class="ev-note">Система с гарантией остаётся целиком. Бюджет сверх её цены уходит в отдельные строки того же купона — самые вероятные по линии конторы, без повторов системы. Каждая такая строка даёт ещё одну комбинацию на 15 из 15; гарантия остаётся ' + g + ' из 15.</p>';
+    if(built.length > 1) h += '<p class="brief-ex-g">Система: ' + built.map(function(q){ return '<button type="button" class="gap-set bx-g' + (q === g ? ' on' : '') + '" data-g="' + q + '">' + q + ' из 15</button>'; }).join(" ") + '</p>';
+    h += '<label class="brief-ex-in">Бюджет, ₽ <input type="number" id="briefExB" inputmode="numeric" min="' + x.min + '" step="' + price + '" value="' + b + '"></label>' +
+      '<p class="brief-ex-sum">Система — <b>' + fmt(x.sys.length) + '</b> строк на ' + fmt(x.min) + ' ₽, гарантия ' + g + '<br>Добивка — <b>' + fmt(x.add.length) + '</b> строк на ' + fmt(x.add.length * price) + ' ₽, по вероятности<br>Всего — <b>' + fmt(x.all.length) + '</b> строк на <b>' + fmt(x.all.length * price) + ' ₽</b>' +
+      (x.all.length >= x.U ? ' — это уже весь купон' : '') + (x.add.length >= BRIEF_EXTRA_MAX ? ' (добивка не больше ' + fmt(BRIEF_EXTRA_MAX) + ' строк)' : '') + '</p>' +
+      '<p class="nw"><button type="button" class="gap-set" id="briefExCart">в корзину</button> <button type="button" class="gap-set" id="briefExCsv">CSV</button></p></div>';
+    return h;
+  }
+  function briefExtraBind(sets){
+    var w = $("briefExtra"); if(!w) return;
+    var busy = false, redraw = function(){ if(busy) return; var cur = $("briefExtra"); if(!cur || !cur.parentNode) return; busy = true; var d = document.createElement("div"); d.innerHTML = briefExtraBox(sets); cur.parentNode.replaceChild(d.firstChild, cur); briefExtraBind(sets); };
+    [].slice.call(w.querySelectorAll(".bx-g")).forEach(function(b){ b.addEventListener("click", function(){ briefExtraG = Number(b.getAttribute("data-g")); redraw(); }); });
+    var inp = $("briefExB");
+    if(inp) inp.addEventListener("change", function(){
+      var g = briefExtraG, price = briefPrice(), res = briefCache(sets)["g" + g], min = res.rows * price;
+      var v = Math.max(min, Math.round((Number(inp.value) || min) / price) * price);
+      briefExtraBudget[g] = v; redraw();
+      var ni = $("briefExB"); if(ni) ni.focus();
+    });
+    var cart = $("briefExCart");
+    if(cart) cart.addEventListener("click", function(){
+      var g = briefExtraG, x = briefExtraLines(sets, g); if(!x) return;
+      if(x.all.length > BASKET_MAX){ $("briefPrev").innerHTML = '<p class="ev-warn">В корзину помещается до ' + BASKET_MAX + ' строк, а здесь ' + fmt(x.all.length) + '. Скачай CSV.</p>'; return; }
+      var r = briefToBasket(x.all, g + "+добивка");
+      $("evBack").hidden = true;
+      say("«Бриф» " + g + " из 15 с добивкой: в корзину добавлено " + fmt(r.added) + " строк" + (r.dup ? ", " + r.dup + " уже были" : "") + " на " + fmt(r.added * briefPrice()) + " ₽.");
+    });
+    var csv = $("briefExCsv");
+    if(csv) csv.addEventListener("click", function(){
+      var g = briefExtraG, x = briefExtraLines(sets, g); if(!x) return;
+      saveCsvFile(briefCsv(x.all), "Бриф " + g + " из 15 + добивка " + x.add.length + ", " + x.all.length + " строк - " + (x.all.length * briefPrice()) + "р.csv");
+    });
+  }
+
   function briefCsv(lines){
     var price = briefPrice(), sep = state.csvSep === "; " ? "; " : ";";
     var out = lines.map(function(L){
@@ -5638,6 +5723,7 @@
          '<td class="nw">полное покрытие</td></tr>';
     for(var g = 14; g >= 9; g--) h += briefRow(g, sets, sizes, U);
     h += '</tbody></table>';
+    h += briefExtraBox(sets);
     h += '<p class="ev-note">Числа детерминированы: один и тот же купон всегда даёт одну и ту же систему. ' +
          'Для частых форм купона из двоек и троек берутся готовые системы, каждая проверена перебором всех комбинаций; ' +
          'для остальных считается жадное покрытие, оно не обязано быть минимальным, зато считается за доли секунды прямо в браузере.</p>';
@@ -5658,6 +5744,7 @@
       });
     };
     bindRule();
+    briefExtraBind(sets);
     if(!aiPlan(ai.data)) loadAi(true).then(function(j){ if(aiPlan(j) && $("briefRuleW")){ $("briefRuleW").innerHTML = briefRuleBox(one, curShape); bindRule(); } });
 
     [].slice.call($("evBody").querySelectorAll(".brief-go")).forEach(function(b){

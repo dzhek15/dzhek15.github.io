@@ -2755,3 +2755,11 @@ html[data-bk="fonbet"] .fon-only{display:flex}
 .fcp-x.m3{background:rgba(201,162,75,.42)}
 .fcp-acts{margin-top:12px}
 .fcp-warn{font-size:13px; margin:0 0 8px; padding:7px 9px; border-left:3px solid #c9a24b; background:rgba(201,162,75,.1)}
+/* добивка к брифу */
+.brief-extra{margin:14px 0; padding:12px 14px; border:1px solid var(--brand-gold); border-radius:var(--r); background:var(--surface-2); text-align:center}
+.brief-extra h3{margin:0 0 6px}
+.brief-ex-in{display:inline-flex; align-items:center; gap:8px; margin:6px 0; font-size:14px; color:var(--muted)}
+.brief-ex-in input{width:130px; padding:6px 8px; border:1px solid var(--line, #444); border-radius:8px; background:var(--surface); color:var(--ink); font:600 15px "IBM Plex Mono",monospace; text-align:right}
+.brief-ex-sum{margin:6px 0; font-size:13.5px; line-height:1.6; color:var(--muted)}
+.brief-ex-sum b{color:var(--ink); font-family:"IBM Plex Mono",monospace}
+.brief-ex-g .gap-set.on{border-color:var(--brand-gold); color:var(--brand-gold)}
