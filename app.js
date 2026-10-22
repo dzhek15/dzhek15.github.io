@@ -433,13 +433,18 @@
     var fShow = inPrevF
       ? (Number(((state.drawByNo || {})[state.prev.tirazh] || {}).pool) || Number(state.prev.pool) || 0)
       : (Number(state.poolSum) || 0);
-    if(fShow > 0){
+    if(FON){
+      /* Фонбет пул тиража не публикует (totobrief отдаёт только суперприз) */
+      fw.hidden = false; $("tkFund").textContent = "не публикуется";
+      fw.title = "Фонбет не публикует пул тиража: известен только суперприз";
+    } else if(fShow > 0){
       fw.hidden = false;
       $("tkFund").textContent = fmt(fShow) + " ₽";
     } else { fw.hidden = false; $("tkFund").textContent = "—"; }
 
     /* ценность тиража: суперприз к типичному фонду, сравниваем с обычным уровнем */
     var vw = $("tkValWrap");
+    if(FON) vw.style.setProperty("display", "none", "important"); else vw.style.removeProperty("display");   /* у Фонбета пул неизвестен — ценность не считаем */
     var fundNow = Number(state.poolTypical) || Number(state.poolSum) || 0;
     var rTyp = Number(state.ratioTypical) || 0;
     if(jackShow && fundNow){
@@ -460,6 +465,7 @@
       vEl.textContent = word;
       $("tkValNote").innerHTML = "суперприз " + r.toFixed(2).replace(".", ",") +
         " от фонда" + (rTyp > 0 ? ", обычно " + rTyp.toFixed(2).replace(".", ",") : "");
+    } else if(FON){ vw.hidden = true;   /* без пула ценность тиража у Фонбета не посчитать */
     } else { vw.hidden = false; $("tkVal").textContent = "—"; $("tkVal").classList.remove("good", "bad"); $("tkValNote").innerHTML = "&nbsp;"; }
 
     /* на телефоне плитки лежат сеткой 2×2: нечётную последнюю растягиваем на всю ширину,
@@ -1655,31 +1661,43 @@
      data/api/history.json собирает зеркало (GitHub Actions): все завершённые тиражи
      с линией конторы, долями пула и итогом. Отсюда — история команды по клику на название. */
   var hist = { ev: [], at: 0, loading: false, count: 0 };
+  /* Фонбет: история — тиражи Фонбета (data/api/fon/history.json) плюс все тиражи Балтбета.
+     Калибровка линии, стратегии и карточки команд в режиме Фонбета считаются по обеим. */
   function loadHist(){
-    if(FON) return;   /* history.json — тиражи Балтбета */
     if(hist.loading || typeof fetch !== "function") return;
     if(hist.at && Date.now() - hist.at < 6 * 3600 * 1000) return;
     hist.loading = true;
-    fetch("data/api/history.json?t=" + Math.floor(Date.now() / 3600000))
-      .then(function(r){ return r.ok ? r.json() : null; })
-      .then(function(j){
-        if(!j || !j.draws) return;
-        var ev = [];
-        Object.keys(j.draws).forEach(function(n){
-          var d = j.draws[n];
-          (d.ev || []).forEach(function(e){
-            ev.push({ n: Number(n), at: d.ended_at || "", home: e[0], away: e[1], ch: e[2] || "",
-                      bk: (e[3] != null && e[4] != null && e[5] != null) ? [Number(e[3]), Number(e[4]), Number(e[5])] : null,
-                      pool: (e[6] != null) ? [Number(e[6]), Number(e[7]), Number(e[8])] : null,
-                      res: e[9] || "", score: e[10] || "" });
+    var tq = "?t=" + Math.floor(Date.now() / 3600000);
+    var get = function(u){ return fetch(u + tq).then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; }); };
+    var srcs = [get("data/api/history.json")];
+    if(FON) srcs.push(get("data/api/" + BK.mir + "history.json"));
+    Promise.all(srcs.concat([FON && fonRuReady ? fonRuReady : null]))
+      .then(function(js){
+        var ev = [], cnt = 0, nb = 0, nf = 0;
+        [js[0], FON ? js[1] : null].forEach(function(j, si){
+          if(!j || !j.draws) return;
+          var fon = si === 1, tr = fon ? ruTeam : function(x){ return x; };
+          Object.keys(j.draws).forEach(function(n){
+            var d = j.draws[n]; cnt++; if(fon) nf++; else nb++;
+            (d.ev || []).forEach(function(e){
+              ev.push({ n: Number(n), src: fon ? "Ф" : (FON ? "Б" : ""), at: d.ended_at || "", home: tr(e[0]), away: tr(e[1]), ch: fon ? fonLeague(e[2] || "") : (e[2] || ""),
+                        bk: (e[3] != null && e[4] != null && e[5] != null) ? [Number(e[3]), Number(e[4]), Number(e[5])] : null,
+                        pool: (e[6] != null) ? [Number(e[6]), Number(e[7]), Number(e[8])] : null,
+                        res: e[9] || "", score: e[10] || "" });
+            });
           });
+          if(fon) hist.fon = j.draws;
         });
-        ev.sort(function(a, b){ return b.n - a.n; });
-        hist.ev = ev; hist.count = Object.keys(j.draws).length; hist.at = Date.now();
+        if(!ev.length) return;
+        ev.sort(function(a, b){ return a.at === b.at ? b.n - a.n : (a.at < b.at ? 1 : -1); });
+        hist.ev = ev; hist.count = cnt; hist.nb = nb; hist.nf = nf; hist.at = Date.now();
         if(!book) render();
       })
       .catch(function(){})
       .then(function(){ hist.loading = false; });
+  }
+  function histCountTxt(){
+    return FON ? hist.count + " тиражей: Фонбет " + (hist.nf || 0) + ", Балтбет " + (hist.nb || 0) : hist.count + " тиражей";
   }
 
   function normTeam(x){ return String(x || "").toLowerCase().replace(/ё/g, "е").replace(/[^a-zа-я0-9]+/g, ""); }
@@ -1696,7 +1714,7 @@
       var e = r.e, mine = r.home ? "1" : "2";
       var cls = (!e.res || e.res === "X") ? "" : (e.res === mine ? " w" : " l");
       var opp = r.home ? e.away : e.home;
-      h += '<tr><td class="nw">' + e.n + '</td><td class="nw">' + fmtDay(e.at) + '</td>' +
+      h += '<tr><td class="nw">' + (e.src || "") + e.n + '</td><td class="nw">' + fmtDay(e.at) + '</td>' +
         '<td class="tm-me" style="text-align:left">' + escHtml(r.home ? meName : opp) + ' — ' + escHtml(r.home ? opp : meName) +
         '<span class="side">' + (r.home ? "дома" : "в гостях") + '</span></td>' +
         '<td class="nw">' + (e.bk ? e.bk.join(" / ") : "—") + '</td>' +
@@ -1718,7 +1736,7 @@
       if(oppKey && isH && normTeam(e.away) === oppKey) h2h.push({ e: e, home: true });
       if(oppKey && isA && normTeam(e.home) === oppKey) h2h.push({ e: e, home: false });
     });
-    $("evTitle").textContent = name + " в Балтсистеме";
+    $("evTitle").textContent = name + (FON ? " в истории тиражей" : " в Балтсистеме");
     var box = $("evBody");
     if(!hist.ev.length){
       box.innerHTML = '<p class="ev-warn">История тиражей ещё не загрузилась — попробуй через минуту.</p>';
@@ -1737,11 +1755,11 @@
           '<p class="ev-note">В личных встречах учтены оба порядка (дома и в гостях).</p><hr class="th-hr">';
       } else {
         h2hBlock = '<h3 class="th-h2">Очные встречи с ' + escHtml(opp) + '</h3>' +
-          '<p class="ev-warn">В истории (' + hist.count + ' тиражей) эти команды между собой не встречались.</p><hr class="th-hr">';
+          '<p class="ev-warn">В истории (' + histCountTxt() + ') эти команды между собой не встречались.</p><hr class="th-hr">';
       }
     }
     if(!rows.length){
-      box.innerHTML = h2hBlock + '<p class="ev-warn">В истории (' + hist.count + ' тиражей) эта команда не встречалась.</p>';
+      box.innerHTML = h2hBlock + '<p class="ev-warn">В истории (' + histCountTxt() + ') эта команда не встречалась.</p>';
       $("evBack").hidden = false; return;
     }
     var w = 0, d = 0, l = 0, favN = 0, favHit = 0;
@@ -1759,7 +1777,7 @@
       (favN ? '<span>фаворитом конторы <b>' + favN + '</b>, прошла <b>' + favHit + '</b></span>' : '') + '</div>';
     h += h2hTable(rows.slice(0, 12), key, name);
     if(rows.length > 12) h += '<p class="ev-note">Показаны последние 12 из ' + rows.length + '.</p>';
-    h += '<p class="ev-note">Линия и пул — доли в процентах 1 / X / 2 на момент закрытия тиража. История: ' + hist.count + ' тиражей.</p>';
+    h += '<p class="ev-note">Линия и пул — доли в процентах 1 / X / 2 на момент закрытия тиража. История: ' + histCountTxt() + '.' + (FON ? ' «Ф» — тираж Фонбета, «Б» — Балтбета.' : '') + '</p>';
     box.innerHTML = h2hBlock + h;
     $("evBack").hidden = false;
   }
@@ -3258,6 +3276,36 @@
     });
     return accDistRows(hits);
   }
+  /* Фонбет: totobrief итогов новых тиражей не отдаёт — берём их из data/api/fon/history.json
+     (итоги собраны по Flashscore). Отменённый/перенесённый матч там помечен «*». */
+  var fonHistP = null;
+  function fonHistDraws(){
+    if(!FON || typeof fetch !== "function") return Promise.resolve(null);
+    if(!fonHistP) fonHistP = fetch("data/api/" + BK.mir + "history.json?t=" + Math.floor(Date.now() / 600000))
+      .then(function(r){ return r.ok ? r.json() : null; }).then(function(j){ return j && j.draws || null; })
+      .catch(function(){ fonHistP = null; return null; });
+    return fonHistP;
+  }
+  /* порядок тиражей в статистике: у Фонбета номера начались заново (№5… в 2026 после №657 в 2020) — сортируем по дате */
+  function accOrd(at, n){
+    if(!FON) return Number(n) || 0;
+    var t = Date.parse(at || ""); return isFinite(t) ? t : 0;
+  }
+  function fonFixPool(x){
+    if(!x || typeof x !== "object" || x.fonPool) return;
+    x.fonPool = 1;
+    if(x.pool_sum != null && !(Number(x.jackpot) > 0)) x.jackpot = x.pool_sum;
+    x.pool_sum = null;
+  }
+  function fonFillRes(info, fh){
+    var d = fh && fh[String(info.number)];
+    if(!d || !Array.isArray(d.ev)) return;
+    var evs = (info.events || []).slice().sort(function(a, b){ return (a.order || 0) - (b.order || 0); });
+    evs.forEach(function(e, i){
+      var h = d.ev[i]; if(!h || normOut(e.result)) return;
+      if(h[9]){ e.result = h[9]; if(h[10] && !e.score) e.score = h[10]; }
+    });
+  }
   function showAcc(back, note, noteN){
     $("evTitle").textContent = "Статистика стратегий";
     $("evBody").innerHTML = '<div id="accBox"><p class="ev-note">Считаю…</p></div>' +
@@ -3265,14 +3313,14 @@
     $("evBack").hidden = false;
     if(back) $("accBack").addEventListener("click", back);
     var store = accRead(), key = accSetKey();
-    var aiH = fetch(MIRROR + "ai_hist.json?t=" + Date.now(), {cache: "no-store"})
+    var aiH = fetch(MIRROR + BK.mir + "ai_hist.json?t=" + Date.now(), {cache: "no-store"})
       .then(function(r){ return r.ok ? r.json() : {}; }).catch(function(){ return {}; });
     /* итоги — по всем тиражам с загруженными выплатами; без выплат — только последние ACC_N */
-    var draws = Promise.all([apiFetch(BKL + "1").then(function(r){ return r.ok ? r.json() : null; }), payLoadShared()])
-      .then(function(rr){ var j = rr[0];
+    var draws = Promise.all([apiFetch(BKL + "1").then(function(r){ return r.ok ? r.json() : null; }), payLoadShared(), fonHistDraws()])
+      .then(function(rr){ var j = rr[0], fh = rr[2];
         /* «expected» — матчи сыграны, оператор ещё не закрыл тираж: берём, если известны все итоги */
         var rows = ((j && j.data) || []).filter(function(d){ return d.status === "finished" || d.status === "expected"; })
-          .sort(function(a, b){ return b.number - a.number; })
+          .sort(function(a, b){ return accOrd(b.ended_at, b.number) - accOrd(a.ended_at, a.number); })
           .filter(function(d, i){ return i < ACC_N || payFor(d.number); });
         return Promise.all(rows.map(function(d){
           var have = store[d.number];
@@ -3281,17 +3329,18 @@
             .then(function(j2){
               var info = j2 && (j2.data || j2);
               if(!info) return;
-              var allRes = (info.events || []).length >= 15 && (info.events || []).every(function(e){ return !!normOut(e && e.result); });
+              if(FON) fonFillRes(info, fh);
+              var allRes = (info.events || []).length >= 15 && (info.events || []).every(function(e){ return !!normOut(e && e.result) || (FON && e && e.result === VOID); });
               if(info.status !== "finished" && !allRes) return;
               info.number = info.number || d.number;
-              store[d.number] = stratForInfo(info);
-            }).catch(function(){});
+              store[d.number] = stratForInfo(info); store[d.number].at = d.ended_at || "";
+            }).catch(function(e){ if(window.console) console.warn("Статистика: тираж " + d.number, e); });
         }));
       }).catch(function(){});
     var vp = loadVirt().catch(function(){ return null; }), vap = loadVirtAi().catch(function(){ return null; });
     Promise.all([aiH, draws, vp, payLoadShared(), vap]).then(function(r){
       var aih = r[0] || {}, vdata = r[2] || {}, vai = r[4] || {}, el = $("accBox"); if(!el) return;
-      var nums = Object.keys(store).map(Number).sort(function(a, b){ return b - a; });
+      var nums = Object.keys(store).map(Number).sort(function(a, b){ return accOrd(store[b].at, b) - accOrd(store[a].at, a); });
       var keep = {}; nums.forEach(function(n, i){ if(i < 40 || payFor(n)) keep[n] = store[n]; }); accWrite(keep);
       nums = nums.filter(function(n, i){ return i < ACC_N || payFor(n); });
       if(!nums.length){ el.innerHTML = '<p class="ev-warn">Пока не удалось получить итоги прошлых тиражей. Попробуй позже.</p>'; return; }
@@ -3711,7 +3760,7 @@
     if(aiHist.data && Date.now() - aiHist.at < 10 * 60000) return Promise.resolve(aiHist.data);
     if(aiHist.loading) return aiHist.loading;
     if(typeof fetch !== "function") return Promise.resolve(null);
-    aiHist.loading = fetch(MIRROR + "ai_hist.json?t=" + (AI_BUST || Math.floor(Date.now() / 600000)), AI_BUST ? {cache: "no-store"} : undefined)
+    aiHist.loading = fetch(MIRROR + BK.mir + "ai_hist.json?t=" + (AI_BUST || Math.floor(Date.now() / 600000)), AI_BUST ? {cache: "no-store"} : undefined)
       .then(function(r){ return r.ok ? r.json() : null; })
       .then(function(j){ aiHist.loading = null; if(j){ aiHist.data = j; aiHist.at = Date.now(); } return aiHist.data; })
       .catch(function(){ aiHist.loading = null; return aiHist.data; });
@@ -3724,7 +3773,7 @@
     if(aiArch.data && Date.now() - aiArch.at < 10 * 60000) return Promise.resolve(aiArch.data);
     if(aiArch.loading) return aiArch.loading;
     if(typeof fetch !== "function") return Promise.resolve(null);
-    aiArch.loading = fetch(MIRROR + "ai_arch.json?t=" + (AI_BUST || Math.floor(Date.now() / 600000)), AI_BUST ? {cache: "no-store"} : undefined)
+    aiArch.loading = fetch(MIRROR + BK.mir + "ai_arch.json?t=" + (AI_BUST || Math.floor(Date.now() / 600000)), AI_BUST ? {cache: "no-store"} : undefined)
       .then(function(r){ return r.ok ? r.json() : null; })
       .then(function(j){ aiArch.loading = null; if(j){ aiArch.data = j; aiArch.at = Date.now(); } return aiArch.data; })
       .catch(function(){ aiArch.loading = null; return aiArch.data; });
@@ -3734,11 +3783,10 @@
      в просмотре идут в рейтинг с пометкой «виртуальный» — на деньги не ставятся, нужны для отслеживания */
   var virt = { data: null, at: 0, loading: null };
   function loadVirt(fresh){
-    if(FON) return Promise.resolve(null);
     if(virt.data && Date.now() - virt.at < (fresh ? 60000 : 10 * 60000)) return Promise.resolve(virt.data);
     if(virt.loading) return virt.loading;
     if(typeof fetch !== "function") return Promise.resolve(null);
-    virt.loading = fetch(MIRROR + "virt.json?t=" + (fresh ? Date.now() : Math.floor(Date.now() / 600000)), fresh ? {cache: "no-store"} : undefined)
+    virt.loading = fetch(MIRROR + BK.mir + "virt.json?t=" + (fresh ? Date.now() : Math.floor(Date.now() / 600000)), fresh ? {cache: "no-store"} : undefined)
       .then(function(r){ return r.ok ? r.json() : null; })
       .then(function(j){ virt.loading = null; if(j){ virt.data = j; virt.at = Date.now(); } return virt.data; })
       .catch(function(){ virt.loading = null; return virt.data; });
@@ -3747,11 +3795,10 @@
   /* обучение «Охота · с ИИ»: та же Охота, вероятности поправлены выводами разбора ИИ (virt_ai.json) */
   var virtAi = { data: null, at: 0, loading: null };
   function loadVirtAi(){
-    if(FON) return Promise.resolve(null);
     if(virtAi.data && Date.now() - virtAi.at < 10 * 60000) return Promise.resolve(virtAi.data);
     if(virtAi.loading) return virtAi.loading;
     if(typeof fetch !== "function") return Promise.resolve(null);
-    virtAi.loading = fetch(MIRROR + "virt_ai.json?t=" + (AI_BUST || Math.floor(Date.now() / 600000)), AI_BUST ? {cache: "no-store"} : undefined)
+    virtAi.loading = fetch(MIRROR + BK.mir + "virt_ai.json?t=" + (AI_BUST || Math.floor(Date.now() / 600000)), AI_BUST ? {cache: "no-store"} : undefined)
       .then(function(r){ return r.ok ? r.json() : null; })
       .then(function(j){ virtAi.loading = null; if(j){ virtAi.data = j; virtAi.at = Date.now(); } return virtAi.data; })
       .catch(function(){ virtAi.loading = null; return virtAi.data; });
@@ -6524,7 +6571,7 @@
     var r = normOut(e && e.result);
     if(r) return r;
     /* totobrief не отдаёт итоги Фонбета вовсе — пустой итог там не значит «матч отменён» */
-    if(FON) return "";
+    if(FON) return (e && e.result === VOID) ? VOID : "";
     return (info && info.status === "finished") ? VOID : "";
   }
   /* попал ли исход строки/клетки в итог: отменённый матч засчитан всем */
@@ -6875,8 +6922,22 @@
     return null;
   }
   function apiFetch(path){
-    if(FON && fonRuReady){ var w = fonRuReady; return w.then(function(){ return apiFetch0(path); }); }
-    return apiFetch0(path);
+    if(!FON) return apiFetch0(path);
+    var w = fonRuReady || Promise.resolve();
+    var p = w.then(function(){ return apiFetch0(path); });
+    var isInfo = /^drawing-info\//.test(path);
+    /* totobrief отдаёт в pool_sum Фонбета суперприз, а сам пул (фонд) не отдаёт: переносим в jackpot,
+       пул — неизвестен. Итоги прошлых тиражей — из истории Фонбета (totobrief их не отдаёт) */
+    return Promise.all([p, isInfo ? fonHistDraws() : null]).then(function(rr){
+      var r = rr[0], fh = rr[1];
+      if(!r.ok) return r;
+      return r.json().then(function(j){
+        var d = j && (j.data || j);
+        (Array.isArray(d) ? d : [d]).forEach(fonFixPool);
+        if(isInfo && d && d.events && fh) fonFillRes(d, fh);
+        return { ok: true, status: 200, json: function(){ return Promise.resolve(j); } };
+      });
+    });
   }
   function apiFetch0(path){
     /* no-store: браузер (особенно Safari на телефоне) иначе отдаёт счёт из своего кэша */
@@ -8156,7 +8217,6 @@
     return miss.length ? miss : null;
   }
   function pcNoAiNote(p){
-    if(FON) return p && p.cur ? '<p class="pc-noai" id="pcNoAi">«ИИ-бриф» и «Охота на 15» пока делаются только для Балтбета; разбор ИИ для Фонбета — по команде.</p>' : "";
     var miss = curAiMissing(p);
     if(!miss) return "";
     var tx = miss.length > 1 ? "ИИ-разбор на этот тираж не проведён: купоны «ИИ-бриф» и «Охота на 15» появятся здесь сразу после разбора."
@@ -8164,7 +8224,7 @@
     return '<p class="pc-noai" id="pcNoAi">' + tx + '</p>';
   }
   function curAiPollSync(p){
-    if(!FON && curAiMissing(p)){
+    if(curAiMissing(p)){
       if(curAiPoll) return;
       curAiPoll = setInterval(function(){
         var q = state.prev;
@@ -9358,7 +9418,7 @@
     var SIZE = 5, B = 20, cal = [[], [], []];
     for(var k = 0; k < 3; k++) for(var i = 0; i < B; i++) cal[k][i] = { hit: 0, n: 0, sp: 0 };
     hist.ev.forEach(function(e){
-      if(!e.bk || !e.res) return;
+      if(!e.bk || !e.res || e.res === VOID) return;
       var s = e.bk[0] + e.bk[1] + e.bk[2]; if(!s) return;
       for(var k = 0; k < 3; k++){
         var p = e.bk[k] / s, bi = Math.max(0, Math.min(B - 1, Math.floor(p * 100 / SIZE)));
@@ -9813,7 +9873,7 @@
     var fund = (typical && poolNow < typical * 0.6) ? typical : poolNow;
     var jack = Number(state.jackpot) || 0;
     var bank = KELLY_BANK;      /* расчётный банк модели, не реальный баланс */
-    if(!fund) return { error: "не знаю размер призового фонда — нажми «Обновить тираж»" };
+    if(!fund) return { error: FON ? "Фонбет не публикует пул тиража, а без него выплату и рост банка не посчитать" : "не знаю размер призового фонда — нажми «Обновить тираж»" };
     var probs = [], pools = [], bad = null;
     state.matches.forEach(function(m){
       var pr = evProbs(m), pl = evPool(m);
