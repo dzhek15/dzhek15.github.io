@@ -31,12 +31,6 @@
         location.replace(u);
       });
     });
-    /* у Фонбета разбора ИИ нет: панель над таблицей просмотра — просто «Матчи тиража» */
-    if(FON){
-      var bar = document.getElementById("aiTblBar"), bt = bar && bar.querySelector(".aitbl-t");
-      if(bt) bt.textContent = "Матчи тиража";
-      [].slice.call(bar ? bar.querySelectorAll(".aitbl-v, .aitbl-s") : []).forEach(function(x){ x.hidden = true; x.style.display = "none"; });
-    }
     var bf = document.getElementById("btnFetch");
     if(bf) bf.title = "Забрать актуальный тираж " + BK.title + "а с totobrief";
   }
@@ -2532,7 +2526,7 @@
         var found = (all.length && fsLookup(m, all)) || (mr.length && fsLookup(m, mr)) || null;
         var tt2 = found ? fsFmtTime(found.ts) : "";
         if(tt2){ if(m.time !== tt2) changed = true; m.time = tt2; m.fsV = FS_MV; }
-        else if(m.time && m.fsV !== FS_MV){ m.time = ""; m.fsV = FS_MV; changed = true; }   /* старое время было от чужого матча */
+        else if(!FON && m.time && m.fsV !== FS_MV){ m.time = ""; m.fsV = FS_MV; changed = true; }   /* старое время было от чужого матча; у Фонбета время из линии верное — не стираем */
       });
       if(changed){ save(); render(); }
     }).catch(function(){});
@@ -8630,7 +8624,7 @@
         var f = (all.length && fsLookup(m, all)) || (mr.length && fsLookup(m, mr)) || null;
         var t = f ? fsFmtTime(f.ts) : "";
         if(t){ if(m.time !== t) changed = true; m.time = t; m.fsV = FS_MV; }
-        else if(m.time && m.fsV !== FS_MV){ m.time = ""; m.fsV = FS_MV; changed = true; }
+        else if(!FON && m.time && m.fsV !== FS_MV){ m.time = ""; m.fsV = FS_MV; changed = true; }
       });
       if(changed){ save(); if(state.viewPrev) render(); }
     }).catch(function(){});
