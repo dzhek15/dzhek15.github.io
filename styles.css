@@ -2763,3 +2763,7 @@ html[data-bk="fonbet"] .fon-only{display:flex}
 .brief-ex-sum{margin:6px 0; font-size:13.5px; line-height:1.6; color:var(--muted)}
 .brief-ex-sum b{color:var(--ink); font-family:"IBM Plex Mono",monospace}
 .brief-ex-g .gap-set.on{border-color:var(--brand-gold); color:var(--brand-gold)}
+
+/* «Назад» / «Вперёд» — отдельной строкой над таблицей купона, на всю её ширину */
+.undo-bar{display:flex; gap:10px; margin:10px 0 8px}
+.undo-bar #btnUndo, .undo-bar #btnRedo{flex:1 1 0; justify-content:center; min-height:40px; font-size:14px}

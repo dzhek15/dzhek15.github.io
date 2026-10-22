@@ -30,7 +30,7 @@ body{margin:0; font:14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; b
 img{max-width:100%}
 [hidden]{display:none !important}
 </style>
-<link rel="stylesheet" href="styles.css?v=20261022b">
+<link rel="stylesheet" href="styles.css?v=20261022c">
 </head>
 <body>
 
@@ -135,8 +135,6 @@ img{max-width:100%}
     </section>
     <div class="roll">
         <div class="roll-secondary roll-service">
-          <button id="btnUndo" type="button" disabled><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M7 4.5 3 8.5l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 8.5H12a4.5 4.5 0 0 1 0 9h-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Назад</button>
-          <button id="btnRedo" type="button" disabled><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M13 4.5l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M16.5 8.5H8a4.5 4.5 0 0 0 0 9h2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Вперёд</button>
           <button id="btnFetch" type="button" title="Забрать актуальный тираж Балтсистемы с totobrief"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4.2 12.5a6 6 0 0 1 9.9-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M15.8 7.5a6 6 0 0 1-9.9 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M14.6 3.1v3.6h-3.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.4 16.9v-3.6h3.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lbl">Обновить тираж</span></button>
         </div>
         <div class="roll-group">
@@ -218,6 +216,10 @@ img{max-width:100%}
   <div class="prev-bar" id="prevBar" hidden></div>
   <div class="aitbl-bar" id="aiTblBar"><span class="aitbl-t">ИИ варианты</span><em class="aitbl-v" title="Виртуальный купон: на деньги не ставится, нужен для отслеживания"><span class="f">виртуальный</span><span class="s">вирт.</span></em><span class="aitbl-s">разбор ИИ, не меняется</span><button type="button" id="aiTblBtn" aria-expanded="true" aria-controls="coupon"><span>Свернуть</span><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 7.5 6 3.5l4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
   <div class="ai-run-note" id="aiRunNote" hidden></div>
+  <div class="undo-bar" id="undoBar">
+    <button id="btnUndo" type="button" disabled><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M7 4.5 3 8.5l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 8.5H12a4.5 4.5 0 0 1 0 9h-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Назад</button>
+    <button id="btnRedo" type="button" disabled><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M13 4.5l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M16.5 8.5H8a4.5 4.5 0 0 0 0 9h2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Вперёд</button>
+  </div>
   <div class="coupon" id="coupon">
     <div class="tm-hint" id="tmHint"><div class="tm-in"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7.5"/><path d="M10 5.8V10l2.8 1.8"/></svg><span>Нажми на команду: её игры в тотализаторе</span><i class="tm-arr" aria-hidden="true"></i></div></div>
     <div class="chead">
@@ -302,10 +304,10 @@ img{max-width:100%}
   </footer>
 </div>
 
-<script src="config.js?v=20261022b"></script>
-<script src="brief_lib.js?v=20261022b"></script>
-<script src="app.js?v=20261022b"></script>
-<script src="visual.js?v=20261022b"></script>
+<script src="config.js?v=20261022c"></script>
+<script src="brief_lib.js?v=20261022c"></script>
+<script src="app.js?v=20261022c"></script>
+<script src="visual.js?v=20261022c"></script>
 
 <script data-goatcounter="https://dzhek15.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 </body>
