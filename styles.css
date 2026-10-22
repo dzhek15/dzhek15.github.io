@@ -2413,6 +2413,9 @@ body.is-prev .pct-col.hit b,body.is-prev .kf-col.hit{color:var(--ink); font-weig
 .ai-paper .ai-stb-q{background:#B07A12}
 .ai-paper .ai-stb-back{background:#2A6B35}
 .ai-paper .ai-stb-ok{background:#5E5446}
+.ai-paper .ai-lp-l10{font-size:12.5px; line-height:1.4; color:var(--muted,#5b6470); margin-top:3px; overflow-wrap:anywhere}
+.ai-paper .ai-lp-fl{font-size:12.5px; line-height:1.4; color:#a4400c; margin-top:3px; overflow-wrap:anywhere}
+.ai-paper .ai-lp-src{font-size:11px; letter-spacing:.02em; text-transform:uppercase; color:var(--muted,#5b6470); opacity:.8; margin-top:2px}
 .ai-paper .ai-lp-d{font-size:13.5px; line-height:1.45; overflow-wrap:anywhere; flex:1 1 150px; min-width:0}
 .ai-paper .ai-lu-sn{color:#5E5446; font-style:italic}
 .ai-paper .ai-lu-no,.ai-paper .ai-lu-xi{display:block; font-size:13.5px; line-height:1.45}

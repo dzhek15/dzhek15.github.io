@@ -2828,9 +2828,13 @@
     var rb = ro === "основной" ? '<span class="ai-ro ai-ro-m">Основной</span>' : (ro === "резерв" ? '<span class="ai-ro ai-ro-r">Резерв</span>' : '');
     var d = [];
     if(p.why) d.push(escHtml(p.why));
+    if(p.why2) d.push('пресса: ' + escHtml(p.why2));
     if(p.since) d.push('<span class="ai-lu-sn">' + escHtml(p.since) + '</span>');
+    var ex = (p.l10 ? '<div class="ai-lp-l10">' + escHtml(p.l10) + '</div>' : '') +
+      (p.flag ? '<div class="ai-lp-fl">Расхождение: ' + escHtml(p.flag) + '</div>' : '') +
+      (p.src ? '<div class="ai-lp-src">' + escHtml(p.src) + '</div>' : '');
     return '<li class="ai-lp"><div class="ai-lp-a">' + (p.num ? '<span class="ai-lp-num">' + escHtml(String(p.num).replace(/^№\s*/, "")) + '</span>' : '') + '<b>' + escHtml(p.n) + '</b>' + (p.pos ? '<span class="ai-lp-pos">' + escHtml(p.pos) + '</span>' : '') + rb + '</div>' +
-      '<div class="ai-lp-b"><span class="ai-stb ai-stb-' + st + '">' + escHtml(p.st || "статус не указан") + '</span>' + (d.length ? '<span class="ai-lp-d">' + d.join(" · ") + '</span>' : '') + '</div></li>';
+      '<div class="ai-lp-b"><span class="ai-stb ai-stb-' + st + '">' + escHtml(p.st || "статус не указан") + '</span>' + (d.length ? '<span class="ai-lp-d">' + d.join(" · ") + '</span>' : '') + '</div>' + ex + '</li>';
   }
   function aiLuHtml(lu){
     var o = '<div class="ai-sec ai-s-lineup"><span class="ai-lb">Составы и отсутствующие</span>';
