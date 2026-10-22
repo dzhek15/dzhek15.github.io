@@ -2010,6 +2010,14 @@
     if(!best || tie) return null;
     return { h: { url: best.hSlug, id: best.hId, logo: best.hLogo }, a: { url: best.aSlug, id: best.aId, logo: best.aLogo }, mid: best.id, ts: best.ts, st: best.st, sc: best.sc, hs: best.hs, as: best.as, ao: best.ao, bx: best.bx };
   }
+  var FON_LAT = null;
+  function fonLatin(x){
+    if(!FON) return x;
+    var ks = Object.keys(FON_RU.t || {});
+    if(!FON_LAT || FON_LAT.n !== ks.length){ FON_LAT = { n: ks.length, m: {} }; ks.forEach(function(k){ FON_LAT.m[FON_RU.t[k]] = k; }); }
+    var w = /\s*\(ж\)$/.test(x), b = String(x || "").replace(/\s*\(ж\)$/, "");
+    return FON_LAT.m[b] ? FON_LAT.m[b] + (w ? " (w)" : "") : x;
+  }
   function fsLookup(m, allIn){
     var isWomen = fsIsWomen(m.home) || fsIsWomen(m.away);
     var country = fsCountry(m.league);
@@ -2026,6 +2034,21 @@
       if(!found) found = fsFindMatch(all, m.home, m.away, isWomen);
       return !!found;
     });
+    /* Фонбет: названия переведены на русский, а Flashscore часть команд пишет латиницей
+       (Delta United, Maleyeit Kafr El Zayiat, Al Gharraf) — пробуем исходные названия линии */
+    if(!found && FON){
+      var hL = fonLatin(m.home), aL = fonLatin(m.away);
+      if(hL !== m.home || aL !== m.away){
+        [[hL, aL], [hL, m.away], [m.home, aL]].some(function(pr){
+          return [true, false].some(function(strict){
+            FS_STRICT = strict;
+            if(mine) found = fsFindMatch(mine, pr[0], pr[1], isWomen);
+            if(!found) found = fsFindMatch(all, pr[0], pr[1], isWomen);
+            return !!found;
+          });
+        });
+      }
+    }
     FS_STRICT = true;
     if(!found && mine) found = fsFindOneSide(mine, m.home, m.away, isWomen);
     FS_STRICT = false;
@@ -3284,6 +3307,13 @@
   function accOrd(at, n){
     if(!FON) return Number(n) || 0;
     var t = Date.parse(at || ""); return isFinite(t) ? t : 0;
+  }
+  /* Фонбет даёт начало матча (UTC) — переводим в МСК; у Балтбета времени в линии нет */
+  function fonKick(e){
+    var st = FON ? /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/.exec(e && e.start_at || "") : null;
+    if(!st) return { date: "", time: "" };
+    var d = new Date(Date.UTC(+st[1], +st[2] - 1, +st[3], +st[4] + 3, +st[5])), p2 = function(x){ return (x < 10 ? "0" : "") + x; };
+    return { date: p2(d.getUTCDate()) + "." + p2(d.getUTCMonth() + 1), time: p2(d.getUTCHours()) + ":" + p2(d.getUTCMinutes()) };
   }
   function fonFixPool(x){
     if(!x || typeof x !== "object" || x.fonPool) return;
@@ -5912,7 +5942,7 @@
   }
 
   function couponLink(){
-    return location.origin + location.pathname + "#k=" +
+    return linkBase() + "#k=" +
            encodeURIComponent(state.tirazh || "") + "-" + couponCode();
   }
 
@@ -6794,7 +6824,7 @@
     var urlP = new Promise(function(res, rej){
       varsEncode(book.rows, function(p){
         if(!p){ rej(new Error("pack")); return; }
-        res(location.origin + location.pathname + "#v=" + encodeURIComponent(state.tirazh || "") + "-" + p);
+        res(linkBase() + "#v=" + encodeURIComponent(state.tirazh || "") + "-" + p);
       });
     });
     /* пока идёт сжатие, Safari теряет «нажатие» и молча не пишет в буфер.
@@ -7453,7 +7483,9 @@
               var t = splitTeams(e.name);
               if(!t) return;
               var qq = e.quotes || {};
+              var kk = fonKick(e);
               list.push({ home: t[0], away: t[1], league: FON ? fonLeague(e.championship) : (e.championship || ""),
+                          date: kk.date, time: kk.time,
                           res: evRes(e, info), score: e.score || "",
                           pct: mkPct(qq), kf: (qq.norm_win_1 != null) ? [qq.norm_win_1, qq.norm_draw, qq.norm_win_2] : null });
             });
@@ -8053,6 +8085,10 @@
   var pcPasteBusy = false;
   /* ссылку могли переслать с искажениями: мессенджер закодировал # и =, вставили только код, адрес с ?s= */
   /* адрес без хвоста ссылки (?s=код, #s=код…): после открытия набора повторная перезагрузка его не дублирует */
+  /* адрес сайта для ссылок: контора (?bk=) всегда в ссылке — номера тиражей у Балтбета и Фонбета разные,
+     и без неё ссылка Фонбета у получателя в режиме Балтбета откроется не в той конторе */
+  function linkBase(){ return location.origin + location.pathname + "?bk=" + BKID; }
+  function linkBk(t){ var m = /[?&]bk=(baltbet|fonbet)\b/.exec(String(t || "")); return m ? m[1] : ""; }
   function linkCleanUrl(){
     var q = String(location.search || "").replace(/^\?/, "").split("&").filter(function(x){ return x && !/^(s|v|vs|k)=/.test(x); }).join("&");
     return location.pathname + (q ? "?" + q : "");
@@ -8081,6 +8117,9 @@
     f.addEventListener("submit", function(e){
       e.preventDefault();
       var raw = String($("pcUrl").value || "").trim(), v = linkNorm(raw);
+      /* вставили ссылку другой конторы — открываем её целиком: сайт сам переключится на нужное тото */
+      var rbk = linkBk(raw);
+      if(rbk && rbk !== BKID && /^https?:\/\//.test(raw.split(/\s+/)[0])){ location.href = raw.split(/\s+/)[0]; return; }
       /* короткие ссылки #s=код сначала превращаем в обычные #vs= (набор берём с сервера) */
       var sIds = v.match(/#s=[A-Za-z0-9_-]{6,16}/g);
       if(sIds && !pcPasteBusy){
@@ -8144,13 +8183,13 @@
         varsEncode(st.rows, function(p){ if(p) res(p); else rej(new Error("pack")); }, pages.length ? pages : null);
       });
     })).then(function(list){
-      var packed = list.map(function(pl, q){ var nm = sets[q].link && !sets[q].lname ? "" : linkNameEnc(pcsvNm(sets[q].name)); return (nm ? nm + "." : "") + pl; }).join("."), base = location.origin + location.pathname;
+      var packed = list.map(function(pl, q){ var nm = sets[q].link && !sets[q].lname ? "" : linkNameEnc(pcsvNm(sets[q].name)); return (nm ? nm + "." : "") + pl; }).join("."), base = linkBase();
       /* адрес в ?…, а не в #…: мессенджеры (MAX и др.) обрезают ссылку на «#» или делают из «#s» хэштег */
-      var longUrl = base + "?vs=" + encodeURIComponent(tir || "") + "-" + packed;
+      var longUrl = base + "&vs=" + encodeURIComponent(tir || "") + "-" + packed;
       /* у владельца — короткая ссылка, набор лежит на сайте. У остальных сервер ссылок (Cloudflare) из РФ часто недоступен,
          поэтому небольшие наборы отдаём длинной ссылкой без сервера */
       if(!ownTok() && longUrl.length <= 3500) return longUrl;
-      return shortPut(tir, packed).then(function(r){ return base + "?s=" + r.id; }, function(){ return longUrl; });
+      return shortPut(tir, packed).then(function(r){ return base + "&s=" + r.id; }, function(){ return longUrl; });
     });
     var wrote = null;
     if(window.ClipboardItem && navigator.clipboard && navigator.clipboard.write){
@@ -8168,8 +8207,8 @@
         return;
       }
       var ok = function(){
-        fin((url.indexOf("?s=") > 0 ? "Короткая ссылка скопирована: " : "Ссылка скопирована: ") + fmt(sets.length) + " набор(ов), " + fmt(nVars) + " вариант(ов), тираж №" + tir +
-          ". Кто откроет — увидит все наборы вкладками в просмотре тиража." + (url.indexOf("?s=") > 0 ? " Хранится 90 дней." : (url.length > 3500 ? " Адрес длинный — в Telegram может не влезть одним сообщением." : "")));
+        fin((/[?&]s=/.test(url) ? "Короткая ссылка скопирована: " : "Ссылка скопирована: ") + fmt(sets.length) + " набор(ов), " + fmt(nVars) + " вариант(ов), тираж №" + tir +
+          ". Кто откроет — увидит все наборы вкладками в просмотре тиража." + (/[?&]s=/.test(url) ? " Хранится 90 дней." : (url.length > 3500 ? " Адрес длинный — в Telegram может не влезть одним сообщением." : "")));
       };
       var manual = function(){
         fin("Скопировать автоматически не вышло — ссылка в окне, скопируй её оттуда.");
