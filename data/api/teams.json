@@ -242,6 +242,9 @@
 "ботафого сп": {
 "f": "fy7q1GPq-dA1p8k46.png"
 },
+"бохум": {
+"f": "IRiimykC-86lnAaq9.png"
+},
 "брага": {
 "f": "j3CGCQTH-6JDIcK05.png"
 },
@@ -263,6 +266,9 @@
 },
 "брентфорд": {
 "f": "SjSCLv86-r9Mudk7j.png"
+},
+"брест": {
+"f": "lWu2w4ne-prdkpc50.png"
 },
 "бристоль роверс": {
 "c": [
@@ -292,6 +298,9 @@
 },
 "вади дегла": {
 "f": "SCbuhyhT-nDyPqWH0.png"
+},
+"валвейк": {
+"f": "AJd4wp8k-YsXoN1Be.png"
 },
 "валенсия": {
 "f": "8Cqphq8k-MHrRLNUo.png"
@@ -323,6 +332,9 @@
 "видад темара": {
 "f": "CC9Gx2lC-Gtyfdpte.png"
 },
+"визела": {
+"f": "QLNN7HA6-AoD8MJLa.png"
+},
 "викинг": {
 "f": "UPxLwWoe-xvniPjZd.png"
 },
@@ -339,8 +351,14 @@
 ],
 "id": 200
 },
+"виченца": {
+"f": "6Lt4CoSq-nPPuzM9e.png"
+},
 "волендам": {
 "f": "8tDUPO86-WYtEUtB2.png"
+},
+"вольфсбург": {
+"f": "0Mr1oIkC-SSSLeFGl.png"
 },
 "вулверхэмптон": {
 "f": "MV7MiUmC-ABWS7fBq.png"
@@ -363,6 +381,9 @@
 "гезтепе": {
 "f": "OSgwwNjT-OGqQfjL1.png"
 },
+"генгам": {
+"f": "23voFsDN-nDL04Hmj.png"
+},
 "гент": {
 "f": "hr2efhUH-ETUaLGDL.png"
 },
@@ -374,6 +395,9 @@
 },
 "годой круз": {
 "f": "SxPJGtiC-IJKf4CSg.png"
+},
+"гранада": {
+"f": "QmKG7dT0-pEzOUfJL.png"
 },
 "греббестад": {
 "f": "ttDGsWlC-ng1fW8Y5.png"
@@ -409,6 +433,9 @@
 },
 "данфермлайн": {
 "f": "lxxL3zhT-vZ6gsKf8.png"
+},
+"дармштадт": {
+"f": "hbrmZHCN-hnEPJbbt.png"
 },
 "де графсхап": {
 "c": [
@@ -562,6 +589,9 @@
 "килмарнок": {
 "f": "6HG2JU96-xAfKntqE.png"
 },
+"клермон": {
+"f": "WSP3LX96-tjFQy6nd.png"
+},
 "клуб америка": {
 "f": "f3CzIwSq-IFA1tboe.png"
 },
@@ -605,6 +635,9 @@
 "#f2212c"
 ],
 "id": 653
+},
+"кортрейк": {
+"f": "8batulQq-nB6CAUfs.png"
 },
 "краснодар": {
 "f": "Ig4p4mBN-vTLj5hDm.png"
@@ -724,6 +757,9 @@
 "малага": {
 "f": "4jmiYe8k-MTxwaw7C.png"
 },
+"мальме": {
+"f": "boa9ERmC-WESei19M.png"
+},
 "мальорка": {
 "f": "WKsw8cne-rmDEjevK.png"
 },
@@ -744,6 +780,9 @@
 },
 "мб руиссе": {
 "f": "GEMJ49CN-2wF033pH.png"
+},
+"мехелен": {
+"f": "vPvl3wS0-zVJMgvaS.png"
 },
 "мец": {
 "f": "SCdF7fjT-Chl7XNKI.png"
@@ -1039,6 +1078,9 @@
 "сандерленд": {
 "f": "rPPdotBN-0d34NJCO.png"
 },
+"санкт-паули": {
+"f": "QHdIUX96-lrmFNGea.png"
+},
 "сантос лагуна": {
 "f": "bZZNKGWH-bmPslben.png"
 },
@@ -1307,6 +1349,9 @@
 ],
 "id": 973
 },
+"хераклес": {
+"f": "MqiB1mme-vuxu3x67.png"
+},
 "херрестадс": {
 "f": "W8KVFClC-bR54g5xh.png"
 },
@@ -1370,6 +1415,9 @@
 },
 "шабаб аль-ордон": {
 "f": "vq5lx3Qq-dvq5wjeM.png"
+},
+"шавиш": {
+"f": "SjeJdnVH-2kigctW8.png"
 },
 "шальке 04": {
 "f": "jy0u6bgT-I7p2Damb.png"
@@ -1440,11 +1488,17 @@
 ],
 "id": 9692
 },
+"эльфсборг": {
+"f": "zVHrRpme-KY7dZH60.png"
+},
 "эмли": {
 "f": "OhOZ9Ele-4xODXnII.png"
 },
 "эммен": {
 "f": "pKNN2hkC-lYiIVDtc.png"
+},
+"эмполи": {
+"f": "8ftWPVPq-KbH8aCLf.png"
 },
 "энвигадо": {
 "f": "461l7eCN-2XZjQRJG.png"
