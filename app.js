@@ -2676,12 +2676,11 @@
      чтобы правки разбора были видны сразу, а не через полчаса */
   function aiSig(j){ return j ? String(j.number) + "|" + (j.at || "") + "|" + JSON.stringify(j.m || []).length : ""; }
   function loadAi(fresh){
-    if(FON) return Promise.resolve(null);   /* разбор ИИ пока делается только для Балтбета */
     if(ai.data && Date.now() - ai.at < (fresh ? 60000 : 30 * 60000)) return Promise.resolve(ai.data);
     if(ai.loading) return ai.loading;
     if(typeof fetch !== "function") return Promise.resolve(null);
     var was = aiSig(ai.data);
-    ai.loading = fetch(MIRROR + "ai.json?t=" + (fresh ? Date.now() : Math.floor(Date.now() / 1800000)), {cache: "no-store"})
+    ai.loading = fetch(MIRROR + BK.mir + "ai.json?t=" + (fresh ? Date.now() : Math.floor(Date.now() / 1800000)), {cache: "no-store"})
       .then(function(r){ return r.ok ? r.json() : null; })
       .then(function(j){
         ai.loading = null;
@@ -6876,6 +6875,10 @@
     return null;
   }
   function apiFetch(path){
+    if(FON && fonRuReady){ var w = fonRuReady; return w.then(function(){ return apiFetch0(path); }); }
+    return apiFetch0(path);
+  }
+  function apiFetch0(path){
     /* no-store: браузер (особенно Safari на телефоне) иначе отдаёт счёт из своего кэша */
     return fetch(API + path, {cache: "no-store"})
       .then(function(r){
@@ -7084,16 +7087,48 @@
      Раньше обе части висели на одном условии, и на свежем тираже расчёт молчал
      целиком. Теперь каждая половина живёт сама по себе. */
   function mkPct(q){
-    var pool = (q.pool_win_1 != null) ? [q.pool_win_1, q.pool_draw, q.pool_win_2] : null;
+    /* Фонбет отдаёт доли игроков с тремя знаками (33.127) — в ячейке нужны целые, как у Балтбета */
+    var pool = (q.pool_win_1 != null) ? [q.pool_win_1, q.pool_draw, q.pool_win_2].map(function(x){ var v = Number(x); return isFinite(v) ? Math.round(v) : x; }) : null;
     var bk   = (q.bk_win_1   != null) ? [q.bk_win_1,   q.bk_draw,   q.bk_win_2]   : null;
     if(!pool && !bk) return null;
     return { pool: pool, bk: bk };
   }
 
-  function splitTeams(name){
+  /* Фонбет: названия команд и турниров приходят по-английски — переводим словарём data/api/fon/ru.json
+     ({t: команды, c: части названия турнира, f: турнир целиком}); чего нет в словаре, остаётся как есть */
+  var FON_RU = { t: {}, c: {}, f: {} }, fonRuReady = FON && typeof fetch === "function"
+    ? fetch(MIRROR + "fon/ru.json?t=" + Math.floor(Date.now() / 600000)).then(function(r){ return r.ok ? r.json() : null; })
+        .then(function(j){ if(j) FON_RU = { t: j.t || {}, c: j.c || {}, f: j.f || {} }; }).catch(function(){})
+    : Promise.resolve();
+  function ruTeam(x){
+    if(!FON) return x;
+    var m = /^(\d+:\d+\s+)?(.*?)(\s*\((?:w|W)\))?$/.exec(String(x || "").trim());
+    if(!m) return x;
+    var base = FON_RU.t[m[2]] || m[2];
+    return (m[1] || "") + base + (m[3] ? " (ж)" : "");
+  }
+  function ruLeague(x){
+    if(!FON) return x;
+    var s = String(x || "").trim(); if(!s) return s;
+    if(FON_RU.f[s]) return FON_RU.f[s];
+    var parts = s.split(/\.\s+/), out = [], i = 0;
+    while(i < parts.length){
+      /* сначала пробуем пару «Country. League» целиком, затем по одной части */
+      var two = i + 1 < parts.length ? parts[i] + ". " + parts[i + 1] : null;
+      if(two && FON_RU.f[two]){ out.push(FON_RU.f[two]); i += 2; continue; }
+      out.push(FON_RU.c[parts[i]] || parts[i]); i++;
+    }
+    return out.join(". ");
+  }
+  function fonLeague(ch){ return ruLeague(String(ch || "").replace(/^Football\.\s*/i, "").replace(/\.\s*Season\s+[\d\/\-]+\s*$/i, "")); }
+  function splitTeamsRaw(name){
     var parts = String(name || "").split(/\s+[—–−-]\s+/);
     if(parts.length < 2) return null;
     return [parts[0].trim(), parts.slice(1).join(" - ").trim()];
+  }
+  function splitTeams(name){
+    var t = splitTeamsRaw(name);
+    return t ? [ruTeam(t[0]), ruTeam(t[1])] : null;
   }
 
   function curSig(){ return state.matches.map(function(m){ return (m.res || "") + "|" + (m.score || "") + "|" + JSON.stringify(m.pct || 0) + "|" + JSON.stringify(m.kf || 0); }).join(";"); }
@@ -7104,7 +7139,12 @@
     var i, t;
     for(i = 0; i < evs.length; i++){
       t = splitTeams(evs[i].name);
-      if(!t || t[0] !== state.matches[i].home || t[1] !== state.matches[i].away) return false;
+      var t0 = splitTeamsRaw(evs[i].name), mi = state.matches[i];
+      if(!t) return false;
+      if(t[0] === mi.home && t[1] === mi.away) continue;
+      /* тот же тираж, сохранённый ещё по-английски: переводим названия на месте, выбор не трогаем */
+      if(FON && t0 && t0[0] === mi.home && t0[1] === mi.away){ mi.home = t[0]; mi.away = t[1]; mi.league = fonLeague(evs[i].championship); continue; }
+      return false;
     }
     var psig0 = curSig();
     for(i = 0; i < evs.length; i++){
@@ -7219,7 +7259,7 @@
         date: d0 ? p2(d0.getUTCDate()) + "." + p2(d0.getUTCMonth() + 1) : "",
         time: d0 ? p2(d0.getUTCHours()) + ":" + p2(d0.getUTCMinutes()) : "",
         /* Фонбет: «Football. Russia. Premier League. Season 26/27» → «Russia. Premier League» */
-        league: String(e.championship || "").replace(/^Football\.\s*/i, "").replace(/\.\s*Season\s+[\d\/\-]+\s*$/i, ""),
+        league: fonLeague(e.championship),
         home: t[0], away: t[1],
         picks: {"1":false,"X":false,"2":false},
         pool: OUT.slice(),
@@ -7358,7 +7398,7 @@
               var t = splitTeams(e.name);
               if(!t) return;
               var qq = e.quotes || {};
-              list.push({ home: t[0], away: t[1], league: e.championship || "",
+              list.push({ home: t[0], away: t[1], league: FON ? fonLeague(e.championship) : (e.championship || ""),
                           res: evRes(e, info), score: e.score || "",
                           pct: mkPct(qq), kf: (qq.norm_win_1 != null) ? [qq.norm_win_1, qq.norm_draw, qq.norm_win_2] : null });
             });
@@ -8116,7 +8156,7 @@
     return miss.length ? miss : null;
   }
   function pcNoAiNote(p){
-    if(FON) return p && p.cur ? '<p class="pc-noai" id="pcNoAi">Разбор ИИ, «ИИ-бриф» и «Охота на 15» пока делаются только для Балтбета.</p>' : "";
+    if(FON) return p && p.cur ? '<p class="pc-noai" id="pcNoAi">«ИИ-бриф» и «Охота на 15» пока делаются только для Балтбета; разбор ИИ для Фонбета — по команде.</p>' : "";
     var miss = curAiMissing(p);
     if(!miss) return "";
     var tx = miss.length > 1 ? "ИИ-разбор на этот тираж не проведён: купоны «ИИ-бриф» и «Охота на 15» появятся здесь сразу после разбора."
