@@ -2799,3 +2799,30 @@ html[data-bk="fonbet"] .fon-only{display:flex}
 .undo-bar #btnRedo:disabled{background:linear-gradient(135deg, #1f8a63, #1b7454)}
 @keyframes undoShine{0%{left:-60%} 55%{left:130%} 100%{left:130%}}
 @media (prefers-reduced-motion:reduce){ .undo-bar #btnUndo::before, .undo-bar #btnRedo::before{animation:none; display:none} }
+
+.ev-kai{margin:10px 0 6px; padding:8px 10px; border:1px solid rgba(201,162,74,.45); border-radius:8px; background:rgba(201,162,74,.08)}
+.ev-kai-sw{display:flex; gap:8px; align-items:center; font-weight:600; cursor:pointer}
+.ev-kai-l{margin:6px 0 0; padding-left:18px; font-size:13px; line-height:1.45}
+.ev-kai-l li{margin:3px 0; overflow-wrap:anywhere}
+
+/* Келли · улучшения: исходы, добавленные улучшениями, — синие */
+.pick.kel-up[aria-pressed="true"]{background:#2f6fd6 !important; border-color:#7fb0ff !important; color:#fff !important; box-shadow:0 0 0 2px rgba(127,176,255,.35)}
+.kel-up-note{grid-column:1 / -1; flex-basis:100%; margin:4px 0 2px; padding:5px 8px; border-left:3px solid #2f6fd6; background:rgba(47,111,214,.12); color:#cfe0ff; font-size:12.5px; line-height:1.4; border-radius:4px; overflow-wrap:anywhere}
+.ev-kai-d{margin:8px 0 0; font-size:13px; line-height:1.45}
+.kel-up-t{color:#7fb0ff}
+
+.ev-arb{margin:10px 0 6px; padding:8px 10px; border:1px solid rgba(127,176,255,.4); border-radius:8px; background:rgba(47,111,214,.07)}
+.ev-arb-h{font-weight:600; margin-bottom:4px}
+.ev-learn table{width:100%; table-layout:fixed; font-size:12px}
+.ev-learn th, .ev-learn td{white-space:normal !important; overflow-wrap:normal; word-break:normal; padding:4px 3px !important; text-align:left !important; font-size:11.5px; letter-spacing:0}
+.ev-learn th:first-child, .ev-learn td:first-child{width:27%}
+.ev-learn summary{cursor:pointer}
+
+.ai-bzr{display:flex; flex-direction:column; gap:8px; margin:4px 0}
+.ai-bzr-a{border-left:3px solid var(--color-primary, #4f98a3); padding:4px 0 4px 10px}
+.ai-bzr-h{font-size:14px}
+.ai-bzr-i{margin:2px 0 4px; font-style:normal; font-weight:500}
+.ai-bzr-m{margin:2px 0; font-size:13px; opacity:.9}
+.ai-bzr-s{font-size:12px; opacity:.8; white-space:nowrap}
+.ai-cv{letter-spacing:1px; color:#e0a030}
+.ai-cv i{font-style:normal; opacity:.25}
