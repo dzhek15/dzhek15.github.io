@@ -2810,3 +2810,6 @@ html[data-bk="fonbet"] .fon-only{display:flex}
 .kel-up-note{grid-column:1 / -1; flex-basis:100%; margin:4px 0 2px; padding:5px 8px; border-left:3px solid #2f6fd6; background:rgba(47,111,214,.12); color:#cfe0ff; font-size:12.5px; line-height:1.4; border-radius:4px; overflow-wrap:anywhere}
 .ev-kai-d{margin:8px 0 0; font-size:13px; line-height:1.45}
 .kel-up-t{color:#7fb0ff}
+
+.ev-arb{margin:10px 0 6px; padding:8px 10px; border:1px solid rgba(127,176,255,.4); border-radius:8px; background:rgba(47,111,214,.07)}
+.ev-arb-h{font-weight:600; margin-bottom:4px}
