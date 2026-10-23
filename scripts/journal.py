@@ -215,7 +215,18 @@ def kel_g(sets, sc, cost, bank):
     return g / len(sc)
 
 
-def plan_kelly_new(evs, fund, jack, bank=10000, edges=None):
+def reach_t(sets, T):
+    """можно ли от купона дойти ровно до T строк, добавляя исходы (двойник ×2, тройник из двойника ×1,5)"""
+    def pw(n, b):
+        c = 0
+        while n > 1 and n % b == 0: n //= b; c += 1
+        return c
+    c = math.prod(len(x) for x in sets); y = pw(T, 3) - pw(c, 3); x = pw(T, 2) - pw(c, 2) + y
+    if c > T or y < 0 or x < 0: return False
+    return x <= sum(len(z) == 1 for z in sets) and y <= sum(len(z) == 2 for z in sets) + x
+
+
+def plan_kelly_new(evs, fund, jack, bank=10000, edges=None, maxc=None):
     """edges: {номер матча: {'o','f'}} — перекосы ИИ; без них это «Келли (новый)»"""
     ev2 = [dict(e, p=edge_adj(e['p'], (edges or {}).get(i))) for i, e in enumerate(evs)]
     sc = kel_scen(ev2, fund, jack); best = None; seen = set()
@@ -225,7 +236,7 @@ def plan_kelly_new(evs, fund, jack, bank=10000, edges=None):
             if key in seen: continue
             seen.add(key)
             cost = math.prod(len(x) for x in sets) * PRICE
-            if cost >= bank: continue
+            if cost >= bank or (maxc and not reach_t(sets, maxc)): continue
             g = kel_g(sets, sc, cost, bank)
             if best is None or g > best[0]: best = (g, sets)
     # своя сборка Монстра: от фаворитов по одному исходу, каждый шаг — наибольший рост банка; каждый шаг — кандидат
@@ -234,7 +245,7 @@ def plan_kelly_new(evs, fund, jack, bank=10000, edges=None):
         st = None
         for i in range(15):
             n = len(sets[i]); nc = combos // n * (n + 1)
-            if n >= 3 or nc > max(BUDGETS) or nc * PRICE >= bank: continue
+            if n >= 3 or nc > (maxc or max(BUDGETS)) or nc * PRICE >= bank: continue
             for k in range(3):
                 if k in sets[i]: continue
                 t = [list(x) for x in sets]; t[i] = sorted(t[i] + [k])
@@ -242,7 +253,7 @@ def plan_kelly_new(evs, fund, jack, bank=10000, edges=None):
                 if st is None or g > st[0]: st = (g, i, k)
         if st is None: break
         g, i, k = st; combos = combos // len(sets[i]) * (len(sets[i]) + 1); sets[i] = sorted(sets[i] + [k])
-        if best is None or g > best[0]: best = (g, [list(x) for x in sets])
+        if (best is None or g > best[0]) and (not maxc or reach_t(sets, maxc)): best = (g, [list(x) for x in sets])
     return best[1]
 
 
@@ -283,10 +294,69 @@ def mk_ev(bk, pl_raw, res):
     return {'p': p, 'pl': pl, 'q': pl if min(pl_raw) >= 1 else None, 'res': res}, ok
 
 
-def plans_for(evs, fund, jack, edges=None):
+def ai_src(num):
+    """источники добора Монстра по матчам: [(исход, порядок доверия, источник)] — как на сайте"""
+    a = rd("ai.json", {})
+    if str(a.get("number")) != str(num): return None
+    out = []
+    for m in a.get("m") or []:
+        m = m or {}; L = []
+        for x in (m.get("adj") or []):
+            if x.get("o") in OUT: L.append((OUT.index(x["o"]), 2 if x.get("src") == "Усталость" else 1, "Усталость" if x.get("src") == "Усталость" else "ИИ: факты"))
+        for o in str(m.get("p") or ""):
+            if o in OUT: L.append((OUT.index(o), 3, "Разбор ИИ"))
+        bz = m.get("bz") or {}
+        if bz.get("n"):
+            v = bz.get("v") or {}; mx = max(v.get(o, 0) for o in OUT)
+            for o in OUT:
+                if mx > 0 and v.get(o, 0) >= mx: L.append((OUT.index(o), 4, "Betzona"))
+        out.append(L)
+    return out
+
+
+def monster_fill(core, T, sc, src):
+    """остаток бюджета до T строк — исходами по порядку доверия источников, внутри — по росту банка; путь всегда ведёт ровно к T"""
+    sets = [list(x) for x in core]; combos = math.prod(len(x) for x in sets); added = []
+    def pw(n, b):
+        c = 0
+        while n > 1 and n % b == 0: n //= b; c += 1
+        return c
+    A, B = pw(T, 2), pw(T, 3)
+    def reach(c, ss):
+        y = B - pw(c, 3); x = A - pw(c, 2) + y
+        if y < 0 or x < 0: return False
+        return x <= sum(len(z) == 1 for z in ss) and y <= sum(len(z) == 2 for z in ss) + x
+    for _ in range(40):
+        if combos >= T: break
+        best = None
+        for i in range(15):
+            n = len(sets[i]); nc = combos // n * (n + 1)
+            if n >= 3 or nc > T: continue
+            for k in range(3):
+                if k in sets[i]: continue
+                t = [list(x) for x in sets]; t[i] = sorted(t[i] + [k])
+                if not reach(nc, t): continue
+                tiers = [z for z in ((src or [[]] * 15)[i] if src else []) if z[0] == k]
+                tier, nm = (min(tiers, key=lambda z: z[1])[1:] if tiers else (5, "Рост банка"))
+                g = kel_g(t, sc, nc * PRICE, 30000)
+                if best is None or (tier, -g) < (best[0], -best[1]): best = (tier, g, i, k, nm, nc)
+        if best is None: break
+        _, _, i, k, nm, nc = best; sets[i] = sorted(sets[i] + [k]); combos = nc; added.append({"i": i, "o": OUT[k], "src": nm})
+    return sets, added
+
+
+def plans_for(evs, fund, jack, edges=None, src=None, fill_log=None):
     kel_ok, kel_any = plan_kelly(evs, fund, jack)
-    kn = plan_kelly_new(evs, fund, jack, bank=30000)   # банк Монстра как на сайте
-    ka = plan_kelly_new(evs, fund, jack, bank=30000, edges=edges) if edges else kn
+    T = math.prod(len(x) for x in kel_any)          # бюджет Монстра = бюджет Келли
+    kn0 = plan_kelly_new(evs, fund, jack, bank=30000, maxc=T)   # ядро: наибольший рост банка 30 000, как на сайте
+    sc = kel_scen(evs, fund, jack)
+    kn, add_n = monster_fill(kn0, T, sc, src)
+    if edges:
+        ev2 = [dict(e, p=edge_adj(e['p'], edges.get(i))) for i, e in enumerate(evs)]
+        ka, add_a = monster_fill(plan_kelly_new(evs, fund, jack, bank=30000, edges=edges, maxc=T), T, kel_scen(ev2, fund, jack), src)
+    else:
+        ka, add_a = kn, add_n
+    if fill_log is not None: fill_log.extend(add_n)
     return {'Фавориты (база)': [[max(range(3), key=lambda k: e['p'][k])] for e in evs],
             'Большинство (база)': [[max(range(3), key=lambda k: e['pl'][k])] for e in evs],
             'Расхождения': plan_gaps(evs), 'max15 ·32': plan_max15(evs, 32), 'Симуляция ·32': plan_sim(evs, 32),
@@ -350,9 +420,12 @@ def main():
             if allq and sum(float(x) for x in pl) >= 90:
                 fund = float(info.get("pool_sum") or 0); jack = float(info.get("jackpot") or 0)
                 ed = ai_edges(num) or {int(k): v for k, v in ((ent or {}).get("edges_raw") or {}).items()}
-                P = plans_for(evs, fund, jack, ed)
+                fl = []
+                P = plans_for(evs, fund, jack, ed, ai_src(num), fl)
                 ent = jd.setdefault(num, {"id": did})
                 ent["edges_raw"] = ed or None
+                # добор Монстра: какие исходы и откуда добавлены сверх ядра (журнал проверяет каждый источник)
+                ent["fill"] = [dict(a, p=round(evs[a["i"]]['p'][OUT.index(a["o"])], 4), q=round(evs[a["i"]]['pl'][OUT.index(a["o"])], 4)) for a in fl]
                 ent["edges"] = [{"i": i, "src": a.get("src", "ИИ"), "o": a["o"], "d": a["d"], "p": round(evs[i]['p'][OUT.index(a["o"])], 4),
                                  "q": round(evs[i]['pl'][OUT.index(a["o"])], 4)} for i, L in sorted((ed or {}).items(), key=lambda x: int(x[0])) for a in L]
                 ent.get("plans", {}).pop("Келли · ИИ", None)
@@ -403,6 +476,8 @@ def main():
                              "ge9": sum(poly[9:])}
                 for x in ent.get("edges") or []:
                     x["hit"] = 1 if evs[int(x["i"])]['res'] == OUT.index(x["o"]) else 0
+                for x in ent.get("fill") or []:
+                    x["hit"] = 1 if evs[int(x["i"])]['res'] == OUT.index(x["o"]) else 0
                 ent["score"] = sc
                 ent["scored"] = now.strftime("%Y-%m-%dT%H:%MZ")
                 changed = True
@@ -435,6 +510,10 @@ def main():
     jr["edges"] = {}
     for x in eds:
         s = jr["edges"].setdefault(x.get("src", "ИИ"), {"n": 0, "exp": 0.0, "hit": 0, "crowd": 0.0})
+        s["n"] += 1; s["exp"] = round(s["exp"] + x["p"], 2); s["hit"] += x["hit"]; s["crowd"] = round(s["crowd"] + x["q"], 2)
+    jr["fill"] = {}
+    for x in [x for ent in jd.values() for x in (ent.get("fill") or []) if "hit" in x]:
+        s = jr["fill"].setdefault(x["src"], {"n": 0, "exp": 0.0, "hit": 0, "crowd": 0.0})
         s["n"] += 1; s["exp"] = round(s["exp"] + x["p"], 2); s["hit"] += x["hit"]; s["crowd"] = round(s["crowd"] + x["q"], 2)
     jr["summary"] = summ
     if changed or jr.get("summary") != rd("journal.json", {}).get("summary"):
