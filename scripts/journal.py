@@ -169,12 +169,20 @@ def plan_kelly(evs,fund,jack,bank=10000):
 
 
 # --- новый Келли: рост банка по полному распределению выплат (как на сайте) ---
-def edge_adj(p, e):
-    if not e: return p
-    k = OUT.index(e['o']); d = min(.06 if str(e.get('f')) == '2' else .03, .9 - p[k])
-    if d <= 0: return p
-    r = 1 - p[k]
-    return [p[j] + d if j == k else p[j] * (r - d) / r for j in range(3)]
+def edge_adj(p, L):
+    """L — список поправок матча [{src, o, d}] (как на сайте: сумма ≤ 8 п.п., сдвиг берётся у остальных исходов)"""
+    if not L: return p
+    add = [0.0, 0.0, 0.0]
+    for a in L: add[OUT.index(a['o'])] += float(a['d'])
+    t = sum(add)
+    if t > .08: add = [x * .08 / t for x in add]
+    q = list(p)
+    for k in range(3):
+        if add[k] <= 0: continue
+        d = min(add[k], .9 - q[k]); r = 1 - q[k]
+        if d <= 0 or r <= d: continue
+        q = [q[k] + d if j == k else q[j] * (r - d) / r for j in range(3)]
+    return q
 
 
 def kel_scen(evs, fund, jack, S=200, seed=7):
@@ -234,17 +242,22 @@ def hit_dist(evs, sets):
 
 
 def ai_edges(num):
+    """поправки «Келли · улучшения» из разбора ИИ: {номер матча: [{src, o, d, why}]}"""
     a = rd("ai.json", {})
     if str(a.get("number")) != str(num): return None
     out = {}
     for i, m in enumerate(a.get("m") or []):
-        e = (m or {}).get("edge")
-        if e and e.get("o") in OUT: out[i] = {"o": e["o"], "f": 2 if str(e.get("f")) == "2" else 1}
+        m = m or {}
+        L = m.get("adj")
+        if not L and m.get("edge") and m["edge"].get("o") in OUT:
+            e = m["edge"]; L = [{"src": "ИИ", "o": e["o"], "d": .06 if str(e.get("f")) == "2" else .03, "why": e.get("why", "")}]
+        L = [x for x in (L or []) if x.get("o") in OUT and float(x.get("d") or 0) > 0]
+        if L: out[i] = L
     return out
 
 
 STRATS = ['Фавориты (база)', 'Большинство (база)', 'Расхождения', 'max15 ·32', 'Симуляция ·32',
-          'Келли (только выгодные)', 'Келли (всегда)', 'Келли (новый)', 'Келли · ИИ', 'ИИ']
+          'Келли (только выгодные)', 'Келли (всегда)', 'Келли (новый)', 'Келли · улучшения', 'ИИ']
 cal = [[[0, 0, 0.0] for _ in range(B)] for _ in range(3)]
 
 
@@ -263,7 +276,7 @@ def plans_for(evs, fund, jack, edges=None):
             'Большинство (база)': [[max(range(3), key=lambda k: e['pl'][k])] for e in evs],
             'Расхождения': plan_gaps(evs), 'max15 ·32': plan_max15(evs, 32), 'Симуляция ·32': plan_sim(evs, 32),
             'Келли (только выгодные)': kel_ok, 'Келли (всегда)': kel_any,
-            'Келли (новый)': kn, 'Келли · ИИ': ka}
+            'Келли (новый)': kn, 'Келли · улучшения': ka}
 
 
 def ser(sets):
@@ -325,8 +338,16 @@ def main():
                 P = plans_for(evs, fund, jack, ed)
                 ent = jd.setdefault(num, {"id": did})
                 ent["edges_raw"] = ed or None
-                ent["edges"] = [{"i": i, "o": e["o"], "f": e["f"], "p": round(evs[i]['p'][OUT.index(e["o"])], 4),
-                                 "q": round(evs[i]['pl'][OUT.index(e["o"])], 4)} for i, e in sorted((ed or {}).items(), key=lambda x: int(x[0]))]
+                ent["edges"] = [{"i": i, "src": a.get("src", "ИИ"), "o": a["o"], "d": a["d"], "p": round(evs[i]['p'][OUT.index(a["o"])], 4),
+                                 "q": round(evs[i]['pl'][OUT.index(a["o"])], 4)} for i, L in sorted((ed or {}).items(), key=lambda x: int(x[0])) for a in L]
+                ent.get("plans", {}).pop("Келли · ИИ", None)
+                # снимок толпы и пула: из таких снимков потом учимся предсказывать итоговую толпу к дедлайну
+                snap = rd("crowd_snap.json", {})
+                snap.setdefault(num, []).append([now.strftime("%Y-%m-%dT%H:%MZ"), round(fund), [[round(x, 2) for x in e['pl']] for e in evs]])
+                snap[num] = snap[num][-150:]
+                for old in sorted(snap, key=int)[:-60]: snap.pop(old, None)
+                with open(os.path.join(API, "crowd_snap.json"), "w", encoding="utf-8") as f:
+                    json.dump(snap, f, separators=(",", ":"))
                 ent["plans"] = {k: ser(v) for k, v in P.items()}
                 ent["updated"] = now.strftime("%Y-%m-%dT%H:%MZ")
                 ent["ai"] = aih.get(num)
@@ -396,8 +417,10 @@ def main():
             s["rwin"] = s.get("rwin", 0) + round(sum(v * cum[j] for j, v in enumerate(d) if 9 <= j <= 15))
     # перекосы ИИ: сыграли ли чаще, чем ждала линия
     eds = [x for ent in jd.values() for x in (ent.get("edges") or []) if "hit" in x]
-    jr["edges"] = {"n": len(eds), "exp": round(sum(x["p"] for x in eds), 2), "hit": sum(x["hit"] for x in eds),
-                   "crowd": round(sum(x["q"] for x in eds), 2)}
+    jr["edges"] = {}
+    for x in eds:
+        s = jr["edges"].setdefault(x.get("src", "ИИ"), {"n": 0, "exp": 0.0, "hit": 0, "crowd": 0.0})
+        s["n"] += 1; s["exp"] = round(s["exp"] + x["p"], 2); s["hit"] += x["hit"]; s["crowd"] = round(s["crowd"] + x["q"], 2)
     jr["summary"] = summ
     if changed or jr.get("summary") != rd("journal.json", {}).get("summary"):
         with open(os.path.join(API, "journal.json"), "w", encoding="utf-8") as f:

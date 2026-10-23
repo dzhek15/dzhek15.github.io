@@ -2804,3 +2804,9 @@ html[data-bk="fonbet"] .fon-only{display:flex}
 .ev-kai-sw{display:flex; gap:8px; align-items:center; font-weight:600; cursor:pointer}
 .ev-kai-l{margin:6px 0 0; padding-left:18px; font-size:13px; line-height:1.45}
 .ev-kai-l li{margin:3px 0; overflow-wrap:anywhere}
+
+/* Келли · улучшения: исходы, добавленные улучшениями, — синие */
+.pick.kel-up[aria-pressed="true"]{background:#2f6fd6 !important; border-color:#7fb0ff !important; color:#fff !important; box-shadow:0 0 0 2px rgba(127,176,255,.35)}
+.kel-up-note{grid-column:1 / -1; flex-basis:100%; margin:4px 0 2px; padding:5px 8px; border-left:3px solid #2f6fd6; background:rgba(47,111,214,.12); color:#cfe0ff; font-size:12.5px; line-height:1.4; border-radius:4px; overflow-wrap:anywhere}
+.ev-kai-d{margin:8px 0 0; font-size:13px; line-height:1.45}
+.kel-up-t{color:#7fb0ff}
