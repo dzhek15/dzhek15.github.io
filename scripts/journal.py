@@ -278,12 +278,15 @@ def ai_edges(num):
         if not L and m.get("edge") and m["edge"].get("o") in OUT:
             e = m["edge"]; L = [{"src": "ИИ", "o": e["o"], "d": .06 if str(e.get("f")) == "2" else .03, "why": e.get("why", "")}]
         L = [x for x in (L or []) if x.get("o") in OUT and float(x.get("d") or 0) > 0]
+        S = LEARN.get("src") or {}
+        L = [dict(x, d=float(x["d"]) * (S.get("Усталость" if x.get("src") == "Усталость" else "ИИ: факты") or {}).get("d_mult", 1.0)) for x in L]
+        L = [x for x in L if x["d"] > 0]
         if L: out[i] = L
     return out
 
 
 STRATS = ['Фавориты (база)', 'Большинство (база)', 'Расхождения', 'max15 ·32', 'Симуляция ·32',
-          'Келли (только выгодные)', 'Келли (всегда)', 'Монстр Келли', 'Монстр Келли · улучшения', 'ИИ']
+          'Келли (только выгодные)', 'Келли (всегда)', 'Монстр Келли', 'Монстр Келли · улучшения', 'Монстр Келли · добор по росту', 'ИИ']
 cal = [[[0, 0, 0.0] for _ in range(B)] for _ in range(3)]
 
 
@@ -294,22 +297,34 @@ def mk_ev(bk, pl_raw, res):
     return {'p': p, 'pl': pl, 'q': pl if min(pl_raw) >= 1 else None, 'res': res}, ok
 
 
+LEARN = {}
+
+
 def ai_src(num):
-    """источники добора Монстра по матчам: [(исход, порядок доверия, источник)] — как на сайте"""
+    """источники добора Монстра по матчам: [(исход, порядок доверия, источник)] — как на сайте; порядок и выключение — из обучения"""
     a = rd("ai.json", {})
     if str(a.get("number")) != str(num): return None
+    if LEARN.get("mode") == "growth": return None
+    S = LEARN.get("src") or {}
+    def rk(name, t0):
+        v = S.get(name)
+        if v and not v.get("on", True): return None
+        return v.get("rank", t0) if v else t0
     out = []
     for m in a.get("m") or []:
         m = m or {}; L = []
         for x in (m.get("adj") or []):
-            if x.get("o") in OUT: L.append((OUT.index(x["o"]), 2 if x.get("src") == "Усталость" else 1, "Усталость" if x.get("src") == "Усталость" else "ИИ: факты"))
+            nm = "Усталость" if x.get("src") == "Усталость" else "ИИ: факты"; t = rk(nm, 2 if nm == "Усталость" else 1)
+            if x.get("o") in OUT and t: L.append((OUT.index(x["o"]), t, nm))
+        t = rk("Разбор ИИ", 3)
         for o in str(m.get("p") or ""):
-            if o in OUT: L.append((OUT.index(o), 3, "Разбор ИИ"))
+            if o in OUT and t: L.append((OUT.index(o), t, "Разбор ИИ"))
         bz = m.get("bz") or {}
         if bz.get("n"):
             v = bz.get("v") or {}; mx = max(v.get(o, 0) for o in OUT)
             for o in OUT:
-                if mx > 0 and v.get(o, 0) >= mx: L.append((OUT.index(o), 4, "Betzona"))
+                t = rk("Betzona", 4)
+                if mx > 0 and v.get(o, 0) >= mx and t: L.append((OUT.index(o), t, "Betzona"))
         out.append(L)
     return out
 
@@ -356,12 +371,13 @@ def plans_for(evs, fund, jack, edges=None, src=None, fill_log=None):
         ka, add_a = monster_fill(plan_kelly_new(evs, fund, jack, bank=30000, edges=edges, maxc=T), T, kel_scen(ev2, fund, jack), src)
     else:
         ka, add_a = kn, add_n
+    kg, _ = monster_fill(kn0, T, sc, None)
     if fill_log is not None: fill_log.extend(add_n)
     return {'Фавориты (база)': [[max(range(3), key=lambda k: e['p'][k])] for e in evs],
             'Большинство (база)': [[max(range(3), key=lambda k: e['pl'][k])] for e in evs],
             'Расхождения': plan_gaps(evs), 'max15 ·32': plan_max15(evs, 32), 'Симуляция ·32': plan_sim(evs, 32),
             'Келли (только выгодные)': kel_ok, 'Келли (всегда)': kel_any,
-            'Монстр Келли': kn, 'Монстр Келли · улучшения': ka}
+            'Монстр Келли': kn, 'Монстр Келли · улучшения': ka, 'Монстр Келли · добор по росту': kg}
 
 
 def ser(sets):
@@ -370,6 +386,117 @@ def ser(sets):
 
 def deser(rows):
     return None if rows is None else [[OUT.index(c) for c in r] for r in rows]
+
+
+
+# ---------- самообучение Монстра Келли ----------
+FIX_BASE = dict(FIX)                     # стартовые поправки выплат (из кода), от них идёт обучение
+SRC_PRIOR = {"ИИ: факты": .03, "Усталость": .02, "Разбор ИИ": 0.0, "Betzona": 0.0}   # стартовая вера в перевес, доля
+SRC_K, SRC_MIN, FIX_K, FIX_WIN = 300, 30, 8, 30
+
+
+def learn_fix(hist, pays):
+    """поправки выплат 9–14 по реальным выплатам последних FIX_WIN тиражей: модель/факт выплаты на строку по категории,
+    сжатие к стартовым (FIX_K тиражей веса у старта), 15 не трогаем — она измерена по сбросам суперприза"""
+    errs = {k: [] for k in range(9, 15)}; used = []
+    for num in sorted([n for n in pays if n in hist], key=int)[-FIX_WIN:]:
+        h = hist[num]; P = pays[num]
+        if not P.get("k") or any(e[9] is None or e[9] == "" for e in h["ev"]) or any(None in e[6:9] for e in h["ev"]): continue
+        evs = [mk_ev([float(x) for x in e[3:6]], [float(x) for x in e[6:9]], OUT.index(e[9]) if e[9] in OUT else -1)[0] for e in h["ev"]]
+        fund = float(h.get("pool_sum") or 0); jack = float(h.get("jackpot") or 0)
+        if not fund: continue
+        lines = (fund / .9) / PRICE; A = fund / 90
+        alloc = {k: A * SH[k] for k in SH}; alloc[14] += jack * J14; alloc[15] += jack * J15
+        crowd = pb([1.0 if e['res'] < 0 else e['pl'][e['res']] for e in evs])
+        for k in range(9, 15):
+            real = float(P["k"].get(str(k)) or 0) * PRICE
+            if real > 0:
+                errs[k].append(math.log((alloc[k] / (lines * tail(crowd, k) * FIX_BASE[k] + 1)) / real))
+        used.append(num)
+    fix = dict(FIX_BASE); info = {}
+    for k in range(9, 15):
+        n = len(errs[k])
+        if n >= 5:
+            m = sum(errs[k]) / n; w = n / (n + FIX_K)
+            fix[k] = round(min(FIX_BASE[k] * 2, max(FIX_BASE[k] / 2, FIX_BASE[k] * math.exp(m * w))), 3)
+        info[k] = {"n": n, "ratio": round(math.exp(sum(errs[k]) / n), 3) if n else None}
+    return fix, info, used
+
+
+def learn_src(jd):
+    """доверие к источникам добора: сколько добранных исходов сыграло против ожидания линии; апостериорный перевес
+    (SRC_K «виртуальных» исходов у стартовой веры). До SRC_MIN исходов источник только наблюдается"""
+    seen = {}; 
+    for num, ent in jd.items():
+        for x in (ent.get("fill") or []) + [dict(e, src="ИИ: факты" if e.get("src", "ИИ") == "ИИ" else e.get("src")) for e in (ent.get("edges") or [])]:
+            if "hit" not in x or x.get("src") not in SRC_PRIOR: continue
+            seen[(num, x["i"], x["o"], x["src"])] = x
+    out = {}
+    for s, m0 in SRC_PRIOR.items():
+        L = [x for k, x in seen.items() if k[3] == s]; n = len(L)
+        hit = sum(x["hit"] for x in L); exp = sum(x["p"] for x in L)
+        lift = (hit - exp) / n if n else 0.0
+        post = (SRC_K * m0 + n * lift) / (SRC_K + n)
+        out[s] = {"n": n, "hit": hit, "exp": round(exp, 2), "lift": round(lift, 4), "post": round(post, 4), "prior": m0,
+                  "on": not (n >= SRC_MIN and post < -0.01), "learned": n >= SRC_MIN}
+    act = sorted([s for s in out if out[s]["on"]], key=lambda s: (-out[s]["post"], list(SRC_PRIOR).index(s)))
+    # пока обучение не набрано, порядок стартовый; обученные источники ставятся по перевесу
+    if not any(out[s]["learned"] for s in out): act = [s for s in SRC_PRIOR if out[s]["on"]]
+    for i, s in enumerate(act): out[s]["rank"] = i + 1
+    for s in out:
+        if s in ("ИИ: факты", "Усталость") and out[s]["learned"]:
+            out[s]["d_mult"] = round(max(0.0, min(2.0, out[s]["post"] / SRC_PRIOR[s])), 3)
+    return out
+
+
+def learn_mode(jd, pays, hist):
+    """сравнение двух способов добора по реальным выплатам: от источников и только по росту банка"""
+    a, b, n = 0.0, 0.0, 0; wa = wb = cost = 0
+    for num, ent in jd.items():
+        sc = ent.get("score") or {}; P = pays.get(num)
+        x, y = sc.get("Монстр Келли"), sc.get("Монстр Келли · добор по росту")
+        if not x or not y or not P or not P.get("k"): continue
+        h = hist.get(num)
+        if not h: continue
+        evs = [mk_ev([float(q) for q in e[3:6]], [float(q) for q in e[6:9]], OUT.index(e[9]) if e[9] in OUT else -1)[0] for e in h["ev"]]
+        cum = [0.0] * 16; c = 0.0
+        for k in range(9, 16): c += float(P["k"].get(str(k)) or 0); cum[k] = c * PRICE
+        r = []
+        for key in ("Монстр Келли", "Монстр Келли · добор по росту"):
+            sets = deser(ent["plans"].get(key))
+            if not sets: break
+            d = hit_dist(evs, sets); w = sum(v * cum[j] for j, v in enumerate(d) if 9 <= j <= 15); cs = math.prod(len(z) for z in sets) * PRICE
+            r.append((w, cs))
+        if len(r) < 2: continue
+        n += 1; wa += r[0][0]; wb += r[1][0]; cost += r[0][1]
+        a += math.log(max(1e-9, 1 + (r[0][0] - r[0][1]) / 30000)); b += math.log(max(1e-9, 1 + (r[1][0] - r[1][1]) / 30000))
+    mode = "growth" if n >= 20 and b > a and wb > wa else "src"
+    return mode, {"n": n, "src_log": round(a, 3), "gr_log": round(b, 3), "src_win": round(wa), "gr_win": round(wb), "cost": round(cost)}
+
+
+def learn_all(hist, jd, now):
+    pays = rd("payouts.json", {})
+    old = rd("learn.json", {})
+    fix, finfo, used = learn_fix(hist, pays)
+    src = learn_src(jd)
+    mode, cmp_ = learn_mode(jd, pays, hist)
+    log = list(old.get("log") or []); at = now.strftime("%Y-%m-%d %H:%M")
+    of = {int(k): v for k, v in (old.get("fix") or {}).items()}
+    ch = ["%d: %s→%s" % (k, str(of.get(k, FIX_BASE[k])).replace(".", ","), str(fix[k]).replace(".", ",")) for k in range(9, 15) if abs(fix[k] - of.get(k, FIX_BASE[k])) >= .01]
+    if ch: log.append({"at": at, "what": "поправки выплат " + ", ".join(ch), "why": "реальные выплаты %d тиражей (до №%s)" % (len(used), used[-1] if used else "—")})
+    for s, v in src.items():
+        o = (old.get("src") or {}).get(s) or {}
+        if v.get("learned") and not o.get("learned"): log.append({"at": at, "what": "источник «%s» начал влиять на купон" % s, "why": "набрано %d добранных исходов" % v["n"]})
+        if o and o.get("on", True) and not v["on"]: log.append({"at": at, "what": "источник «%s» выключен" % s, "why": "сыграло %d при ожидании линии %s из %d" % (v["hit"], str(v["exp"]).replace(".", ","), v["n"])})
+        if o and not o.get("on", True) and v["on"]: log.append({"at": at, "what": "источник «%s» снова включён" % s, "why": "перевес вернулся выше порога"})
+        if o.get("rank") and v.get("rank") and o["rank"] != v["rank"]: log.append({"at": at, "what": "«%s»: место в доборе %d→%d" % (s, o["rank"], v["rank"]), "why": "перевес %+.1f п.п." % (v["post"] * 100)})
+    if old.get("mode", "src") != mode: log.append({"at": at, "what": "добор: " + ("только по росту банка" if mode == "growth" else "от источников"), "why": "реальные выплаты %d тиражей" % cmp_["n"]})
+    L = {"at": now.isoformat(), "fix": {str(k): v for k, v in fix.items()}, "fix_base": {str(k): v for k, v in FIX_BASE.items()},
+         "fix_info": {str(k): v for k, v in finfo.items()}, "fix_n": len(used), "src": src, "mode": mode, "cmp": cmp_, "log": log[-40:],
+         "rules": {"src_min": SRC_MIN, "src_k": SRC_K, "fix_k": FIX_K, "fix_win": FIX_WIN, "mode_min": 20}}
+    with open(os.path.join(API, "learn.json"), "w", encoding="utf-8") as f:
+        json.dump(L, f, ensure_ascii=False, separators=(",", ":"))
+    return L
 
 
 def main():
@@ -386,6 +513,10 @@ def main():
             cal_update(evs)
     jr = rd("journal.json", {"draws": {}})
     jd = jr.setdefault("draws", {})
+    # самообучение: поправки выплат, доверие к источникам, способ добора — до расчёта купонов
+    global FIX, LEARN
+    LEARN = learn_all(hist, jd, datetime.now(timezone.utc))
+    FIX = {int(k): v for k, v in LEARN["fix"].items()}
     aih = rd("ai_hist.json", {})
     lst = rd("drawings-1.json", [])
     lst = lst if isinstance(lst, list) else lst.get("data", [])
