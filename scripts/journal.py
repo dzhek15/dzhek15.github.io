@@ -280,6 +280,8 @@ def ai_edges(num):
         L = [x for x in (L or []) if x.get("o") in OUT and float(x.get("d") or 0) > 0]
         S = LEARN.get("src") or {}
         L = [dict(x, d=float(x["d"]) * (S.get("Усталость" if x.get("src") == "Усталость" else "ИИ: факты") or {}).get("d_mult", 1.0)) for x in L]
+        mf = ((S.get("ИИ: факты") or {}).get("models") or {}).get(m.get("model")) or {}
+        if not mf.get("on", True): L = [x for x in L if x.get("src") == "Усталость"]   # модель ИИ выключена — её факты не сдвигают
         L = [x for x in L if x["d"] > 0]
         if L: out[i] = L
     return out
@@ -306,22 +308,23 @@ def ai_src(num):
     if str(a.get("number")) != str(num): return None
     if LEARN.get("mode") == "growth": return None
     S = LEARN.get("src") or {}
-    def rk(name, t0):
+    def rk(name, t0, md=None):
         v = S.get(name)
         if v and not v.get("on", True): return None
+        if v and md and not ((v.get("models") or {}).get(md) or {}).get("on", True): return None
         return v.get("rank", t0) if v else t0
     out = []
     for m in a.get("m") or []:
-        m = m or {}; L = []
+        m = m or {}; L = []; md = m.get("model")
         for x in (m.get("adj") or []):
-            nm = "Усталость" if x.get("src") == "Усталость" else "ИИ: факты"; t = rk(nm, 2 if nm == "Усталость" else 1)
+            nm = "Усталость" if x.get("src") == "Усталость" else "ИИ: факты"; t = rk(nm, 2 if nm == "Усталость" else 1, md if nm != "Усталость" else None)
             if x.get("o") in OUT and t: L.append((OUT.index(x["o"]), t, nm))
-        t = rk("Разбор ИИ", 3)
+        t = rk("Разбор ИИ", 3, md)
         for o in str(m.get("p") or ""):
             if o in OUT and t: L.append((OUT.index(o), t, "Разбор ИИ"))
-        tp = m.get("trap") or {}; t = rk("ИИ-критик", 4)
+        tp = m.get("trap") or {}; t = rk("ИИ-критик", 4, md)
         if tp.get("o") in OUT and t: L.append((OUT.index(tp["o"]), t, "ИИ-критик"))
-        t = rk("Betzona: факты", 5)
+        t = rk("Betzona: факты", 5, md)
         for o in set(x.get("s") for x in (m.get("bza") or [])):
             if o in OUT and t: L.append((OUT.index(o), t, "Betzona: факты"))
         bz = m.get("bz") or {}
@@ -435,22 +438,79 @@ def learn_fix(hist, pays):
     return fix, info, used
 
 
+ADW_DELTA, ADW_MIN, ADW_STEP = 0.05, 30, 5     # уверенность детектора, минимум с каждой стороны разреза, шаг проверки
+
+
+def adwin(xs):
+    """ADWIN (Bifet, Gavaldà 2007): окно растёт, пока его старая и новая части не начнут различаться по среднему
+    сильнее, чем допускает случай; тогда старая часть отбрасывается. xs — поток (сыграло − вероятность линии)
+    в порядке тиражей. Возвращает начало окна и список разрезов [(позиция, среднее до, среднее после)]"""
+    st = 0; cuts = []
+    pre = [0.0]; pre2 = [0.0]
+    for v in xs: pre.append(pre[-1] + v); pre2.append(pre2[-1] + v * v)
+    for t in range(1, len(xs) + 1):
+        if (t - st) < 2 * ADW_MIN or t % ADW_STEP: continue
+        while True:
+            n = t - st; cut = None
+            mu = (pre[t] - pre[st]) / n; var = max(1e-6, (pre2[t] - pre2[st]) / n - mu * mu)
+            dl = math.log(2 * math.log(max(3, n)) / ADW_DELTA)
+            for c in range(st + ADW_MIN, t - ADW_MIN + 1, ADW_STEP):
+                n0, n1 = c - st, t - c
+                m0 = (pre[c] - pre[st]) / n0; m1 = (pre[t] - pre[c]) / n1
+                m = 1.0 / (1.0 / n0 + 1.0 / n1)
+                eps = math.sqrt(2.0 / m * var * dl) + 2.0 / (3.0 * m) * dl
+                if abs(m0 - m1) > eps: cut = (c, m0, m1); break
+            if not cut: break
+            cuts.append((cut[0], round(cut[1], 4), round(cut[2], 4))); st = cut[0]
+            if t - st < 2 * ADW_MIN: break
+    return st, cuts
+
+
+def src_stat(L, m0, K):
+    """статистика источника по окну детектора: при найденном переломе стартовая вера сбрасывается к нулю и вес старта
+    вдвое меньше — чтобы после смены качества купон реагировал быстрее"""
+    L = sorted(L, key=lambda x: (int(x["_n"]), x["i"]))
+    st, cuts = adwin([x["hit"] - x["p"] for x in L])
+    W = L[st:]; n = len(W)
+    if cuts: m0, K = 0.0, K // 2
+    hit = sum(x["hit"] for x in W); exp = sum(x["p"] for x in W)
+    lift = (hit - exp) / n if n else 0.0
+    post = (K * m0 + n * lift) / (K + n)
+    r = {"n": n, "n_all": len(L), "hit": hit, "exp": round(exp, 2), "lift": round(lift, 4), "post": round(post, 4), "prior": m0,
+         "on": not (n >= SRC_MIN and post < -0.01), "learned": n >= SRC_MIN}
+    if cuts:
+        c = cuts[-1]; r["cut"] = {"from": L[c[0]]["_n"], "drop": c[0], "was": c[1], "now": c[2], "k": len(cuts)}
+    return r
+
+
+def mdn(md):
+    """короткое имя модели ИИ: nvidia/nemotron-3-ultra-550b-a55b"""
+    return str(md or "").replace(":free", "").split(":")[-1].split("/")[-1]
+
+
+LLM_SRC = ("ИИ: факты", "Разбор ИИ", "ИИ-критик", "Betzona: факты")   # подсказки этих источников пишет модель ИИ
+
+
 def learn_src(jd):
-    """доверие к источникам добора: сколько добранных исходов сыграло против ожидания линии; апостериорный перевес
-    (SRC_K «виртуальных» исходов у стартовой веры). До SRC_MIN исходов источник только наблюдается"""
-    seen = {}; 
+    """доверие к источникам добора: сколько подсказанных исходов сыграло против ожидания линии; апостериорный перевес
+    по окну детектора смены качества. Для источников от ИИ — то же отдельно по каждой модели ИИ"""
+    seen = {}
     for num, ent in jd.items():
+        F = ent.get("feat") or []
         for x in (ent.get("fill") or []) + (ent.get("sugg") or []) + [dict(e, src="ИИ: факты" if e.get("src", "ИИ") == "ИИ" else e.get("src")) for e in (ent.get("edges") or [])]:
             if "hit" not in x or x.get("src") not in SRC_PRIOR: continue
-            seen[(num, x["i"], x["o"], x["src"])] = x
+            i = int(x["i"]); md = (F[i] or {}).get("md") if i < len(F) else None
+            seen[(num, i, x["o"], x["src"])] = dict(x, _n=num, md=md)
     out = {}
     for s, m0 in SRC_PRIOR.items():
-        L = [x for k, x in seen.items() if k[3] == s]; n = len(L)
-        hit = sum(x["hit"] for x in L); exp = sum(x["p"] for x in L)
-        lift = (hit - exp) / n if n else 0.0
-        post = (SRC_K * m0 + n * lift) / (SRC_K + n)
-        out[s] = {"n": n, "hit": hit, "exp": round(exp, 2), "lift": round(lift, 4), "post": round(post, 4), "prior": m0,
-                  "on": not (n >= SRC_MIN and post < -0.01), "learned": n >= SRC_MIN}
+        L = [x for k, x in seen.items() if k[3] == s]
+        out[s] = src_stat(L, m0, SRC_K)
+        if s in LLM_SRC:
+            M = {}
+            for x in L:
+                if x.get("md"): M.setdefault(x["md"], []).append(x)
+            out[s]["models"] = {md: {k: v for k, v in src_stat(Lm, out[s]["post"], 100).items() if k in ("n", "hit", "exp", "post", "on", "learned", "cut")}
+                                for md, Lm in M.items()}
     act = sorted([s for s in out if out[s]["on"]], key=lambda s: (-out[s]["post"], list(SRC_PRIOR).index(s)))
     # пока обучение не набрано, порядок стартовый; обученные источники ставятся по перевесу
     if not any(out[s]["learned"] for s in out): act = [s for s in SRC_PRIOR if out[s]["on"]]
@@ -590,6 +650,13 @@ def learn_all(hist, jd, now):
         if v.get("learned") and not o.get("learned"): log.append({"at": at, "what": "источник «%s» начал влиять на купон" % s, "why": "набрано %d добранных исходов" % v["n"]})
         if o and o.get("on", True) and not v["on"]: log.append({"at": at, "what": "источник «%s» выключен" % s, "why": "сыграло %d при ожидании линии %s из %d" % (v["hit"], str(v["exp"]).replace(".", ","), v["n"])})
         if o and not o.get("on", True) and v["on"]: log.append({"at": at, "what": "источник «%s» снова включён" % s, "why": "перевес вернулся выше порога"})
+        c, oc = v.get("cut"), o.get("cut")
+        if c and (not oc or oc.get("from") != c["from"] or oc.get("k") != c["k"]):
+            log.append({"at": at, "what": "«%s»: сменилось качество, статистика до №%s забыта" % (s, c["from"]), "why": "было %+.1f п.п., стало %+.1f п.п." % (c["was"] * 100, c["now"] * 100)})
+        for md, mv in (v.get("models") or {}).items():
+            om = (o.get("models") or {}).get(md) or {}
+            if om.get("on", True) and not mv["on"]: log.append({"at": at, "what": "«%s»: подсказки модели %s выключены" % (s, mdn(md)), "why": "сыграло %d при ожидании линии %s из %d" % (mv["hit"], str(mv["exp"]).replace(".", ","), mv["n"])})
+            if om and not om.get("on", True) and mv["on"]: log.append({"at": at, "what": "«%s»: модель %s снова в работе" % (s, mdn(md)), "why": "перевес вернулся выше порога"})
         if o.get("rank") and v.get("rank") and o["rank"] != v["rank"]: log.append({"at": at, "what": "«%s»: место в доборе %d→%d" % (s, o["rank"], v["rank"]), "why": "перевес %+.1f п.п." % (v["post"] * 100)})
     ob = old.get("brain") or {}
     if brain["on"] and not ob.get("on"): log.append({"at": at, "what": "мозг Монстра включён — купон считается по его вероятностям", "why": "на %d новых матчах точнее линии" % brain["np"]})

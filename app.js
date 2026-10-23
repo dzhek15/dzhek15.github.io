@@ -9928,6 +9928,8 @@
       L = L.filter(function(a){ return a && OUT.indexOf(a.o) >= 0 && Number(a.d) > 0 && a.why; }).map(function(a){
         var v = LEARN && LEARN.src && LEARN.src[a.src === "Усталость" ? "Усталость" : "ИИ: факты"];
         if(v && v.on === false) return null;
+        var mdl = ai.data && ai.data.m && ai.data.m[i] ? ai.data.m[i].model : null;
+        if(a.src !== "Усталость" && v && mdl && v.models && v.models[mdl] && v.models[mdl].on === false) return null;
         var mlt = v && v.d_mult != null ? Number(v.d_mult) : 1, o = {}; for(var k in a) o[k] = a[k];
         o.d = Number(a.d) * mlt; return o.d > 0 ? o : null;
       }).filter(Boolean);
@@ -10083,21 +10085,22 @@
     }).catch(function(){});
   }
   learnLoad();
-  function learnRank(name, t0){
+  function learnRank(name, t0, md){
     var v = LEARN && LEARN.src && LEARN.src[name];
     if(v && v.on === false) return 0;
+    if(v && md && v.models && v.models[md] && v.models[md].on === false) return 0;   // эта модель ИИ у источника выключена
     return v && v.rank ? v.rank : t0;
   }
   function monsterSrc(idx){
     var out = [], d = ai.data && String(ai.data.number) === String(state.tirazh) && ai.data.m ? ai.data.m[idx] : null;
     if(LEARN && LEARN.mode === "growth") return out;
-    var E = kelEdges(), L = (E && E[idx]) || [], t;
-    L.forEach(function(a){ var nm = a.src === "Усталость" ? "Усталость" : "ИИ: факты"; t = learnRank(nm, nm === "Усталость" ? 2 : 1); if(t) out.push({ o: a.o, t: t, src: nm, why: a.why }); });
-    t = learnRank("Разбор ИИ", 3);
+    var E = kelEdges(), L = (E && E[idx]) || [], t, md = d ? d.model : null;
+    L.forEach(function(a){ var nm = a.src === "Усталость" ? "Усталость" : "ИИ: факты"; t = learnRank(nm, nm === "Усталость" ? 2 : 1, nm === "Усталость" ? null : md); if(t) out.push({ o: a.o, t: t, src: nm, why: a.why }); });
+    t = learnRank("Разбор ИИ", 3, md);
     if(t && d && d.p) String(d.p).split("").forEach(function(o){ if(OUT.indexOf(o) >= 0) out.push({ o: o, t: t, src: "Разбор ИИ", why: "в купоне ИИ по матчу «" + d.p + "» — разбор учитывает травмы, мотивацию и настрой команд" }); });
-    t = learnRank("ИИ-критик", 4);
+    t = learnRank("ИИ-критик", 4, md);
     if(t && d && d.trap && OUT.indexOf(d.trap.o) >= 0) out.push({ o: d.trap.o, t: t, src: "ИИ-критик", why: "риск для фаворита: " + d.trap.why });
-    t = learnRank("Betzona: факты", 5);
+    t = learnRank("Betzona: факты", 5, md);
     if(t && d && d.bza && d.bza.length){
       OUT.forEach(function(o){
         var F = d.bza.filter(function(x){ return x.s === o; });
@@ -10127,6 +10130,18 @@
     });
     var c = L.cmp || {};
     h += '</tbody></table><p><b>Способ добора</b>: ' + (L.mode === "growth" ? 'только по росту банка' : 'от источников') + '. Сравнение с добором только по росту банка по реальным выплатам: ' + (c.n ? c.n + ' тир., выигрыш ' + fmt(c.src_win) + ' ₽ против ' + fmt(c.gr_win) + ' ₽ при ставках ' + fmt(c.cost) + ' ₽' : 'пока нет тиражей с выплатами') + '. Переключится, если после ' + L.rules.mode_min + ' тиражей добор по росту окажется лучше и по росту банка, и по деньгам.</p>';
+    var cutL = [], modL = [];
+    Object.keys(L.src || {}).forEach(function(s){
+      var v = L.src[s];
+      if(v.cut) cutL.push('<li>' + escHtml(s) + ': с №' + escHtml(v.cut.from) + ' качество сменилось — было ' + pc(v.cut.was) + ', стало ' + pc(v.cut.now) + '; учитываются ' + v.n + ' последних подсказок из ' + v.n_all + '</li>');
+      Object.keys(v.models || {}).forEach(function(md){
+        var mv = v.models[md];
+        modL.push('<tr><td>' + escHtml(s) + '</td><td>' + escHtml(md.replace(/:free$/, "").split(":").pop().split("/").pop()) + '</td><td>' + mv.n + '</td><td>' + pc(mv.post) + '</td><td>' + (mv.on === false ? 'выключена' : mv.learned ? 'в работе' : 'учится') + (mv.cut ? '<br>перелом' : '') + '</td></tr>');
+      });
+    });
+    h += '<p><b>Детектор смены качества</b> (ADWIN): следит за каждым источником и за каждой моделью ИИ. Если свежие подсказки играют заметно иначе, чем старые, старая статистика забывается и купон быстрее реагирует. Замечает перелом примерно от 12 п.п. на 400 подсказках, ложная тревога — не чаще 1 раза из 40.</p>';
+    h += cutL.length ? '<ul class="ev-kai-l">' + cutL.join("") + '</ul>' : '<p class="ev-note" style="text-align:left">Переломов пока нет.</p>';
+    if(modL.length) h += '<table class="ev-tab"><thead><tr><th>Источник</th><th>Модель ИИ</th><th>Исх.</th><th>Перевес</th><th>Статус</th></tr></thead><tbody>' + modL.join("") + '</tbody></table>';
     var B = L.brain;
     if(B){
       var nm = { ai_pick: "выбор ИИ", ai_top: "главный исход ИИ", edge: "факты ИИ против толпы", fat: "усталость", trap: "ИИ-критик", bz_facts: "факты Betzona", bz_votes: "голоса Betzona", crowd_gap: "толпа против линии", even_x: "равный матч → ничья" };
