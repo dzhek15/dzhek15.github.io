@@ -228,6 +228,21 @@ def plan_kelly_new(evs, fund, jack, bank=10000, edges=None):
             if cost >= bank: continue
             g = kel_g(sets, sc, cost, bank)
             if best is None or g > best[0]: best = (g, sets)
+    # своя сборка Монстра: от фаворитов по одному исходу, каждый шаг — наибольший рост банка; каждый шаг — кандидат
+    sets = [[max(range(3), key=lambda k: calprob(e['p'])[k])] for e in ev2]; combos = 1
+    for _ in range(40):
+        st = None
+        for i in range(15):
+            n = len(sets[i]); nc = combos // n * (n + 1)
+            if n >= 3 or nc > max(BUDGETS) or nc * PRICE >= bank: continue
+            for k in range(3):
+                if k in sets[i]: continue
+                t = [list(x) for x in sets]; t[i] = sorted(t[i] + [k])
+                g = kel_g(t, sc, nc * PRICE, bank)
+                if st is None or g > st[0]: st = (g, i, k)
+        if st is None: break
+        g, i, k = st; combos = combos // len(sets[i]) * (len(sets[i]) + 1); sets[i] = sorted(sets[i] + [k])
+        if best is None or g > best[0]: best = (g, [list(x) for x in sets])
     return best[1]
 
 
@@ -270,8 +285,8 @@ def mk_ev(bk, pl_raw, res):
 
 def plans_for(evs, fund, jack, edges=None):
     kel_ok, kel_any = plan_kelly(evs, fund, jack)
-    kn = plan_kelly_new(evs, fund, jack)
-    ka = plan_kelly_new(evs, fund, jack, edges=edges) if edges else kn
+    kn = plan_kelly_new(evs, fund, jack, bank=30000)   # банк Монстра как на сайте
+    ka = plan_kelly_new(evs, fund, jack, bank=30000, edges=edges) if edges else kn
     return {'Фавориты (база)': [[max(range(3), key=lambda k: e['p'][k])] for e in evs],
             'Большинство (база)': [[max(range(3), key=lambda k: e['pl'][k])] for e in evs],
             'Расхождения': plan_gaps(evs), 'max15 ·32': plan_max15(evs, 32), 'Симуляция ·32': plan_sim(evs, 32),
