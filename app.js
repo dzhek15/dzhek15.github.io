@@ -2766,6 +2766,36 @@
     if(!a && !b) return "";
     return a + b + '<p class="ai-cal-lg"><span class="ai-st">Красный</span> соперник сильнее или выше в таблице, <span class="ai-wk">зелёный</span> слабее или ниже, без цвета класс не определён. <span class="ai-euk">Синим</span> выделены еврокубки. Название команды стоит слева от тире в домашней игре и справа в гостевой.</p>';
   }
+  /* Betzona: прочтение каждого автора — главная мысль, доводы, убедительность, настрой; тон — по модели эмоций */
+  function aiTone(t){
+    if(!t) return "";
+    var v = t.pos - t.anx - t.irr;
+    return v >= 0.25 ? "уверенный" : v >= 0.08 ? "скорее уверенный" : v > -0.08 ? "ровный" : v > -0.25 ? "с тревогой или раздражением" : "тревожный, раздражённый";
+  }
+  function aiBzrHtml(r){
+    var CV = ["без доводов", "слабо", "средне", "убедительно"];
+    var h = '<div class="ai-bzr">' + r.bzr.map(function(x){
+      var dots = '<span class="ai-cv ai-cv' + x.conv + '" title="убедительность ' + x.conv + ' из 3">' + "●●●".slice(0, x.conv) + '<i>' + "●●●".slice(x.conv) + '</i></span>';
+      var tn = aiTone(x.tone);
+      return '<div class="ai-bzr-a"><div class="ai-bzr-h"><b>' + escHtml(x.a) + '</b>' + (x.bet ? ' — ' + escHtml(x.bet) : '') + (x.s ? ' <span class="ai-bzr-s">за «' + escHtml(x.s) + '»</span>' : '') + '</div>' +
+        '<p class="ai-bzr-i">' + escHtml(x.idea) + '</p>' +
+        (x.args && x.args.length ? '<ul class="ai-bz">' + x.args.map(function(g){ return '<li>' + escHtml(g.f) + (g.s ? ' <span class="ai-bzr-s">→ ' + escHtml(g.s) + '</span>' : '') + '</li>'; }).join("") + '</ul>' : '') +
+        '<p class="ai-bzr-m">Убедительность: ' + dots + ' ' + CV[x.conv] + (x.cw ? ' — ' + escHtml(x.cw) : '') + '</p>' +
+        ((x.mood || tn) ? '<p class="ai-bzr-m">Настрой: ' + escHtml(x.mood || "—") + (x.mq ? ' («' + escHtml(x.mq) + '»)' : '') + (tn ? '; тон текста по модели эмоций — ' + tn : '') + '</p>' : '') + '</div>';
+    }).join("") + '</div>';
+    var w = r.bzw;
+    if(w){
+      var tot = (w["1"] || 0) + (w.X || 0) + (w["2"] || 0);
+      if(tot > 0) h += '<p class="ai-bzr-m">С учётом убедительности и тона люди Betzona за: ' + OUT.map(function(o){ return o + ' — ' + Math.round(100 * (w[o] || 0) / tot) + '%'; }).join(", ") + '.</p>';
+    }
+    return h;
+  }
+  function aiEmoHtml(r){
+    var e = r.emo; if(!e) return "";
+    var nm = { h: (r.hd && r.hd.h && r.hd.h.n) || "хозяева", a: (r.hd && r.hd.a && r.hd.a.n) || "гости" }, L = [];
+    ["h", "a"].forEach(function(k){ if(e[k]) L.push(escHtml(nm[k]) + ' — ' + aiTone(e[k]) + ' (' + e[k].n + ' выск.)'); });
+    return L.length ? '<p class="ai-bzr-m">Тон высказываний по модели эмоций: ' + L.join("; ") + '.</p>' : "";
+  }
   function aiPara(x, r){
     var m = /^(Прошлые игры|Следующие игры|Кубок|На кону|Составы и отсутствующие|Тренеры и настроение|Прогнозы людей \(Betzona\)|Неочевидная деталь|Неочевидные детали, наблюдения):\s*([\s\S]*)$/.exec(x);
     /* «Прошлые игры» на сайте не показываем: уже сыгранные матчи только мешают читать разбор (решение 09.10.2026) */
@@ -2786,13 +2816,16 @@
         if(u) src = u[1]; else if(y.trim()) li.push(y.trim());
       });
       var none = li.length === 1 && /нет прогноза|не ответил/.test(li[0]);
+      if(!none && r && r.bzr && r.bzr.length) return '<div class="ai-sec ai-s-bz"><span class="ai-lb">Прогнозы людей (Betzona)</span>' + aiBzrHtml(r) +
+        (src ? '<p class="ai-bz-src"><a href="' + escHtml(src) + '" target="_blank" rel="noopener">Открыть на betzona.ru</a></p>' : '') + '</div>';
       return '<div class="ai-sec ai-s-bz"><span class="ai-lb">Прогнозы людей (Betzona)</span>' +
         (none ? '<p class="ai-bz-none">' + escHtml(li[0].charAt(0).toUpperCase() + li[0].slice(1)) + '</p>' :
           '<ul class="ai-bz">' + li.map(function(y){ return '<li>' + escHtml(y) + '</li>'; }).join("") + '</ul>') +
         (src ? '<p class="ai-bz-src"><a href="' + escHtml(src) + '" target="_blank" rel="noopener">Открыть на betzona.ru</a></p>' : '') + '</div>';
     }
     if(m && AI_SEC[m[1]]){
-      return '<div class="ai-sec ai-s-' + AI_SEC[m[1]] + '"><span class="ai-lb">' + escHtml(m[1]) + '</span><p>' + aiFmt(escHtml(m[2].charAt(0).toUpperCase() + m[2].slice(1))) + '</p></div>';
+      var emo = m[1] === "Тренеры и настроение" && r ? aiEmoHtml(r) : "";
+      return '<div class="ai-sec ai-s-' + AI_SEC[m[1]] + '"><span class="ai-lb">' + escHtml(m[1]) + '</span><p>' + aiFmt(escHtml(m[2].charAt(0).toUpperCase() + m[2].slice(1))) + '</p>' + emo + '</div>';
     }
     return '<p>' + aiFmt(escHtml(x)) + '</p>';
   }
@@ -9955,7 +9988,9 @@
                Math.min(2, (d.bza || []).filter(function(z){ return z.s === o; }).length) / 2,
                bz.n ? Number((bz.v || {})[o] || 0) / Math.max(1, bz.n) : 0,
                (q[k] - p[k]) * 10,
-               o === "X" ? Number(d.even || 0) / 10 : 0];
+               o === "X" ? Number(d.even || 0) / 10 : 0,
+               (function(){ var w = d.bzw; if(!w) return 0; var t = (w["1"] || 0) + (w.X || 0) + (w["2"] || 0); return t > 0 ? (w[o] || 0) / t : 0; })(),
+               (function(){ var e = d.emo; if(!e || o === "X") return 0; var tn = function(z){ return z ? z.pos - z.anx - z.irr : 0; }, df = tn(e.h) - tn(e.a); return o === "1" ? df : -df; })()];
       var v = Math.log(Math.max(1e-6, p[k]));
       for(var j = 0; j < x.length && j < w.length; j++) v += w[j] * x[j];
       lg.push(v);
@@ -10108,7 +10143,10 @@
       });
     }
     t = learnRank("Betzona: голоса", 6);
-    if(t && d && d.bz && d.bz.n){
+    if(t && d && d.bzw){
+      var vw = d.bzw, mw = Math.max(vw["1"] || 0, vw.X || 0, vw["2"] || 0);
+      OUT.forEach(function(o){ if(mw >= 1 && (vw[o] || 0) >= mw) out.push({ o: o, t: t, src: "Betzona: голоса", why: "за «" + o + "» самые убедительные авторы Betzona (вес с учётом доводов и тона " + String(Math.round(vw[o] * 10) / 10).replace(".", ",") + ")" }); });
+    } else if(t && d && d.bz && d.bz.n){
       var v = d.bz.v || {}, mx = Math.max(v["1"] || 0, v.X || 0, v["2"] || 0);
       OUT.forEach(function(o){ if(mx > 0 && (v[o] || 0) >= mx) out.push({ o: o, t: t, src: "Betzona: голоса", why: "люди Betzona чаще всего ставят на «" + o + "» (" + String(Math.round((v[o] || 0) * 10) / 10).replace(".", ",") + " из " + d.bz.n + " прогнозов)" }); });
     }
@@ -10144,7 +10182,7 @@
     if(modL.length) h += '<table class="ev-tab"><thead><tr><th>Источник</th><th>Модель ИИ</th><th>Исх.</th><th>Перевес</th><th>Статус</th></tr></thead><tbody>' + modL.join("") + '</tbody></table>';
     var B = L.brain;
     if(B){
-      var nm = { ai_pick: "выбор ИИ", ai_top: "главный исход ИИ", edge: "факты ИИ против толпы", fat: "усталость", trap: "ИИ-критик", bz_facts: "факты Betzona", bz_votes: "голоса Betzona", crowd_gap: "толпа против линии", even_x: "равный матч → ничья" };
+      var nm = { ai_pick: "выбор ИИ", ai_top: "главный исход ИИ", edge: "факты ИИ против толпы", fat: "усталость", trap: "ИИ-критик", bz_facts: "факты Betzona", bz_votes: "голоса Betzona", crowd_gap: "толпа против линии", even_x: "равный матч → ничья", bz_conv: "убедительные авторы Betzona", emo: "тон тренеров и игроков" };
       h += '<p><b>Мозг Монстра</b> — своя модель поверх линии, учится сама: ' + (B.on ? '<b class="kel-up-t">включён</b>, купон Монстра считается по его вероятностям' : 'в тени — учится, купон не меняет') + '. Матчей с итогом: ' + B.n + ', проверено на новых: ' + B.np + ' (нужно ' + B.min + ' и стабильный выигрыш у линии)' + (B.np ? '. Ошибка предсказания: линия ' + String(B.ll_line).replace(".", ",") + ', мозг ' + String(B.ll_brain).replace(".", ",") : '') + '.</p>';
       if(B.n) h += '<ul class="ev-kai-l">' + B.feat.map(function(f, i){ return { f: f, w: B.w[i] }; }).filter(function(x){ return Math.abs(x.w) >= 0.01; }).sort(function(a, b){ return Math.abs(b.w) - Math.abs(a.w); }).map(function(x){ return '<li>' + (nm[x.f] || x.f) + ': ' + (x.w > 0 ? 'повышает' : 'понижает') + ' шанс исхода (вес ' + String(x.w).replace(".", ",") + ')</li>'; }).join("") + '</ul>';
     }

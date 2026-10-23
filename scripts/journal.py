@@ -327,7 +327,12 @@ def ai_src(num):
         t = rk("Betzona: факты", 5, md)
         for o in set(x.get("s") for x in (m.get("bza") or [])):
             if o in OUT and t: L.append((OUT.index(o), t, "Betzona: факты"))
-        bz = m.get("bz") or {}
+        bw = m.get("bzw") or {}
+        if bw and max(bw.values()) >= 1:
+            mxw = max(bw.values()); t = rk("Betzona: голоса", 6)
+            for o in OUT:
+                if bw.get(o, 0) >= mxw and t: L.append((OUT.index(o), t, "Betzona: голоса"))
+        bz = {} if bw else (m.get("bz") or {})
         if bz.get("n"):
             v = bz.get("v") or {}; mx = max(v.get(o, 0) for o in OUT)
             for o in OUT:
@@ -550,7 +555,7 @@ def learn_mode(jd, pays, hist):
 # логиты исхода = log(вероятность линии) + Σ w·признак; признаки — то, чего нет в линии. Сильная L2-регуляризация
 # тянет веса к нулю: пока сигнал не доказан, модель почти повторяет линию. Проверка — последовательная:
 # каждый тираж предсказывается моделью, обученной только на более ранних.
-BRAIN_F = ["ai_pick", "ai_top", "edge", "fat", "trap", "bz_facts", "bz_votes", "crowd_gap", "even_x"]
+BRAIN_F = ["ai_pick", "ai_top", "edge", "fat", "trap", "bz_facts", "bz_votes", "crowd_gap", "even_x", "bz_conv", "emo"]
 BRAIN_L2, BRAIN_MIN, BRAIN_IT, BRAIN_STEP = 20.0, 300, 150, 10
 
 
@@ -566,7 +571,17 @@ def brain_x(f, k, p, q):
             min(2, sum(1 for x in (f.get("bza") or []) if x.get("s") == o)) / 2.0,
             (float((f.get("bz") or {}).get("v", {}).get(o, 0)) / max(1, (f.get("bz") or {}).get("n") or 1)) if (f.get("bz") or {}).get("n") else 0.0,
             (q[k] - p[k]) * 10,
-            (float(f.get("ev") or 0) / 10.0) if o == "X" else 0.0]
+            (float(f.get("ev") or 0) / 10.0) if o == "X" else 0.0,
+            (float((f.get("bzw") or {}).get(o, 0)) / sum((f.get("bzw") or {}).values())) if f.get("bzw") and sum(f["bzw"].values()) > 0 else 0.0,
+            emo_x(f.get("emo"), o)]
+
+
+def emo_x(e, o):
+    """разница тона тренеров и игроков (уверенность − тревога − раздражение) хозяев и гостей, со знаком исхода"""
+    if not e or o == "X": return 0.0
+    tn = lambda z: (z["pos"] - z["anx"] - z["irr"]) if z else 0.0
+    d = tn(e.get("h")) - tn(e.get("a"))
+    return d if o == "1" else -d
 
 
 def brain_feat(m):
@@ -576,7 +591,7 @@ def brain_feat(m):
     return {"ap": m.get("p"), "rk": m.get("rank"), "ev": m.get("even"), "eo": e.get("o"), "ef": e.get("f"),
             "adj": [{"o": a.get("o"), "d": a.get("d"), "src": a.get("src")} for a in (m.get("adj") or [])],
             "tr": (m.get("trap") or {}).get("o"), "bza": [{"s": x.get("s"), "t": x.get("t")} for x in (m.get("bza") or [])],
-            "bz": m.get("bz"), "md": m.get("model")}
+            "bz": m.get("bz"), "bzw": m.get("bzw"), "emo": m.get("emo"), "md": m.get("model")}
 
 
 def brain_prob(w, f, p, q):
