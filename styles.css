@@ -2799,3 +2799,8 @@ html[data-bk="fonbet"] .fon-only{display:flex}
 .undo-bar #btnRedo:disabled{background:linear-gradient(135deg, #1f8a63, #1b7454)}
 @keyframes undoShine{0%{left:-60%} 55%{left:130%} 100%{left:130%}}
 @media (prefers-reduced-motion:reduce){ .undo-bar #btnUndo::before, .undo-bar #btnRedo::before{animation:none; display:none} }
+
+.ev-kai{margin:10px 0 6px; padding:8px 10px; border:1px solid rgba(201,162,74,.45); border-radius:8px; background:rgba(201,162,74,.08)}
+.ev-kai-sw{display:flex; gap:8px; align-items:center; font-weight:600; cursor:pointer}
+.ev-kai-l{margin:6px 0 0; padding-left:18px; font-size:13px; line-height:1.45}
+.ev-kai-l li{margin:3px 0; overflow-wrap:anywhere}

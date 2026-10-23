@@ -9490,7 +9490,7 @@
     var rows = [];
     state.matches.forEach(function(m, idx){
       var r = { idx: idx, m: m, locked: m.mode === "lock", p: null, q: null, set: [] };
-      if(m.pct && m.pct.bk) r.p = calProb(m.pct.bk);
+      if(m.pct && m.pct.bk) r.p = edgeAdj(idx, calProb(m.pct.bk));
       if(m.pct) r.q = crowdShare(m.pct.pool);
       if(r.locked){ r.set = OUT.filter(function(o){ return m.picks[o]; }).map(function(o){ return OUT.indexOf(o); }); }
       else if(r.p){
@@ -9548,7 +9548,7 @@
     var rows = [];
     state.matches.forEach(function(m, idx){
       var r = { idx: idx, m: m, locked: m.mode === "lock", p: null, q: null, set: [], gain: 0 };
-      if(m.pct && m.pct.bk) r.p = calProb(m.pct.bk);
+      if(m.pct && m.pct.bk) r.p = edgeAdj(idx, calProb(m.pct.bk));
       if(m.pct) r.q = crowdShare(m.pct.pool);
       if(r.locked) r.set = OUT.filter(function(o){ return m.picks[o]; }).map(function(o){ return OUT.indexOf(o); });
       else if(r.p){ var b = 0; for(var k = 1; k < 3; k++) if(r.p[k] > r.p[b]) b = k; r.set = [b]; }
@@ -9854,7 +9854,7 @@
     var rows = [], fixed = 1;
     state.matches.forEach(function(m, idx){
       var r = { idx: idx, m: m, locked: m.mode === "lock", p: null, q: null, set: [] };
-      if(m.pct && m.pct.bk) r.p = calProb(m.pct.bk);
+      if(m.pct && m.pct.bk) r.p = edgeAdj(idx, calProb(m.pct.bk));
       if(m.pct) r.q = crowdShare(m.pct.pool);
       if(r.locked){ r.set = OUT.filter(function(o){ return m.picks[o]; }).map(function(o){ return OUT.indexOf(o); }); fixed *= Math.max(1, r.set.length); }
       rows.push(r);
@@ -9897,13 +9897,74 @@
     });
     return { rows: rows, combos: n };
   }
+  /* ---------- «Келли · ИИ»: перекосы против толпы из разбора ИИ ----------
+     Разбор помечает до 4 исходов, у которых по фактам (кадры, ротация, мотивация, кризис) шансы выше,
+     чем видно из линии, а толпа их не перегружает. Келли · ИИ поднимает вероятность такого исхода
+     на 3 п.п. (один факт) или 6 п.п. (несколько) за счёт двух других и дальше считает как обычно.
+     Размер сдвига — стартовое допущение: журнал копит, сыграли ли перекосы чаще линии. */
+  var KEL_EDGE = null, KEL_AI_KEY = "dz_kel_ai";
+  function kelEdges(){
+    if(FON || !ai.data || String(ai.data.number) !== String(state.tirazh) || !ai.data.m) return null;
+    var out = {}, n = 0;
+    ai.data.m.forEach(function(x, i){ var e = x && x.edge; if(e && OUT.indexOf(e.o) >= 0 && e.why){ out[i] = e; n++; } });
+    return n ? out : null;
+  }
+  function edgeAdj(idx, p){
+    var e = KEL_EDGE && KEL_EDGE[idx];
+    if(!p || !e) return p;
+    var k = OUT.indexOf(e.o), d = Math.min(Number(e.f) === 2 ? 0.06 : 0.03, 0.9 - p[k]);
+    if(!(d > 0)) return p;
+    var rest = 1 - p[k], q = p.slice();
+    for(var j = 0; j < 3; j++) q[j] = j === k ? p[k] + d : p[j] * (rest - d) / rest;
+    return q;
+  }
+  function withEdges(on, fn){
+    var was = KEL_EDGE; KEL_EDGE = on ? kelEdges() : null;
+    try { return fn(); } finally { KEL_EDGE = was; }
+  }
+  /* Рост банка по полному распределению выплат: 300 сценариев итогов тиража (одни и те же для всех купонов),
+     в каждом — своя таблица выплат (при победах фаворитов угадывает и толпа, приз дробится) и выплата купона.
+     g = среднее ln(1 − цена/банк + выплата/банк). Двоичное «приз есть / нет» с средней выплатой
+     из-за редких огромных выплат за 13–15 считало выгодным почти любой купон. */
+  function kelScen(probs, pools, lines, fund, jack, S){
+    var seed = 0x9e3779b9;
+    probs.forEach(function(p, i){ seed = (seed ^ Math.round(p[0] * 1e6 + p[2] * 1e3 + i)) >>> 0; seed = Math.imul(seed, 2654435761) >>> 0; });
+    function rnd(){ seed = (seed + 0x6D2B79F5) >>> 0; var t = seed; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
+    var res = [], pay = [];
+    for(var s = 0; s < S; s++){
+      var r = [], q = [];
+      for(var i = 0; i < 15; i++){
+        var u = rnd(), k = u < probs[i][0] ? 0 : (u < probs[i][0] + probs[i][1] ? 1 : 2);
+        r.push(k); q.push(pools[i][k]);
+      }
+      res.push(r); pay.push(evPayouts(poissonBinomial(q), lines, fund, jack).pay);
+    }
+    return { res: res, pay: pay, S: S };
+  }
+  function kelGrowth(sets, sc, cost, bank){
+    var g = 0;
+    for(var s = 0; s < sc.S; s++){
+      var poly = [1], r = sc.res[s];
+      for(var i = 0; i < 15; i++){
+        var hit = sets[i].indexOf(r[i]) >= 0 ? 1 : 0, a = sets[i].length - hit, nx = [];
+        for(var j = 0; j <= poly.length; j++) nx[j] = 0;
+        for(j = 0; j < poly.length; j++){ nx[j] += poly[j] * a; nx[j + 1] += poly[j] * hit; }
+        poly = nx;
+      }
+      var w = 0;
+      for(var k = 9; k < poly.length; k++) w += poly[k] * sc.pay[s][k];
+      g += Math.log(Math.max(1e-9, 1 - cost / bank + w / bank));
+    }
+    return g / sc.S;
+  }
   /* ---------- «Келли»: какой купон сильнее всего растит банк ----------
      Кандидаты — купоны «По данным» и «Симуляции» на 1…512 вариантов.
      Для каждого: шанс хоть какого-то приза p (купон угадал 9+), средняя выплата
      при призе и цена купона как доля банка f. Рост банка за тираж —
      p·ln(1 + f·b) + (1 − p)·ln(1 − f), где b — чистый выигрыш на рубль при призе.
      Подставляется купон с наибольшим ростом; если у всех рост ≤ 0 — не ставить. */
-  function planByKelly(maxLines){
+  function planByKelly(maxLines, useAi){
+    if(useAi) return withEdges(true, function(){ var K = planByKelly(maxLines); if(K && !K.error) K.edges = KEL_EDGE; return K; });
     var price = linePrice();
     if(!(maxLines > 0)) maxLines = limitMaxLines(price);
     var poolNow = Number(state.poolSum) || 0, typical = Number(state.poolTypical) || 0;
@@ -9912,14 +9973,14 @@
     var bank = KELLY_BANK;      /* расчётный банк модели, не реальный баланс */
     if(!fund) return { error: FON ? "Фонбет не публикует пул тиража, а без него выплату и рост банка не посчитать" : "не знаю размер призового фонда — нажми «Обновить тираж»" };
     var probs = [], pools = [], bad = null;
-    state.matches.forEach(function(m){
-      var pr = evProbs(m), pl = evPool(m);
+    state.matches.forEach(function(m, idx){
+      var pr = edgeAdj(idx, evProbs(m)), pl = evPool(m);
       if(!pr || !pl) bad = bad || ("нет данных по матчу «" + m.home + " — " + m.away + "»");
       probs.push(pr); pools.push(pl);
     });
     if(bad) return { error: bad };
     if(probs.length !== 15) return { error: "в тираже не 15 матчей с данными" };
-    var lines = (fund / 0.9) / price, cands = [];
+    var lines = (fund / 0.9) / price, cands = [], sc = kelScen(probs, pools, lines, fund, jack, 300);
     limitList(price).filter(function(B){ return B <= maxLines; }).forEach(function(B){
       [["Система", planByData(B)], ["Симуляция", planBySim(B)], ["Ровно на сумму", planExact(B)]].forEach(function(pair){
         if(!pair[1]) return;
@@ -9932,8 +9993,7 @@
         var ev = evAverage(sets, probs, pools, lines, fund, jack, 400);
         var pWin = evTail(evCouponDist(sets, probs), 9);
         var W = ev.avg * plan.combos;                 /* средняя выплата купона */
-        var f = cost / bank, b = pWin > 0 ? (W / pWin) / cost - 1 : -1;
-        var g = (f < 1 && pWin > 0 && b > -1) ? pWin * Math.log(1 + f * b) + (1 - pWin) * Math.log(1 - f) : -Infinity;
+        var g = cost < bank ? kelGrowth(sets, sc, cost, bank) : -Infinity;
         cands.push({ key: key, src: pair[0], plan: plan, cost: cost, pWin: pWin, ret: W / cost, g: g });
       });
     });
@@ -9957,7 +10017,8 @@
     ["Бриф", "Собирает систему с гарантией: вместо всех строк купона берётся их часть, которая всё равно гарантирует заданное число угаданных при попадании в отмеченные исходы.<span class=\"ev-bt\">На истории не проверялась: работает поверх вашего купона.</span>"],
     ["Охота на 15", "Цель — забрать 15 из 15. Вместо системы берутся самые вероятные отдельные строки: система вынуждена покупать и маловероятные сочетания. Вероятности — модель, обученная на истории (линия конторы, ничьи, молодёжные турниры); среди почти равных строк остаются менее популярные у игроков, чтобы не делить суперприз. До 400 строк — в корзину, больше — сразу в CSV. Обучение «Охота · с ИИ» (без денег, в статистике): после разбора ИИ база купона — выбор ИИ целиком (где Охота и ИИ расходятся, приоритет у ИИ), к ней добавляются до двух неочевидных исходов, которые исключили обе стратегии, но игроки ставят на них заметно меньше линии, остаток бюджета — по вероятности Охоты; бриф 14 из 15 до 300 000 ₽, записывается до матчей. Заменит основную, только если обыграет её по реальным выплатам на 10 тиражах с №5036.<span class=\"ev-bt\">На истории (618 тиражей, на 940 тиражах не пересчитывалось): при ~900 строках шанс 15 из 15 по модели — 0,085% против 0,073% у системы той же цены, при ~8 000 строк — 0,55% против 0,44%. На ~8 000 строк 15 из 15 забрали бы 4 раза, система — ни разу, но 4 события слишком мало для вывода, это не доказательство.</span>"],
     ["Симуляция", "Цель — чаще попадать в призы (9 и больше). Двойники и тройники ставятся там, где сильнее всего растёт шанс 9+, в пределах выбранного лимита суммы; итог проверяется розыгрышем 10 000 тиражей.<span class=\"ev-bt\">На истории (733 тиража, купон до 32 вариантов, в среднем 809 ₽): приз в 40,1% тиражей, 12+ — в 2,46%, 13+ — в 0,55%.</span>"],
-    ["Келли", "Цель — быстрее всего растить банк. Сравнивает системы по вероятностям и купоны «Симуляции» всех допустимых размеров в пределах лимита суммы (до 17 280 ₽) и собирает один системный купон на выбранную сумму, из равных по размеру — с большим ожидаемым ростом расчётного банка 30 000 ₽. Если купон по модели невыгоден, честно предупреждает и показывает купон с наибольшим ростом.<span class=\"ev-bt\">На истории (733 тиража, прежняя версия: купоны до 512 вариантов, банк 10 000 ₽): в среднем купон за 3 113 ₽, приз в 55,7% тиражей, 12+ — в 4,91%, 13+ — в 1,64%. Модель выплат считала выгодным каждый тираж из-за крупных суперпризов — к этому стоит относиться осторожно.</span>"]
+    ["Келли", "Цель — быстрее всего растить банк. Сравнивает системы по вероятностям, купоны «Симуляции» и «Ровно на сумму» всех допустимых размеров в пределах лимита суммы (до 17 280 ₽) и собирает один системный купон на выбранную сумму, из равных по размеру — с большим ростом расчётного банка 30 000 ₽. Рост банка считается по полному распределению выплат (300 сценариев итогов, в каждом своя таблица выплат), а не по двоичному «приз есть / нет». Если купон по модели невыгоден или сумма велика для банка, честно предупреждает и показывает купон с наибольшим ростом. Режим «Келли · ИИ» добавляет перекосы против толпы из разбора ИИ (+3 или +6 п.п. исходу с фактами), пока на проверке в журнале.<span class=\"ev-bt\">На истории (1000 тиражей, выплаты по модели): при той же сумме выбор по полному распределению не хуже прежнего на тиражах 4042–4700 и в среднем на 880–950 ₽ за тираж лучше на 4701–5044 при купонах 32–128 вариантов, но интервал разницы включает ноль; при 512 вариантах выбор совпадает. По реальным выплатам тиражей 5026–5044 прежний Келли журнала вернул 80 337 ₽ на 60 000 ₽, почти весь плюс — тиражи 5040 и 5044. «Келли · ИИ» на истории не проверить: разборов ИИ за прошлые годы нет.</span>"]
+
   ];
   function showStratGuide(){
     $("evTitle").textContent = "Как работают стратегии";
@@ -10252,12 +10313,21 @@
   }
   function showKellyStrat(){
     var box = stratGuard("Стратегия «Келли»"); if(!box) return;
-    var L = limitLines("kelLimit", limitMaxLines()), K = planByKelly(L), price = linePrice();
-    var h = stratHow('Цель — быстрее всего растить банк. Сравниваются системы по вероятностям и купоны «Симуляции» на все допустимые размеры в пределах лимита суммы; купон собирается на выбранную сумму (самый крупный допустимый в её пределах), а из равных по размеру берётся тот, у которого ожидаемый рост банка больше. Рядом показан купон с наибольшим ростом. Банк модели — расчётные 30 000 ₽, а не реальный баланс. Если рост отрицательный — модель предупреждает, что ставить невыгодно.');
+    var E = kelEdges(), useAi = !!E && localStorage.getItem(KEL_AI_KEY) !== "0";
+    var L = limitLines("kelLimit", limitMaxLines()), K = planByKelly(L, useAi), price = linePrice();
+    var h = stratHow('Цель — быстрее всего растить банк. Сравниваются системы по вероятностям, купоны «Симуляции» и «Ровно на сумму» на все допустимые размеры в пределах лимита суммы; купон собирается на выбранную сумму (самый крупный допустимый в её пределах), а из равных по размеру берётся тот, у которого рост банка больше. Рост считается по полному распределению выплат: 300 сценариев итогов тиража, в каждом своя таблица выплат (если побеждают фавориты, угадывает и толпа, и приз дробится). Банк модели — расчётные 30 000 ₽, а не реальный баланс. Если рост отрицательный — модель предупреждает, что сумма для такого банка слишком велика или купон невыгоден.<br><br><b>Келли · ИИ</b> — то же, но с поправкой на перекосы из разбора ИИ: исходы, у которых по фактам (кадровые потери, ротация, мотивация, кризис) шансы выше, чем видно из линии, а толпа на них не перегружена. Такой исход получает +3 п.п. вероятности (один факт) или +6 п.п. (несколько) за счёт двух других. Сдвиг — стартовое допущение: журнал проверяет, играют ли перекосы чаще линии, и Келли · ИИ сменит обычный, только если обыграет его по реальным выплатам.');
     h += limitSelect("kelLimit", L);
+    if(E){
+      var el = Object.keys(E).map(function(i){ var e = E[i], m = state.matches[i]; return '<li><b>' + (Number(i) + 1) + '. ' + escHtml(m ? m.home + ' — ' + m.away : '') + ': ' + e.o + '</b> (' + (Number(e.f) === 2 ? '+6' : '+3') + ' п.п.) — ' + escHtml(e.why) + '</li>'; }).join("");
+      h += '<div class="ev-kai"><label class="ev-kai-sw"><input type="checkbox" id="kelAi"' + (useAi ? ' checked' : '') + '> Келли · ИИ: учитывать перекосы против толпы (' + Object.keys(E).length + ')</label><ul class="ev-kai-l">' + el + '</ul></div>';
+    } else if(!FON){
+      h += '<p class="ev-note dt-center">Перекосов против толпы ИИ в этом тираже не нашёл' + (ai.data && String(ai.data.number) === String(state.tirazh) ? '' : ' (разбора ИИ по этому тиражу ещё нет)') + ' — считается обычный Келли.</p>';
+    }
     if(K.error){
       box.innerHTML = h + '<p class="ev-warn">Посчитать не получилось: ' + K.error + '.</p>';
-      $("evBack").hidden = false; limitBind(box, showKellyStrat); return;
+      $("evBack").hidden = false; limitBind(box, showKellyStrat);
+      var sw0 = $("kelAi"); if(sw0) sw0.addEventListener("change", function(){ try { localStorage.setItem(KEL_AI_KEY, sw0.checked ? "1" : "0"); } catch(e){} showKellyStrat(); });
+      return;
     }
     var pick = K.pick, b = K.best;
     if(pick){
@@ -10278,7 +10348,9 @@
       h += stratTable(pick.plan.rows);
       h += '<div class="ev-data-go ev-data-go2"><button type="button" id="dataApply" class="btn-ev">Подставить в купон</button><button type="button" id="planCsv" class="btn-ev">Скачать CSV</button></div>' + STRAT_NOTE;
     }
-    stratFinish(box, h, pick ? pick.plan : null, "Келли", showKellyStrat);
+    stratFinish(box, h, pick ? pick.plan : null, useAi ? "Келли · ИИ" : "Келли", showKellyStrat);
+    var sw = $("kelAi");
+    if(sw) sw.addEventListener("change", function(){ try { localStorage.setItem(KEL_AI_KEY, sw.checked ? "1" : "0"); } catch(e){} showKellyStrat(); });
   }
   $("btnData").addEventListener("click", showHunt);
   $("stratHelp").addEventListener("click", function(e){ e.preventDefault(); showStratGuide(); });

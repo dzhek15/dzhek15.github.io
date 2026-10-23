@@ -168,9 +168,83 @@ def plan_kelly(evs,fund,jack,bank=10000):
     return (least[1] if least[0]>0 else None), least[1]
 
 
+# --- новый Келли: рост банка по полному распределению выплат (как на сайте) ---
+def edge_adj(p, e):
+    if not e: return p
+    k = OUT.index(e['o']); d = min(.06 if str(e.get('f')) == '2' else .03, .9 - p[k])
+    if d <= 0: return p
+    r = 1 - p[k]
+    return [p[j] + d if j == k else p[j] * (r - d) / r for j in range(3)]
+
+
+def kel_scen(evs, fund, jack, S=200, seed=7):
+    import random
+    rnd = random.Random(seed)
+    lines = (fund / .9) / PRICE; A = fund / 90
+    alloc = {k: A * SH[k] for k in SH}; alloc[14] += jack * J14; alloc[15] += jack * J15
+    P = [calprob(e['p']) for e in evs]; out = []
+    for _ in range(S):
+        res = []
+        for p in P:
+            u = rnd.random(); res.append(0 if u < p[0] else (1 if u < p[0] + p[1] else 2))
+        crowd = pb([e['pl'][r] for e, r in zip(evs, res)])
+        n = {c: lines * tail(crowd, c) * FIX[c] + 1 for c in range(9, 16)}
+        out.append((res, [sum(alloc[c] / n[c] for c in range(9, k + 1)) if k >= 9 else 0 for k in range(16)]))
+    return out
+
+
+def kel_g(sets, sc, cost, bank):
+    g = 0.0
+    for res, pay in sc:
+        poly = [1]
+        for r, s in zip(res, sets):
+            h = 1 if r in s else 0; a = len(s) - h
+            nn = [0] * (len(poly) + 1)
+            for j, v in enumerate(poly): nn[j] += v * a; nn[j + 1] += v * h
+            poly = nn
+        w = sum(v * pay[k] for k, v in enumerate(poly) if k >= 9)
+        g += math.log(max(1e-9, 1 - cost / bank + w / bank))
+    return g / len(sc)
+
+
+def plan_kelly_new(evs, fund, jack, bank=10000, edges=None):
+    """edges: {номер матча: {'o','f'}} — перекосы ИИ; без них это «Келли (новый)»"""
+    ev2 = [dict(e, p=edge_adj(e['p'], (edges or {}).get(i))) for i, e in enumerate(evs)]
+    sc = kel_scen(ev2, fund, jack); best = None; seen = set()
+    for Bd in BUDGETS:
+        for sets in (plan_max15(ev2, Bd), plan_sim(ev2, Bd)):
+            key = str(sets)
+            if key in seen: continue
+            seen.add(key)
+            cost = math.prod(len(x) for x in sets) * PRICE
+            if cost >= bank: continue
+            g = kel_g(sets, sc, cost, bank)
+            if best is None or g > best[0]: best = (g, sets)
+    return best[1]
+
+
+def hit_dist(evs, sets):
+    poly = [1]
+    for e, s in zip(evs, sets):
+        h = 1 if (e['res'] < 0 or e['res'] in s) else 0; a = len(s) - h
+        nn = [0] * (len(poly) + 1)
+        for j, v in enumerate(poly): nn[j] += v * a; nn[j + 1] += v * h
+        poly = nn
+    return poly
+
+
+def ai_edges(num):
+    a = rd("ai.json", {})
+    if str(a.get("number")) != str(num): return None
+    out = {}
+    for i, m in enumerate(a.get("m") or []):
+        e = (m or {}).get("edge")
+        if e and e.get("o") in OUT: out[i] = {"o": e["o"], "f": 2 if str(e.get("f")) == "2" else 1}
+    return out
+
 
 STRATS = ['Фавориты (база)', 'Большинство (база)', 'Расхождения', 'max15 ·32', 'Симуляция ·32',
-          'Келли (только выгодные)', 'Келли (всегда)', 'ИИ']
+          'Келли (только выгодные)', 'Келли (всегда)', 'Келли (новый)', 'Келли · ИИ', 'ИИ']
 cal = [[[0, 0, 0.0] for _ in range(B)] for _ in range(3)]
 
 
@@ -181,12 +255,15 @@ def mk_ev(bk, pl_raw, res):
     return {'p': p, 'pl': pl, 'q': pl if min(pl_raw) >= 1 else None, 'res': res}, ok
 
 
-def plans_for(evs, fund, jack):
+def plans_for(evs, fund, jack, edges=None):
     kel_ok, kel_any = plan_kelly(evs, fund, jack)
+    kn = plan_kelly_new(evs, fund, jack)
+    ka = plan_kelly_new(evs, fund, jack, edges=edges) if edges else kn
     return {'Фавориты (база)': [[max(range(3), key=lambda k: e['p'][k])] for e in evs],
             'Большинство (база)': [[max(range(3), key=lambda k: e['pl'][k])] for e in evs],
             'Расхождения': plan_gaps(evs), 'max15 ·32': plan_max15(evs, 32), 'Симуляция ·32': plan_sim(evs, 32),
-            'Келли (только выгодные)': kel_ok, 'Келли (всегда)': kel_any}
+            'Келли (только выгодные)': kel_ok, 'Келли (всегда)': kel_any,
+            'Келли (новый)': kn, 'Келли · ИИ': ka}
 
 
 def ser(sets):
@@ -244,8 +321,12 @@ def main():
                 evs.append(ev)
             if allq and sum(float(x) for x in pl) >= 90:
                 fund = float(info.get("pool_sum") or 0); jack = float(info.get("jackpot") or 0)
-                P = plans_for(evs, fund, jack)
+                ed = ai_edges(num) or {int(k): v for k, v in ((ent or {}).get("edges_raw") or {}).items()}
+                P = plans_for(evs, fund, jack, ed)
                 ent = jd.setdefault(num, {"id": did})
+                ent["edges_raw"] = ed or None
+                ent["edges"] = [{"i": i, "o": e["o"], "f": e["f"], "p": round(evs[i]['p'][OUT.index(e["o"])], 4),
+                                 "q": round(evs[i]['pl'][OUT.index(e["o"])], 4)} for i, e in sorted((ed or {}).items(), key=lambda x: int(x[0]))]
                 ent["plans"] = {k: ser(v) for k, v in P.items()}
                 ent["updated"] = now.strftime("%Y-%m-%dT%H:%MZ")
                 ent["ai"] = aih.get(num)
@@ -284,6 +365,8 @@ def main():
                         poly = nn
                     sc[k] = {"combos": combos, "cost": combos * PRICE, "win": round(w), "best": best,
                              "ge9": sum(poly[9:])}
+                for x in ent.get("edges") or []:
+                    x["hit"] = 1 if evs[int(x["i"])]['res'] == OUT.index(x["o"]) else 0
                 ent["score"] = sc
                 ent["scored"] = now.strftime("%Y-%m-%dT%H:%MZ")
                 changed = True
@@ -296,6 +379,25 @@ def main():
             s = summ.setdefault(k, {"n": 0, "cost": 0, "win": 0, "paid": 0, "ge9": 0, "best": 0})
             s["n"] += 1; s["cost"] += v["cost"]; s["win"] += v["win"]; s["paid"] += 1 if v["win"] > 0 else 0
             s["ge9"] += 1 if v["best"] >= 9 else 0; s["best"] += v["best"]
+    # реальные выплаты Балтбета (общий архив выплат), где они есть
+    pays = rd("payouts.json", {})
+    for num, ent in jd.items():
+        P = pays.get(num); h = hist.get(num)
+        if not P or not P.get("k") or not h or not ent.get("score"): continue
+        evs = [mk_ev([float(x) for x in e[3:6]], [float(x) for x in e[6:9]], OUT.index(e[9]) if e[9] in OUT else -1)[0] for e in h["ev"]]
+        cum = [0.0] * 16; c = 0.0
+        for k in range(9, 16): c += float(P["k"].get(str(k)) or 0); cum[k] = c * PRICE
+        sets_all = {k: deser(v) for k, v in ent["plans"].items()}
+        if ent.get("ai") and len(ent["ai"]) == 15: sets_all["ИИ"] = [[OUT.index(ch) for ch in r] for r in ent["ai"]]
+        for k, sets in sets_all.items():
+            if not sets or k not in summ: continue
+            d = hit_dist(evs, sets); s = summ[k]
+            s["rn"] = s.get("rn", 0) + 1; s["rcost"] = s.get("rcost", 0) + math.prod(len(x) for x in sets) * PRICE
+            s["rwin"] = s.get("rwin", 0) + round(sum(v * cum[j] for j, v in enumerate(d) if 9 <= j <= 15))
+    # перекосы ИИ: сыграли ли чаще, чем ждала линия
+    eds = [x for ent in jd.values() for x in (ent.get("edges") or []) if "hit" in x]
+    jr["edges"] = {"n": len(eds), "exp": round(sum(x["p"] for x in eds), 2), "hit": sum(x["hit"] for x in eds),
+                   "crowd": round(sum(x["q"] for x in eds), 2)}
     jr["summary"] = summ
     if changed or jr.get("summary") != rd("journal.json", {}).get("summary"):
         with open(os.path.join(API, "journal.json"), "w", encoding="utf-8") as f:
