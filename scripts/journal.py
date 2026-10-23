@@ -319,14 +319,26 @@ def ai_src(num):
         t = rk("Разбор ИИ", 3)
         for o in str(m.get("p") or ""):
             if o in OUT and t: L.append((OUT.index(o), t, "Разбор ИИ"))
+        tp = m.get("trap") or {}; t = rk("ИИ-критик", 4)
+        if tp.get("o") in OUT and t: L.append((OUT.index(tp["o"]), t, "ИИ-критик"))
+        t = rk("Betzona: факты", 5)
+        for o in set(x.get("s") for x in (m.get("bza") or [])):
+            if o in OUT and t: L.append((OUT.index(o), t, "Betzona: факты"))
         bz = m.get("bz") or {}
         if bz.get("n"):
             v = bz.get("v") or {}; mx = max(v.get(o, 0) for o in OUT)
             for o in OUT:
-                t = rk("Betzona", 4)
-                if mx > 0 and v.get(o, 0) >= mx and t: L.append((OUT.index(o), t, "Betzona"))
+                t = rk("Betzona: голоса", 6)
+                if mx > 0 and v.get(o, 0) >= mx and t: L.append((OUT.index(o), t, "Betzona: голоса"))
         out.append(L)
     return out
+
+
+def ai_src_all(num):
+    global LEARN
+    keep = LEARN; LEARN = {}
+    try: return ai_src(num)
+    finally: LEARN = keep
 
 
 def monster_fill(core, T, sc, src):
@@ -352,7 +364,7 @@ def monster_fill(core, T, sc, src):
                 t = [list(x) for x in sets]; t[i] = sorted(t[i] + [k])
                 if not reach(nc, t): continue
                 tiers = [z for z in ((src or [[]] * 15)[i] if src else []) if z[0] == k]
-                tier, nm = (min(tiers, key=lambda z: z[1])[1:] if tiers else (5, "Рост банка"))
+                tier, nm = (min(tiers, key=lambda z: z[1])[1:] if tiers else (9, "Рост банка"))
                 g = kel_g(t, sc, nc * PRICE, 30000)
                 if best is None or (tier, -g) < (best[0], -best[1]): best = (tier, g, i, k, nm, nc)
         if best is None: break
@@ -391,7 +403,7 @@ def deser(rows):
 
 # ---------- самообучение Монстра Келли ----------
 FIX_BASE = dict(FIX)                     # стартовые поправки выплат (из кода), от них идёт обучение
-SRC_PRIOR = {"ИИ: факты": .03, "Усталость": .02, "Разбор ИИ": 0.0, "Betzona": 0.0}   # стартовая вера в перевес, доля
+SRC_PRIOR = {"ИИ: факты": .03, "Усталость": .02, "Разбор ИИ": 0.0, "ИИ-критик": 0.0, "Betzona: факты": 0.0, "Betzona: голоса": 0.0}   # стартовая вера в перевес, доля
 SRC_K, SRC_MIN, FIX_K, FIX_WIN = 300, 30, 8, 30
 
 
@@ -428,7 +440,7 @@ def learn_src(jd):
     (SRC_K «виртуальных» исходов у стартовой веры). До SRC_MIN исходов источник только наблюдается"""
     seen = {}; 
     for num, ent in jd.items():
-        for x in (ent.get("fill") or []) + [dict(e, src="ИИ: факты" if e.get("src", "ИИ") == "ИИ" else e.get("src")) for e in (ent.get("edges") or [])]:
+        for x in (ent.get("fill") or []) + (ent.get("sugg") or []) + [dict(e, src="ИИ: факты" if e.get("src", "ИИ") == "ИИ" else e.get("src")) for e in (ent.get("edges") or [])]:
             if "hit" not in x or x.get("src") not in SRC_PRIOR: continue
             seen[(num, x["i"], x["o"], x["src"])] = x
     out = {}
@@ -474,12 +486,101 @@ def learn_mode(jd, pays, hist):
     return mode, {"n": n, "src_log": round(a, 3), "gr_log": round(b, 3), "src_win": round(wa), "gr_win": round(wb), "cost": round(cost)}
 
 
+# ---------- «мозг Монстра»: своя обучаемая модель поверх линии ----------
+# логиты исхода = log(вероятность линии) + Σ w·признак; признаки — то, чего нет в линии. Сильная L2-регуляризация
+# тянет веса к нулю: пока сигнал не доказан, модель почти повторяет линию. Проверка — последовательная:
+# каждый тираж предсказывается моделью, обученной только на более ранних.
+BRAIN_F = ["ai_pick", "ai_top", "edge", "fat", "trap", "bz_facts", "bz_votes", "crowd_gap", "even_x"]
+BRAIN_L2, BRAIN_MIN, BRAIN_IT, BRAIN_STEP = 20.0, 300, 150, 10
+
+
+def brain_x(f, k, p, q):
+    """признаки исхода k матча; f — сохранённые до матча данные разбора"""
+    o = OUT[k]; ap = str(f.get("ap") or "")
+    adj = f.get("adj") or []
+    return [1.0 / len(ap) if o in ap and ap else 0.0,
+            1.0 if (f.get("rk") or [None])[0] == o else 0.0,
+            (2.0 if f.get("ef") == 2 else 1.0) if f.get("eo") == o else 0.0,
+            sum(float(a.get("d") or 0) for a in adj if a.get("src") == "Усталость" and a.get("o") == o) * 50,
+            1.0 if f.get("tr") == o else 0.0,
+            min(2, sum(1 for x in (f.get("bza") or []) if x.get("s") == o)) / 2.0,
+            (float((f.get("bz") or {}).get("v", {}).get(o, 0)) / max(1, (f.get("bz") or {}).get("n") or 1)) if (f.get("bz") or {}).get("n") else 0.0,
+            (q[k] - p[k]) * 10,
+            (float(f.get("ev") or 0) / 10.0) if o == "X" else 0.0]
+
+
+def brain_feat(m):
+    """что сохранить из разбора ИИ по матчу до начала: только то, что известно до матча"""
+    if not m: return None
+    e = m.get("edge") or {}
+    return {"ap": m.get("p"), "rk": m.get("rank"), "ev": m.get("even"), "eo": e.get("o"), "ef": e.get("f"),
+            "adj": [{"o": a.get("o"), "d": a.get("d"), "src": a.get("src")} for a in (m.get("adj") or [])],
+            "tr": (m.get("trap") or {}).get("o"), "bza": [{"s": x.get("s"), "t": x.get("t")} for x in (m.get("bza") or [])],
+            "bz": m.get("bz"), "md": m.get("model")}
+
+
+def brain_prob(w, f, p, q):
+    lg = [math.log(max(1e-6, p[k])) + sum(wi * xi for wi, xi in zip(w, brain_x(f, k, p, q))) for k in range(3)]
+    mx = max(lg); e = [math.exp(v - mx) for v in lg]; s = sum(e)
+    return [v / s for v in e]
+
+
+def brain_fit(S, w0=None):
+    """S — [(f, p, q, res)]; градиентный спуск с L2"""
+    w = list(w0 or [0.0] * len(BRAIN_F)); n = max(1, len(S)); lr = 0.5
+    X = [[brain_x(f, k, p, q) for k in range(3)] for f, p, q, r in S]
+    for _ in range(BRAIN_IT):
+        g = [BRAIN_L2 * wi / n for wi in w]
+        for (f, p, q, r), xs in zip(S, X):
+            lg = [math.log(max(1e-6, p[k])) + sum(wi * xi for wi, xi in zip(w, xs[k])) for k in range(3)]
+            mx = max(lg); e = [math.exp(v - mx) for v in lg]; s = sum(e); pr = [v / s for v in e]
+            for k in range(3):
+                d = (pr[k] - (1.0 if k == r else 0.0)) / n
+                for j in range(len(w)): g[j] += d * xs[k][j]
+        w = [wi - lr * gi for wi, gi in zip(w, g)]
+    return w
+
+
+def learn_brain(jd, hist, old=None):
+    rows = []                                         # (номер тиража, f, p, q, итог)
+    for num in sorted(jd, key=int):
+        ent = jd[num]; F = ent.get("feat"); h = hist.get(num)
+        if not F or not h or len(F) != 15: continue
+        for i, e in enumerate(h["ev"]):
+            if not F[i] or e[9] not in OUT or None in e[3:9]: continue
+            ev, _ = mk_ev([float(x) for x in e[3:6]], [float(x) for x in e[6:9]], OUT.index(e[9]))
+            rows.append((int(num), F[i], calprob(ev['p']), ev['pl'], ev['res']))
+    if old and old.get("n") == len(rows) and old.get("feat") == BRAIN_F: return old     # новых итогов нет — не пересчитываем
+    draws = sorted(set(r[0] for r in rows)); w = None; dl = {}; ll_l = ll_b = 0.0; npred = 0
+    for t, d in enumerate(draws):
+        if t >= 5 and (t - 5) % BRAIN_STEP == 0:     # переобучение каждые BRAIN_STEP тиражей, только на прошлом
+            w = brain_fit([r[1:] for r in rows if r[0] < d], w)
+        if w is None: continue
+        for r in [r for r in rows if r[0] == d]:
+            pb_ = brain_prob(w, r[1], r[2], r[3]); a = -math.log(max(1e-9, r[2][r[4]])); b = -math.log(max(1e-9, pb_[r[4]]))
+            ll_l += a; ll_b += b; npred += 1; dl.setdefault(d, []).append(b - a)
+    wf = brain_fit([r[1:] for r in rows], w) if rows else [0.0] * len(BRAIN_F)
+    ci = None
+    if dl:
+        import random
+        rnd = random.Random(5); ks = list(dl); bs = []
+        for _ in range(500):
+            smp = [dl[rnd.choice(ks)] for _ in ks]; tot = sum(sum(x) for x in smp); cnt = sum(len(x) for x in smp)
+            bs.append(tot / cnt)
+        bs.sort(); ci = [round(bs[12], 5), round(bs[487], 5)]
+    on = npred >= BRAIN_MIN and ci is not None and ci[1] < 0
+    return {"feat": BRAIN_F, "w": [round(x, 4) for x in wf], "n": len(rows), "np": npred,
+            "ll_line": round(ll_l / npred, 5) if npred else None, "ll_brain": round(ll_b / npred, 5) if npred else None,
+            "ci": ci, "on": on, "min": BRAIN_MIN}
+
+
 def learn_all(hist, jd, now):
     pays = rd("payouts.json", {})
     old = rd("learn.json", {})
     fix, finfo, used = learn_fix(hist, pays)
     src = learn_src(jd)
     mode, cmp_ = learn_mode(jd, pays, hist)
+    brain = learn_brain(jd, hist, old.get("brain"))
     log = list(old.get("log") or []); at = now.strftime("%Y-%m-%d %H:%M")
     of = {int(k): v for k, v in (old.get("fix") or {}).items()}
     ch = ["%d: %s→%s" % (k, str(of.get(k, FIX_BASE[k])).replace(".", ","), str(fix[k]).replace(".", ",")) for k in range(9, 15) if abs(fix[k] - of.get(k, FIX_BASE[k])) >= .01]
@@ -490,9 +591,12 @@ def learn_all(hist, jd, now):
         if o and o.get("on", True) and not v["on"]: log.append({"at": at, "what": "источник «%s» выключен" % s, "why": "сыграло %d при ожидании линии %s из %d" % (v["hit"], str(v["exp"]).replace(".", ","), v["n"])})
         if o and not o.get("on", True) and v["on"]: log.append({"at": at, "what": "источник «%s» снова включён" % s, "why": "перевес вернулся выше порога"})
         if o.get("rank") and v.get("rank") and o["rank"] != v["rank"]: log.append({"at": at, "what": "«%s»: место в доборе %d→%d" % (s, o["rank"], v["rank"]), "why": "перевес %+.1f п.п." % (v["post"] * 100)})
+    ob = old.get("brain") or {}
+    if brain["on"] and not ob.get("on"): log.append({"at": at, "what": "мозг Монстра включён — купон считается по его вероятностям", "why": "на %d новых матчах точнее линии" % brain["np"]})
+    if ob.get("on") and not brain["on"]: log.append({"at": at, "what": "мозг Монстра снова в тени", "why": "перестал быть точнее линии"})
     if old.get("mode", "src") != mode: log.append({"at": at, "what": "добор: " + ("только по росту банка" if mode == "growth" else "от источников"), "why": "реальные выплаты %d тиражей" % cmp_["n"]})
     L = {"at": now.isoformat(), "fix": {str(k): v for k, v in fix.items()}, "fix_base": {str(k): v for k, v in FIX_BASE.items()},
-         "fix_info": {str(k): v for k, v in finfo.items()}, "fix_n": len(used), "src": src, "mode": mode, "cmp": cmp_, "log": log[-40:],
+         "fix_info": {str(k): v for k, v in finfo.items()}, "fix_n": len(used), "src": src, "mode": mode, "cmp": cmp_, "brain": brain, "log": log[-40:],
          "rules": {"src_min": SRC_MIN, "src_k": SRC_K, "fix_k": FIX_K, "fix_win": FIX_WIN, "mode_min": 20}}
     with open(os.path.join(API, "learn.json"), "w", encoding="utf-8") as f:
         json.dump(L, f, ensure_ascii=False, separators=(",", ":"))
@@ -555,7 +659,14 @@ def main():
                 P = plans_for(evs, fund, jack, ed, ai_src(num), fl)
                 ent = jd.setdefault(num, {"id": did})
                 ent["edges_raw"] = ed or None
+                _ai = rd("ai.json", {})
+                if str(_ai.get("number")) == str(num) and len(_ai.get("m") or []) == 15:
+                    ent["feat"] = [brain_feat(m) for m in _ai["m"]]
                 # добор Монстра: какие исходы и откуда добавлены сверх ядра (журнал проверяет каждый источник)
+                # все подсказки источников по матчам (не только попавшие в купон) — для обучения доверию
+                _src = ai_src_all(num)
+                ent["sugg"] = [{"i": i, "o": OUT[k], "src": nm, "p": round(evs[i]['p'][k], 4), "q": round(evs[i]['pl'][k], 4)}
+                               for i, L in enumerate(_src or []) for k, _, nm in L] if _src else ent.get("sugg")
                 ent["fill"] = [dict(a, p=round(evs[a["i"]]['p'][OUT.index(a["o"])], 4), q=round(evs[a["i"]]['pl'][OUT.index(a["o"])], 4)) for a in fl]
                 ent["edges"] = [{"i": i, "src": a.get("src", "ИИ"), "o": a["o"], "d": a["d"], "p": round(evs[i]['p'][OUT.index(a["o"])], 4),
                                  "q": round(evs[i]['pl'][OUT.index(a["o"])], 4)} for i, L in sorted((ed or {}).items(), key=lambda x: int(x[0])) for a in L]
@@ -607,7 +718,7 @@ def main():
                              "ge9": sum(poly[9:])}
                 for x in ent.get("edges") or []:
                     x["hit"] = 1 if evs[int(x["i"])]['res'] == OUT.index(x["o"]) else 0
-                for x in ent.get("fill") or []:
+                for x in (ent.get("fill") or []) + (ent.get("sugg") or []):
                     x["hit"] = 1 if evs[int(x["i"])]['res'] == OUT.index(x["o"]) else 0
                 ent["score"] = sc
                 ent["scored"] = now.strftime("%Y-%m-%dT%H:%MZ")
