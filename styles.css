@@ -2834,7 +2834,5 @@ html[data-bk="fonbet"] .fon-only{display:flex}
 
 .rk-ai.rk-st{background:rgba(79,152,163,.18); color:inherit}
 
-/* свои CSV и ссылки в рейтинге наборов — лёгкая заливка, чтобы быстро найти среди виртуальных */
-.pc-rk.mine{background:rgba(120,190,255,.10)}
-.pc-rk.mine:hover{background:rgba(120,190,255,.16)}
-.pc-rk.mine.on{background:rgba(120,190,255,.18)}
+/* свои CSV и ссылки в рейтинге наборов — голубая пунктирная рамка, чтобы быстро найти среди виртуальных */
+.pc-rk.mine{outline:2px dashed #5fb4ff; outline-offset:-3px}
