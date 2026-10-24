@@ -2802,7 +2802,7 @@
     if(m && m[1] === "Прошлые игры") return "";
     if(m && m[1] === "Следующие игры" && r && r.n){
       var cal = aiCal(r.n);
-      if(cal) return '<div class="ai-sec ai-s-next"><span class="ai-lb">Следующие игры</span>' + cal + (m[2] ? '<p>' + aiFmt(escHtml(m[2].charAt(0).toUpperCase() + m[2].slice(1))) + '</p>' : '') + '</div>';
+      if(cal) return '<div class="ai-sec ai-s-next"><span class="ai-lb">Следующие игры</span>' + cal + '</div>';
     }
     if(m && m[1] === "Составы и отсутствующие" && r && r.lu && r.lu.teams) return aiLuHtml(r.lu);
     if(m && m[1] === "Составы и отсутствующие" && r){
