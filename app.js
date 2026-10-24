@@ -7868,7 +7868,7 @@
       sys = [picks.join(",")];
     }
     var k = -1, sig = sys.join("|");
-    for(i = 0; i < pcsv.sets.length; i++) if(pcsv.sets[i].ai && !pcsv.sets[i].virt){ k = i; break; }
+    for(i = 0; i < pcsv.sets.length; i++) if(pcsv.sets[i].ai && !pcsv.sets[i].virt && !pcsv.sets[i].strat){ k = i; break; }
     if(k >= 0 && (pcsv.sets[k].sys || []).join("|") === sig) return;
     var set = { name: nm, ai: 1, virtai: 1, link: 0, sys: sys, rows: pcsvExpand(sys) };
     if(!set.rows.length) return;
@@ -7876,12 +7876,42 @@
     if(k < 0 && pcsv.sets.length === 1) pcsvUse(0);
     else if(k >= 0 && pcsv.act === k) pcsvUse(k);
   }
+  /* виртуальные купоны Келли, Монстра Келли и Симуляции в просмотре: тот же расчёт, что в статистике стратегий
+     (stratForInfo по доле толпы и линии тиража на максимальную сумму); в хранилище не пишутся */
+  var stratView = {};
+  function pcsvSyncStrat(){
+    var p = state.prev; if(!p || pcsv.tir !== String(p.tirazh) || !p.id) return;
+    var tir = String(p.tirazh), c = stratView[tir];
+    if(c && p.cur && Date.now() - c.t > 10 * 60000) c = null;          /* идущий приём: толпа меняется — пересчёт раз в 10 минут */
+    if(!c){
+      if(stratView[tir] === 0) return;
+      stratView[tir] = 0;
+      apiFetch("drawing-info/" + p.id).then(function(r){ return r.ok ? r.json() : null; }).then(function(j){
+        var info = j && (j.data || j);
+        if(!info || !(info.events || []).length){ delete stratView[tir]; return; }
+        info.number = info.number || tir;
+        var v = stratForInfo(info); v.t = Date.now(); stratView[tir] = v;
+        if(state.viewPrev && state.prev && String(state.prev.tirazh) === tir) renderPrevCsv();
+      }).catch(function(){ delete stratView[tir]; });
+      return;
+    }
+    [["kel", "Келли"], ["mkel", "Монстр Келли"], ["sim", "Симуляция"]].forEach(function(q){
+      var line = c[q[0]]; if(!Array.isArray(line) || line.length !== p.matches.length) return;
+      var sys = [line.join(",")], sig = sys[0], k = -1, i;
+      for(i = 0; i < pcsv.sets.length; i++) if(pcsv.sets[i].strat === q[0]){ k = i; break; }
+      if(k >= 0 && pcsv.sets[k].sig === sig) return;
+      var set = { name: q[1] + " · виртуальный", ai: 1, strat: q[0], link: 0, sig: sig, sys: sys, rows: pcsvExpand(sys) };
+      if(!set.rows.length) return;
+      if(k >= 0) pcsv.sets[k] = set; else pcsv.sets.push(set);
+      if(k >= 0 && pcsv.act === k) pcsvUse(k);
+    });
+  }
   /* виртуальный набор стратегии «Охота на 15 · бриф 14 из 15»: строки готовы заранее (virt.json), в хранилище не пишутся */
   function pcsvSyncVirt(){
     var p = state.prev; if(!p || pcsv.tir !== String(p.tirazh)) return;
     var rec = virt.data && virt.data[String(p.tirazh)]; if(!rec || !rec.z) return;
     var k = -1, i;
-    for(i = 0; i < pcsv.sets.length; i++) if(pcsv.sets[i].virt){ k = i; break; }
+    for(i = 0; i < pcsv.sets.length; i++) if(pcsv.sets[i].virt && !pcsv.sets[i].strat){ k = i; break; }
     if(k >= 0 && pcsv.sets[k].sig === rec.at + "|" + rec.n) return;
     var rows = virtRows(rec.z);
     if(!rows.length) return;
@@ -8332,6 +8362,7 @@
     pcsvEnsure(String(p.tirazh));
     pcsvSyncAi();
     pcsvSyncVirt();
+    pcsvSyncStrat();
     curAiPollSync(p);
     var noAi = pcNoAiNote(p);
     /* сообщение держим 10 с: фоновые обновления счёта перерисовывают блок */
@@ -8413,7 +8444,7 @@
         if(mv && Date.now() - mv.at < 90000) tr = '<u class="' + (mv.d > 0 ? "up" : "dn") + '">' + (mv.d > 0 ? "▲" : "▼") + Math.abs(mv.d) + '</u>';
         h += '<button type="button" role="tab" class="pc-rk' + (q.out ? " out" : "") + (q.i === pcsv.act ? " on" : "") + (k < 3 && pe ? " m" + (k + 1) : "") + '" data-t="' + q.i + '" data-id="' + q.i + '" aria-pressed="' + (q.i === pcsv.act) + '" title="' + escHtml(st.link && !st.lname ? "Ссылка · " + pcsvLabel(st) : pcsvNm(st.name)) + ' · ' + fmt(st.rows.length) + ' вар.">' +
           '<span class="rk-p"><b>' + (k + 1) + '</b>' + tr + '</span>' +
-          '<span class="rk-n"><b>' + escHtml(pcsvLabel(st)) + '</b>' + ((st.link && !st.lname) || st.virt || st.ai ? '' : '<span class="rk-fn">' + escHtml(pcsvNm(st.name)) + '</span>') + '<small>' + (q.out ? '<span class="rk-x" title="Набор выбыл: ни один вариант уже не наберёт ' + PAY + '+">\u00d7</span> ' : '') + (st.virt ? '<em class="rk-ai rk-hunt">Охота</em>' + RK_VT : st.ai ? '<em class="rk-ai">ИИ</em>' + RK_VT : "") + '<span class="rk-cnt">' + fmt(st.rows.length) + ' вар.</span></small></span>' +
+          '<span class="rk-n"><b>' + escHtml(pcsvLabel(st)) + '</b>' + ((st.link && !st.lname) || st.virt || st.ai ? '' : '<span class="rk-fn">' + escHtml(pcsvNm(st.name)) + '</span>') + '<small>' + (q.out ? '<span class="rk-x" title="Набор выбыл: ни один вариант уже не наберёт ' + PAY + '+">\u00d7</span> ' : '') + (st.strat ? '<em class="rk-ai rk-st">' + ({ kel: "Келли", mkel: "Монстр", sim: "Симул." })[st.strat] + '</em>' + RK_VT : st.virt ? '<em class="rk-ai rk-hunt">Охота</em>' + RK_VT : st.ai ? '<em class="rk-ai">ИИ</em>' + RK_VT : "") + '<span class="rk-cnt">' + fmt(st.rows.length) + ' вар.</span></small></span>' +
           '<span class="rk-v">' + (pe ? '<i class="cn" data-k="' + q.i + 'b">' + q.b + '</i><small> из ' + pe + '</small>' : '—') + '</span>' +
           '<span class="rk-v' + (q.w ? " ok" : "") + '"><i class="cn" data-k="' + q.i + 'w">' + fmt(q.w) + '</i></span><span class="rk-v"><i class="cn" data-k="' + q.i + 'a">' + fmt(q.a) + '</i></span>' +
           '<span class="rk-bar" data-w="' + (n ? Math.round(q.b / n * 100) : 0) + '" data-pay="' + (n ? Math.round(PAY / n * 100) : 60) + '"><i></i><u></u></span></button>';
