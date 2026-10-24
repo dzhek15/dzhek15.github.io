@@ -1694,7 +1694,7 @@ body.is-prev .row .pick.ai-pk{opacity:1; border-color:var(--ai-pk-bd); color:var
 .pc-rk{height:48px; width:100%; border:0; border-bottom:1px solid var(--rule); border-left:3px solid transparent; background:var(--surface-2); color:var(--ink); text-align:left; cursor:pointer; font-family:"IBM Plex Sans",sans-serif; position:relative}
 .pc-rk:last-child{border-bottom:0}
 .pc-rk:hover{background:var(--surface-3)}
-.pc-rk.on{border-left-color:var(--brand-gold); background:var(--surface-3)}
+.pc-rk.on{background:var(--surface-3)}
 .pc-rk.go-up{animation:rkUp 1.6s ease-out}
 .pc-rk.go-dn{animation:rkDn 1.6s ease-out}
 @keyframes rkUp{0%,30%{background:color-mix(in srgb,#3fae6a 28%,var(--surface-2))}}
