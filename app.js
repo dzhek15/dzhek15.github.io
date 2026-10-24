@@ -2800,9 +2800,11 @@
     var m = /^(Прошлые игры|Следующие игры|Кубок|На кону|Составы и отсутствующие|Тренеры и настроение|Прогнозы людей \(Betzona\)|Неочевидная деталь|Неочевидные детали, наблюдения|Логика матча):\s*([\s\S]*)$/.exec(x);
     /* «Прошлые игры» на сайте не показываем: уже сыгранные матчи только мешают читать разбор (решение 09.10.2026) */
     if(m && m[1] === "Прошлые игры") return "";
+    if(m && m[1] === "Следующие игры" && r && r.nxt && r.nxt.length)
+      return '<div class="ai-sec ai-s-next"><span class="ai-lb">Следующие игры</span><ul class="ai-nx">' + r.nxt.map(function(x){ return '<li>' + escHtml(x) + '</li>'; }).join("") + '</ul></div>';
     if(m && m[1] === "Следующие игры" && r && r.n){
       var cal = aiCal(r.n);
-      if(cal) return '<div class="ai-sec ai-s-next"><span class="ai-lb">Следующие игры</span>' + cal + (m[2] ? '<p>' + aiFmt(escHtml(m[2].charAt(0).toUpperCase() + m[2].slice(1))) + '</p>' : '') + '</div>';
+      if(cal) return '<div class="ai-sec ai-s-next"><span class="ai-lb">Следующие игры</span>' + cal + '</div>';
     }
     if(m && m[1] === "Составы и отсутствующие" && r && r.lu && r.lu.teams) return aiLuHtml(r.lu);
     if(m && m[1] === "Составы и отсутствующие" && r){
