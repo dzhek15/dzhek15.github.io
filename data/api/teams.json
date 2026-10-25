@@ -18,6 +18,9 @@
 "аек афины": {
 "f": "ph8YRKne-6iRkbdOB.png"
 },
+"аек ларнака": {
+"f": "WOZjnJ8k-QF8cQNGa.png"
+},
 "айнтрахт брауншвейг": {
 "f": "bZS1GF96-rBP4Wuhs.png"
 },
@@ -305,6 +308,9 @@
 "булонь-сюр-мер": {
 "f": "bkQjzw7k-ppahwjB4.png"
 },
+"бургос": {
+"f": "8G2Evj86-0ME49KyM.png"
+},
 "вади дегла": {
 "f": "SCbuhyhT-nDyPqWH0.png"
 },
@@ -319,6 +325,9 @@
 },
 "ванспор": {
 "f": "xQpfV8U0-E1tcA12K.png"
+},
+"варта": {
+"f": "YT68vI8k-YwLXAjZC.png"
 },
 "васко да гама": {
 "f": "Qw7CsWAN-bam8o1Nj.png"
@@ -744,8 +753,14 @@
 "лион": {
 "f": "bkuX6RS0-GU4hlIMk.png"
 },
+"лкс лодзь": {
+"f": "4ret8s86-CrgYOGj7.png"
+},
 "локомотив москва": {
 "f": "8SEEGmDN-MZsLC2vU.png"
+},
+"локомотив пловдив": {
+"f": "zNR5wyBN-CrHFHNPj.png"
 },
 "локомотив ярославль": {
 "f": "d2XBiSjC-bcMBxKZi.png"
@@ -765,6 +780,9 @@
 "лугано": {
 "f": "M3PFqTAN-CA35gjSs.png"
 },
+"лудогорец разград": {
+"f": "KG84D6Rq-Kjkd1Ayp.png"
+},
 "льянерос": {
 "f": "dtGebzCN-hjn5AE5Q.png"
 },
@@ -780,6 +798,9 @@
 },
 "маккаби тель-авив": {
 "f": "vifKdrkC-EgfVDm2G.png"
+},
+"маккаби хайфа": {
+"f": "h4m4NhUH-Q5Dpg1h8.png"
 },
 "маклсфилд таун": {
 "f": "YNfQpCiT-rZPjZPfl.png"
@@ -959,6 +980,9 @@
 "орсомарсо": {
 "f": "nJOU79BN-OQvTHdKn.png"
 },
+"осасуна": {
+"f": "UTfY3r86-Yu8w588N.png"
+},
 "осер": {
 "f": "4tdLdYlC-StfGPPS1.png"
 },
@@ -1047,6 +1071,9 @@
 "реал сосьедад": {
 "f": "rcAkl5le-vJb36ZBF.png"
 },
+"ред стар": {
+"f": "fT80UIA6-pEpm230o.png"
+},
 "реджана": {
 "f": "h4Rp5mAN-xpwwMV0F.png"
 },
@@ -1056,6 +1083,9 @@
 "#5c231c"
 ],
 "id": 53
+},
+"реймс": {
+"f": "fgcfKf86-x6KhF69U.png"
 },
 "рексхэм": {
 "f": "bHt6w87k-OxoAKHbA.png"
@@ -1068,6 +1098,9 @@
 },
 "ренн": {
 "f": "pnrF2X76-Y5eozcI6.png"
+},
+"ризеспор": {
+"f": "W4mOfm86-rZkRF8yE.png"
 },
 "риу аве": {
 "f": "06rYX486-pjxqSmk4.png"
@@ -1122,6 +1155,9 @@
 },
 "сан лоренцо(р)": {
 "f": "AmumUhQq-KfZ5zEAf.png"
+},
+"сан мартин сан-хуан": {
+"f": "bFaN6aUH-Ol3GCYT2.png"
 },
 "сан тельмо": {
 "f": "OSSBMG8k-nFtSniOn.png"
@@ -1195,6 +1231,9 @@
 },
 "славия прага": {
 "f": "nsu4mohT-8nl9JmVC.png"
+},
+"славия софия": {
+"f": "IgY8NX7k-rXOMwTEr.png"
 },
 "смуха": {
 "f": "6DEg1o86-Y1Z3w2bI.png"
@@ -1340,6 +1379,9 @@
 "усм алжир": {
 "f": "Qsg1H1jC-dYgRyyJN.png"
 },
+"фалкенберг": {
+"f": "tAcXpMQq-8CTmUesg.png"
+},
 "фатих карагюмрюк": {
 "f": "236tUEA6-dhK4x4oH.png"
 },
@@ -1348,6 +1390,9 @@
 },
 "фелгейраш": {
 "f": "6V6E75jT-vk3KAD9k.png"
+},
+"фенербахче": {
+"f": "drRgiLlC-llnQ8REs.png"
 },
 "финн харпс": {
 "c": [
@@ -1395,6 +1440,9 @@
 },
 "халл сити": {
 "f": "WGeGdCSq-bJFnYpTt.png"
+},
+"хапоэль беэр-шева": {
+"f": "MH6GxSQq-A3ON3kaq.png"
 },
 "хассани агадир": {
 "c": [
@@ -1444,6 +1492,9 @@
 },
 "цска москва": {
 "f": "ryxLMTmC-IJ0hG48b.png"
+},
+"цска софия": {
+"f": "MZmpVA7k-hzxcfK0L.png"
 },
 "чатем таун": {
 "f": "2DNFAXS0-vZlrO7BD.png"
@@ -1559,6 +1610,9 @@
 },
 "энерги коттбус": {
 "f": "CrORMNS0-YaIORIpO.png"
+},
+"эребру": {
+"f": "W8NZm4lC-faUNG9Ka.png"
 },
 "эрокспор": {
 "f": "CU5OgwRq-SIclczL4.png"
