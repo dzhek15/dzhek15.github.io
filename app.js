@@ -2747,6 +2747,13 @@
     s = s.replace(/(\d+\s(?:очк[а-я]*))/g, '<span class="ai-nm">$1</span>');
     return s;
   }
+  /* «Следующие игры»: заголовок раздела, ниже по каждой команде отдельной строкой «Следующий матч (турнир)»
+     и отдельной выделенной по центру строкой «Хозяева — Гости, дата (через N дней)» */
+  function aiNextGame(x){
+    var g = /^(Следующий матч \([^)]*\))\s+—\s+(.+)$/.exec(x);
+    if(!g) return '<p class="ai-nx-none">' + escHtml(x) + '</p>';
+    return '<div class="ai-nxg"><div class="ai-nx-k">' + escHtml(g[1]) + '</div><div class="ai-nx-m">' + escHtml(g[2]) + '</div></div>';
+  }
   /* календарь «Следующие игры»: таблица по каждой команде; красный соперник сильнее или выше в таблице, зелёный слабее или ниже */
   function aiCalTeam(t){
     if(!t || !t.g || !t.g.length) return "";
@@ -2801,7 +2808,7 @@
     /* «Прошлые игры» на сайте не показываем: уже сыгранные матчи только мешают читать разбор (решение 09.10.2026) */
     if(m && m[1] === "Прошлые игры") return "";
     if(m && m[1] === "Следующие игры" && r && r.nxt && r.nxt.length)
-      return '<div class="ai-sec ai-s-next"><span class="ai-lb">Следующие игры</span><ul class="ai-nx">' + r.nxt.map(function(x){ return '<li>' + escHtml(x) + '</li>'; }).join("") + '</ul></div>';
+      return '<div class="ai-sec ai-s-next"><span class="ai-lb">Следующие игры</span><div class="ai-nx">' + r.nxt.map(aiNextGame).join("") + '</div></div>';
     if(m && m[1] === "Следующие игры" && r && r.n){
       var cal = aiCal(r.n);
       if(cal) return '<div class="ai-sec ai-s-next"><span class="ai-lb">Следующие игры</span>' + cal + '</div>';
