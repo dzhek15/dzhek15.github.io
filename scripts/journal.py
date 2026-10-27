@@ -649,6 +649,65 @@ def learn_brain(jd, hist, old=None):
             "ci": ci, "on": on, "min": BRAIN_MIN}
 
 
+CSV_DIR = os.path.join(ROOT, "data", "csv")
+CSV_SRC = (("mine", "Мои CSV"), ("sigal", "CSV Сигал"))
+
+
+def csv_shares(st):
+    """доля строк набора, где в матче стоит каждый исход (набор — пары из sys: «1,X,12,…» или строка из 15 исходов)"""
+    tot, cnt = 0.0, [dict.fromkeys(OUT, 0.0) for _ in range(15)]
+    for e in st.get("sys") or []:
+        parts = e.split(",") if "," in e else list(e)
+        if len(parts) != 15: continue
+        w = 1
+        for x in parts: w *= len(x)
+        tot += w
+        for j, x in enumerate(parts):
+            for c in x:
+                if c in cnt[j]: cnt[j][c] += w / len(x)
+    return [{c: (v / tot if tot else 0.0) for c, v in m.items()} for m in cnt]
+
+
+def csv_load(bk="baltbet"):
+    """архив CSV владельца: data/csv/<контора>/<тираж>.json -> {тираж: [наборы]}"""
+    out = {}
+    d = os.path.join(CSV_DIR, bk)
+    if not os.path.isdir(d): return out
+    for fn in sorted(os.listdir(d)):
+        if not fn.endswith(".json"): continue
+        try:
+            with open(os.path.join(d, fn), encoding="utf-8") as f: j = json.load(f)
+        except Exception:
+            continue
+        out[str(j.get("n"))] = j.get("sets") or []
+    return out
+
+
+def learn_csv(hist, minlines=100):
+    """CSV владельца как источник подсказок для Монстра (пока в тени, купон не меняет): исход считается «подсказкой»,
+    если стоит минимум в 60% строк больших наборов тиража. Статистика та же, что у остальных источников: сыграло против ожидания линии"""
+    arch = csv_load()
+    out = {"draws": len(arch), "sets": sum(len(v) for v in arch.values()), "shadow": True, "src": {}}
+    for key, name in CSV_SRC:
+        seen = []
+        for num, sets in arch.items():
+            h = hist.get(num)
+            if not h or len(h.get("ev") or []) != 15: continue
+            use = [st for st in sets if st.get("src") == key and int(st.get("lines") or 0) >= minlines]
+            if not use: continue
+            sh = [csv_shares(st) for st in use]
+            for i, e in enumerate(h["ev"]):
+                if None in e[6:9] or e[9] not in OUT: continue
+                z = sum(float(x) for x in e[6:9]) or 1.0
+                for k, o in enumerate(OUT):
+                    share = sum(m[i][o] for m in sh) / len(sh)
+                    if share >= .6: seen.append({"_n": num, "i": i, "o": o, "hit": int(e[9] == o), "p": float(e[6 + k]) / z})
+        r = src_stat(seen, 0.0, SRC_K) if seen else {"n": 0, "n_all": 0, "hit": 0, "exp": 0, "lift": 0, "post": 0, "prior": 0.0, "on": True, "learned": False}
+        r["draws"] = len({x["_n"] for x in seen})
+        out["src"][name] = r
+    return out
+
+
 def learn_all(hist, jd, now):
     pays = rd("payouts.json", {})
     old = rd("learn.json", {})
@@ -678,7 +737,7 @@ def learn_all(hist, jd, now):
     if ob.get("on") and not brain["on"]: log.append({"at": at, "what": "мозг Монстра снова в тени", "why": "перестал быть точнее линии"})
     if old.get("mode", "src") != mode: log.append({"at": at, "what": "добор: " + ("только по росту банка" if mode == "growth" else "от источников"), "why": "реальные выплаты %d тиражей" % cmp_["n"]})
     L = {"at": now.isoformat(), "fix": {str(k): v for k, v in fix.items()}, "fix_base": {str(k): v for k, v in FIX_BASE.items()},
-         "fix_info": {str(k): v for k, v in finfo.items()}, "fix_n": len(used), "src": src, "mode": mode, "cmp": cmp_, "brain": brain, "log": log[-40:],
+         "fix_info": {str(k): v for k, v in finfo.items()}, "fix_n": len(used), "src": src, "csv": learn_csv(hist), "mode": mode, "cmp": cmp_, "brain": brain, "log": log[-40:],
          "rules": {"src_min": SRC_MIN, "src_k": SRC_K, "fix_k": FIX_K, "fix_win": FIX_WIN, "mode_min": 20}}
     with open(os.path.join(API, "learn.json"), "w", encoding="utf-8") as f:
         json.dump(L, f, ensure_ascii=False, separators=(",", ":"))

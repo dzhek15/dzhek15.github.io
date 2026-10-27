@@ -8042,6 +8042,75 @@
   function pcsvPut(tir){
     PCSV_PEND[String(tir)] = 1;
     if(!PCSV_TIMER) PCSV_TIMER = setTimeout(pcsvFlush, 300);
+    csvArcSoon(tir);
+  }
+  /* ---------- общий архив CSV для аналитики и обучения Монстра: data/csv/<контора>/<тираж>.json ----------
+     Пишет только владелец с ключом (как архив выплат). Набор попадает в архив один раз по содержимому и больше не удаляется,
+     даже если его убрали из браузера. Журнал сайта читает архив и считает «Мои CSV» / «CSV Сигал» как источники в тени. */
+  var CSVARC_TIMER = {}, CSVARC_KEY = "dzhek-csvarc-" + BKID;
+  function csvArcHash(str){
+    var h1 = 5381, h2 = 52711, i, c;
+    for(i = 0; i < str.length; i++){ c = str.charCodeAt(i); h1 = ((h1 * 33) ^ c) >>> 0; h2 = ((h2 * 31) + c) >>> 0; }
+    return h1.toString(36) + h2.toString(36);
+  }
+  function csvArcSrc(name){
+    var n = String(name || "").toLowerCase();
+    if(!n) return "unknown";
+    if(n.indexOf("рандом") >= 0) return "random";
+    if(n.indexOf("сига") >= 0) return "sigal";
+    if(n.indexOf("допы") >= 0) return "dop";
+    if(n.indexOf("келли") >= 0) return "kelly";
+    if(/таня|брат|форум|по 1 купону/.test(n)) return "other";
+    if(n.indexOf("мой") >= 0 || n.indexOf("бриф") >= 0) return "mine";
+    return "unknown";
+  }
+  function csvArcSoon(tir){
+    if(!ownTok() || typeof fetch !== "function") return;
+    clearTimeout(CSVARC_TIMER[tir]);
+    CSVARC_TIMER[tir] = setTimeout(function(){ csvArcPush(String(tir)).catch(function(){}); }, 6000);
+  }
+  function csvArcPush(tir){
+    var e = pcsvAll()[tir], sets = ((e && e.sets) || []).filter(function(st){ return !st.ai && st.sys && st.sys.length; });
+    if(!sets.length) return Promise.resolve(0);
+    var done = {}; try{ done = JSON.parse(localStorage.getItem(CSVARC_KEY) || "{}") || {}; }catch(x){}
+    var recs = [];
+    sets.forEach(function(st){
+      var sys = st.sys.map(function(x){ var p = String(x).split(","); return p.every(function(c){ return c.length === 1; }) ? p.join("") : String(x); });
+      var id = csvArcHash(sys.join("|")); if(done[tir + ":" + id]) return;
+      var lines = 0; st.sys.forEach(function(x){ var w = 1; String(x).split(",").forEach(function(c){ w *= c.length; }); lines += w; });
+      recs.push({ id: id, name: st.name || "", src: csvArcSrc(st.name), price: FON ? 50 : 30, lines: lines, sys: sys, via: st.link ? "link" : "file", at: st.at || Date.now() });
+    });
+    if(!recs.length) return Promise.resolve(0);
+    var tok = ownTok(), url = "https://api.github.com/repos/dzhek15/dzhek15.github.io/contents/data/csv/" + BKID + "/" + encodeURIComponent(tir) + ".json";
+    var H = { "Authorization": "Bearer " + tok, "Accept": "application/vnd.github+json" };
+    var b64d = function(x){ return decodeURIComponent(escape(atob(String(x).replace(/\n/g, "")))); };
+    var b64e = function(x){ return btoa(unescape(encodeURIComponent(x))); };
+    var attempt = function(left){
+      return fetch(url + "?ref=main&t=" + Date.now(), { headers: H, cache: "no-store" }).then(function(r){
+        if(r.status === 404) return { sha: null, doc: { v: 1, bk: BKID, n: Number(tir), sets: [] } };
+        if(!r.ok) throw new Error("GitHub " + r.status);
+        return r.json().then(function(j){ return { sha: j.sha, doc: JSON.parse(b64d(j.content || "")) }; });
+      }).then(function(cur){
+        var have = {}; cur.doc.sets.forEach(function(x){ have[x.id] = 1; });
+        var add = recs.filter(function(x){ return !have[x.id]; });
+        if(add.length){
+          cur.doc.sets = cur.doc.sets.concat(add);
+          var body = { message: "Архив CSV: тираж " + tir + ", наборов +" + add.length, content: b64e(JSON.stringify(cur.doc)), branch: "main" };
+          if(cur.sha) body.sha = cur.sha;
+          return fetch(url, { method: "PUT", headers: H, body: JSON.stringify(body) }).then(function(r){
+            if((r.status === 409 || r.status === 422) && left > 0) return attempt(left - 1);
+            if(!r.ok) throw new Error("GitHub " + r.status);
+            return add.length;
+          });
+        }
+        return 0;
+      });
+    };
+    return attempt(2).then(function(n){
+      recs.forEach(function(x){ done[tir + ":" + x.id] = 1; });
+      try{ localStorage.setItem(CSVARC_KEY, JSON.stringify(done)); }catch(x){}
+      return n;
+    });
   }
   /* подтянуть сохранённое из IndexedDB и слить со старым localStorage */
   function pcsvLoadDb(){
