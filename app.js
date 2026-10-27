@@ -10432,6 +10432,22 @@
     forms.sort(function(a, b){ return b.v - a.v || a.n - b.n; });
     var f = forms[0], sets = [];
     for(i = 0; i < N; i++) sets.push(lock[i] ? lock[i].slice() : ord[i].slice(0, f.sizes[i]).sort(function(a, b){ return a - b; }));
+    /* синие исходы: те, что в основе только из-за улучшений (перекосы ИИ, усталость) или перекоса против толпы */
+    var fill = {}, nFill = 0;
+    for(i = 0; i < N; i++){
+      var szI = sets[i].length;
+      if(lock[i] || szI >= 3 || state.matches[i].fsVoid) continue;
+      var rawP = evProbs(state.matches[i]) || probs[i];
+      var topAdj = [0, 1, 2].sort(function(a, b){ return probs[i][b] - probs[i][a] || a - b; }).slice(0, szI);
+      var topRaw = [0, 1, 2].sort(function(a, b){ return rawP[b] - rawP[a] || a - b; }).slice(0, szI);
+      sets[i].forEach(function(k){
+        var why = null, eds = (KEL_EDGE && KEL_EDGE[i]) || [];
+        var mine = eds.filter(function(e){ return e.o === OUT[k]; });
+        if(topRaw.indexOf(k) < 0 && topAdj.indexOf(k) >= 0 && mine.length) why = mine.map(function(e){ return e.src + ": " + e.why; }).join("; ");
+        else if(topAdj.indexOf(k) < 0) why = "толпа недоигрывает этот исход: модель " + Math.round(probs[i][k] * 100) + "%, толпа " + Math.round(pools[i][k] * 100) + "% — при выигрыше приз делится на меньшее число победителей";
+        if(why){ (fill[i] = fill[i] || {})[OUT[k]] = why; nFill++; }
+      });
+    }
     /* строки готовой системы: столбцы библиотеки — сначала двойники, потом тройники; цифра 0 — самый сильный исход матча */
     var cols = [], sz0 = [];
     for(i = 0; i < N; i++) if(f.sizes[i] === 2){ cols.push(i); sz0.push(2); }
@@ -10465,12 +10481,12 @@
     }
     var rows = skel.map(function(r, i){
       var o = {}; for(var k in r) o[k] = r[k];
-      o.set = sets[i].slice();
+      o.set = sets[i].slice(); if(fill[i]) o.kup = fill[i];
       var n = o.set.length, top = o.set.map(function(k){ return OUT[k] + " " + Math.round(probs[i][k] * 100) + "%"; }).join(", ");
       o.why = r.locked ? "фикс, не трогаю" : (n === 3 ? "тройник: исходы близки — берём все три" : (n === 2 ? "двойник: " + top : "ординар: " + top));
       return o;
     });
-    var plan = { rows: rows, combos: lines.length, lines: lines, brief: { g: 14, d: f.d, t: f.t, singles: N - f.d - f.t, pIn: f.pIn, p14: Math.max(w14 / SIM, f.pIn), p15: w15 / SIM }, fill: null, added: [] };
+    var plan = { rows: rows, combos: lines.length, lines: lines, brief: { g: 14, d: f.d, t: f.t, singles: N - f.d - f.t, pIn: f.pIn, p14: Math.max(w14 / SIM, f.pIn), p15: w15 / SIM }, fill: nFill ? fill : null, added: [] };
     var pick = { key: "brief", src: "Бриф 14 из 15", plan: plan, cost: lines.length * price, pWin: w9 / SIM, ret: null, g: NaN };
     return { brief: true, forms: forms, cands: [], best: pick, core: pick, pick: pick, bank: KELLY_BANK, maxLines: R, target: lines.length };
   }
@@ -10610,7 +10626,7 @@
         + '<td><div class="dt-m">' + escHtml(r.m.home) + ' — ' + escHtml(r.m.away) + '</div>'
         + '<div class="dt-why">' + escHtml(r.p ? r.why : "нет линии конторы, строку не трогаю") + '</div></td>'
         + '<td class="nw mono"><div>' + pr + '</div><div class="dt-why">толпа ' + cr + '</div></td>'
-        + '<td class="nw"><span class="dt-pick' + (r.locked ? ' dt-lock' : '') + '">' + pick + '</span></td></tr>';
+        + '<td class="nw"><span class="dt-pick' + (r.locked ? ' dt-lock' : '') + '">' + (r.kup ? r.set.map(function(k){ return r.kup[OUT[k]] ? '<b class="kel-up-t" title="' + escHtml(r.kup[OUT[k]]) + '">' + OUT[k] + '</b>' : OUT[k]; }).join("") : pick) + '</span></td></tr>';
     });
     return h + '</tbody></table>';
   }
@@ -11061,9 +11077,10 @@
       });
       h += '</tbody></table><p class="ev-note">Выбрана форма с наибольшим шансом, что все 15 исходов окажутся внутри основы (выделена). Ниже — исходы основы по матчам.</p>';
       h += stratTable(BP.plan.rows);
+      if(BP.plan.fill) h += '<p class="ev-note"><b class="kel-up-t">Синие</b> исходы попали в основу не по линии конторы: из-за перекоса против толпы или улучшений ИИ и усталости. Причина — по наведению и под матчем в купоне после «Основа в купон».</p>';
       h += '<div class="ev-data-go ev-data-go2"><button type="button" id="dataApply" class="btn-ev">Основа в купон</button><button type="button" id="mkBasket" class="btn-ev">Строки в корзину</button><button type="button" id="planCsv" class="btn-ev">Скачать CSV</button></div>' + STRAT_NOTE;
       h += lonelyHtml(BP.plan) + arbHtml() + learnHtml();
-      BP.plan.kup = null; BP.plan.kdel = null;
+      BP.plan.kup = BP.plan.fill; BP.plan.kdel = null;
       stratFinish(box, h, BP.plan, useAi ? "Монстр Келли · улучшения" : "Монстр Келли", showMonsterStrat);
       var mb = $("mkBasket");
       if(mb) mb.addEventListener("click", function(){
