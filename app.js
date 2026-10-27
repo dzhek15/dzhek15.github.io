@@ -9861,6 +9861,7 @@
   }
   function limitBind(box, rerender){
     [].slice.call(box.querySelectorAll(".lim-sel")).forEach(function(sel){
+      if(!sel.getAttribute("data-key")) return;
       sel.addEventListener("change", function(){
         var key = sel.getAttribute("data-key"), id = sel.id;
         state[key] = Number(sel.value) || 0; save();
@@ -10079,7 +10080,8 @@
      «ИИ» — перекос против толпы по фактам (кадры, ротация, мотивация, кризис): +3 п.п. (один факт) или +6 п.п. (несколько);
      «Усталость» — календарь Flashscore по всем турнирам: +2 п.п. отдохнувшей стороне или сопернику команды,
      у которой через ≤3 дня еврокубок или кубок. Сдвиги — стартовые допущения, журнал проверяет каждый источник. */
-  var KEL_EDGE = null, KEL_AI_KEY = "dz_kel_ai";
+  var KEL_EDGE = null, KEL_AI_KEY = "dz_kel_ai", SRC_W_KEY = "dz_src_w", SRC_W_BASE = [0, 0.10, 0.20];
+  function srcWLevel(){ var v = null; try { v = localStorage.getItem(SRC_W_KEY); } catch(e){} v = Number(v); return v === 0 || v === 1 || v === 2 ? v : 2; }
   function kelEdges(){
     if(FON || !ai.data || String(ai.data.number) !== String(state.tirazh) || !ai.data.m) return null;
     var out = {}, n = 0;
@@ -10395,16 +10397,19 @@
     /* зафиксированные руками матчи остаются как есть */
     var lock = [], i;
     for(i = 0; i < N; i++) lock.push(skel[i].locked && skel[i].set.length ? skel[i].set.slice().sort() : null);
-    /* остальные источники (выбор ИИ по матчу, ИИ-критик, Betzona) подталкивают «силу» исхода на их проверенный перевес
-       из журнала (не меньше 1 п.п. и не больше 6); факты ИИ и усталость уже учтены в вероятностях */
-    var SRC_SKIP = { "ИИ: факты": 1, "Усталость": 1 }, bonus = [], srcWhy = [], anyBonus = false;
+    /* остальные источники (выбор ИИ по матчу, ИИ-критик, Betzona) добавляют «силе» исхода вес довода: уровень «журнал» — их
+       записанный перевес (1–6 п.п.), «средний» — 10 п.п., «основной» — 20 п.п. на довод, с поправкой на место источника в журнале;
+       факты ИИ и усталость уже учтены в вероятностях */
+    var SW = srcWLevel(), SRC_SKIP = { "ИИ: факты": 1, "Усталость": 1 }, bonus = [], srcWhy = [], anyBonus = false;
     for(i = 0; i < N; i++){
       var bb = [0, 0, 0], ww = [[], [], []];
       if(!lock[i] && !state.matches[i].fsVoid) monsterSrc(i, true).forEach(function(a){
         if(SRC_SKIP[a.src]) return;
         var k = OUT.indexOf(a.o); if(k < 0) return;
-        var v = LEARN && LEARN.src && LEARN.src[a.src], d = v && v.post != null ? Number(v.post) : 0.01;
-        d = Math.min(0.06, Math.max(0.01, d)); bb[k] += d; ww[k].push(a.src + ": " + a.why); anyBonus = true;
+        var v = LEARN && LEARN.src && LEARN.src[a.src], d;
+        if(SW === 0){ d = v && v.post != null ? Number(v.post) : 0.01; d = Math.min(0.06, Math.max(0.01, d)); }
+        else d = SRC_W_BASE[SW] * Math.max(0.5, 1 - 0.08 * ((Number(a.t) || 1) - 1));   /* чем выше место источника в журнале, тем весомее довод */
+        bb[k] += d; ww[k].push(a.src + ": " + a.why); anyBonus = true;
       });
       bonus.push(bb); srcWhy.push(ww);
     }
@@ -11093,6 +11098,7 @@
     if(K.brief){
       var BP = K.pick, BI = BP.plan.brief, price0 = linePrice();
       if(K.brain) h += '<p class="ev-note dt-center">Вероятности матчей — от мозга Монстра (обучен на ' + LEARN.brain.n + ' матчах, точнее линии на новых).</p>';
+      h += '<div class="ev-data-bar"><label for="srcW">Вес доводов</label><select id="srcW" class="lim-sel">' + [[2, "основной ориентир (20 п.п. на довод)"], [1, "средний (10 п.п.)"], [0, "по журналу (1–6 п.п.)"]].map(function(x){ return '<option value="' + x[0] + '"' + (x[0] === srcWLevel() ? ' selected' : '') + '>' + x[1] + '</option>'; }).join("") + '</select></div>';
       h += stratCards([["Строк", fmt(BP.plan.combos) + " · " + fmt(BP.cost) + " ₽"], ["Гарантия", "14 из 15"], ["Все 15 внутри", stratChance(BI.pIn)], ["Шанс 14+", stratChance(BI.p14)], ["Шанс приза (9+)", stratChance(BP.pWin)]]);
       h += '<p class="ev-sub dt-center lim-sum">Основа: ' + BI.singles + ' ' + plural(BI.singles, "ординар", "ординара", "ординаров") + ' · ' + BI.d + ' ' + plural(BI.d, "двойник", "двойника", "двойников") + ' · ' + BI.t + ' ' + plural(BI.t, "тройник", "тройника", "тройников") + '<br>Остаток до ' + fmt(MK_BRIEF_RUB) + ' ₽: <b>' + fmt(MK_BRIEF_RUB - BP.cost) + ' ₽</b>, его можно потратить на «Добивку» в «Брифе».</p>';
       h += '<table class="ev-tab ev-data-cands"><thead><tr><th>Форма (двойн. + тройн.)</th><th>Строк</th><th>Сумма</th><th>Все 15 внутри</th></tr></thead><tbody>';
@@ -11114,6 +11120,7 @@
         $("evBack").hidden = true;
         say("«Монстр Келли»: в корзину добавлено " + fmt(r.added) + " строк" + (r.dup ? ", " + r.dup + " уже были" : "") + " на " + fmt(r.added * price0) + " ₽.");
       });
+      var sws = $("srcW"); if(sws) sws.addEventListener("change", function(){ try { localStorage.setItem(SRC_W_KEY, sws.value); } catch(e){} showMonsterStrat(); });
       var sw1 = $("kelAi");
       if(sw1) sw1.addEventListener("change", function(){ try { localStorage.setItem(KEL_AI_KEY, sw1.checked ? "1" : "0"); } catch(e){} showMonsterStrat(); });
       return;
