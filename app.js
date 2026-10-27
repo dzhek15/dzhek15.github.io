@@ -10392,67 +10392,91 @@
     });
     if(bad) return { error: bad };
     var base = planByData(1), skel = base.rows;
-    /* исходы каждого матча по убыванию «силы»; для зафиксированных — то, что выбрано вручную */
-    var ord = [], lock = [];
-    for(var i = 0; i < N; i++){
-      var r = skel[i], o = [0, 1, 2].sort(function(a, b){ return W[i][b] - W[i][a] || probs[i][b] - probs[i][a] || a - b; });
-      ord.push(o);
-      lock.push(r.locked && r.set.length ? r.set.slice().sort() : null);
+    /* зафиксированные руками матчи остаются как есть */
+    var lock = [], i;
+    for(i = 0; i < N; i++) lock.push(skel[i].locked && skel[i].set.length ? skel[i].set.slice().sort() : null);
+    /* остальные источники (выбор ИИ по матчу, ИИ-критик, Betzona) подталкивают «силу» исхода на их проверенный перевес
+       из журнала (не меньше 1 п.п. и не больше 6); факты ИИ и усталость уже учтены в вероятностях */
+    var SRC_SKIP = { "ИИ: факты": 1, "Усталость": 1 }, bonus = [], srcWhy = [], anyBonus = false;
+    for(i = 0; i < N; i++){
+      var bb = [0, 0, 0], ww = [[], [], []];
+      if(!lock[i] && !state.matches[i].fsVoid) monsterSrc(i, true).forEach(function(a){
+        if(SRC_SKIP[a.src]) return;
+        var k = OUT.indexOf(a.o); if(k < 0) return;
+        var v = LEARN && LEARN.src && LEARN.src[a.src], d = v && v.post != null ? Number(v.post) : 0.01;
+        d = Math.min(0.06, Math.max(0.01, d)); bb[k] += d; ww[k].push(a.src + ": " + a.why); anyBonus = true;
+      });
+      bonus.push(bb); srcWhy.push(ww);
     }
-    var forms = [];
-    Object.keys(L).forEach(function(key){
-      var pr = key.split(","), d = Number(pr[0]), t = Number(pr[1]);
-      if(Number(pr[2]) !== 1 || d + t > N) return;
-      var rows = L[key].length / 4;
-      if(rows > R) return;
-      /* перебор по матчам: dp[a][b] — лучшая сумма логарифмов, a двойников и b тройников уже поставлено */
-      var dp = {}; dp["0,0"] = { v: 0, ch: [] };
-      for(var i = 0; i < N; i++){
-        var nd = {}, m = state.matches[i], cs = [];
-        for(var sz = 1; sz <= 3; sz++){
-          var S = 0, SP = 0;
-          if(lock[i]){ if(lock[i].length !== sz) { cs.push(null); continue; } lock[i].forEach(function(k){ S += W[i][k]; }); }
-          else for(var q = 0; q < sz; q++) S += W[i][ord[i][q]];
-          cs.push(m.fsVoid ? -0.0001 * (sz - 1) : Math.log(Math.max(S, 1e-9)));
-        }
-        Object.keys(dp).forEach(function(k){
-          var ab = k.split(","), a = Number(ab[0]), b = Number(ab[1]), cur = dp[k];
-          [[1, a, b], [2, a + 1, b], [3, a, b + 1]].forEach(function(x){
-            var c = cs[x[0] - 1]; if(c === null || x[1] > d || x[2] > t) return;
-            var nk = x[1] + "," + x[2], v = cur.v + c;
-            if(!nd[nk] || v > nd[nk].v) nd[nk] = { v: v, ch: cur.ch.concat([x[0]]) };
-          });
-        });
-        dp = nd;
-      }
-      var fin = dp[d + "," + t];
-      if(fin) forms.push({ d: d, t: t, key: key, n: rows, cost: rows * price, v: fin.v, pIn: Math.exp(fin.v), sizes: fin.ch });
+    var W1 = W.map(function(w, i){
+      var x = [0, 1, 2].map(function(k){ return w[k] + bonus[i][k]; }), z = x[0] + x[1] + x[2];
+      return x.map(function(v){ return v / z; });
     });
-    if(!forms.length) return { error: "под сумму " + fmt(MK_BRIEF_RUB) + " ₽ нет подходящей готовой системы (есть зафиксированные матчи, которые мешают)" };
-    forms.sort(function(a, b){ return b.v - a.v || a.n - b.n; });
-    var f = forms[0], sets = [];
-    for(i = 0; i < N; i++) sets.push(lock[i] ? lock[i].slice() : ord[i].slice(0, f.sizes[i]).sort(function(a, b){ return a - b; }));
+    function solve(Wm){
+      var forms = [], ord = [];
+      for(var i0 = 0; i0 < N; i0++) ord.push([0, 1, 2].sort(function(a, b){ return Wm[i0][b] - Wm[i0][a] || probs[i0][b] - probs[i0][a] || a - b; }));
+      Object.keys(L).forEach(function(key){
+        var pr = key.split(","), d = Number(pr[0]), t = Number(pr[1]);
+        if(Number(pr[2]) !== 1 || d + t > N) return;
+        var rows = L[key].length / 4;
+        if(rows > R) return;
+        /* перебор по матчам: dp[a][b] — лучшая сумма логарифмов, a двойников и b тройников уже поставлено */
+        var dp = {}; dp["0,0"] = { v: 0, ch: [] };
+        for(var i = 0; i < N; i++){
+          var nd = {}, m = state.matches[i], cs = [];
+          for(var sz = 1; sz <= 3; sz++){
+            var S = 0, SP = 0;
+            if(lock[i]){ if(lock[i].length !== sz) { cs.push(null); continue; } lock[i].forEach(function(k){ S += Wm[i][k]; }); }
+            else for(var q = 0; q < sz; q++) S += Wm[i][ord[i][q]];
+            cs.push(m.fsVoid ? -0.0001 * (sz - 1) : Math.log(Math.max(S, 1e-9)));
+          }
+          Object.keys(dp).forEach(function(k){
+            var ab = k.split(","), a = Number(ab[0]), b = Number(ab[1]), cur = dp[k];
+            [[1, a, b], [2, a + 1, b], [3, a, b + 1]].forEach(function(x){
+              var c = cs[x[0] - 1]; if(c === null || x[1] > d || x[2] > t) return;
+              var nk = x[1] + "," + x[2], v = cur.v + c;
+              if(!nd[nk] || v > nd[nk].v) nd[nk] = { v: v, ch: cur.ch.concat([x[0]]) };
+            });
+          });
+          dp = nd;
+        }
+        var fin = dp[d + "," + t];
+        if(fin){ var pt = 1; for(var i2 = 0; i2 < N; i2++){ if(state.matches[i2].fsVoid) continue; var ss = 0; if(lock[i2]) lock[i2].forEach(function(k){ ss += probs[i2][k]; }); else for(var q2 = 0; q2 < fin.ch[i2]; q2++) ss += probs[i2][ord[i2][q2]]; pt *= Math.min(1, ss); }
+          forms.push({ d: d, t: t, key: key, n: rows, cost: rows * price, v: fin.v, pIn: pt, sizes: fin.ch }); }
+      });
+      if(!forms.length) return { err: "под сумму " + fmt(MK_BRIEF_RUB) + " ₽ нет подходящей готовой системы (есть зафиксированные матчи, которые мешают)" };
+      forms.sort(function(a, b){ return b.v - a.v || a.n - b.n; });
+      var f = forms[0], sets = [], i;
+      for(i = 0; i < N; i++) sets.push(lock[i] ? lock[i].slice() : ord[i].slice(0, f.sizes[i]).sort(function(a, b){ return a - b; }));
+      return { ord: ord, forms: forms, f: f, sets: sets };
+    }
+    var S0 = solve(W), S1 = anyBonus ? solve(W1) : S0;
+    if(S1.err) return { error: S1.err };
+    var forms = S1.forms, f = S1.f, sets = S1.sets, ord = S1.ord, W0sets = S0.sets;
     /* синие исходы: те, что в основе только из-за улучшений (перекосы ИИ, усталость) или перекоса против толпы */
-    var fill = {}, nFill = 0;
+    var fill = {}, nFill = 0, nSrcM = 0, nSrcCh = 0;
     for(i = 0; i < N; i++){
       var szI = sets[i].length;
+      if(bonus[i][0] + bonus[i][1] + bonus[i][2] > 0) nSrcM++;
       if(lock[i] || szI >= 3 || state.matches[i].fsVoid) continue;
       var rawP = evProbs(state.matches[i]) || probs[i];
       var topAdj = [0, 1, 2].sort(function(a, b){ return probs[i][b] - probs[i][a] || a - b; }).slice(0, szI);
       var topRaw = [0, 1, 2].sort(function(a, b){ return rawP[b] - rawP[a] || a - b; }).slice(0, szI);
       sets[i].forEach(function(k){
-        var why = null, eds = (KEL_EDGE && KEL_EDGE[i]) || [];
+        var parts = [], eds = (KEL_EDGE && KEL_EDGE[i]) || [];
         var mine = eds.filter(function(e){ return e.o === OUT[k]; });
-        if(topRaw.indexOf(k) < 0 && topAdj.indexOf(k) >= 0 && mine.length) why = mine.map(function(e){ return e.src + ": " + e.why; }).join("; ");
-        else if(topAdj.indexOf(k) < 0) why = "толпа недоигрывает этот исход: модель " + Math.round(probs[i][k] * 100) + "%, толпа " + Math.round(pools[i][k] * 100) + "% — при выигрыше приз делится на меньшее число победителей";
-        if(why){ (fill[i] = fill[i] || {})[OUT[k]] = why; nFill++; }
+        var viaSrc = srcWhy[i][k].length > 0 && (W0sets[i].indexOf(k) < 0 || topAdj.indexOf(k) < 0);
+        if(viaSrc){ parts.push(srcWhy[i][k].join("; ")); if(W0sets[i].indexOf(k) < 0) nSrcCh++; }
+        if(topRaw.indexOf(k) < 0 && topAdj.indexOf(k) >= 0 && mine.length) parts.push(mine.map(function(e){ return e.src + ": " + e.why; }).join("; "));
+        if(topAdj.indexOf(k) < 0) parts.push("толпа недоигрывает этот исход: модель " + Math.round(probs[i][k] * 100) + "%, толпа " + Math.round(pools[i][k] * 100) + "% — при выигрыше приз делится на меньшее число победителей");
+        if(parts.length){ (fill[i] = fill[i] || {})[OUT[k]] = parts.join(" · "); nFill++; }
       });
     }
     /* строки готовой системы: столбцы библиотеки — сначала двойники, потом тройники; цифра 0 — самый сильный исход матча */
     var cols = [], sz0 = [];
     for(i = 0; i < N; i++) if(f.sizes[i] === 2){ cols.push(i); sz0.push(2); }
     for(i = 0; i < N; i++) if(f.sizes[i] === 3){ cols.push(i); sz0.push(3); }
-    var srt = sets.map(function(st, i){ return st.slice().sort(function(a, b){ return W[i][b] - W[i][a] || a - b; }); });
+    var srt = sets.map(function(st, i){ return st.slice().sort(function(a, b){ return W1[i][b] - W1[i][a] || a - b; }); });
     var lines = [], code = briefLibRows(L[f.key]);
     code.forEach(function(x){
       var line = [], q;
@@ -10486,7 +10510,7 @@
       o.why = r.locked ? "фикс, не трогаю" : (n === 3 ? "тройник: исходы близки — берём все три" : (n === 2 ? "двойник: " + top : "ординар: " + top));
       return o;
     });
-    var plan = { rows: rows, combos: lines.length, lines: lines, brief: { g: 14, d: f.d, t: f.t, singles: N - f.d - f.t, pIn: f.pIn, p14: Math.max(w14 / SIM, f.pIn), p15: w15 / SIM }, fill: nFill ? fill : null, added: [] };
+    var plan = { rows: rows, combos: lines.length, lines: lines, brief: { g: 14, d: f.d, t: f.t, singles: N - f.d - f.t, pIn: f.pIn, p14: Math.max(w14 / SIM, f.pIn), p15: w15 / SIM, srcM: nSrcM, srcCh: nSrcCh }, fill: nFill ? fill : null, added: [] };
     var pick = { key: "brief", src: "Бриф 14 из 15", plan: plan, cost: lines.length * price, pWin: w9 / SIM, ret: null, g: NaN };
     return { brief: true, forms: forms, cands: [], best: pick, core: pick, pick: pick, bank: KELLY_BANK, maxLines: R, target: lines.length };
   }
@@ -11051,7 +11075,7 @@
     var E = kelEdges(), useAi = !!E && localStorage.getItem(KEL_AI_KEY) !== "0";
     var L = limitLines("mkelLimit", limitMaxLines()), K = planMonster(L, useAi), price = linePrice();
     var diff = null;   /* синим отмечается только добор: у каждого исхода свой источник */
-    var HOW_BRIEF = 'Монстр Келли собирает <b>бриф 14 из 15</b> на сумму не больше ' + fmt(MK_BRIEF_RUB) + ' ₽. Это готовая система из библиотеки: если все 15 исходов окажутся внутри основы купона, гарантированно угадано не меньше 14. Из всех готовых форм, которые влезают в сумму, берётся та, где основа с наибольшей вероятностью накрывает все 15 исходов: сначала решается, в каких матчах поставить одиночки, двойники и тройники (перебор точный), затем в каждом матче берутся самые сильные исходы. «Сила» исхода — вероятность, умноженная на (вероятность / доля толпы): при близких вероятностях берётся исход, который толпа недоигрывает, и выплата за него делится на меньшее число победителей. Зафиксированные матчи не меняются. Прежний способ (ядро по росту банка + добор) остаётся только у Фонбета.<br><br><b>Монстр Келли · улучшения</b> — те же поправки к вероятностям, которых нет в линии: перекосы против толпы из разбора ИИ (+3 п.п. за один факт, +6 за несколько) и усталость по календарю Flashscore (+2 п.п. отдохнувшей стороне). Они могут поменять, какие исходы попадут в основу. Шансы ниже — розыгрыш 3000 тиражей по вероятностям матчей, а не гарантия.';
+    var HOW_BRIEF = 'Монстр Келли собирает <b>бриф 14 из 15</b> на сумму не больше ' + fmt(MK_BRIEF_RUB) + ' ₽. Это готовая система из библиотеки: если все 15 исходов окажутся внутри основы купона, гарантированно угадано не меньше 14. Из всех готовых форм, которые влезают в сумму, берётся та, где основа с наибольшей вероятностью накрывает все 15 исходов: сначала решается, в каких матчах поставить одиночки, двойники и тройники (перебор точный), затем в каждом матче берутся самые сильные исходы. «Сила» исхода — вероятность, умноженная на (вероятность / доля толпы): при близких вероятностях берётся исход, который толпа недоигрывает, и выплата за него делится на меньшее число победителей. Зафиксированные матчи не меняются. Остальные источники — выбор ИИ по матчу, ИИ-критик, факты и голоса Betzona — подталкивают «силу» своих исходов на перевес, который журнал за ними записал (не меньше 1 и не больше 6 п.п.): они решают близкие случаи, а исход, который источники изменили, в таблице синий. Прежний способ (ядро по росту банка + добор) остаётся только у Фонбета.<br><br><b>Монстр Келли · улучшения</b> — те же поправки к вероятностям, которых нет в линии: перекосы против толпы из разбора ИИ (+3 п.п. за один факт, +6 за несколько) и усталость по календарю Flashscore (+2 п.п. отдохнувшей стороне). Они могут поменять, какие исходы попадут в основу. Шансы ниже — розыгрыш 3000 тиражей по вероятностям матчей, а не гарантия.';
     var h = stratHow(!FON ? HOW_BRIEF : 'Цель — закрыть как можно больше вариантов на выбранную сумму, не теряя идею Келли. Бюджет такой же, как у Келли: самый крупный купон в пределах суммы. Сначала собирается ядро — купон с наибольшим ростом расчётного банка (кандидаты: системы по вероятностям, «Симуляция», «Ровно на сумму» и своя сборка от фаворитов по одному исходу). Если ядро дешевле бюджета, остаток добирается исходами из других источников по порядку доверия: факты ИИ против толпы (травмы, ротация, мотивация, кризис), усталость по календарю Flashscore, выбор психологического разбора ИИ, ИИ-критик (риск для фаворита), факты и аргументы людей Betzona, их голоса; что останется — по росту банка. Добранные исходы в таблице <span class=\"kel-up-t\">синие</span>, под матчем — источник и причина. Рост считается по полному распределению выплат: 300 сценариев итогов тиража, в каждом своя таблица выплат (если побеждают фавориты, угадывает и толпа, и приз дробится). Банк модели — расчётные 30 000 ₽, а не реальный баланс. Если рост отрицательный — модель предупреждает, что сумма для такого банка слишком велика или купон невыгоден.<br><br><b>Монстр Келли · улучшения</b> — то же, но с поправками, которых нет в линии: перекосы против толпы из разбора ИИ (кадровые потери, ротация, мотивация, кризис; +3 п.п. за один факт, +6 за несколько) и усталость по календарю Flashscore со всеми турнирами (+2 п.п. отдохнувшей стороне или сопернику команды, у которой через 3 дня еврокубок или кубок). Купон сравнивается с Монстром Келли без улучшений на ту же сумму: добавленные исходы в таблице <span class="kel-up-t">синие</span>, под матчем — почему и откуда; убранные подписаны там же. Сдвиги — стартовые допущения: журнал проверяет каждый источник отдельно.');
     if(FON) h += limitSelect("mkelLimit", L);
     if(E){
@@ -11077,7 +11101,8 @@
       });
       h += '</tbody></table><p class="ev-note">Выбрана форма с наибольшим шансом, что все 15 исходов окажутся внутри основы (выделена). Ниже — исходы основы по матчам.</p>';
       h += stratTable(BP.plan.rows);
-      if(BP.plan.fill) h += '<p class="ev-note"><b class="kel-up-t">Синие</b> исходы попали в основу не по линии конторы: из-за перекоса против толпы или улучшений ИИ и усталости. Причина — по наведению и под матчем в купоне после «Основа в купон».</p>';
+      h += '<p class="ev-note dt-center">Доводы источников (выбор ИИ, ИИ-критик, Betzona): ' + (BI.srcM ? 'есть в ' + BI.srcM + ' матч. из 15, поменяли в основе ' + BI.srcCh + ' исх' : 'по этому тиражу пока нет') + '.</p>';
+      if(BP.plan.fill) h += '<p class="ev-note"><b class="kel-up-t">Синие</b> исходы попали в основу не по линии конторы: из-за перекоса против толпы, улучшений ИИ и усталости или доводов источников (выбор ИИ, ИИ-критик, Betzona). Причина — по наведению и под матчем в купоне после «Основа в купон».</p>';
       h += '<div class="ev-data-go ev-data-go2"><button type="button" id="dataApply" class="btn-ev">Основа в купон</button><button type="button" id="mkBasket" class="btn-ev">Строки в корзину</button><button type="button" id="planCsv" class="btn-ev">Скачать CSV</button></div>' + STRAT_NOTE;
       h += lonelyHtml(BP.plan) + arbHtml() + learnHtml();
       BP.plan.kup = BP.plan.fill; BP.plan.kdel = null;
