@@ -3289,7 +3289,7 @@
     });
   }
   /* статистика не зависит от лимитов пользователя: только от цены строки и потолка */
-  function accSetKey(){ return "max" + LIM_MAX_RUB + "|" + linePrice() + "|v7mb"; }
+  function accSetKey(){ return "max" + LIM_MAX_RUB + "|" + linePrice() + "|v8mb"; }
   function stratForInfo(info){
     var list = matchesFromInfo(info);
     var bak = { matches: state.matches, poolSum: state.poolSum, jackpot: state.jackpot, tirazh: state.tirazh }, v;
@@ -10083,7 +10083,7 @@
      «Усталость» — календарь Flashscore по всем турнирам: +2 п.п. отдохнувшей стороне или сопернику команды,
      у которой через ≤3 дня еврокубок или кубок. Сдвиги — стартовые допущения, журнал проверяет каждый источник. */
   var KEL_EDGE = null, KEL_AI_KEY = "dz_kel_ai", SRC_W_KEY = "dz_src_w", SRC_W_BASE = [0, 0.35, 0.60];   /* доля доводов в итоговой «силе» исхода; остальное — Келли (вероятность модели против толпы) */
-  function srcWLevel(){ var v = null; try { v = localStorage.getItem(SRC_W_KEY); } catch(e){} v = Number(v); return v === 0 || v === 1 || v === 2 ? v : 2; }
+  function srcWLevel(){ return 2; }   /* вариант один для окна, рейтинга и статистики: доводы 60% · Келли 40% */
   function kelEdges(){
     if(FON || !ai.data || String(ai.data.number) !== String(state.tirazh) || !ai.data.m) return null;
     var out = {}, n = 0;
@@ -11096,7 +11096,7 @@
   }
   function showMonsterStrat(){
     var box = stratGuard("Стратегия «Монстр Келли»"); if(!box) return;
-    var E = kelEdges(), useAi = !!E && localStorage.getItem(KEL_AI_KEY) !== "0";
+    var E = kelEdges(), useAi = !!E && (!FON ? true : localStorage.getItem(KEL_AI_KEY) !== "0");
     var L = limitLines("mkelLimit", limitMaxLines()), K = planMonster(L, useAi), price = linePrice();
     var diff = null;   /* синим отмечается только добор: у каждого исхода свой источник */
     var HOW_BRIEF = 'Монстр Келли собирает <b>бриф 14 из 15</b> на сумму не больше ' + fmt(MK_BRIEF_RUB) + ' ₽. Это готовая система из библиотеки: если все 15 исходов окажутся внутри основы купона, гарантированно угадано не меньше 14. Из всех готовых форм, которые влезают в сумму, берётся та, где основа с наибольшей вероятностью накрывает все 15 исходов: сначала решается, в каких матчах поставить одиночки, двойники и тройники (перебор точный), затем в каждом матче берутся самые сильные исходы. «Сила» исхода — вероятность, умноженная на (вероятность / доля толпы): при близких вероятностях берётся исход, который толпа недоигрывает, и выплата за него делится на меньшее число победителей. Зафиксированные матчи не меняются. Остальные источники — ранжирование исходов в разборе ИИ (психология, новости, прогнозы людей), выбор ИИ по матчу, ИИ-критик, факты и голоса Betzona — входят в «силу» исхода вместе с Келли: в режиме «доводы 60% · Келли 40%» ориентир на них, но Келли (вероятность модели против толпы) остаётся основой и единственной опорой там, где доводов нет. Исход, который источники изменили, в таблице синий. Прежний способ (ядро по росту банка + добор) остаётся только у Фонбета.<br><br><b>Монстр Келли · улучшения</b> — те же поправки к вероятностям, которых нет в линии: перекосы против толпы из разбора ИИ (+3 п.п. за один факт, +6 за несколько) и усталость по календарю Flashscore (+2 п.п. отдохнувшей стороне). Они могут поменять, какие исходы попадут в основу. Шансы ниже — розыгрыш 3000 тиражей по вероятностям матчей, а не гарантия.';
@@ -11104,7 +11104,7 @@
     if(FON) h += limitSelect("mkelLimit", L);
     if(E){
       var el = Object.keys(E).map(function(i){ var m = state.matches[i]; return E[i].map(function(a){ return '<li><b>' + (Number(i) + 1) + '. ' + escHtml(m ? m.home + ' — ' + m.away : '') + ': ' + a.o + '</b> (+' + Math.round(a.d * 100) + ' п.п., ' + escHtml(a.src) + ') — ' + escHtml(a.why) + '</li>'; }).join(""); }).join("");
-      h += '<div class="ev-kai"><label class="ev-kai-sw"><input type="checkbox" id="kelAi"' + (useAi ? ' checked' : '') + '> Монстр Келли · улучшения: перекосы ИИ и усталость (' + Object.keys(E).length + ' матч.)</label><ul class="ev-kai-l">' + el + '</ul>' + (diff ? diff.html : '') + '</div>';
+      h += '<div class="ev-kai"><label class="ev-kai-sw">' + (FON ? '<input type="checkbox" id="kelAi"' + (useAi ? ' checked' : '') + '> ' : '') + 'Монстр Келли · улучшения: перекосы ИИ и усталость (' + Object.keys(E).length + ' матч.)</label><ul class="ev-kai-l">' + el + '</ul>' + (diff ? diff.html : '') + '</div>';
     } else if(!FON){
       h += '<p class="ev-note dt-center">Улучшений по этому тиражу нет: ни перекосов ИИ, ни заметной разницы в усталости' + (ai.data && String(ai.data.number) === String(state.tirazh) ? '' : ' (разбора ИИ по этому тиражу ещё нет)') + ' — считается Монстр Келли без улучшений.</p>';
     }
@@ -11117,7 +11117,6 @@
     if(K.brief){
       var BP = K.pick, BI = BP.plan.brief, price0 = linePrice();
       if(K.brain) h += '<p class="ev-note dt-center">Вероятности матчей — от мозга Монстра (обучен на ' + LEARN.brain.n + ' матчах, точнее линии на новых).</p>';
-      h += '<div class="ev-data-bar"><label for="srcW">Вес доводов</label><select id="srcW" class="lim-sel">' + [[2, "доводы 60% · Келли 40%"], [1, "доводы 35% · Келли 65%"], [0, "Келли + перевес по журналу (1–6 п.п.)"]].map(function(x){ return '<option value="' + x[0] + '"' + (x[0] === srcWLevel() ? ' selected' : '') + '>' + x[1] + '</option>'; }).join("") + '</select></div>';
       h += stratCards([["Строк", fmt(BP.plan.combos) + " · " + fmt(BP.cost) + " ₽"], ["Гарантия", "14 из 15"], ["Все 15 внутри", stratChance(BI.pIn)], ["Шанс 14+", stratChance(BI.p14)], ["Шанс приза (9+)", stratChance(BP.pWin)]]);
       h += '<p class="ev-sub dt-center lim-sum">Основа: ' + BI.singles + ' ' + plural(BI.singles, "ординар", "ординара", "ординаров") + ' · ' + BI.d + ' ' + plural(BI.d, "двойник", "двойника", "двойников") + ' · ' + BI.t + ' ' + plural(BI.t, "тройник", "тройника", "тройников") + '<br>Остаток до ' + fmt(MK_BRIEF_RUB) + ' ₽: <b>' + fmt(MK_BRIEF_RUB - BP.cost) + ' ₽</b>, его можно потратить на «Добивку» в «Брифе».</p>';
       h += '<table class="ev-tab ev-data-cands"><thead><tr><th>Форма (двойн. + тройн.)</th><th>Строк</th><th>Сумма</th><th>Все 15 внутри</th></tr></thead><tbody>';
@@ -11126,7 +11125,7 @@
       });
       h += '</tbody></table><p class="ev-note">Выбрана форма с наибольшим шансом, что все 15 исходов окажутся внутри основы (выделена). Ниже — исходы основы по матчам.</p>';
       h += stratTable(BP.plan.rows);
-      h += '<p class="ev-note dt-center">Доводы источников (выбор ИИ, ИИ-критик, Betzona): ' + (BI.srcM ? 'есть в ' + BI.srcM + ' матч. из 15, поменяли в основе ' + BI.srcCh + ' исх' : 'по этому тиражу пока нет') + '.</p>';
+      h += '<p class="ev-note dt-center">Вариант один — он же в рейтинге и статистике: доводы 60% · Келли 40%. Доводы источников (ранжирование и выбор ИИ, ИИ-критик, Betzona): ' + (BI.srcM ? 'есть в ' + BI.srcM + ' матч. из 15, поменяли в основе ' + BI.srcCh + ' исх' : 'по этому тиражу пока нет') + '.</p>';
       if(BP.plan.fill) h += '<p class="ev-note"><b class="kel-up-t">Синие</b> исходы попали в основу не по линии конторы: из-за перекоса против толпы, улучшений ИИ и усталости или доводов источников (выбор ИИ, ИИ-критик, Betzona). Причина — по наведению и под матчем в купоне после «Основа в купон».</p>';
       h += '<div class="ev-data-go ev-data-go2"><button type="button" id="dataApply" class="btn-ev">Основа в купон</button><button type="button" id="mkBasket" class="btn-ev">Строки в корзину</button><button type="button" id="planCsv" class="btn-ev">Скачать CSV</button></div>' + STRAT_NOTE;
       h += lonelyHtml(BP.plan) + arbHtml() + learnHtml();
@@ -11139,7 +11138,6 @@
         $("evBack").hidden = true;
         say("«Монстр Келли»: в корзину добавлено " + fmt(r.added) + " строк" + (r.dup ? ", " + r.dup + " уже были" : "") + " на " + fmt(r.added * price0) + " ₽.");
       });
-      var sws = $("srcW"); if(sws) sws.addEventListener("change", function(){ try { localStorage.setItem(SRC_W_KEY, sws.value); } catch(e){} showMonsterStrat(); });
       var sw1 = $("kelAi");
       if(sw1) sw1.addEventListener("change", function(){ try { localStorage.setItem(KEL_AI_KEY, sw1.checked ? "1" : "0"); } catch(e){} showMonsterStrat(); });
       return;
