@@ -8064,13 +8064,22 @@
     if(n.indexOf("мой") >= 0 || n.indexOf("бриф") >= 0) return "mine";
     return "unknown";
   }
+  /* тираж заканчивается, когда браузер может быть закрыт: поэтому наборы окончившихся тиражей проверяются при каждом заходе и раз в 10 минут */
+  function csvArcSweep(){
+    if(!ownTok()) return;
+    Object.keys(pcsvAll()).forEach(function(k){ if(/^\d+$/.test(k) && pcsvTirDone(k)) csvArcSoon(k); });
+  }
+  setTimeout(csvArcSweep, 25000); setInterval(csvArcSweep, 600000);
   function csvArcSoon(tir){
     if(!ownTok() || typeof fetch !== "function") return;
     clearTimeout(CSVARC_TIMER[tir]);
     CSVARC_TIMER[tir] = setTimeout(function(){ csvArcPush(String(tir)).catch(function(){}); }, 6000);
   }
   function csvArcPush(tir){
-    var e = pcsvAll()[tir], sets = ((e && e.sets) || []).filter(function(st){ return !st.ai && st.sys && st.sys.length; });
+    /* в архив идёт то же, что в статистику «Мои CSV»: наборы, державшиеся до окончания тиража (в том числе удалённые уже после него).
+       Убранные до окончания и загруженные после окончания не берутся; пока тираж не закончился, ничего не пишется */
+    if(!pcsvTirDone(tir)) return Promise.resolve(0);
+    var e = pcsvAll()[tir], sets = ((e && e.sets) || []).filter(function(st){ return !st.ai && !st.virt && !st.late; }).concat((e && e.kept) || []).filter(function(st){ return st.sys && st.sys.length; });
     if(!sets.length) return Promise.resolve(0);
     var done = {}; try{ done = JSON.parse(localStorage.getItem(CSVARC_KEY) || "{}") || {}; }catch(x){}
     var recs = [];
