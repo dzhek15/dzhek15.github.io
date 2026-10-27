@@ -327,6 +327,9 @@ def ai_src(num):
         t = rk("Betzona: факты", 5, md)
         for o in set(x.get("s") for x in (m.get("bza") or [])):
             if o in OUT and t: L.append((OUT.index(o), t, "Betzona: факты"))
+        t = rk("Betzona: события", 7, md)
+        for o in set(x.get("s") for x in (m.get("bze") or []) if (x.get("w") or 0) >= 2):
+            if o in OUT and t: L.append((OUT.index(o), t, "Betzona: события"))
         bw = m.get("bzw") or {}
         if bw and max(bw.values()) >= 1:
             mxw = max(bw.values()); t = rk("Betzona: голоса", 6)
@@ -411,7 +414,7 @@ def deser(rows):
 
 # ---------- самообучение Монстра Келли ----------
 FIX_BASE = dict(FIX)                     # стартовые поправки выплат (из кода), от них идёт обучение
-SRC_PRIOR = {"ИИ: факты": .03, "Усталость": .02, "Разбор ИИ": 0.0, "ИИ-критик": 0.0, "Betzona: факты": 0.0, "Betzona: голоса": 0.0}   # стартовая вера в перевес, доля
+SRC_PRIOR = {"ИИ: факты": .03, "Усталость": .02, "Разбор ИИ": 0.0, "ИИ-критик": 0.0, "Betzona: факты": 0.0, "Betzona: голоса": 0.0, "Betzona: события": 0.0}   # стартовая вера в перевес, доля
 SRC_K, SRC_MIN, FIX_K, FIX_WIN = 300, 30, 8, 30
 
 
@@ -493,7 +496,7 @@ def mdn(md):
     return str(md or "").replace(":free", "").split(":")[-1].split("/")[-1]
 
 
-LLM_SRC = ("ИИ: факты", "Разбор ИИ", "ИИ-критик", "Betzona: факты")   # подсказки этих источников пишет модель ИИ
+LLM_SRC = ("ИИ: факты", "Разбор ИИ", "ИИ-критик", "Betzona: факты", "Betzona: события")   # подсказки этих источников пишет модель ИИ
 
 
 def learn_src(jd):
@@ -591,6 +594,7 @@ def brain_feat(m):
     return {"ap": m.get("p"), "rk": m.get("rank"), "ev": m.get("even"), "eo": e.get("o"), "ef": e.get("f"),
             "adj": [{"o": a.get("o"), "d": a.get("d"), "src": a.get("src")} for a in (m.get("adj") or [])],
             "tr": (m.get("trap") or {}).get("o"), "bza": [{"s": x.get("s"), "t": x.get("t")} for x in (m.get("bza") or [])],
+            "bze": [{"s": x.get("s"), "t": x.get("t"), "w": x.get("w")} for x in (m.get("bze") or [])],
             "bz": m.get("bz"), "bzw": m.get("bzw"), "emo": m.get("emo"), "md": m.get("model")}
 
 
