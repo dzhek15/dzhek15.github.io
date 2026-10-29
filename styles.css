@@ -2842,3 +2842,7 @@ html[data-bk="fonbet"] .fon-only{display:flex}
 
 /* свои CSV и ссылки в рейтинге наборов — синяя вертикальная полоса слева, чтобы быстро найти среди виртуальных */
 .pc-rk.mine{box-shadow:inset 6px 0 0 #2f80ff}
+
+.pc-o.tail{opacity:.4; border-style:dashed}
+.pc-o.on.blu{color:#7fb0ff; border-color:#4f8bd6; background:color-mix(in srgb, #4f8bd6 22%, transparent)}
+:root[data-theme="light"] .pc-o.on.blu{color:#1d4f91; border-color:#2f6bb8; background:#D3E3F7}

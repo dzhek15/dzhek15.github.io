@@ -7946,7 +7946,8 @@
     var rows = virtRows(rec.z);
     if(!rows.length) return;
     var set = { name: (rec.name || "Охота на 15") + " · виртуальный", ai: 1, virt: 1, link: 0, sig: rec.at + "|" + rec.n, pin: rec.pin,
-                sys: rows.map(function(x){ return x.split("").join(","); }), rows: rows };
+                sys: rows.map(function(x){ return x.split("").join(","); }), rows: rows,
+                core: rec.sys || null, bl: rec.bl || [], wy: rec.wy || {}, nsys: rec.n_sys || 0 };
     if(k >= 0) pcsv.sets[k] = set; else pcsv.sets.push(set);
     if(k >= 0 && pcsv.act === k) pcsvUse(k);
   }
@@ -8608,8 +8609,9 @@
         '<span class="pc-tc' + lvc + '">' + pcTime(m) + '</span>';
       h += '<button type="button" class="pc-fs" data-fs="' + j + '" title="Открыть матч на Flashscore" aria-label="Открыть на Flashscore: ' + escHtml(m.home) + ' — ' + escHtml(m.away) + '"><b class="fs-mark">F<i>S</i></b></button>';
       OUT.forEach(function(o){
-        var cls = "pc-o" + (c[o] ? " on" : "") + (res[j] === VOID ? (c[o] ? " hit" : "") : res[j] === o ? (c[o] ? " hit" : " hole") : (res[j] && c[o] ? " miss" + (res[j] && !c[res[j]] ? " bad" : "") : ""));
-        h += '<span class="' + cls + '" title="' + o + ': ' + fmt(c[o]) + ' вар.">' + o + (sysL.length === 1 ? '' : '<small>' + (c[o] ? (c[o] === total ? "все" : fmt(c[o])) : "·") + '</small>') + '</span>';
+        var hs = pcsv.sets[pcsv.act], hc = hs && hs.core && hs.core[j] != null ? String(hs.core[j]) : null, inC = hc === null || hc.indexOf(o) >= 0, isBl = hc !== null && inC && String(hs.bl[j] || "").indexOf(o) >= 0;
+        var cls = "pc-o" + (c[o] && inC ? " on" : "") + (c[o] && !inC ? " tail" : "") + (isBl && c[o] ? " blu" : "") + (res[j] === VOID ? (c[o] ? " hit" : "") : res[j] === o ? (c[o] ? " hit" : " hole") : (res[j] && c[o] ? " miss" + (res[j] && !c[res[j]] ? " bad" : "") : ""));
+        h += '<span class="' + cls + '" title="' + o + ': ' + fmt(c[o]) + ' вар.' + (c[o] && !inC ? ' — только в добавочных строках, не в системе' : '') + (isBl && c[o] ? ' — ' + (hs.wy[j + o] || 'доводы источников') : '') + '">' + o + (sysL.length === 1 ? '' : '<small>' + (c[o] ? (c[o] === total ? "все" : fmt(c[o])) : "·") + '</small>') + '</span>';
       });
       h += '</div>';
       if(wiOk && pcsv.what === j){
