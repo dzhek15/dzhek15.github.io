@@ -10945,14 +10945,17 @@
   function showHuntSet(box, rec){
     var rows = virtRows(rec.z), price = briefPrice(), sets = rec.sets || [], bl = rec.bl || [], wy = rec.wy || {};
     var lines = rows.map(function(r){ return r.split("").map(function(ch){ return OUT.indexOf(ch); }); });
-    var h = stratHow('Охота на 15 тратит весь бюджет ' + fmt(lines.length * price) + ' ₽: сначала система «14 из 15» на ' + fmt(rec.n_sys || lines.length) + ' строк, остаток добирается самыми сильными строками вне системы. Исходы выбираются алгоритмами Монстра Келли: линия, улучшения ИИ и усталость, Келли против толпы, доводы источников (психология, новости, события, история команд в Балтсистеме) — доводы 60% · Келли 40%. Синим отмечены исходы, которые добавили доводы источников: без них набор остался бы чисто по линии конторы. Набор считается один раз после разбора ИИ и дальше не меняется — по нему ведётся статистика.');
+    var h = stratHow('Охота на 15 тратит весь бюджет ' + fmt(lines.length * price) + ' ₽: сначала система «14 из 15» на ' + fmt(rec.n_sys || lines.length) + ' строк, на остаток бюджета добираются самые сильные строки с новыми исходами — покрытие шире системы; такие исходы в таблице подчёркнуты пунктиром. Исходы выбираются алгоритмами Монстра Келли: линия, улучшения ИИ и усталость, Келли против толпы, доводы источников (психология, новости, события, история команд в Балтсистеме) — доводы 60% · Келли 40%. Синим отмечены исходы, которые выбраны по доводам источников, а не по чистой линии конторы. Набор считается один раз после разбора ИИ и дальше не меняется — по нему ведётся статистика.');
     h += stratCards([["Цена купона", fmt(lines.length * price) + " ₽"], ["Строк", fmt(lines.length)], ["Шанс 15 из 15", rec.p15 ? stratChance(rec.p15) : "—"]]);
     h += '<table class="ev-tab ev-data-tab"><thead><tr><th>№</th><th>Матч</th><th>В наборе</th></tr></thead><tbody>';
     state.matches.forEach(function(m, i){
-      var st = String(sets[i] || ""), why = [];
+      var st = String(sets[i] || ""), why = [], ad = String((rec.add || [])[i] || ""), an = rec.an || {};
       var chips = st.split("").map(function(ch){
-        if(String(bl[i] || "").indexOf(ch) >= 0){ var w = wy[i + ch] || "доводы источников"; why.push(ch + " — " + w); return '<b class="kel-up-t" title="' + escHtml(w) + '">' + ch + '</b>'; }
-        return ch;
+        var isAdd = ad.indexOf(ch) >= 0, cls = [], tt = [];
+        if(isAdd){ cls.push("dt-add"); tt.push("добавлен из остатка бюджета: " + fmt(an[i + ch] || 0) + " строк"); }
+        if(String(bl[i] || "").indexOf(ch) >= 0){ var w = wy[i + ch] || "доводы источников"; why.push(ch + " — " + w); cls.push("kel-up-t"); tt.push(w); }
+        if(!cls.length) return ch;
+        return '<b class="' + cls.join(" ") + '" title="' + escHtml(tt.join(". ")) + '">' + ch + '</b>';
       }).join("");
       h += '<tr><td class="nw">' + (i + 1) + '</td><td><div class="dt-m">' + escHtml(m.home) + ' — ' + escHtml(m.away) + '</div>'
         + (why.length ? '<div class="dt-why">' + escHtml(why.join("; ")) + '</div>' : '') + '</td>'
@@ -10964,7 +10967,7 @@
       + '<button type="button" id="huntBasket" class="btn-ev"' + (canBasket ? '' : ' disabled title="В корзину помещается до ' + fmt(BASKET_MAX) + ' строк — используй CSV"') + '>В корзину</button>'
       + '<button type="button" id="huntCsv" class="btn-ev">Скачать CSV</button></div>';
     if(!canBasket) h += '<p class="ev-note dt-center">Больше ' + fmt(BASKET_MAX) + ' строк корзина не вмещает — такой купон выгружается сразу в CSV.</p>';
-    h += '<p class="ev-note">Выигрыш не гарантирован: система даёт не меньше 14 из 15 при попадании всех исходов в набор, остальные строки повышают шанс на 15. «Подставить в купон» ставит в таблицу все исходы набора, синие — по доводам.</p>';
+    h += '<p class="ev-note">Подчёркнутые исходы добавлены из остатка бюджета (над ними строки с новыми исходами), синие выбраны по доводам. Выигрыш не гарантирован: система даёт не меньше 14 из 15 при попадании всех исходов в набор, остальные строки повышают шанс на 15. «Подставить в купон» ставит в таблицу все исходы набора, синие — по доводам.</p>';
     if(!FON && rec.algo === "monster") h += learnHtml();
     box.innerHTML = h;
     $("evBack").hidden = false;
