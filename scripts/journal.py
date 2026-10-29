@@ -562,7 +562,7 @@ def learn_mode(jd, pays, hist):
 # тянет веса к нулю: пока сигнал не доказан, модель почти повторяет линию. Проверка — последовательная:
 # каждый тираж предсказывается моделью, обученной только на более ранних.
 BRAIN_F = ["ai_pick", "ai_top", "edge", "fat", "trap", "bz_facts", "bz_votes", "crowd_gap", "even_x", "bz_conv", "emo"]
-BRAIN_L2, BRAIN_MIN, BRAIN_IT, BRAIN_STEP = 20.0, 300, 150, 10
+BRAIN_L2, BRAIN_MIN, BRAIN_IT, BRAIN_STEP = 20.0, 150, 150, 10
 
 
 def brain_x(f, k, p, q):
