@@ -7145,9 +7145,9 @@
         else if(done){ lv = 0; at = aj.at || (as && as.end); sTxt = "проведён для тиража №" + curN + (as && as.start && sameDraw ? " (" + (as.event === "schedule" ? "по расписанию" : "вручную") + "), начало " + stT + (as.end ? ", опубликован " + fmtStamp(as.end, true) : "") : ", опубликован " + fmtStamp(aj.at, true)) + "; автозапуск сегодня больше не нужен"; }
         else if(as && as.state === "run"){ lv = 2; at = as.start; sTxt = "начался в " + stT + ", но больше часа без итога — похоже, прервался"; }
         else if(as && as.state === "fail" && ageMin(as.start) <= 20 * 60){ lv = 2; at = as.end || as.start; sTxt = "прервался с ошибкой, начало " + stT; }
-        else { lv = 2; at = null; sTxt = "не начался" + (beforeSched ? " — запуск в 11:07 МСК" : " — GitHub ещё не запустил задание (по расписанию 11:07, запасной запуск в 12:37 МСК)") +
+        else { lv = 2; at = null; sTxt = "не начался" + (beforeSched ? " — запуск в 11:07 МСК" : " — GitHub ещё не запустил задание (по расписанию 11:07, запасные запуски в 11:17, 11:27 и 11:37 МСК)") +
           (aj && aj.number ? "; последний разбор — тираж №" + aj.number : ""); }
-        rows.push({ n: "Разбор ИИ", d: "каждый день в 11:07 МСК, запасной запуск в 12:37", at: at, lv: lv, s: sTxt, quiet: !done && beforeSched && !(as && as.state === "run") });
+        rows.push({ n: "Разбор ИИ", d: "каждый день в 11:07 МСК, запасные запуски 11:17, 11:27, 11:37", at: at, lv: lv, s: sTxt, quiet: !done && beforeSched && !(as && as.state === "run") });
       })();
       dstat = { at: Date.now(), res: rows };
       /* до 11:00 МСК «не начался» — это норма, точку на кнопке он не красит */
@@ -7174,7 +7174,7 @@
       '<p class="ev-note">Время — московское. Основной источник — totobrief, запасной — stavka.tv: если один молчит, сайт берёт данные из другого и из зеркала на GitHub.</p>' +
       (ownTok() ? '<div class="ai-run-own"><b>Разбор ИИ — только для владельца</b><p class="ev-note" id="aiRunSt">Узнаю у GitHub…</p>' +
         '<button type="button" class="btn" id="aiRunGo" disabled>Запустить разбор сейчас</button>' +
-        '<p class="ev-note">Пока идёт разбор, новый запустить нельзя. Если текущий тираж уже разобран — вашим запуском или по расписанию, — автозапуск в 11:07 и 12:37 его пропускает.</p></div>' : '');
+        '<p class="ev-note">Пока идёт разбор, новый запустить нельзя. Если текущий тираж уже разобран — вашим запуском или по расписанию, — автозапуск с 11:07 до 11:37 его пропускает.</p></div>' : '');
       if(ownTok()){ aiRunStatus(); $("aiRunGo").onclick = aiRunStart; }
     });
   }
