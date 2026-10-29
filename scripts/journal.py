@@ -327,6 +327,9 @@ def ai_src(num):
         t = rk("Betzona: факты", 5, md)
         for o in set(x.get("s") for x in (m.get("bza") or [])):
             if o in OUT and t: L.append((OUT.index(o), t, "Betzona: факты"))
+        t = rk("Балтсистема: история", 8, md)
+        for o in set(x.get("s") for x in (m.get("bth") or [])):
+            if o in OUT and t: L.append((OUT.index(o), t, "Балтсистема: история"))
         t = rk("Betzona: события", 7, md)
         for o in set(x.get("s") for x in (m.get("bze") or []) if (x.get("w") or 0) >= 2):
             if o in OUT and t: L.append((OUT.index(o), t, "Betzona: события"))
@@ -414,7 +417,7 @@ def deser(rows):
 
 # ---------- самообучение Монстра Келли ----------
 FIX_BASE = dict(FIX)                     # стартовые поправки выплат (из кода), от них идёт обучение
-SRC_PRIOR = {"ИИ: факты": .03, "Усталость": .02, "Разбор ИИ": 0.0, "ИИ-критик": 0.0, "Betzona: факты": 0.0, "Betzona: голоса": 0.0, "Betzona: события": 0.0}   # стартовая вера в перевес, доля
+SRC_PRIOR = {"ИИ: факты": .03, "Усталость": .02, "Разбор ИИ": 0.0, "ИИ-критик": 0.0, "Betzona: факты": 0.0, "Betzona: голоса": 0.0, "Betzona: события": 0.0, "Балтсистема: история": 0.0}   # стартовая вера в перевес, доля
 SRC_K, SRC_MIN, FIX_K, FIX_WIN = 300, 30, 8, 30
 
 
@@ -595,6 +598,7 @@ def brain_feat(m):
             "adj": [{"o": a.get("o"), "d": a.get("d"), "src": a.get("src")} for a in (m.get("adj") or [])],
             "tr": (m.get("trap") or {}).get("o"), "bza": [{"s": x.get("s"), "t": x.get("t")} for x in (m.get("bza") or [])],
             "bze": [{"s": x.get("s"), "t": x.get("t"), "w": x.get("w")} for x in (m.get("bze") or [])],
+            "bth": [{"s": x.get("s")} for x in (m.get("bth") or [])],
             "bz": m.get("bz"), "bzw": m.get("bzw"), "emo": m.get("emo"), "md": m.get("model")}
 
 

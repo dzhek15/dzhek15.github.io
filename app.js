@@ -2790,6 +2790,11 @@
         '<p class="ai-bzr-m">Убедительность: ' + dots + ' ' + CV[x.conv] + (x.cw ? ' — ' + escHtml(x.cw) : '') + '</p>' +
         ((x.mood || tn) ? '<p class="ai-bzr-m">Настрой: ' + escHtml(x.mood || "—") + (x.mq ? ' («' + escHtml(x.mq) + '»)' : '') + (tn ? '; тон текста по модели эмоций — ' + tn : '') + '</p>' : '') + '</div>';
     }).join("") + '</div>';
+    if(r.bth && r.bth.length){
+      h += '<div class="ai-bze"><p class="ai-bzr-m"><b>История команд в Балтсистеме</b></p><ul class="ai-bz">' + r.bth.map(function(x){
+        return '<li>' + escHtml(x.why) + ' <span class="ai-bzr-s">→ ' + escHtml(x.s) + '</span></li>';
+      }).join("") + '</ul></div>';
+    }
     if(r.bze && r.bze.length){
       var EVN = { "стадион": "Стадион", "праздник": "Праздник", "дата": "Особая дата", "травма": "Травма", "состав": "Состав", "психология": "Психология", "другое": "Событие" };
       h += '<div class="ai-bze"><p class="ai-bzr-m"><b>События и психология из описаний Betzona</b></p><ul class="ai-bz">' + r.bze.map(function(x){
@@ -2832,7 +2837,7 @@
         if(u) src = u[1]; else if(y.trim()) li.push(y.trim());
       });
       var none = li.length === 1 && /нет прогноза|не ответил/.test(li[0]);
-      if(!none && r && ((r.bzr && r.bzr.length) || (r.bze && r.bze.length))) return '<div class="ai-sec ai-s-bz"><span class="ai-lb">Прогнозы людей (Betzona)</span>' + aiBzrHtml(r) +
+      if(!none && r && ((r.bzr && r.bzr.length) || (r.bze && r.bze.length) || (r.bth && r.bth.length))) return '<div class="ai-sec ai-s-bz"><span class="ai-lb">Прогнозы людей (Betzona)</span>' + aiBzrHtml(r) +
         (src ? '<p class="ai-bz-src"><a href="' + escHtml(src) + '" target="_blank" rel="noopener">Открыть на betzona.ru</a></p>' : '') + '</div>';
       return '<div class="ai-sec ai-s-bz"><span class="ai-lb">Прогнозы людей (Betzona)</span>' +
         (none ? '<p class="ai-bz-none">' + escHtml(li[0].charAt(0).toUpperCase() + li[0].slice(1)) + '</p>' :
@@ -10280,6 +10285,13 @@
         if(F.length) out.push({ o: o, t: t, src: "Betzona: факты", why: F.map(function(x){ return x.f + (x.a ? " (" + x.a + ")" : ""); }).join("; ") });
       });
     }
+    t = learnRank("Балтсистема: история", 8, md);
+    if(t && d && d.bth && d.bth.length){
+      OUT.forEach(function(o){
+        var F = d.bth.filter(function(x){ return x.s === o; });
+        if(F.length) out.push({ o: o, t: t, src: "Балтсистема: история", why: F.map(function(x){ return x.why; }).join("; ") });
+      });
+    }
     t = learnRank("Betzona: события", 7, md);
     if(t && d && d.bze && d.bze.length){
       OUT.forEach(function(o){
@@ -10929,8 +10941,66 @@
     $("evBack").hidden = true;
     return { added: add.length, dup: dup };
   }
+  /* готовый набор Охоты на этот тираж (virt.json): система 14 из 15 + самые сильные строки до полного бюджета; тот же, что идёт в статистику */
+  function showHuntSet(box, rec){
+    var rows = virtRows(rec.z), price = briefPrice(), sets = rec.sets || [], bl = rec.bl || [], wy = rec.wy || {};
+    var lines = rows.map(function(r){ return r.split("").map(function(ch){ return OUT.indexOf(ch); }); });
+    var h = stratHow('Охота на 15 тратит весь бюджет ' + fmt(lines.length * price) + ' ₽: сначала система «14 из 15» на ' + fmt(rec.n_sys || lines.length) + ' строк, остаток добирается самыми сильными строками вне системы. Исходы выбираются алгоритмами Монстра Келли: линия, улучшения ИИ и усталость, Келли против толпы, доводы источников (психология, новости, события, история команд в Балтсистеме) — доводы 60% · Келли 40%. Синим отмечены исходы, которые добавили доводы источников: без них набор остался бы чисто по линии конторы. Набор считается один раз после разбора ИИ и дальше не меняется — по нему ведётся статистика.');
+    h += stratCards([["Цена купона", fmt(lines.length * price) + " ₽"], ["Строк", fmt(lines.length)], ["Шанс 15 из 15", rec.p15 ? stratChance(rec.p15) : "—"]]);
+    h += '<table class="ev-tab ev-data-tab"><thead><tr><th>№</th><th>Матч</th><th>В наборе</th></tr></thead><tbody>';
+    state.matches.forEach(function(m, i){
+      var st = String(sets[i] || ""), why = [];
+      var chips = st.split("").map(function(ch){
+        if(String(bl[i] || "").indexOf(ch) >= 0){ var w = wy[i + ch] || "доводы источников"; why.push(ch + " — " + w); return '<b class="kel-up-t" title="' + escHtml(w) + '">' + ch + '</b>'; }
+        return ch;
+      }).join("");
+      h += '<tr><td class="nw">' + (i + 1) + '</td><td><div class="dt-m">' + escHtml(m.home) + ' — ' + escHtml(m.away) + '</div>'
+        + (why.length ? '<div class="dt-why">' + escHtml(why.join("; ")) + '</div>' : '') + '</td>'
+        + '<td class="nw"><span class="dt-pick">' + chips + '</span></td></tr>';
+    });
+    h += '</tbody></table>';
+    var canBasket = lines.length <= BASKET_MAX;
+    h += '<div class="ev-data-go ev-data-go2"><button type="button" id="huntApply" class="btn-ev">Подставить в купон</button>'
+      + '<button type="button" id="huntBasket" class="btn-ev"' + (canBasket ? '' : ' disabled title="В корзину помещается до ' + fmt(BASKET_MAX) + ' строк — используй CSV"') + '>В корзину</button>'
+      + '<button type="button" id="huntCsv" class="btn-ev">Скачать CSV</button></div>';
+    if(!canBasket) h += '<p class="ev-note dt-center">Больше ' + fmt(BASKET_MAX) + ' строк корзина не вмещает — такой купон выгружается сразу в CSV.</p>';
+    h += '<p class="ev-note">Выигрыш не гарантирован: система даёт не меньше 14 из 15 при попадании всех исходов в набор, остальные строки повышают шанс на 15. «Подставить в купон» ставит в таблицу все исходы набора, синие — по доводам.</p>';
+    if(!FON && rec.algo === "monster") h += learnHtml();
+    box.innerHTML = h;
+    $("evBack").hidden = false;
+    $("huntApply").addEventListener("click", function(){
+      pushHistory("до «Охоты на 15»");
+      state.matches.forEach(function(m, i){
+        var pk = {"1": false, "X": false, "2": false}, st = String(sets[i] || "");
+        st.split("").forEach(function(ch){ pk[ch] = true; });
+        m.picks = pk; m.mode = "free"; delete m.kdel;
+        var ku = {}; String(bl[i] || "").split("").forEach(function(ch){ if(pk[ch]) ku[ch] = wy[i + ch] || "доводы источников"; });
+        if(Object.keys(ku).length) m.kup = ku; else delete m.kup;
+      });
+      save(); render(); $("evBack").hidden = true;
+      var t0 = tally();
+      say("«Охота на 15»: в таблицу поставлены все исходы набора (" + fmt(t0.combos) + " вар. в таблице), синие — по доводам. Сами " + fmt(lines.length) + " строк на " + fmt(lines.length * price) + " ₽ — «В корзину» или CSV; «Записать» таблицу не нажимай. «Назад» откатит.");
+    });
+    var hb = $("huntBasket");
+    if(hb && canBasket) hb.addEventListener("click", function(){
+      if(state.played.length + lines.length > BASKET_MAX){ say("В корзине уже " + fmt(state.played.length) + " вариантов, вместе с " + fmt(lines.length) + " строками охоты выйдет больше " + fmt(BASKET_MAX) + ". Очисти корзину или скачай CSV."); return; }
+      var r = huntCommit(lines.map(function(l){ return { line: l }; }), price);
+      say("«Охота на 15»: в корзину " + fmt(r.added) + " строк на " + fmt(r.added * price) + " ₽" + (r.dup ? ", повторов пропущено: " + fmt(r.dup) : "") + ".");
+    });
+    $("huntCsv").addEventListener("click", function(){
+      saveCsvFile(briefCsv(lines), "ohota15_" + (state.tirazh || "tirazh") + "_" + lines.length + ".csv");
+      $("evBack").hidden = true;
+      say("«Охота на 15»: " + fmt(lines.length) + " строк на " + fmt(lines.length * price) + " ₽ — в CSV.");
+    });
+  }
   function showHunt(){
     var box = stratGuard("Стратегия «Охота на 15»"); if(!box) return;
+    if(!virt.data && !virt.huntTry){
+      virt.huntTry = true; box.innerHTML = '<p class="ev-sub dt-center">Загружаю набор Охоты…</p>'; $("evBack").hidden = false;
+      loadVirt().then(function(){ showHunt(); }); return;
+    }
+    var vrec = virt.data && virt.data[String(state.tirazh)];
+    if(vrec && vrec.z && vrec.sets && vrec.sets.length === 15 && state.matches.length === 15){ showHuntSet(box, vrec); return; }
     var N = Number(state.huntSize) || 100;
     if(HUNT_SIZES.indexOf(N) < 0) N = 100;
     var plan = planHunt(N);
