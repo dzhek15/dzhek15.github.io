@@ -10951,9 +10951,9 @@
     state.matches.forEach(function(m, i){
       var ad0 = String((rec.add || [])[i] || ""), st = String(core[i] || sets[i] || "") + ad0.split("").filter(function(c){ return String(core[i] || sets[i] || "").indexOf(c) < 0; }).join(""), why = [], ad = String((rec.add || [])[i] || ""), an = rec.an || {};
       var chips = st.split("").sort(function(a, b){ return "1X2".indexOf(a) - "1X2".indexOf(b); }).map(function(ch){
-        var isAdd = ad.indexOf(ch) >= 0 && core[i].indexOf(ch) < 0 && String(bl[i] || "").indexOf(ch) < 0, cls = [], tt = [];
+        var isAdd = ad.indexOf(ch) >= 0 && String(core[i] || sets[i] || "").indexOf(ch) < 0, cls = [], tt = [];
         if(isAdd){ cls.push("dt-add"); tt.push("добор бюджета, в таблицу не ставится: " + fmt(an[i + ch] || 0) + " строк"); }
-        if(String(bl[i] || "").indexOf(ch) >= 0){ var w = wy[i + ch] || "доводы источников"; why.push(ch + " — " + w); cls.push("kel-up-t"); tt.push(w); }
+        if(String(bl[i] || "").indexOf(ch) >= 0 && String(core[i] || sets[i] || "").indexOf(ch) >= 0){ var w = wy[i + ch] || "доводы источников"; why.push(ch + " — " + w); cls.push("kel-up-t"); tt.push(w); }
         if(!cls.length) return ch;
         return '<b class="' + cls.join(" ") + '" title="' + escHtml(tt.join(". ")) + '">' + ch + '</b>';
       }).join("");
@@ -10967,14 +10967,14 @@
       + '<button type="button" id="huntBasket" class="btn-ev"' + (canBasket ? '' : ' disabled title="В корзину помещается до ' + fmt(BASKET_MAX) + ' строк — используй CSV"') + '>В корзину</button>'
       + '<button type="button" id="huntCsv" class="btn-ev">Скачать CSV</button></div>';
     if(!canBasket) h += '<p class="ev-note dt-center">Больше ' + fmt(BASKET_MAX) + ' строк корзина не вмещает — такой купон выгружается сразу в CSV.</p>';
-    h += '<p class="ev-note">Серые исходы с пунктиром встречаются только в строках добора; синие выбраны по доводам и ставятся в таблицу вместе с исходами системы. Выигрыш не гарантирован: система даёт не меньше 14 из 15 при попадании всех исходов в набор, остальные строки повышают шанс на 15. «Подставить в купон» ставит в таблицу исходы системы и синие.</p>';
+    h += '<p class="ev-note">Серые исходы с пунктиром встречаются только в строках добора; синие входят в систему и выбраны по доводам, а не по чистой линии. Выигрыш не гарантирован: система даёт не меньше 14 из 15 при попадании всех исходов в набор, остальные строки повышают шанс на 15. «Подставить в купон» ставит в таблицу исходы системы.</p>';
     if(!FON && rec.algo === "monster") h += learnHtml();
     box.innerHTML = h;
     $("evBack").hidden = false;
     $("huntApply").addEventListener("click", function(){
       pushHistory("до «Охоты на 15»");
       state.matches.forEach(function(m, i){
-        var pk = {"1": false, "X": false, "2": false}, st = String(core[i] || "") + String(bl[i] || "");
+        var pk = {"1": false, "X": false, "2": false}, st = String(core[i] || "");
         st.split("").forEach(function(ch){ pk[ch] = true; });
         m.picks = pk; m.mode = "free"; delete m.kdel;
         var ku = {}; String(bl[i] || "").split("").forEach(function(ch){ if(pk[ch]) ku[ch] = wy[i + ch] || "доводы источников"; });
@@ -10982,7 +10982,7 @@
       });
       save(); render(); $("evBack").hidden = true;
       var t0 = tally();
-      say("«Охота на 15»: в таблицу поставлены исходы системы и синие (" + fmt(t0.combos) + " вар. в таблице), синие — по доводам. Сами " + fmt(lines.length) + " строк на " + fmt(lines.length * price) + " ₽ — «В корзину» или CSV; «Записать» таблицу не нажимай. «Назад» откатит.");
+      say("«Охота на 15»: в таблицу поставлены исходы системы (" + fmt(t0.combos) + " вар. в таблице), синие — по доводам. Сами " + fmt(lines.length) + " строк на " + fmt(lines.length * price) + " ₽ — «В корзину» или CSV; «Записать» таблицу не нажимай. «Назад» откатит.");
     });
     var hb = $("huntBasket");
     if(hb && canBasket) hb.addEventListener("click", function(){
