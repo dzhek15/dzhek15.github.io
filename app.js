@@ -8468,7 +8468,57 @@
       }, 120000);
     } else if(curAiPoll){ clearInterval(curAiPoll); curAiPoll = 0; }
   }
+  function rkKind(st){
+    if(st.strat) return "rs-" + st.strat;
+    if(st.virt) return "rs-hunt";
+    if(st.ai) return "rs-ai";
+    return "";
+  }
+  /* исходы набора по матчам: основные исходы системы, если они известны, иначе всё, что встречается в строках */
+  function setOutcomesOf(st, n){
+    var out = [], j;
+    for(j = 0; j < n; j++){
+      if(st.core && st.core[j] != null){ out.push(String(st.core[j])); continue; }
+      var f = { "1": 0, "X": 0, "2": 0 }, rws = st.rows || [], lim = Math.min(rws.length, 30000), r, c;
+      for(r = 0; r < lim; r++){ c = rws[r].charAt(j); if(f[c] != null) f[c] = 1; if(f["1"] && f["X"] && f["2"]) break; }
+      out.push(OUT.filter(function(o){ return f[o]; }).join(""));
+    }
+    return out;
+  }
+  function cmpName(st, i){
+    if(st.strat) return ({ kel: "Келли", mkel: "Монстр", sim: "Симул." })[st.strat] || "Набор";
+    if(st.virt) return "Охота";
+    if(st.ai) return "ИИ";
+    return "Мой " + (i + 1);
+  }
+  function showSetCompare(){
+    var p = state.prev; if(!p) return;
+    var ms = p.matches, n = ms.length;
+    var sets = pcsv.sets.filter(function(x){ return x.rows && x.rows.length; }).slice(0, 8);
+    var outs = sets.map(function(st){ return setOutcomesOf(st, n); });
+    var h = '<div class="cmp-wrap"><table class="ev-tab cmp-tab"><thead><tr><th>№</th><th>Матч</th>' + sets.map(function(st, i){ return '<th title="' + escHtml(pcsvNm(st.name)) + '">' + escHtml(cmpName(st, i)) + '</th>'; }).join("") + '</tr></thead><tbody>';
+    var uni = 0;
+    ms.forEach(function(m, j){
+      var common = OUT.filter(function(o){ return outs.every(function(x){ return x[j].indexOf(o) >= 0; }); });
+      if(common.length === 1) uni++;
+      h += '<tr><td class="nw">' + (j + 1) + '</td><td class="cmp-m">' + escHtml(m.home) + ' — ' + escHtml(m.away) + '</td>';
+      outs.forEach(function(x){
+        h += '<td class="nw"><span class="dt-pick">' + x[j].split("").map(function(o){
+          var cnt = outs.filter(function(y){ return y[j].indexOf(o) >= 0; }).length;
+          var cls = cnt === outs.length ? "cmp-all" : cnt === 1 ? "cmp-one" : "";
+          return cls ? '<b class="' + cls + '" title="' + (cnt === outs.length ? "есть во всех наборах" : "только в этом наборе") + '">' + o + '</b>' : o;
+        }).join("") + '</span></td>';
+      });
+      h += '</tr>';
+    });
+    h += '</tbody></table></div><p class="col-leg"><b class="cmp-all">1</b> исход есть во всех наборах (консенсус) &nbsp; <b class="cmp-one">X</b> исход только в одном наборе (спорный)</p>';
+    h += '<p class="ev-note">Единодушно в одном исходе наборы сошлись в ' + uni + ' матчах из ' + n + '. В Охоте и Монстре берутся основные исходы системы, у остальных наборов — все исходы, которые встречаются в строках.</p>';
+    $("evTitle").textContent = "Сравнение наборов";
+    $("evBody").innerHTML = h;
+    $("evBack").hidden = false;
+  }
   function renderPrevCsv(){
+
     var box = $("prevCsv"); if(!box) return;
     var p = state.prev;
     if(!(state.viewPrev && p)){ box.hidden = true; return; }
@@ -8548,22 +8598,22 @@
         if(o && o.place !== k + 1 && pe) rk.mv[q.i] = { d: o.place - (k + 1), at: Date.now() };
       });
       rkNow = sc;
-      h += '<div class="pc-rkw"><div class="pc-rkttl"><span class="pc-rkx">Рейтинг наборов</span>' + (liveN ? '<span class="pc-rklive"><i class="lv-dot"></i>LIVE · ' + liveN + '</span>' : '') + '</div>' +
+      h += '<div class="pc-rkw"><div class="pc-rkttl"><span class="pc-rkx">Рейтинг наборов</span>' + (sc.some(function(q){ return q.out; }) ? '<button type="button" class="pc-rklv' + (pcsv.rkLive ? " on" : "") + '" id="pcRkLive" aria-pressed="' + !!pcsv.rkLive + '">Только живые</button>' : '') + (liveN ? '<span class="pc-rklive"><i class="lv-dot"></i>LIVE · ' + liveN + '</span>' : '') + '</div>' +
         '<p class="pc-lnote pc-rknote">Считаются сыгранные матчи' + (liveN ? ' и идущие по текущему счёту' : '') + '. Тап по набору открывает его.' +
         (pcsv.sets.some(function(x){ return x.ai; }) ? '<br>' + RK_VT + '\u2014 набор не ставится на деньги, он нужен для отслеживания.' : '') +
         (sc.some(function(q){ return q.out; }) ? '<br><span class="rk-x" aria-hidden="true">\u00d7</span> \u2014 набор выбыл: после сыгранных матчей ни один его вариант уже не наберёт ' + PAY + '+.' : '') + '</p>' +
-        '<div class="pc-rkt" role="tablist"><div class="pc-rkh"><span>#</span><span>Набор</span><span>Лучший</span><span>9+</span><span>Живых</span></div><div class="pc-rkb">';
+        '<div class="pc-rkt' + (pcsv.rkLive ? " live-only" : "") + '" role="tablist"><div class="pc-rkh"><span>#</span><span>Набор</span><span>Лучший</span><span>9+</span><span>Живых</span></div><div class="pc-rkb">';
       sc.forEach(function(q, k){
         var st = pcsv.sets[q.i], mv = rk.mv[q.i], tr = "";
         if(mv && Date.now() - mv.at < 90000) tr = '<u class="' + (mv.d > 0 ? "up" : "dn") + '">' + (mv.d > 0 ? "▲" : "▼") + Math.abs(mv.d) + '</u>';
-        h += '<button type="button" role="tab" class="pc-rk' + (q.out ? " out" : "") + (q.i === pcsv.act ? " on" : "") + (st.ai || st.virt || st.strat ? "" : " mine") + (k < 3 && pe ? " m" + (k + 1) : "") + '" data-t="' + q.i + '" data-id="' + q.i + '" aria-pressed="' + (q.i === pcsv.act) + '" title="' + escHtml(st.link && !st.lname ? "Ссылка · " + pcsvLabel(st) : pcsvNm(st.name)) + ' · ' + fmt(st.rows.length) + ' вар.">' +
+        h += '<button type="button" role="tab" class="pc-rk' + (q.out ? " out" : "") + (q.i === pcsv.act ? " on" : "") + (st.ai || st.virt || st.strat ? "" : " mine") + " " + rkKind(st) + (k < 3 && pe ? " m" + (k + 1) : "") + '" data-t="' + q.i + '" data-id="' + q.i + '" aria-pressed="' + (q.i === pcsv.act) + '" title="' + escHtml(st.link && !st.lname ? "Ссылка · " + pcsvLabel(st) : pcsvNm(st.name)) + ' · ' + fmt(st.rows.length) + ' вар.">' +
           '<span class="rk-p"><b>' + (k + 1) + '</b>' + tr + '</span>' +
           '<span class="rk-n"><b>' + escHtml(pcsvLabel(st)) + '</b>' + ((st.link && !st.lname) || st.virt || st.ai ? (st.brief ? '<span class="rk-fn">бриф 14 из 15</span>' : '') : '<span class="rk-fn">' + escHtml(pcsvNm(st.name)) + '</span>') + '<small>' + (q.out ? '<span class="rk-x" title="Набор выбыл: ни один вариант уже не наберёт ' + PAY + '+">\u00d7</span> ' : '') + (st.strat ? '<em class="rk-ai rk-st">' + ({ kel: "Келли", mkel: "Монстр", sim: "Симул." })[st.strat] + '</em>' + RK_VT : st.virt ? '<em class="rk-ai rk-hunt">Охота</em>' + RK_VT : st.ai ? '<em class="rk-ai">ИИ</em>' + RK_VT : "") + '<span class="rk-cnt">' + fmt(st.rows.length) + ' вар.</span></small></span>' +
           '<span class="rk-v">' + (pe ? '<i class="cn" data-k="' + q.i + 'b">' + q.b + '</i><small> из ' + pe + '</small>' : '—') + '</span>' +
           '<span class="rk-v' + (q.w ? " ok" : "") + '"><i class="cn" data-k="' + q.i + 'w">' + fmt(q.w) + '</i></span><span class="rk-v"><i class="cn" data-k="' + q.i + 'a">' + fmt(q.a) + '</i></span>' +
           '<span class="rk-bar" data-w="' + (n ? Math.round(q.b / n * 100) : 0) + '" data-pay="' + (n ? Math.round(PAY / n * 100) : 60) + '"><i></i><u></u></span></button>';
       });
-      h += '</div></div></div>';
+      h += '</div></div>' + (pcsv.sets.filter(function(x){ return x.rows && x.rows.length; }).length > 1 ? '<div class="pc-cmp"><button type="button" class="pc-btn ghost" id="pcCmp">Сравнить наборы по матчам</button></div>' : '') + '</div>';
     }
     /* общая сумма всех загруженных наборов тиража — в панели просмотра */
     var allRows = 0; pcsv.sets.forEach(function(x){ if(!x.ai) allRows += x.rows.length; });
@@ -8720,6 +8770,8 @@
     box.innerHTML = h;
     $("pcLoad").addEventListener("click", pcsvPick);
     pcPasteBind();
+    var bcmp = $("pcCmp"); if(bcmp) bcmp.addEventListener("click", showSetCompare);
+    var blv = $("pcRkLive"); if(blv) blv.addEventListener("click", function(){ pcsv.rkLive = !pcsv.rkLive; renderPrevCsv(); });
     $("pcShareAll").addEventListener("click", pcsvShareAll);
     if($("pcDropAll")) $("pcDropAll").addEventListener("click", function(){
       var mine = pcsvMine(), nv = mine.reduce(function(a, st){ return a + st.rows.length; }, 0);

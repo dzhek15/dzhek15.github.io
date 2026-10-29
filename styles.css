@@ -2860,3 +2860,25 @@ html[data-bk="fonbet"] .fon-only{display:flex}
 .col-leg .pc-o.tail{opacity:.75; border-style:dashed}
 .ver-banner span{white-space:nowrap}
 .ver-banner{width:max-content}
+
+.col-leg{text-align:center}
+/* рейтинг: цвет полосы слева по типу набора, фильтр «только живые» */
+.pc-rk.rs-hunt{box-shadow:inset 6px 0 0 #e8c25a}
+.pc-rk.rs-mkel{box-shadow:inset 6px 0 0 #3fb6c4}
+.pc-rk.rs-kel{box-shadow:inset 6px 0 0 #9aa7b4}
+.pc-rk.rs-sim{box-shadow:inset 6px 0 0 #b07fd6}
+.pc-rk.rs-ai{box-shadow:inset 6px 0 0 #6fcf97}
+.pc-rkt.live-only .pc-rk.out{display:none}
+.pc-rklv{margin-left:10px; padding:3px 9px; font-size:11px; font-weight:700; border:1px solid var(--rule-strong,var(--rule)); border-radius:var(--r,6px); background:transparent; color:var(--muted); cursor:pointer}
+.pc-rklv.on{color:var(--gold-ink); border-color:var(--gold-ink); background:rgba(212,175,55,.12)}
+.pc-cmp{display:flex; justify-content:center; margin:10px 0 2px}
+/* сравнение наборов */
+.cmp-wrap{overflow-x:auto}
+.cmp-tab th,.cmp-tab td{padding:4px 5px; font-size:12px}
+.cmp-tab .cmp-m{min-width:120px; font-size:12px; line-height:1.25}
+.cmp-all{color:var(--gold-ink); font-weight:800}
+.cmp-one{color:#7fb0ff; font-weight:800; text-decoration:underline dotted; text-underline-offset:3px}
+.cmp-tab th{text-align:center; font-size:11px; padding:4px 3px}
+.cmp-tab th:nth-child(2),.cmp-tab .cmp-m{text-align:left}
+.cmp-tab td{padding:4px 3px; text-align:center}
+.cmp-tab .cmp-m{min-width:0; width:34%}
