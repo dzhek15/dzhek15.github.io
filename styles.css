@@ -2863,11 +2863,6 @@ html[data-bk="fonbet"] .fon-only{display:flex}
 
 .col-leg{text-align:center}
 /* рейтинг: цвет полосы слева по типу набора, фильтр «только живые» */
-.pc-rk.rs-hunt{box-shadow:inset 6px 0 0 #e8c25a}
-.pc-rk.rs-mkel{box-shadow:inset 6px 0 0 #3fb6c4}
-.pc-rk.rs-kel{box-shadow:inset 6px 0 0 #9aa7b4}
-.pc-rk.rs-sim{box-shadow:inset 6px 0 0 #b07fd6}
-.pc-rk.rs-ai{box-shadow:inset 6px 0 0 #6fcf97}
 .pc-rkt.live-only .pc-rk.out{display:none}
 .pc-rklv{margin-left:10px; padding:3px 9px; font-size:11px; font-weight:700; border:1px solid var(--rule-strong,var(--rule)); border-radius:var(--r,6px); background:transparent; color:var(--muted); cursor:pointer}
 .pc-rklv.on{color:var(--gold-ink); border-color:var(--gold-ink); background:rgba(212,175,55,.12)}
