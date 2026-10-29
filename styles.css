@@ -2846,3 +2846,17 @@ html[data-bk="fonbet"] .fon-only{display:flex}
 .pc-o.tail{opacity:.4; border-style:dashed}
 .pc-o.on.blu{color:#7fb0ff; border-color:#4f8bd6; background:color-mix(in srgb, #4f8bd6 22%, transparent)}
 :root[data-theme="light"] .pc-o.on.blu{color:#1d4f91; border-color:#2f6bb8; background:#D3E3F7}
+
+/* баннер новой версии */
+.ver-banner{position:fixed; left:50%; bottom:14px; transform:translateX(-50%); z-index:90; display:flex; align-items:center; gap:10px; max-width:calc(100vw - 24px); padding:9px 12px; border:1px solid var(--gold-ink,#d4af37); border-radius:var(--r,6px); background:var(--surface,#1b2425); color:var(--ink,#eee); box-shadow:0 6px 24px rgba(0,0,0,.45); font-size:13px}
+.ver-banner .ver-go{padding:5px 12px; font-weight:700; border:1px solid var(--gold-ink,#d4af37); background:transparent; color:var(--gold-ink,#d4af37); border-radius:var(--r,6px); cursor:pointer}
+.ver-banner .ver-x{padding:2px 8px; font-size:18px; line-height:1; background:transparent; border:0; color:var(--muted,#9aa); cursor:pointer}
+/* легенда цветов исходов */
+.col-leg{margin:8px 0 10px; font-size:12px; line-height:2; color:var(--muted)}
+.col-leg .pc-o{display:inline-flex; width:26px; height:22px; margin:0 3px 0 6px; vertical-align:middle; font-size:12px}
+.col-leg .pc-o:first-child{margin-left:0}
+/* кнопки окон стратегий закреплены внизу окна */
+.ev-body .ev-data-go{position:sticky; bottom:-18px; z-index:2; margin:14px -16px -18px; padding:10px 16px 14px; background:var(--surface); border-top:1px solid var(--rule)}
+.col-leg .pc-o.tail{opacity:.75; border-style:dashed}
+.ver-banner span{white-space:nowrap}
+.ver-banner{width:max-content}
