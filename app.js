@@ -10959,7 +10959,8 @@
     var canBasket = plan.lines.length <= BASKET_MAX;
     h += '<div class="ev-data-go ev-data-go2">'
       + '<button type="button" id="huntBasket" class="btn-ev"' + (canBasket ? '' : ' disabled title="В корзину помещается до ' + fmt(BASKET_MAX) + ' строк — используй CSV"') + '>В корзину</button>'
-      + '<button type="button" id="huntCsv" class="btn-ev">Скачать CSV</button></div>';
+      + '<button type="button" id="huntCsv" class="btn-ev">Скачать CSV</button>'
+      + '<button type="button" id="huntApply" class="btn-ev">Подставить в купон</button></div>';
     if(!canBasket) h += '<p class="ev-note dt-center">Больше ' + fmt(BASKET_MAX) + ' строк корзина не вмещает — такой купон выгружается сразу в CSV.</p>';
     h += '<p class="ev-note">Выигрыш не гарантирован: даже 10 000 строк дают около полупроцента шанса. Контора оценивает матчи точно, поэтому шанс растёт в основном с числом строк.</p>';
     if(!FON && plan.monster) h += learnHtml();
@@ -10979,6 +10980,11 @@
       var r = huntCommit(plan.lines, price);
       say("«Охота на 15»: в корзину " + fmt(r.added) + " строк на " + fmt(r.added * price) + " ₽"
         + (r.dup ? ", повторов пропущено: " + fmt(r.dup) : "") + "." + tableNote(sys));
+    });
+    $("huntApply").addEventListener("click", function(){
+      var n = huntToTable(plan.tab);
+      $("evBack").hidden = true;
+      say("«Охота на 15»: самые вероятные исходы поставлены в купон — " + fmt(n) + " вар. на " + fmt(n * price) + " ₽ (охотничьи строки по одной — «В корзину» или CSV). «Назад» откатит.");
     });
     $("huntCsv").addEventListener("click", function(){
       saveCsvFile(briefCsv(plan.lines.map(function(c){ return c.line; })),
