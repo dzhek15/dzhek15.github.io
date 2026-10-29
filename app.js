@@ -10299,7 +10299,7 @@
   }
   function learnHtml(){
     var L = LEARN; if(!L) return "";
-    var pc = function(x){ return (x >= 0 ? "+" : "") + (x * 100).toFixed(1).replace(".", ",") + " п.п."; }, h = '<details class="ev-arb ev-learn"><summary class="ev-arb-h">Чему научился Монстр</summary>';
+    var pc = function(x){ return (x >= 0 ? "+" : "") + (x * 100).toFixed(1).replace(".", ",") + " п.п."; }, h = '<details class="ev-arb ev-learn"><summary class="ev-arb-h">Чему научились Монстр и Охота</summary>';
     h += '<p class="ev-note" style="text-align:left">Журнал после каждого тиража пересчитывает три вещи. Изменения идут маленькими шагами: к стартовым значениям «притягивает» ' + L.rules.fix_k + ' тиражей для выплат и ' + L.rules.src_k + ' исходов для источников, чтобы одна удача или неудача не перекосила купон.</p>';
     h += '<p><b>Поправки выплат</b> (реальные выплаты ' + L.fix_n + ' тиражей):</p><table class="ev-tab"><thead><tr><th>Угадано</th><th>Старт</th><th>Сейчас</th><th>Модель/факт</th></tr></thead><tbody>';
     for(var k = 9; k <= 15; k++){
@@ -10328,7 +10328,7 @@
     var B = L.brain;
     if(B){
       var nm = { ai_pick: "выбор ИИ", ai_top: "главный исход ИИ", edge: "факты ИИ против толпы", fat: "усталость", trap: "ИИ-критик", bz_facts: "факты Betzona", bz_votes: "голоса Betzona", crowd_gap: "толпа против линии", even_x: "равный матч → ничья", bz_conv: "убедительные авторы Betzona", emo: "тон тренеров и игроков" };
-      h += '<p><b>Мозг Монстра</b> — своя модель поверх линии, учится сама: ' + (B.on ? '<b class="kel-up-t">включён</b>, купон Монстра считается по его вероятностям' : 'в тени — учится, купон не меняет') + '. Матчей с итогом: ' + B.n + ', проверено на новых: ' + B.np + ' (нужно ' + B.min + ' и стабильный выигрыш у линии)' + (B.np ? '. Ошибка предсказания: линия ' + String(B.ll_line).replace(".", ",") + ', мозг ' + String(B.ll_brain).replace(".", ",") : '') + '.</p>';
+      h += '<p><b>Мозг Монстра</b> — своя модель поверх линии, учится сама: ' + (B.on ? '<b class="kel-up-t">включён</b>, купоны Монстра и Охоты считаются по его вероятностям' : 'в тени — учится, купон не меняет') + '. Матчей с итогом: ' + B.n + ', проверено на новых: ' + B.np + ' (нужно ' + B.min + ' и стабильный выигрыш у линии)' + (B.np ? '. Ошибка предсказания: линия ' + String(B.ll_line).replace(".", ",") + ', мозг ' + String(B.ll_brain).replace(".", ",") : '') + '.</p>';
       if(B.n) h += '<ul class="ev-kai-l">' + B.feat.map(function(f, i){ return { f: f, w: B.w[i] }; }).filter(function(x){ return Math.abs(x.w) >= 0.01; }).sort(function(a, b){ return Math.abs(b.w) - Math.abs(a.w); }).map(function(x){ return '<li>' + (nm[x.f] || x.f) + ': ' + (x.w > 0 ? 'повышает' : 'понижает') + ' шанс исхода (вес ' + String(x.w).replace(".", ",") + ')</li>'; }).join("") + '</ul>';
     }
     if(L.log && L.log.length) h += '<p><b>Последние изменения</b></p><ul class="ev-kai-l">' + L.log.slice(-6).reverse().map(function(x){ return '<li>' + escHtml(x.at) + ' — ' + escHtml(x.what) + ' (' + escHtml(x.why) + ')</li>'; }).join("") + '</ul>';
@@ -10962,6 +10962,7 @@
       + '<button type="button" id="huntCsv" class="btn-ev">Скачать CSV</button></div>';
     if(!canBasket) h += '<p class="ev-note dt-center">Больше ' + fmt(BASKET_MAX) + ' строк корзина не вмещает — такой купон выгружается сразу в CSV.</p>';
     h += '<p class="ev-note">Выигрыш не гарантирован: даже 10 000 строк дают около полупроцента шанса. Контора оценивает матчи точно, поэтому шанс растёт в основном с числом строк.</p>';
+    if(!FON && plan.monster) h += learnHtml();
     box.innerHTML = h;
     $("evBack").hidden = false;
     $("huntSize").addEventListener("change", function(){ state.huntSize = Number(this.value) || 100; save(); showHunt(); });
