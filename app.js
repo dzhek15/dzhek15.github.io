@@ -10943,16 +10943,16 @@
   }
   /* готовый набор Охоты на этот тираж (virt.json): система 14 из 15 + самые сильные строки до полного бюджета; тот же, что идёт в статистику */
   function showHuntSet(box, rec){
-    var rows = virtRows(rec.z), price = briefPrice(), sets = rec.sets || [], bl = rec.bl || [], wy = rec.wy || {};
+    var rows = virtRows(rec.z), price = briefPrice(), sets = rec.sets || [], core = rec.sys || rec.sets || [], bl = rec.bl || [], wy = rec.wy || {};
     var lines = rows.map(function(r){ return r.split("").map(function(ch){ return OUT.indexOf(ch); }); });
-    var h = stratHow('Охота на 15 тратит весь бюджет ' + fmt(lines.length * price) + ' ₽: сначала система «14 из 15» на ' + fmt(rec.n_sys || lines.length) + ' строк, на остаток бюджета добираются самые сильные строки с новыми исходами — покрытие шире системы; такие исходы в таблице подчёркнуты пунктиром. Исходы выбираются алгоритмами Монстра Келли: линия, улучшения ИИ и усталость, Келли против толпы, доводы источников (психология, новости, события, история команд в Балтсистеме) — доводы 60% · Келли 40%. Синим отмечены исходы, которые выбраны по доводам источников, а не по чистой линии конторы. Набор считается один раз после разбора ИИ и дальше не меняется — по нему ведётся статистика.');
+    var h = stratHow('Охота на 15 тратит весь бюджет ' + fmt(lines.length * price) + ' ₽: сначала система «14 из 15» на ' + fmt(rec.n_sys || lines.length) + ' строк, на остаток бюджета (система целиком больше в бюджет не помещается) добираются самые сильные строки с другими исходами — такие исходы показаны серым с пунктиром, в таблицу купона они не ставятся. Исходы выбираются алгоритмами Монстра Келли: линия, улучшения ИИ и усталость, Келли против толпы, доводы источников (психология, новости, события, история команд в Балтсистеме) — доводы 60% · Келли 40%. Синим отмечены исходы, которые выбраны по доводам источников, а не по чистой линии конторы. Набор считается один раз после разбора ИИ и дальше не меняется — по нему ведётся статистика.');
     h += stratCards([["Цена купона", fmt(lines.length * price) + " ₽"], ["Строк", fmt(lines.length)], ["Шанс 15 из 15", rec.p15 ? stratChance(rec.p15) : "—"]]);
     h += '<table class="ev-tab ev-data-tab"><thead><tr><th>№</th><th>Матч</th><th>В наборе</th></tr></thead><tbody>';
     state.matches.forEach(function(m, i){
-      var st = String(sets[i] || ""), why = [], ad = String((rec.add || [])[i] || ""), an = rec.an || {};
-      var chips = st.split("").map(function(ch){
-        var isAdd = ad.indexOf(ch) >= 0, cls = [], tt = [];
-        if(isAdd){ cls.push("dt-add"); tt.push("добавлен из остатка бюджета: " + fmt(an[i + ch] || 0) + " строк"); }
+      var ad0 = String((rec.add || [])[i] || ""), st = String(core[i] || sets[i] || "") + ad0.split("").filter(function(c){ return String(core[i] || sets[i] || "").indexOf(c) < 0; }).join(""), why = [], ad = String((rec.add || [])[i] || ""), an = rec.an || {};
+      var chips = st.split("").sort(function(a, b){ return "1X2".indexOf(a) - "1X2".indexOf(b); }).map(function(ch){
+        var isAdd = ad.indexOf(ch) >= 0 && core[i].indexOf(ch) < 0 && String(bl[i] || "").indexOf(ch) < 0, cls = [], tt = [];
+        if(isAdd){ cls.push("dt-add"); tt.push("добор бюджета, в таблицу не ставится: " + fmt(an[i + ch] || 0) + " строк"); }
         if(String(bl[i] || "").indexOf(ch) >= 0){ var w = wy[i + ch] || "доводы источников"; why.push(ch + " — " + w); cls.push("kel-up-t"); tt.push(w); }
         if(!cls.length) return ch;
         return '<b class="' + cls.join(" ") + '" title="' + escHtml(tt.join(". ")) + '">' + ch + '</b>';
@@ -10967,14 +10967,14 @@
       + '<button type="button" id="huntBasket" class="btn-ev"' + (canBasket ? '' : ' disabled title="В корзину помещается до ' + fmt(BASKET_MAX) + ' строк — используй CSV"') + '>В корзину</button>'
       + '<button type="button" id="huntCsv" class="btn-ev">Скачать CSV</button></div>';
     if(!canBasket) h += '<p class="ev-note dt-center">Больше ' + fmt(BASKET_MAX) + ' строк корзина не вмещает — такой купон выгружается сразу в CSV.</p>';
-    h += '<p class="ev-note">Подчёркнутые исходы добавлены из остатка бюджета (над ними строки с новыми исходами), синие выбраны по доводам. Выигрыш не гарантирован: система даёт не меньше 14 из 15 при попадании всех исходов в набор, остальные строки повышают шанс на 15. «Подставить в купон» ставит в таблицу все исходы набора, синие — по доводам.</p>';
+    h += '<p class="ev-note">Серые исходы с пунктиром встречаются только в строках добора; синие выбраны по доводам и ставятся в таблицу вместе с исходами системы. Выигрыш не гарантирован: система даёт не меньше 14 из 15 при попадании всех исходов в набор, остальные строки повышают шанс на 15. «Подставить в купон» ставит в таблицу исходы системы и синие.</p>';
     if(!FON && rec.algo === "monster") h += learnHtml();
     box.innerHTML = h;
     $("evBack").hidden = false;
     $("huntApply").addEventListener("click", function(){
       pushHistory("до «Охоты на 15»");
       state.matches.forEach(function(m, i){
-        var pk = {"1": false, "X": false, "2": false}, st = String(sets[i] || "");
+        var pk = {"1": false, "X": false, "2": false}, st = String(core[i] || "") + String(bl[i] || "");
         st.split("").forEach(function(ch){ pk[ch] = true; });
         m.picks = pk; m.mode = "free"; delete m.kdel;
         var ku = {}; String(bl[i] || "").split("").forEach(function(ch){ if(pk[ch]) ku[ch] = wy[i + ch] || "доводы источников"; });
@@ -10982,7 +10982,7 @@
       });
       save(); render(); $("evBack").hidden = true;
       var t0 = tally();
-      say("«Охота на 15»: в таблицу поставлены все исходы набора (" + fmt(t0.combos) + " вар. в таблице), синие — по доводам. Сами " + fmt(lines.length) + " строк на " + fmt(lines.length * price) + " ₽ — «В корзину» или CSV; «Записать» таблицу не нажимай. «Назад» откатит.");
+      say("«Охота на 15»: в таблицу поставлены исходы системы и синие (" + fmt(t0.combos) + " вар. в таблице), синие — по доводам. Сами " + fmt(lines.length) + " строк на " + fmt(lines.length * price) + " ₽ — «В корзину» или CSV; «Записать» таблицу не нажимай. «Назад» откатит.");
     });
     var hb = $("huntBasket");
     if(hb && canBasket) hb.addEventListener("click", function(){

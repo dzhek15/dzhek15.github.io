@@ -2811,7 +2811,7 @@ html[data-bk="fonbet"] .fon-only{display:flex}
 .ev-kai-d{margin:8px 0 0; font-size:13px; line-height:1.45}
 .kel-up-t{color:#7fb0ff}
 .dt-add{text-decoration:underline dotted; text-underline-offset:3px; font-weight:600}
-.dt-pick .dt-add:not(.kel-up-t){opacity:.8}
+.dt-pick .dt-add:not(.kel-up-t){opacity:.45}
 
 .ev-arb{margin:10px 0 6px; padding:8px 10px; border:1px solid rgba(127,176,255,.4); border-radius:8px; background:rgba(47,111,214,.07)}
 .ev-arb-h{font-weight:600; margin-bottom:4px}
