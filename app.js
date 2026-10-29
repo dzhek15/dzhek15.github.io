@@ -2963,7 +2963,7 @@
      mx = true — для статистики: каждая стратегия при максимальном доступном лимите,
      независимо от лимитов, выбранных для своего купона */
   function stratCore(mx){
-    var v = { gap: null, sim: null, kel: null, mkel: null, mkelR: null }, str = function(set){ return set.map(function(k){ return OUT[k]; }).join(""); };
+    var v = { gap: null, sim: null, kel: null, mkel: null, mkelR: null, mkelK: null }, str = function(set){ return set.map(function(k){ return OUT[k]; }).join(""); };
     var M = limitMaxLines();
     try {
       var gs = planGapSys(mx ? M : limitLines("gapLimit", 1));
@@ -2982,6 +2982,7 @@
       var MK = planMonster(mx ? M : limitLines("mkelLimit", M)), mp = MK && !MK.error ? MK.pick : null;
       if(mp){
         v.mkel = mp.plan.rows.map(function(r){ return str(r.set); });
+        v.mkelK = mp.plan.rows.map(function(r){ return r.kup || null; });      /* синие исходы: причина по каждому */
         if(mp.plan.lines) v.mkelR = mp.plan.lines.map(function(ln){ return str(ln); });   /* бриф: отдельные строки, а не произведение множеств */
       }
     } catch(e){}
@@ -3312,7 +3313,7 @@
     } finally {
       state.matches = bak.matches; state.poolSum = bak.poolSum; state.jackpot = bak.jackpot; state.tirazh = bak.tirazh;
     }
-    return { res: list.map(function(m){ return m.res; }), gap: v.gap, sim: v.sim, kel: v.kel, mkel: v.mkel, mkelR: v.mkelR, gap2: v.gap2, sim2: v.sim2, m: list.map(function(m){ return m.home + " — " + m.away; }), key: accSetKey(), price: linePrice() };
+    return { res: list.map(function(m){ return m.res; }), gap: v.gap, sim: v.sim, kel: v.kel, mkel: v.mkel, mkelR: v.mkelR, mkelK: v.mkelK, gap2: v.gap2, sim2: v.sim2, m: list.map(function(m){ return m.home + " — " + m.away; }), key: accSetKey(), price: linePrice() };
   }
   /* системный купон: сколько полных строк угадали ровно k матчей (свёртка по матчам, без перебора строк) */
   function accScore(line, res){
@@ -7931,6 +7932,10 @@
       if(k >= 0 && pcsv.sets[k].sig === sig) return;
       var set = { name: q[1] + (brief ? " бриф 14 из 15" : "") + " · виртуальный", ai: 1, strat: q[0], link: 0, sig: sig, sys: sys, rows: pcsvExpand(sys) };
       if(brief) set.brief = 1;
+      if(brief && Array.isArray(c.mkel) && c.mkel.length === p.matches.length && Array.isArray(c.mkelK)){
+        set.core = c.mkel.slice(); set.bl = c.mkelK.map(function(kp){ return kp ? Object.keys(kp).join("") : ""; });
+        set.wy = {}; c.mkelK.forEach(function(kp, j){ if(kp) Object.keys(kp).forEach(function(o){ set.wy[j + o] = kp[o]; }); });
+      }
       if(!set.rows.length) return;
       if(k >= 0) pcsv.sets[k] = set; else pcsv.sets.push(set);
       if(k >= 0 && pcsv.act === k) pcsvUse(k);
