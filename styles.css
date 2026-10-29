@@ -2838,7 +2838,7 @@ html[data-bk="fonbet"] .fon-only{display:flex}
 .ai-nx-m{font:700 15px/1.35 "PT Serif",Georgia,serif; color:#1D1A15; overflow-wrap:anywhere}
 .ai-nx-none{margin:3px 0; text-align:center; font-size:12.5px; opacity:.75}
 
-.rk-ai.rk-st{background:rgba(79,152,163,.18); color:inherit}
+.rk-ai.rk-st{background:rgba(212,175,55,.14); color:var(--gold-ink)}
 
 /* свои CSV и ссылки в рейтинге наборов — синяя вертикальная полоса слева, чтобы быстро найти среди виртуальных */
 .pc-rk.mine{box-shadow:inset 6px 0 0 #2f80ff}
