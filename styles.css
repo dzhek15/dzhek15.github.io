@@ -2877,3 +2877,7 @@ html[data-bk="fonbet"] .fon-only{display:flex}
 .cmp-tab th:nth-child(2),.cmp-tab .cmp-m{text-align:left}
 .cmp-tab td{padding:4px 3px; text-align:center}
 .cmp-tab .cmp-m{min-width:0; width:34%}
+/* снятый исход: никакой рамки и тени от прежнего синего или фокуса (результат матча и просмотр CSV не затрагиваются) */
+.pick:not([aria-pressed="true"]):not(.won):not(.in-pool):not(.bk-real):not(.mine-hit):focus,
+.pick:not([aria-pressed="true"]):not(.won):not(.in-pool):not(.bk-real):not(.mine-hit):focus-visible{outline:none}
+.pick.kel-up:not([aria-pressed="true"]){box-shadow:none; outline:none}

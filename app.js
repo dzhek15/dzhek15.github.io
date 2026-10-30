@@ -4277,6 +4277,7 @@
             /* синяя отметка и её довод не пропадают: снял исход и поставил снова — она возвращается */
             if(m.kupAll && m.kupAll[o]){ m.kup = m.kup || {}; m.kup[o] = m.kupAll[o]; }
             if(m.kdelAll && m.kdelAll[o]){ m.kdel = m.kdel || {}; m.kdel[o] = m.kdelAll[o]; }
+            try { b.blur(); } catch(e){}      /* после тапа на телефоне у кнопки не остаётся рамки фокуса */
             save(); render();
           });
         }
