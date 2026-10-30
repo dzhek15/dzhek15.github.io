@@ -3522,3 +3522,18 @@ button{border-radius:8px; border-color:var(--kit-line)}
 @media (min-width:700px){
   body.is-prev .pcsv > .pc-cov:not(.wpPane):not([hidden]):not(:empty), body.is-prev .pcsv > .pc-vars:not(.wpPane):not([hidden]):not(:empty), body.is-prev .pcsv > .pc-rkw:not(.wpPane):not([hidden]):not(:empty){padding-inline:clamp(18px, 4vw, 48px)}
 }
+
+/* телефон: у «Весь купон» и вариантов — свои поля внутри панели, карточки не упираются и не обрезаются */
+@media (max-width:560px){
+  body.is-prev .pcsv > .pc-cov:not(.wpPane):not([hidden]):not(:empty){padding:6px 7px}
+  body.is-prev .pc-cov .pc-cr{grid-template-columns:20px 44px 58px minmax(0,1fr) 26px repeat(3,34px); gap:4px 2px}
+  body.is-prev .pc-cov .pc-fs{width:26px}
+  body.is-prev .pc-cov .pc-sc em{font-size:19px}
+  body.is-prev .pc-cov .pc-tc .pc-tm{font-size:15px}
+  body.is-prev .pc-cov .pc-tc .pc-tm.pc-tx{font-size:10.5px; letter-spacing:0}
+}
+@media (max-width:360px){
+  body.is-prev .pcsv > .pc-cov:not(.wpPane):not([hidden]):not(:empty){padding:6px 5px}
+  body.is-prev .pc-cov .pc-cr{grid-template-columns:18px 40px 52px minmax(0,1fr) 24px repeat(3,31px); gap:3px 2px}
+  body.is-prev .pc-cov .pc-fs{width:24px}
+}
