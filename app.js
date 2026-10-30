@@ -5493,7 +5493,7 @@
     var p = 0; for(i = 12; i < dp.length; i++) p += dp[i];
     return p;
   }
-  function briefP12(lines, P){
+  function briefP12(lines, P, Nfix){
     var n = lines.length ? lines[0].length : 0, R = lines.length, i, j;
     if(!R || n < 12) return null;
     var code = new Int32Array(R);
@@ -5503,7 +5503,7 @@
       var pj = P[j] || [1 / 3, 1 / 3, 1 / 3], t = pj[0] + pj[1] + pj[2];
       cum.push([pj[0] / t, (pj[0] + pj[1]) / t]);
     }
-    var N = Math.max(4000, Math.min(20000, Math.floor(6e7 / R))), seed = 20261030, ok = 0, MASK = 0x15555555;
+    var N = Nfix || Math.max(4000, Math.min(20000, Math.floor(6e7 / R))), seed = 20261030, ok = 0, MASK = 0x15555555;
     function rnd(){ seed = (seed + 0x6D2B79F5) | 0; var z = Math.imul(seed ^ (seed >>> 15), 1 | seed); z = (z + Math.imul(z ^ (z >>> 7), 61 | z)) ^ z; return ((z ^ (z >>> 14)) >>> 0) / 4294967296; }
     for(var s0 = 0; s0 < N; s0++){
       var y = 0;
@@ -5515,6 +5515,65 @@
       }
     }
     return ok / N;
+  }
+  /* «Рекомендации»: что сделать с собранной системой, чтобы шанс «12+» вырос */
+  function briefRecHtml(sets, g){
+    var res = briefCache(sets)["g" + g]; if(!res || !res.lines) return '';
+    var P = briefProbs(), price = briefPrice(), U = 1, NF = 12000;
+    sets.forEach(function(st){ U *= st.length; });
+    var lines = res.lines, rows = lines.length;
+    var base = briefP12(lines, P, NF);
+    var pc = function(p){ return (p * 100).toFixed(p >= 0.1 ? 1 : 2) + '%'; };
+    var dl = function(p){ var d = (p - base) * 100; return (d >= 0 ? '+' : '\u2212') + Math.abs(d).toFixed(Math.abs(d) >= 1 ? 1 : 2) + ' п.п.'; };
+    var maxK = Math.min(U - rows, BRIEF_EXTRA_MAX), h = '<div class="brief-rec"><h3>Рекомендации к системе ' + g + ' из 15</h3>' +
+      '<p class="ev-note">Сейчас: <b>' + fmt(rows) + '</b> строк на ' + fmt(rows * price) + ' ₽, шанс 12+ — <b>' + pc(base) + '</b>. Ниже — что добавляет шанс; все цифры по модели (линия конторы), оценка по розыгрышу итогов.</p>';
+    var ks = [], seen = {};
+    [0.25, 0.5, 1, 2].forEach(function(f){ var kk = Math.max(10, Math.round(rows * f / 10) * 10); kk = Math.min(kk, maxK); if(kk > 0 && !seen[kk]){ seen[kk] = 1; ks.push(kk); } });
+    if(ks.length){
+      var skip = new Set(lines.map(function(L){ return L.join(""); })), top = briefTopLines(sets, ks[ks.length - 1], skip);
+      h += '<p class="brief-rec-h">1. Добавить строки (добивка самыми вероятными)</p><table class="ev-tab brief-rec-tab"><tbody>';
+      ks.forEach(function(kk){
+        var p = briefP12(lines.concat(top.slice(0, kk)), P, NF);
+        h += '<tr><td>+' + fmt(kk) + ' строк</td><td>+' + fmt(kk * price) + ' ₽</td><td><b>12+ ' + pc(p) + '</b> <span class="brief-rec-d">' + dl(p) + '</span></td>' +
+             '<td class="nw"><button type="button" class="gap-set brief-rec-add" data-g="' + g + '" data-k="' + kk + '">в добивку</button></td></tr>';
+      });
+      h += '</tbody></table>';
+    }
+    var full0 = briefP12Full(sets, P), cand = [];
+    sets.forEach(function(st, ix){
+      if(st.length >= 3 || (state.matches[ix] && state.matches[ix].fsVoid)) return;
+      for(var o = 0; o < 3; o++){
+        if(st.indexOf(o) >= 0) continue;
+        var ns = sets.map(function(a){ return a.slice(); }); ns[ix].push(o);
+        var f1 = briefP12Full(ns, P), U1 = U / st.length * (st.length + 1);
+        cand.push({ ix: ix, o: o, f1: f1, U1: U1, gain: (f1 - full0) / Math.max(1, U1 - U) });
+      }
+    });
+    cand.sort(function(a, b){ return b.gain - a.gain; });
+    if(cand.length){
+      h += '<p class="brief-rec-h">2. Добавить исход в купон (потом пересобрать бриф)</p><table class="ev-tab brief-rec-tab"><tbody>';
+      cand.slice(0, 3).forEach(function(c){
+        var m = state.matches[c.ix];
+        h += '<tr><td>№' + (c.ix + 1) + ' ' + escHtml(m ? m.home + ' — ' + m.away : '') + ': <b>+' + OUT[c.o] + '</b></td><td>полное покрытие ' + fmt(U) + ' → ' + fmt(Math.round(c.U1)) + ' стр.</td>' +
+             '<td><b>12+ ' + pc(full0) + ' → ' + pc(c.f1) + '</b></td></tr>';
+      });
+      h += '</tbody></table><p class="ev-note">Шанс указан для полного покрытия купона. У пересобранной системы он будет ниже, но вырастет пропорционально.</p>';
+    }
+    var other = [];
+    for(var q = 14; q >= 9; q--){
+      var r2 = briefCache(sets)["g" + q];
+      if(q !== g && r2 && r2.lines) other.push({ g: q, rows: r2.lines.length, p: briefP12(r2.lines, P, NF) });
+    }
+    if(other.length){
+      h += '<p class="brief-rec-h">3. Другие собранные системы этого купона</p><table class="ev-tab brief-rec-tab"><tbody>';
+      other.forEach(function(o){
+        h += '<tr><td>' + o.g + ' из 15</td><td>' + fmt(o.rows) + ' стр. · ' + fmt(o.rows * price) + ' ₽</td><td><b>12+ ' + pc(o.p) + '</b> <span class="brief-rec-d">' + dl(o.p) + '</span></td></tr>';
+      });
+      h += '</tbody></table>';
+    } else if(g > 9){
+      h += '<p class="ev-note">Чем ниже гарантия, тем дешевле система и тем меньше шанс на 12+. Нужен шанс выше — соберите систему с более высокой гарантией или добавьте строки.</p>';
+    }
+    return h + '</div>';
   }
   /* строки «Брифа» — в корзину, как броски и прокрутки */
   var BASKET_MAX = 12000;   /* строки охоты/брифа хранятся сжато (без snap), поэтому влезает 10 000 */
@@ -5659,14 +5718,15 @@
              stratChance(pin * have.w15) + '</div><div class="brief-ch">14+: ' + stratChance(pin * have.w14) + '</div>';
       }
       if(have.lines){
-        if(have.p12 == null) have.p12 = briefP12(have.lines, briefProbs());
+        if(have.p12 == null) have.p12 = briefP12(have.lines, briefProbs(), 12000);
         if(have.p12 != null) ch += '<div class="brief-ch brief-ch12" title="Шанс по модели на 12 и больше угаданных в этой системе — как «12+» у форм с ИИ">12+: ' + stratChance(have.p12) + '</div>';
       }
       cells = '<td><b>' + fmt(have.rows) + '</b>' + ch + '</td><td>' + fmt(cost) + ' ₽</td>' +
               '<td class="brief-save">' + (U === have.rows ? "—" : "−" + save.toFixed(0) + "%") + '</td>' +
               '<td class="nw"><button type="button" class="gap-set brief-cart" data-g="' + g + '">в корзину</button>' +
               ' <button type="button" class="gap-set brief-csv" data-g="' + g + '">CSV</button>' +
-              ' <button type="button" class="gap-set brief-prev" data-g="' + g + '">строки</button></td>';
+              ' <button type="button" class="gap-set brief-prev" data-g="' + g + '">строки</button>' +
+              ' <button type="button" class="gap-set brief-rec" data-g="' + g + '">советы</button></td>';
     } else if(have && have.tooBig){
       cells = '<td colspan="3" class="brief-no">вселенная ' + fmt(have.U) + ' — не берусь</td><td class="brief-save"></td>';
     } else if(have && have.slow){
@@ -5990,6 +6050,24 @@
         $("briefPrev").innerHTML = '<h3>Первые строки системы (гарантия ' + g + ')</h3>' +
           '<pre class="brief-pre">' + head + (res.rows > 20 ? "\n… и ещё " + fmt(res.rows - 20) + " строк" : "") + '</pre>';
         $("briefPrev").scrollIntoView({behavior:"smooth", block:"nearest"});
+      });
+    });
+    [].slice.call($("evBody").querySelectorAll(".brief-rec")).forEach(function(b){
+      b.addEventListener("click", function(){
+        var g = Number(b.getAttribute("data-g")), box = $("briefPrev");
+        box.innerHTML = '<p class="ev-note">Считаю рекомендации…</p>';
+        box.scrollIntoView({behavior:"smooth", block:"nearest"});
+        setTimeout(function(){
+          box.innerHTML = briefRecHtml(sets, g);
+          [].slice.call(box.querySelectorAll(".brief-rec-add")).forEach(function(a){
+            a.addEventListener("click", function(){
+              var gg = Number(a.getAttribute("data-g")), kk = Number(a.getAttribute("data-k")), rs = briefCache(sets)["g" + gg];
+              briefExtraG = gg; briefExtraBudget[gg] = (rs.rows + kk) * briefPrice();
+              var cur = $("briefExtra");
+              if(cur && cur.parentNode){ var d = document.createElement("div"); d.innerHTML = briefExtraBox(sets); cur.parentNode.replaceChild(d.firstChild, cur); briefExtraBind(sets); $("briefExtra").scrollIntoView({behavior:"smooth", block:"nearest"}); }
+            });
+          });
+        }, 30);
       });
     });
     $("evBack").hidden = false;

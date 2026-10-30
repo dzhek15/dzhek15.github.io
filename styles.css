@@ -2882,3 +2882,4 @@ html[data-bk="fonbet"] .fon-only{display:flex}
 .pick:not([aria-pressed="true"]):not(.won):not(.in-pool):not(.bk-real):not(.mine-hit):focus-visible{outline:none}
 .pick.kel-up:not([aria-pressed="true"]){box-shadow:none; outline:none}
 .brief-ch12{color:var(--brand-gold, #c9a24b); font-weight:600}
+.brief-rec{margin:12px 0} .brief-rec-h{margin:10px 0 4px; font-weight:700; color:var(--brand-gold,#c9a24b)} .brief-rec-tab td{font-size:12.5px} .brief-rec-d{color:var(--muted); font-size:11px}
