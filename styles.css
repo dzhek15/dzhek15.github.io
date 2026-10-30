@@ -3127,8 +3127,10 @@ html[data-bk="fonbet"] .fon-only{display:flex}
   background:radial-gradient(circle, rgba(246,221,149,.55), rgba(246,221,149,0) 70%); text-shadow:0 0 28px rgba(246,221,149,.95); animation:ftGoalTxt 2.4s ease-out forwards; pointer-events:none}
 @keyframes ftGoal{0%{transform:scale(.6)} 45%{transform:scale(1.28)} 100%{transform:scale(1)}}
 @keyframes ftGoalTxt{0%{opacity:0; transform:scale(.4)} 18%{opacity:1; transform:scale(1.05)} 70%{opacity:1} 100%{opacity:0; transform:scale(1.15)}}
-.cv-feat.ft-swap .cv-ft{animation:ftSwap .55s ease-out}
-@keyframes ftSwap{from{opacity:0; transform:translateY(8px) scale(.98)} to{opacity:1; transform:none}}
+.cv-feat .cv-ft{transition:opacity .65s ease, transform .65s ease, filter .65s ease}
+.cv-feat.ft-out .cv-ft{opacity:0; transform:translateY(-6px) scale(.985); filter:blur(3px)}
+.cv-feat.ft-in .cv-ft{animation:ftSwap .9s cubic-bezier(.2,.7,.2,1)}
+@keyframes ftSwap{from{opacity:0; transform:translateY(10px) scale(.985); filter:blur(3px)} to{opacity:1; transform:none; filter:none}}
 
 /* лента из 15 меток */
 .cv-pips{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:2px 16px 10px}

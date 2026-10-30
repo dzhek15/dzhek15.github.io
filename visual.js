@@ -114,13 +114,18 @@
     if(el.dataset.sig === sig) return;
     var swap = el.dataset.sig && el.dataset.sig.split("|")[1] !== String(x.i);
     el.dataset.sig = sig;
-    el.innerHTML = '<div class="' + cls + '" data-i="' + x.i + '"><div class="ft-k">' + k + '</div><div class="ft-m">' +
+    var html = '<div class="' + cls + '" data-i="' + x.i + '"><div class="ft-k">' + k + '</div><div class="ft-m">' +
       '<div class="ft-t">' + embImg(D, m.home, m) + '<span>' + esc(m.home) + '</span></div>' + mid +
       '<div class="ft-t">' + embImg(D, m.away, m) + '<span>' + esc(m.away) + '</span></div></div>' +
       (m.league ? '<div class="ft-l">' + esc(m.league) + '</div>' : "") + '</div>';
-    if(swap && !RM) { el.classList.remove("ft-swap"); void el.offsetWidth; el.classList.add("ft-swap"); }
+    /* смена матча — плавно: старый гаснет и чуть уходит вверх, новый проявляется снизу */
+    clearTimeout(fxs.sw);
+    if(swap && !RM){
+      el.classList.remove("ft-in"); el.classList.add("ft-out");
+      fxs.sw = setTimeout(function(){ el.innerHTML = html; el.classList.remove("ft-out"); void el.offsetWidth; el.classList.add("ft-in"); }, 650);
+    } else { el.innerHTML = html; }
     if(!fxs.rot){
-      fxs.rot = setInterval(function(){ if(document.hidden || fxs.list.length < 2) return; fxs.idx++; renderFeat(); }, 7000);
+      fxs.rot = setInterval(function(){ if(document.hidden || fxs.list.length < 2) return; fxs.idx++; renderFeat(); }, 16000);
     }
   }
   function renderCd(){
