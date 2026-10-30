@@ -6668,29 +6668,46 @@
     var H = { "Authorization": "Bearer " + tok, "Accept": "application/vnd.github+json" };
     return fetch(LINK_GH + id + ".json?ref=main&t=" + Date.now(), { headers: H, cache: "no-store" }).then(function(r){
       if(r.ok) return id;                                       /* такой набор уже лежит */
-      if(r.status !== 404) throw new Error("GitHub ответил " + r.status);
+      if(r.status !== 404) throw new Error(ghWhy(r.status));
       var body = { message: "Ссылка " + id + " · тираж " + tir, branch: "main",
                    content: btoa(unescape(encodeURIComponent(JSON.stringify({ t: String(tir || ""), d: packed }) + "\n"))) };
       return fetch(LINK_GH + id + ".json", { method: "PUT", headers: H, body: JSON.stringify(body) }).then(function(r2){
         if(r2.ok || r2.status === 422) return id;
-        throw new Error("GitHub ответил " + r2.status);
+        throw new Error(ghWhy(r2.status));
       });
     });
   }
+  function ghWhy(st){
+    return st === 401 ? "GitHub не принимает ключ владельца (401) — введи ключ заново"
+      : st === 403 || st === 404 ? "у ключа владельца нет права записи в сайт (" + st + "): нужен Contents → Read and write для dzhek15.github.io"
+      : "GitHub ответил " + st;
+  }
+  var shortWhy = "";
   function linkPutWorker(tir, packed){
     if(typeof fetch !== "function" || !C.SHORT_HOST) return Promise.reject(new Error("no"));
-    return fetch(C.SHORT_HOST, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ t: String(tir || ""), d: packed }) })
+    var ctl = window.AbortController ? new AbortController() : null;
+    if(ctl) setTimeout(function(){ ctl.abort(); }, 8000);     /* в РФ соединение с Cloudflare может висеть — не ждём вечно */
+    return fetch(C.SHORT_HOST, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ t: String(tir || ""), d: packed }), signal: ctl ? ctl.signal : undefined })
       .then(function(r){ if(!r.ok) throw new Error("http"); return r.json(); })
       .then(function(j){ if(!j || !j.id) throw new Error("id"); return j.id; });
   }
   /* -> {id, site}: site = набор лежит на сайте (откроется у всех, в том числе без VPN) */
   function shortPut(tir, packed){
+    shortWhy = "";
     var w = linkPutWorker(tir, packed).then(function(id){ return id; }, function(){ return null; });
-    if(!ownTok()) return w.then(function(id){ if(!id) throw new Error("no"); return { id: id, site: false }; });
-    return linkId(tir, packed).then(function(id){
-      return linkPutSite(id, tir, packed).then(function(){ return w.then(function(){ return { id: id, site: true }; }); },
-        function(){ return w.then(function(wid){ if(!wid) throw new Error("no"); return { id: wid, site: false }; }); });
+    if(!ownTok()) return w.then(function(id){
+      if(!id){ shortWhy = "в этом браузере не включён режим владельца, а сервер ссылок из вашей сети недоступен"; throw new Error("no"); }
+      return { id: id, site: false };
     });
+    return linkId(tir, packed).then(function(id){
+      return linkPutSite(id, tir, packed).then(function(){
+        /* набор уже на сайте — сервер ссылок ждём недолго, он только запасной */
+        return Promise.race([w, new Promise(function(r){ setTimeout(r, 2500); })]).then(function(){ return { id: id, site: true }; });
+      }, function(e){
+        shortWhy = (e && e.message) || "запись на сайт не удалась";
+        return w.then(function(wid){ if(!wid){ shortWhy += "; сервер ссылок недоступен"; throw new Error("no"); } return { id: wid, site: false }; });
+      });
+    }, function(){ shortWhy = "браузер не умеет считать код ссылки"; throw new Error("no"); });
   }
   function shortGetSite(id){
     return fetch("data/links/" + encodeURIComponent(id) + ".json?t=" + Date.now(), { cache: "no-store" })
@@ -8586,7 +8603,7 @@
   }
   function pcsvShareAll(){
     var b = $("pcShareAll"); if(!b || !pcsvMine().length) return;
-    var was = b.textContent, sets = pcsvMine(), tir = pcsv.tir;
+    var was = b.textContent, sets = pcsvMine(), tir = pcsv.tir; shortWhy = "";
     var nVars = sets.reduce(function(a, st){ return a + st.rows.length; }, 0);
     b.disabled = true; b.textContent = "собираю…";
     var urlP = Promise.all(sets.map(function(st){
@@ -8620,7 +8637,7 @@
       }
       var ok = function(){
         fin((/[?&]s=/.test(url) ? "Короткая ссылка скопирована: " : "Ссылка скопирована: ") + fmt(sets.length) + " набор(ов), " + fmt(nVars) + " вариант(ов), тираж №" + tir +
-          ". Кто откроет — увидит все наборы вкладками в просмотре тиража." + (/[?&]s=/.test(url) ? " Хранится 90 дней." : (url.length > 3500 ? " Адрес длинный — в Telegram может не влезть одним сообщением." : "")));
+          ". Кто откроет — увидит все наборы вкладками в просмотре тиража." + (/[?&]s=/.test(url) ? " Хранится 90 дней." : (url.length > 3500 ? " Адрес длинный — в Telegram может не влезть одним сообщением." : "") + (shortWhy && url.length > 3500 ? " Короткая не получилась: " + shortWhy + "." : "")));
       };
       var manual = function(){
         fin("Скопировать автоматически не вышло — ссылка в окне, скопируй её оттуда.");
@@ -8884,7 +8901,7 @@
     var fin = function(t){ cmpvMsg = t; cmpvRefresh(); };
     var msg = function(url){
       return (/[?&]c=/.test(url) ? "Короткая ссылка скопирована: " : "Ссылка скопирована: ") + n + " вариант(ов), тираж №" + state.tirazh + "." +
-        (/[?&]c=/.test(url) ? " Откроется у получателя примерно через минуту после создания и хранится 90 дней." : " Отправьте её — у получателя откроется это сравнение.");
+        (/[?&]c=/.test(url) ? " Откроется у получателя примерно через минуту после создания и хранится 90 дней." : " Отправьте её — у получателя откроется это сравнение." + (shortWhy ? " Короткая не получилась: " + shortWhy + "." : ""));
     };
     var wrote = null;
     if(window.ClipboardItem && navigator.clipboard && navigator.clipboard.write){
