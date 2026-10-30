@@ -3564,3 +3564,19 @@ body.is-prev .pcsv > :not(.wpPane):not([hidden]):not(:empty){box-shadow:0 6px 16
 .pc-flt.pc-lvl button.lvk small,.pc-flt.pc-lvl button.lvw small{font:700 12px var(--f-num); color:var(--brand-gold); opacity:1}
 .pc-lvl-n{margin:-2px auto 8px; max-width:640px; text-align:center}
 @media (prefers-reduced-motion: reduce){ .pc-vr span.hit.lv,.pc-vr span.miss.lv,.pc-vr .pc-h.lv,.pc-vr.vgo-up,.pc-vr.vgo-dn{animation:none} }
+
+/* варианты: без пульсации; выделены только те, кто ещё в игре, крупнее — кто в игре онлайн (9+ по текущему счёту) */
+.pc-vr span.hit.lv,.pc-vr span.miss.lv,.pc-vr .pc-h.lv{animation:none}
+.pc-vr span.hit.lv,.pc-vr span.miss.lv{box-shadow:inset 0 0 0 1px rgba(227,185,85,.5)}
+.pc-vr .pc-h.lv{box-shadow:0 0 0 1.5px rgba(227,185,85,.6)}
+body.is-prev .pc-vars .pc-vr.dead{opacity:.42}
+body.is-prev .pc-vars .pc-vr.dead span.hit,body.is-prev .pc-vars .pc-vr.dead span.miss,body.is-prev .pc-vars .pc-vr.dead span.lv{background:transparent; color:var(--muted); box-shadow:none; text-shadow:none}
+body.is-prev .pc-vars .pc-vr.dead .pc-h{background:transparent; color:var(--muted); box-shadow:none}
+body.is-prev .pc-vars .pc-vr.win{background:color-mix(in srgb,var(--brand-gold) 11%, transparent); border-radius:8px; box-shadow:inset 3px 0 0 var(--brand-gold)}
+body.is-prev .pc-vars .pc-vr.win span{font-weight:800; font-size:15px}
+body.is-prev .pc-vars .pc-vr.win span.m2{font-size:12px}
+body.is-prev .pc-vars .pc-vr.win span.m3{font-size:10px}
+body.is-prev .pc-vars .pc-vr.win span.hit{background:color-mix(in srgb,var(--cold) 38%, transparent)}
+body.is-prev .pc-vars .pc-vr.win span:first-child{font-size:12px; color:var(--brand-gold)}
+body.is-prev .pc-vars .pc-vr.win .pc-h{font-size:17px; box-shadow:0 0 0 1.5px var(--brand-gold)}
+@media (max-width:560px){ body.is-prev .pc-vars .pc-vr.win span{font-size:13px} body.is-prev .pc-vars .pc-vr.win .pc-h{font-size:14px} }
