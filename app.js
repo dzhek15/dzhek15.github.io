@@ -4274,8 +4274,9 @@
           if(m.mode==="lock"){ b.disabled = true; }
           b.addEventListener("click", function(){
             m.picks[o] = !m.picks[o];
-            if(m.kup){ delete m.kup[o]; if(!Object.keys(m.kup).length) delete m.kup; }
-            if(m.kdel){ delete m.kdel[o]; if(!Object.keys(m.kdel).length) delete m.kdel; }
+            /* синяя отметка и её довод не пропадают: снял исход и поставил снова — она возвращается */
+            if(m.kupAll && m.kupAll[o]){ m.kup = m.kup || {}; m.kup[o] = m.kupAll[o]; }
+            if(m.kdelAll && m.kdelAll[o]){ m.kdel = m.kdel || {}; m.kdel[o] = m.kdelAll[o]; }
             save(); render();
           });
         }
@@ -10771,11 +10772,11 @@
   function stratApply(plan, name){
     pushHistory("до стратегии «" + name + "»");
     var set = 0;
-    state.matches.forEach(function(m){ delete m.kup; delete m.kdel; });
+    state.matches.forEach(function(m){ delete m.kup; delete m.kdel; delete m.kupAll; delete m.kdelAll; });
     plan.rows.forEach(function(r){
       var ix = state.matches.indexOf(r.m);
-      if(plan.kup && plan.kup[ix] && !r.locked) r.m.kup = plan.kup[ix];
-      if(plan.kdel && plan.kdel[ix] && !r.locked) r.m.kdel = plan.kdel[ix];
+      if(plan.kup && plan.kup[ix] && !r.locked){ r.m.kup = plan.kup[ix]; r.m.kupAll = JSON.parse(JSON.stringify(plan.kup[ix])); }
+      if(plan.kdel && plan.kdel[ix] && !r.locked){ r.m.kdel = plan.kdel[ix]; r.m.kdelAll = JSON.parse(JSON.stringify(plan.kdel[ix])); }
       if(r.locked || !r.p || !r.set.length) return;
       r.m.picks = {"1": false, "X": false, "2": false};
       r.set.forEach(function(k){ r.m.picks[OUT[k]] = true; });
@@ -11043,7 +11044,8 @@
         st.split("").forEach(function(ch){ pk[ch] = true; });
         m.picks = pk; m.mode = "free"; delete m.kdel;
         var ku = {}; String(bl[i] || "").split("").forEach(function(ch){ if(pk[ch]) ku[ch] = wy[i + ch] || "доводы источников"; });
-        if(Object.keys(ku).length) m.kup = ku; else delete m.kup;
+        delete m.kdelAll;
+        if(Object.keys(ku).length){ m.kup = ku; m.kupAll = JSON.parse(JSON.stringify(ku)); } else { delete m.kup; delete m.kupAll; }
       });
       save(); render(); $("evBack").hidden = true;
       var t0 = tally();
