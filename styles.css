@@ -3384,37 +3384,37 @@ body.is-prev .row .tc-t.tc-live, :root:not([data-compact="1"]) body.is-prev .row
 :root[data-theme="light"]:not([data-compact="1"]) body.is-prev .row .teams .mscore .sh,
 :root[data-theme="light"]:not([data-compact="1"]) body.is-prev .row .teams .mscore .sa,
 :root[data-theme="light"]:not([data-compact="1"]) body.is-prev .row .teams .mscore.live .sh,
-:root[data-theme="light"]:not([data-compact="1"]) body.is-prev .row .teams .mscore.live .sa{color:#3a2a0e; background:linear-gradient(180deg,#fffdf6,#f3e8c9); border-color:rgba(160,120,40,.55); text-shadow:none; box-shadow:inset 0 1px 0 #fff, 0 3px 8px -6px rgba(90,60,10,.45)}
+:root[data-theme="light"]:not([data-compact="1"]) body.is-prev .row .teams .mscore.live .sa{color:#3a2a0e; background:linear-gradient(180deg,#ffffff,#eef2f1); border-color:rgba(160,120,40,.55); text-shadow:none; box-shadow:inset 0 1px 0 #fff, 0 3px 8px -6px rgba(90,60,10,.45)}
 :root[data-theme="light"]:not([data-compact="1"]) body.is-prev .row .teams .mscore .sh.tr,
 :root[data-theme="light"]:not([data-compact="1"]) body.is-prev .row .teams .mscore .sa.tr,
 :root[data-theme="light"]:not([data-compact="1"]) body.is-prev .row .teams .mscore.live .sh.tr,
-:root[data-theme="light"]:not([data-compact="1"]) body.is-prev .row .teams .mscore.live .sa.tr{color:#8c7a55; background:linear-gradient(180deg,#faf6ea,#eee5cd); border-color:rgba(160,120,40,.28); box-shadow:none}
-:root[data-theme="light"]:not([data-compact="1"]) body.is-prev .row .tc-t{background:#f7f0dc; border-color:rgba(160,120,40,.4); color:#3a2a0e}
+:root[data-theme="light"]:not([data-compact="1"]) body.is-prev .row .teams .mscore.live .sa.tr{color:#8c7a55; background:linear-gradient(180deg,#f7f9f8,#e9eeed); border-color:rgba(160,120,40,.28); box-shadow:none}
+:root[data-theme="light"]:not([data-compact="1"]) body.is-prev .row .tc-t{background:#ffffff; border-color:rgba(160,120,40,.4); color:#3a2a0e}
 :root[data-theme="light"]:not([data-compact="1"]) body.is-prev .row .tc-t.tc-ft{color:#1F3A52; background:#f1f4f7; border-color:rgba(31,58,82,.3)}
 :root[data-theme="light"]:not([data-compact="1"]) body.is-prev .row .tc-t.tc-live,
 :root[data-theme="light"] body.is-prev .row .tc-t.tc-live{color:#7a5410; background:#fbefc9; border-color:rgba(160,120,40,.6); box-shadow:none}
-:root[data-theme="light"]:not([data-compact="1"]) body.is-prev .row .tc-t.tc-end{color:#7a5410; background:#f3ead0}
-:root[data-theme="light"] .mode.srch, :root[data-theme="light"] body.is-prev .row .teams .mode.fs-near{background:#fff8e6; border-color:rgba(160,120,40,.6)}
-:root[data-theme="light"] .mode.srch:hover{background:#f6e9c2}
+:root[data-theme="light"]:not([data-compact="1"]) body.is-prev .row .tc-t.tc-end{color:#7a5410; background:#f3f6f5}
+:root[data-theme="light"] .mode.srch, :root[data-theme="light"] body.is-prev .row .teams .mode.fs-near{background:#ffffff; border-color:rgba(160,120,40,.6)}
+:root[data-theme="light"] .mode.srch:hover{background:#f3f6f5}
 :root[data-theme="light"] .mode.srch .fs-mark{color:#7a5410}
 :root[data-theme="light"] .row .lv-dot{background:#c9963c}
 
 /* светлая тема: обложка тиража светлая (шампанское), без чёрного фона */
 :root[data-theme="light"] .cover{color:#2b2112;
-  background:radial-gradient(360px 220px at 50% 22%, rgba(255,236,170,.65), transparent 72%), radial-gradient(640px 240px at 10% 0%, rgba(227,185,85,.22), transparent 70%), radial-gradient(520px 260px at 100% 100%, rgba(120,170,200,.2), transparent 70%), linear-gradient(160deg,#fffaf0 0%,#f6eedb 55%,#efe3c4 100%);
+  background:radial-gradient(420px 240px at 50% 16%, #fff 0%, rgba(255,255,255,0) 72%), radial-gradient(640px 240px at 6% 0%, rgba(201,162,75,.16), transparent 70%), radial-gradient(520px 260px at 100% 100%, rgba(62,92,118,.14), transparent 70%), linear-gradient(160deg,#ffffff 0%,#f8faf9 55%,#e9eeef 100%);
   border-color:rgba(160,120,40,.5);
-  box-shadow:0 14px 34px -18px rgba(90,60,10,.45), 0 0 0 1px rgba(160,120,40,.12), inset 0 1px 0 #fff, inset 0 -30px 60px -40px rgba(201,162,75,.3)}
+  box-shadow:0 18px 40px -20px rgba(19,26,27,.5), 0 0 0 1px rgba(160,120,40,.14), inset 0 1px 0 #fff, inset 0 -34px 60px -44px rgba(62,92,118,.3), 0 0 36px -14px rgba(227,185,85,.35)}
 :root[data-theme="light"] .cv-frame{border-color:rgba(160,120,40,.4)}
 :root[data-theme="light"] .cv-sheen{mix-blend-mode:normal; opacity:.55}
 :root[data-theme="light"] .cv-grain{opacity:.05}
-:root[data-theme="light"] .cv-fx i{background:linear-gradient(90deg, transparent, rgba(227,185,85,.12) 45%, rgba(227,185,85,.18) 50%, rgba(227,185,85,.12) 55%, transparent)}
+:root[data-theme="light"] .cv-fx i{background:linear-gradient(90deg, transparent, rgba(255,255,255,.55) 45%, rgba(255,255,255,.8) 50%, rgba(255,255,255,.55) 55%, transparent)}
 :root[data-theme="light"] .cover .logo{filter:drop-shadow(0 8px 14px rgba(90,60,10,.35)) drop-shadow(0 0 14px rgba(227,185,85,.35))}
 :root[data-theme="light"] .cv-k{color:#6b5524}
 :root[data-theme="light"] .cv-num{background:linear-gradient(180deg,#8a6112,#c9963c 55%,#6f4d0d); -webkit-background-clip:text; background-clip:text; filter:drop-shadow(0 1px 0 rgba(255,255,255,.7))}
 :root[data-theme="light"] .cv-num small{-webkit-text-fill-color:#a67a1c; color:#a67a1c}
 :root[data-theme="light"] .cv-v{background:linear-gradient(100deg,#8a6112 0%,#c9963c 30%,#a67a1c 50%,#c9963c 70%,#8a6112 100%); -webkit-background-clip:text; background-clip:text; filter:drop-shadow(0 1px 0 rgba(255,255,255,.7))}
 :root[data-theme="light"] .cv-date{color:#7a5a1a}
-:root[data-theme="light"] .cv-pool.is-on{border-color:rgba(160,120,40,.55); background:linear-gradient(180deg,rgba(227,185,85,.28),rgba(227,185,85,.1))}
+:root[data-theme="light"] .cv-pool.is-on{border-color:rgba(160,120,40,.55); background:linear-gradient(180deg,#ffffff,#f1f5f4); box-shadow:inset 0 1px 0 #fff, 0 4px 10px -6px rgba(19,26,27,.4)}
 :root[data-theme="light"] .cv-pool em{color:#7a5a1a}
 :root[data-theme="light"] .cv-pool b{color:#2b2112}
 :root[data-theme="light"] .cv-foot{border-top-color:rgba(160,120,40,.3)}
@@ -3428,17 +3428,17 @@ body.is-prev .row .tc-t.tc-live, :root:not([data-compact="1"]) body.is-prev .row
 :root[data-theme="light"] .cv-chip em{color:rgba(58,42,14,.5)}
 :root[data-theme="light"] .cv-dot{color:rgba(160,120,40,.6)}
 :root[data-theme="light"] .cd-k{color:#7a5a1a}
-:root[data-theme="light"] .cd-d b{color:#3a2a0e; border-color:rgba(160,120,40,.55); background:linear-gradient(180deg,#fffdf6 0%,#fffaf0 49%,#f1e6c8 50%,#f6edd4 100%); box-shadow:0 6px 12px -8px rgba(90,60,10,.5), inset 0 1px 0 #fff; text-shadow:none}
+:root[data-theme="light"] .cd-d b{color:#3a2a0e; border-color:rgba(160,120,40,.55); background:linear-gradient(180deg,#ffffff 0%,#fbfcfc 49%,#eef2f1 50%,#f4f7f6 100%); box-shadow:0 6px 12px -8px rgba(90,60,10,.5), inset 0 1px 0 #fff; text-shadow:none}
 :root[data-theme="light"] .cd-d i{color:#a67a1c}
 :root[data-theme="light"] .cd-dd{color:#8a6112}
 :root[data-theme="light"] .cv-cd.is-hot .cd-d b{color:#7a4a0a; border-color:rgba(180,110,30,.8); text-shadow:none}
 :root[data-theme="light"] .cv-cd.is-last .cd-d b{border-color:#c9763c; color:#7a3a0a}
 :root[data-theme="light"] .cv-cd.is-last .cd-k{color:#a05a1c}
-:root[data-theme="light"] .cv-ft{border-color:rgba(160,120,40,.4); background:linear-gradient(180deg,rgba(255,255,255,.85),rgba(246,237,212,.85)); box-shadow:inset 0 1px 0 #fff, 0 10px 22px -14px rgba(90,60,10,.4)}
+:root[data-theme="light"] .cv-ft{border-color:rgba(160,120,40,.4); background:linear-gradient(180deg,#ffffff,#f1f5f4); box-shadow:inset 0 1px 0 #fff, 0 10px 22px -14px rgba(90,60,10,.4)}
 :root[data-theme="light"] .ft-k{color:#7a5a1a}
 :root[data-theme="light"] .ft-t span{color:#2b2112}
 :root[data-theme="light"] .ft-emb{filter:drop-shadow(0 3px 5px rgba(90,60,10,.35))}
-:root[data-theme="light"] .ft-sc{color:#3a2a0e; background:linear-gradient(180deg,#fffdf6,#f1e6c8); border-color:rgba(160,120,40,.55); box-shadow:inset 0 1px 0 #fff, 0 4px 12px -6px rgba(90,60,10,.4); text-shadow:none}
+:root[data-theme="light"] .ft-sc{color:#3a2a0e; background:linear-gradient(180deg,#ffffff,#eef2f1); border-color:rgba(160,120,40,.55); box-shadow:inset 0 1px 0 #fff, 0 4px 12px -6px rgba(90,60,10,.4); text-shadow:none}
 :root[data-theme="light"] .ft-sc i{color:#a67a1c}
 :root[data-theme="light"] .ft-vs span{color:#8a6112}
 :root[data-theme="light"] .ft-l{color:rgba(58,42,14,.65)}
@@ -3504,3 +3504,21 @@ button{border-radius:8px; border-color:var(--kit-line)}
 .panel-head button, .ev-head button{border-radius:8px}
 .knob-hint, .roll-cap, label{font-family:var(--f-ui)}
 .knob-hint{letter-spacing:.04em}
+
+/* светлая тема: «Весь купон» — светлые плитки счёта, статуса и FS, без чёрной заливки */
+:root[data-theme="light"] .pc-cov .pc-sc, :root[data-theme="light"] .pc-cov .pc-tc, :root[data-theme="light"] .pc-cov .pc-fs,
+:root[data-theme="light"] .pc-cov .pc-sc.is-lv, :root[data-theme="light"] .pc-cov .pc-tc.is-lv{background:linear-gradient(180deg,#ffffff,#eef2f1); border-color:rgba(160,120,40,.55); box-shadow:inset 0 1px 0 #fff, 0 3px 8px -6px rgba(19,26,27,.4)}
+:root[data-theme="light"] .pc-cov .pc-sc.no{background:transparent; border-color:transparent; box-shadow:none}
+:root[data-theme="light"] .pc-cov .pc-sc em, :root[data-theme="light"] .pc-cov .pc-sc em.live{color:#2b2112; text-shadow:none}
+:root[data-theme="light"] .pc-cov .pc-tc .pc-tm{color:#2b2112}
+:root[data-theme="light"] .pc-cov .pc-tc .pc-tm.pc-ftm{color:#1F3A52}
+:root[data-theme="light"] .pc-cov .pc-tc .pc-tm.pc-pp{color:#6b5a3a}
+:root[data-theme="light"] .pc-cov .pc-tc.is-lv .pc-tm, :root[data-theme="light"] .pc-cov .pc-tc .pc-tm.lv{color:#7a5410}
+:root[data-theme="light"] .pc-cov .pc-sc.is-lv, :root[data-theme="light"] .pc-cov .pc-tc.is-lv{border-color:rgba(160,120,40,.8)}
+:root[data-theme="light"] .pc-fs, :root[data-theme="light"] .pc-cov .pc-fs{background:linear-gradient(180deg,#ffffff,#eef2f1)}
+:root[data-theme="light"] .pc-fs .fs-mark{color:#7a5410}
+:root[data-theme="light"] .pc-fs:hover{background:#f6eecf}
+/* внутренние боковые поля «Весь купон» и вариантов на широких экранах */
+@media (min-width:700px){
+  body.is-prev .pcsv > .pc-cov:not(.wpPane):not([hidden]):not(:empty), body.is-prev .pcsv > .pc-vars:not(.wpPane):not([hidden]):not(:empty), body.is-prev .pcsv > .pc-rkw:not(.wpPane):not([hidden]):not(:empty){padding-inline:clamp(18px, 4vw, 48px)}
+}
