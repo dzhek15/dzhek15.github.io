@@ -5563,52 +5563,101 @@
     var maxK = Math.min(U - rows, BRIEF_EXTRA_MAX), h = '<div class="brief-rec"><h3>Рекомендации к системе ' + g + ' из 15</h3>' +
       '<p class="ev-note">Сейчас: <b>' + fmt(rows) + '</b> строк на ' + fmt(rows * price) + ' ₽, шанс — <b>' + base.t + '</b>. ' +
       (hi ? 'Для гарантии 14 смотрим на 15 из 15 и на 14+. ' : '') + 'Все цифры по модели (линия конторы).</p>';
-    var ks = [], seen = {};
+    var ks = [], seen = {}, hr = '';
     [0.25, 0.5, 1, 2].forEach(function(f){ var kk = Math.max(10, Math.round(rows * f / 10) * 10); kk = Math.min(kk, maxK); if(kk > 0 && !seen[kk]){ seen[kk] = 1; ks.push(kk); } });
     if(ks.length){
       var skip = new Set(lines.map(function(L){ return L.join(""); })), top = briefTopLines(sets, ks[ks.length - 1], skip);
-      h += '<p class="brief-rec-h">1. Добавить строки (самые вероятные)</p><table class="ev-tab brief-rec-tab"><tbody>';
+      hr += '<p class="brief-rec-h">@N@. Не менять купон: докупить строки сверх системы</p><p class="ev-note">Берутся самые вероятные строки купона, которых ещё нет в системе. Кнопка «в добивку» переносит их в блок добивки.</p><table class="ev-tab brief-rec-tab"><tbody>';
       ks.forEach(function(kk){
         var m = mt(lines.concat(top.slice(0, kk)), g);
-        h += '<tr><td>+' + fmt(kk) + ' строк</td><td>+' + fmt(kk * price) + ' ₽</td><td><b>' + m.t + '</b> <span class="brief-rec-d">' + dl(m) + '</span></td>' +
+        hr += '<tr><td>+' + fmt(kk) + ' строк</td><td>+' + fmt(kk * price) + ' ₽</td><td><b>' + m.t + '</b> <span class="brief-rec-d">' + dl(m) + '</span></td>' +
              '<td class="nw"><button type="button" class="gap-set brief-rec-add" data-g="' + g + '" data-k="' + kk + '">в добивку</button></td></tr>';
       });
-      h += '</tbody></table>';
+      hr += '</tbody></table>';
     }
-    var pin0 = briefInside(sets, P), full0 = hi ? pin0 : briefP12Full(sets, P, g >= 13 ? 13 : 12), cand = [];
+    var full0 = hi ? briefInside(sets, P) : briefP12Full(sets, P, g >= 13 ? 13 : 12);
     var fv = function(ss){ return hi ? briefInside(ss, P) : briefP12Full(ss, P, g >= 13 ? 13 : 12); };
-    var ft = function(v){ return hi ? '15: ' + stratChance(v) : (g >= 13 ? '13+ ' : '12+ ') + stratChance(v); };
+    var nm = function(ix){ var m = state.matches[ix]; return '№' + (ix + 1) + ' ' + escHtml(m ? m.home + ' — ' + m.away : ''); };
+    var ss = function(a){ return a.slice().sort().map(function(o){ return OUT[o]; }).join(' '); };
+    var voidM = function(ix){ return state.matches[ix] && state.matches[ix].fsVoid; };
+    var tgt = hi ? 'шанс на 15' : 'шанс ' + (g >= 13 ? '13+' : '12+');
+    /* оценка для пересобранной системы: строки и шанс меняются во столько же раз, во сколько меняется полное покрытие */
+    var est = function(f1, U1){
+      var rw = Math.max(1, Math.round(rows * U1 / U)), pv = base.v * f1 / Math.max(full0, 1e-12);
+      return { rows: rw, cost: rw * price, p: pv, x: f1 / Math.max(full0, 1e-12) };
+    };
+    var line = function(e){
+      var d = e.cost - rows * price, dd = Math.abs(d) < price * rows * 0.03 ? 'цена та же' : (d > 0 ? '+' : '\u2212') + fmt(Math.abs(Math.round(d))) + ' ₽';
+      return 'Система будет примерно ' + fmt(e.rows) + ' строк на ' + fmt(e.cost) + ' ₽ (' + dd + '). ' + tgt[0].toUpperCase() + tgt.slice(1) + ': ' + stratChance(base.v) + ' → <b>примерно ' + stratChance(e.p) + '</b> (×' + e.x.toFixed(2) + ').';
+    };
+    var moves = [], adds = [], n = sets.length;
+    /* перенос: убрать исход r в матче X, добавить исход a в матче Y */
+    for(var x = 0; x < n; x++){
+      if(voidM(x) || sets[x].length < 2) continue;
+      sets[x].forEach(function(r){
+        for(var y = 0; y < n; y++){
+          if(voidM(y)) continue;
+          for(var o = 0; o < 3; o++){
+            var cur = sets.map(function(z){ return z.slice(); });
+            cur[x] = cur[x].filter(function(v){ return v !== r; });
+            if(cur[y].indexOf(o) >= 0 || cur[y].length >= 3) continue;
+            if(x === y && o === r) continue;
+            cur[y].push(o);
+            var U1 = 1; cur.forEach(function(z){ U1 *= z.length; });
+            if(U1 < U * 0.8 || U1 > U * 1.25) continue;
+            var f1 = fv(cur);
+            if(f1 > full0 * 1.03) moves.push({ x: x, r: r, y: y, o: o, f1: f1, U1: U1, after: cur });
+          }
+        }
+      });
+    }
+    moves.sort(function(p, q){ return q.f1 - p.f1; });
+    var mv = [], usedKey = {};
+    moves.forEach(function(c){ var k = c.x + '-' + c.y; if(mv.length < 3 && !usedKey[k]){ usedKey[k] = 1; mv.push(c); } });
     sets.forEach(function(st, ix){
-      if(st.length >= 3 || (state.matches[ix] && state.matches[ix].fsVoid)) return;
+      if(st.length >= 3 || voidM(ix)) return;
       for(var o = 0; o < 3; o++){
         if(st.indexOf(o) >= 0) continue;
-        var ns = sets.map(function(a){ return a.slice(); }); ns[ix].push(o);
-        var f1 = fv(ns), U1 = U / st.length * (st.length + 1);
-        cand.push({ ix: ix, o: o, f1: f1, U1: U1, gain: (f1 - full0) / Math.max(1, U1 - U) });
+        var ns2 = sets.map(function(z){ return z.slice(); }); ns2[ix].push(o);
+        var U2 = U / st.length * (st.length + 1), f2 = fv(ns2);
+        adds.push({ ix: ix, o: o, f1: f2, U1: U2, gain: (f2 - full0) / Math.max(1, U2 - U) });
       }
     });
-    cand.sort(function(a, b){ return b.gain - a.gain; });
-    if(cand.length){
-      h += '<p class="brief-rec-h">2. Добавить исход в купон (потом пересобрать бриф)</p><table class="ev-tab brief-rec-tab"><tbody>';
-      cand.slice(0, 3).forEach(function(c){
-        var m = state.matches[c.ix];
-        h += '<tr><td>№' + (c.ix + 1) + ' ' + escHtml(m ? m.home + ' — ' + m.away : '') + ': <b>+' + OUT[c.o] + '</b></td><td>полное покрытие ' + fmt(U) + ' → ' + fmt(Math.round(c.U1)) + ' стр.</td>' +
-             '<td><b>' + ft(full0) + ' → ' + stratChance(c.f1) + '</b></td></tr>';
+    adds.sort(function(p, q){ return q.gain - p.gain; });
+    h += '<p class=\"ev-note\">Правки делаются в самом купоне (таблица исходов), после них нажмите «собрать» для этой гарантии заново. Цифры после правки — оценка.</p>';
+    if(mv.length){
+      h += '<p class=\"brief-rec-h\">1. Перенести исход: цена та же, шанс выше</p>';
+      mv.forEach(function(c){
+        var e = est(c.f1, c.U1);
+        h += '<div class=\"brief-rec-card\">' + (c.x === c.y ?
+             '<div><b>Заменить</b> «' + OUT[c.r] + '» на «' + OUT[c.o] + '» в матче ' + nm(c.x) + ' (было ' + ss(sets[c.x]) + ', станет ' + ss(c.after[c.x]) + ')</div>' :
+             '<div><b>Убрать</b> «' + OUT[c.r] + '» в матче ' + nm(c.x) + ' (было ' + ss(sets[c.x]) + ', станет ' + ss(c.after[c.x]) + ')</div>' +
+             '<div><b>Добавить</b> «' + OUT[c.o] + '» в матче ' + nm(c.y) + ' (было ' + ss(sets[c.y]) + ', станет ' + ss(c.after[c.y]) + ')</div>') +
+             '<div class=\"brief-rec-d\">' + line(e) + '</div></div>';
       });
-      h += '</tbody></table><p class="ev-note">' + (hi ? 'Шанс на 15 из 15 указан для полного покрытия: он равен шансу, что все итоги окажутся внутри купона. У пересобранной системы он будет ниже, но вырастет примерно во столько же раз.' : 'Шанс указан для полного покрытия купона. У пересобранной системы он будет ниже, но вырастет пропорционально.') + '</p>';
     }
+    if(adds.length){
+      h += '<p class=\"brief-rec-h\">' + (mv.length ? '2' : '1') + '. Добавить исход: цена выше, шанс выше</p>';
+      adds.slice(0, 3).forEach(function(c){
+        var e = est(c.f1, c.U1), st = sets[c.ix], ns3 = st.concat([c.o]);
+        h += '<div class=\"brief-rec-card\"><div><b>Добавить</b> «' + OUT[c.o] + '» в матче ' + nm(c.ix) + ' (было ' + ss(st) + ', станет ' + ss(ns3) + ')</div>' +
+             '<div class=\"brief-rec-d\">' + line(e) + '</div></div>';
+      });
+    }
+    hr = hr.replace('@N@', String((mv.length ? 1 : 0) + (adds.length ? 1 : 0) + 1)); h += hr;
+    if(!mv.length && !adds.length) h += '<p class=\"ev-note\">Исходы в купоне уже расставлены лучше некуда: добавлять или переносить нечего.</p>';
     var other = [];
     for(var q = 14; q >= 9; q--){
       var r2 = briefCache(sets)["g" + q];
       if(q !== g && r2 && r2.lines) other.push({ g: q, rows: r2.lines.length, m: mt(r2.lines, q) });
     }
     if(other.length){
-      h += '<p class="brief-rec-h">3. Другие собранные системы этого купона</p><table class="ev-tab brief-rec-tab"><tbody>';
+      h += '<p class="brief-rec-h">Другие собранные системы этого купона</p><table class="ev-tab brief-rec-tab"><tbody>';
       other.forEach(function(o){
         h += '<tr><td>' + o.g + ' из 15</td><td>' + fmt(o.rows) + ' стр. · ' + fmt(o.rows * price) + ' ₽</td><td><b>' + o.m.t + '</b></td></tr>';
       });
       h += '</tbody></table>';
-    } else if(g > 9){
+    } else if(g > 9 && g < 14){
       h += '<p class="ev-note">Чем ниже гарантия, тем дешевле система и тем меньше шанс на верхние категории. Нужен шанс выше — соберите систему с более высокой гарантией или добавьте строки.</p>';
     }
     return h + '</div>';
