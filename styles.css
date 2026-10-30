@@ -3547,3 +3547,20 @@ body.is-prev #rows > .row{background-color:color-mix(in srgb, var(--surface) 84%
 body.is-prev #tmHint:not(:empty){background-color:color-mix(in srgb, var(--surface) 55%, transparent)}
 body.is-prev .coupon .chead{background-color:color-mix(in srgb, var(--surface) 70%, transparent)}
 body.is-prev .pcsv > :not(.wpPane):not([hidden]):not(:empty){box-shadow:0 6px 16px -14px rgba(0,0,0,.6)}
+
+/* варианты онлайн: идущие матчи по текущему счёту, претенденты на 9, 10, 11… */
+.pc-vr span.hit.lv,.pc-vr span.miss.lv{box-shadow:inset 0 0 0 1px rgba(227,185,85,.55); animation:lvSoft 4.5s ease-in-out infinite}
+@keyframes lvSoft{50%{box-shadow:inset 0 0 0 1px rgba(227,185,85,.2)}}
+.pc-vr .pc-h.lv{box-shadow:0 0 0 1.5px rgba(227,185,85,.7); animation:lvSoft 4.5s ease-in-out infinite}
+.pc-vr.lvr:not(.win) .pc-h.lv{background:color-mix(in srgb,var(--brand-gold) 22%, var(--surface-3))}
+.pc-vr.vgo-up{animation:vgoUp 2.4s ease-out}
+@keyframes vgoUp{0%{background:rgba(227,185,85,.34)} 100%{background:transparent}}
+.pc-vr.vgo-dn{animation:vgoDn 2s ease-out}
+@keyframes vgoDn{0%{background:rgba(160,170,175,.2)} 100%{background:transparent}}
+.pc-lvl{align-items:center; margin-top:-2px}
+.pc-lvl-t{display:inline-flex; align-items:center; gap:6px; font:700 11px/1 var(--f-ui); letter-spacing:.1em; text-transform:uppercase; color:var(--brand-gold); padding:0 4px}
+.pc-lvl-t i{width:7px; height:7px; border-radius:50%; background:#e3b955; box-shadow:0 0 6px rgba(227,185,85,.6); animation:cvBlip 3.6s ease-in-out infinite}
+.pc-flt.pc-lvl button.lvk,.pc-flt.pc-lvl button.lvw{border-color:color-mix(in srgb,var(--brand-gold) 55%, var(--rule-strong))}
+.pc-flt.pc-lvl button.lvk small,.pc-flt.pc-lvl button.lvw small{font:700 12px var(--f-num); color:var(--brand-gold); opacity:1}
+.pc-lvl-n{margin:-2px auto 8px; max-width:640px; text-align:center}
+@media (prefers-reduced-motion: reduce){ .pc-vr span.hit.lv,.pc-vr span.miss.lv,.pc-vr .pc-h.lv,.pc-vr.vgo-up,.pc-vr.vgo-dn{animation:none} }
