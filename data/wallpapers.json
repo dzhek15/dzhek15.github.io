@@ -1,26 +1,30 @@
 {
  "updated": "2026-10-30",
- "note": "пробный набор; позже подставляется после ИИ-разбора по темам новостей",
+ "note": "обновляется конвейером wallpapers.py по свежим новостям, рисуют бесплатные нейросети",
  "items": [
   {
-   "src": "img/wp/wp1.webp",
-   "theme": "Вечерний стадион",
-   "light": "img/wp/wl1.webp"
+   "src": "img/wp/auto/20261030-1.webp",
+   "light": "img/wp/auto/20261030-1l.webp",
+   "theme": "Пустые трибуны Райо",
+   "by": "pollinations:sana"
   },
   {
-   "src": "img/wp/wp2.webp",
-   "theme": "Мяч под дождём",
-   "light": "img/wp/wl2.webp"
+   "src": "img/wp/auto/20261030-2.webp",
+   "light": "img/wp/auto/20261030-2l.webp",
+   "theme": "Дождь над Чемпионшипом",
+   "by": "pollinations:sana"
   },
   {
-   "src": "img/wp/wp3.webp",
-   "theme": "Тактическая доска",
-   "light": "img/wp/wl3.webp"
+   "src": "img/wp/auto/20261030-3.webp",
+   "light": "img/wp/auto/20261030-3l.webp",
+   "theme": "Дебют у костра Бернли",
+   "by": "pollinations:sana"
   },
   {
-   "src": "img/wp/wp4.webp",
-   "theme": "Трибуны в дымке",
-   "light": "img/wp/wl4.webp"
+   "src": "img/wp/auto/20261030-4.webp",
+   "light": "img/wp/auto/20261030-4l.webp",
+   "theme": "Тактика под прожекторами",
+   "by": "pollinations:sana"
   }
  ]
 }
