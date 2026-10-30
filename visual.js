@@ -346,6 +346,47 @@
   }
   if($("btnHistDoc")) $("btnHistDoc").addEventListener("click", basketDoc);
 
+  /* Обои за таблицами в режиме просмотра: плавно сменяющиеся прозрачные картинки на тему футбольных новостей.
+     Список берётся из data/wallpapers.json (после ИИ-разбора конвейер подставляет свежий набор). */
+  var wp = { list: null, i: -1, front: 0, timer: 0, box: null, loading: false };
+  function wpLoad(cb){
+    if(wp.list){ cb(); return; }
+    if(wp.loading) return;
+    wp.loading = true;
+    fetch("data/wallpapers.json?x=" + Math.floor(Date.now() / 600000), { cache: "no-cache" }).then(function(r){ return r.json(); }).then(function(j){
+      wp.list = ((j && j.items) || []).filter(function(it){ return it && it.src; });
+      wp.loading = false; if(wp.list.length) cb();
+    }).catch(function(){ wp.loading = false; });
+  }
+  function wpShow(){
+    if(!wp.list || !wp.list.length || !wp.box) return;
+    wp.i = (wp.i + 1) % wp.list.length;
+    var it = wp.list[wp.i], im = new Image();
+    im.onload = function(){
+      var a = wp.box.children[wp.front ^ 1], b = wp.box.children[wp.front];
+      a.style.backgroundImage = "url(" + it.src + ")";
+      a.classList.remove("wp-on"); void a.offsetWidth; a.classList.add("wp-on");
+      b.classList.remove("wp-on");
+      wp.front ^= 1;
+      wp.box.setAttribute("data-theme", it.theme || "");
+    };
+    im.src = it.src;
+  }
+  function wpSync(){
+    var on = document.body.classList.contains("is-prev");
+    if(on && !wp.box){
+      wp.box = document.createElement("div"); wp.box.id = "wpBg"; wp.box.setAttribute("aria-hidden", "true");
+      wp.box.innerHTML = "<i></i><i></i>"; document.body.insertBefore(wp.box, document.body.firstChild);
+    }
+    if(!wp.box) return;
+    wp.box.style.display = on ? "" : "none";
+    if(on && !wp.timer){
+      wpLoad(function(){ if(!wp.timer){ wpShow(); wp.timer = setInterval(wpShow, 24000); } });
+    }
+    if(!on && wp.timer){ clearInterval(wp.timer); wp.timer = 0; }
+  }
+  try{ new MutationObserver(wpSync).observe(document.body, { attributes: true, attributeFilter: ["class"] }); wpSync(); }catch(e){}
+
   function all(){ try{ renderCover(); decorateBasket(); }catch(e){ if(window.console) console.warn("ДЖЕК visual:", e); } }
   document.addEventListener("dz:render", function(){ all(); setTimeout(function(){ try{ renderCover(); }catch(e){} }, 0); });
   setInterval(function(){ try{ renderCover(); }catch(e){} }, 30000);
