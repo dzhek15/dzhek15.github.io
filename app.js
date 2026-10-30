@@ -8793,34 +8793,31 @@
     var h = tabs + leg, uni = 0;
     if(!sets.length) h += '<p class="ev-note">Все наборы скрыты: нажмите на название набора выше.</p>';
     else if(cmpMode === "over"){
-      h += '<div class="cmp-wrap"><table class="ev-tab cmp-tab cmp-ov"><thead><tr><th>№</th><th>Матч</th><th>1</th><th>X</th><th>2</th></tr></thead><tbody>';
+      /* наложение: на каждый исход — полоска из ячеек, по одной на набор (цвет набора, если исход в нём есть) */
+      h += '<div class="cmp-hd"><span>Каждая полоска — один набор: цветная, если в нём есть этот исход. Золотая рамка — исход есть во всех.</span></div><div class="cmp-grid">';
       ms.forEach(function(m, j){
-        h += '<tr><td class="nw">' + (j + 1) + '</td><td class="cmp-m">' + escHtml(m.home) + ' — ' + escHtml(m.away) + '</td>';
-        OUT.forEach(function(o){
-          var who = []; sets.forEach(function(st, k){ if(outs[k][j].indexOf(o) >= 0) who.push(st); });
-          var full = who.length === sets.length;
-          h += '<td class="cmp-ovc' + (full ? ' full' : '') + '" style="--a:' + (who.length / sets.length).toFixed(2) + '" title="' + who.length + ' из ' + sets.length + '">' +
-            '<span class="cmp-dots">' + who.map(function(st){ return '<i style="background:' + col(st) + '"></i>'; }).join("") + '</span></td>';
+        var cells = OUT.map(function(o){
+          var who = sets.map(function(st, k){ return outs[k][j].indexOf(o) >= 0; });
+          var c = who.filter(Boolean).length, full = c === sets.length;
+          return '<div class="cmp-oc' + (full ? ' full' : c ? '' : ' none') + '" title="' + c + ' из ' + sets.length + '"><b>' + o + '</b><span class="cmp-bars">' +
+            sets.map(function(st, k){ return '<i' + (who[k] ? ' style="background:' + col(st) + '"' : ' class="z"') + '></i>'; }).join("") + '</span><em>' + c + '</em></div>';
         });
-        h += '</tr>';
+        h += '<div class="cmp-mr"><div class="cmp-mt"><span class="cmp-mn">' + (j + 1) + '</span>' + escHtml(m.home) + ' — ' + escHtml(m.away) + '</div><div class="cmp-oo">' + cells.join("") + '</div></div>';
       });
-      h += '</tbody></table></div><p class="col-leg">Цветные точки — наборы, в которых есть исход. Чем плотнее фон ячейки, тем больше наборов за этот исход; золотая рамка — исход есть во всех показанных наборах.</p>';
+      h += '</div>';
     } else if(cmpMode === "side"){
-      h += '<div class="cmp-wrap"><table class="ev-tab cmp-tab"><thead><tr><th>№</th><th>Матч</th>' + sets.map(function(st){ return '<th title="' + escHtml(cmpNmT(st)) + '"><i class="cmp-th" style="background:' + col(st) + '"></i>' + escHtml(cmpLab(st)) + '</th>'; }).join("") + '</tr></thead><tbody>';
+      /* рядом: для каждого матча — по ячейке на набор, внутри 1 / X / 2, выбранные закрашены цветом набора */
+      h += '<div class="cmp-hd cmp-hs' + (sets.length > 5 ? ' many' : '') + '">' + sets.map(function(st){ return '<span class="cmp-hn" style="background:' + col(st) + '" title="' + escHtml(cmpNmT(st)) + '">' + escHtml(String(cmpLab(st)).replace(/^\D+/, "") || cmpLab(st)) + '</span>'; }).join("") + '</div><div class="cmp-grid' + (sets.length > 5 ? ' many' : '') + '">';
       ms.forEach(function(m, j){
-        var common = OUT.filter(function(o){ return outs.every(function(x){ return x[j].indexOf(o) >= 0; }); });
-        if(common.length === 1) uni++;
-        h += '<tr><td class="nw">' + (j + 1) + '</td><td class="cmp-m">' + escHtml(m.home) + ' — ' + escHtml(m.away) + '</td>';
-        outs.forEach(function(x){
-          h += '<td class="nw"><span class="dt-pick">' + x[j].split("").map(function(o){
-            var cnt = outs.filter(function(y){ return y[j].indexOf(o) >= 0; }).length;
-            var cls = cnt === outs.length && outs.length > 1 ? "cmp-all" : cnt === 1 && outs.length > 1 ? "cmp-one" : "";
-            return cls ? '<b class="' + cls + '" title="' + (cnt === outs.length ? "есть во всех наборах" : "только в этом наборе") + '">' + o + '</b>' : o;
-          }).join("") + '</span></td>';
-        });
-        h += '</tr>';
+        var same = outs.every(function(x){ return x[j] === outs[0][j]; });
+        if(same) uni++;
+        h += '<div class="cmp-mr"><div class="cmp-mt"><span class="cmp-mn">' + (j + 1) + '</span>' + escHtml(m.home) + ' — ' + escHtml(m.away) + (same && sets.length > 1 ? '<u class="cmp-eq">одинаково</u>' : '') + '</div><div class="cmp-ss">' +
+          outs.map(function(x, k){
+            return '<div class="cmp-sc">' + OUT.map(function(o){ var on = x[j].indexOf(o) >= 0; return '<b' + (on ? ' class="on" style="background:' + col(sets[k]) + '"' : '') + '>' + o + '</b>'; }).join("") + '</div>';
+          }).join("") + '</div></div>';
       });
-      h += '</tbody></table></div><p class="col-leg"><b class="cmp-all">1</b> исход есть во всех наборах (консенсус) &nbsp; <b class="cmp-one">X</b> исход только в одном наборе (спорный)</p>';
+      h += '</div>';
+      if(sets.length > 1) h += '<p class="ev-note">Одинаковый выбор во всех наборах — в ' + uni + ' матчах из ' + n + '.</p>';
     } else {
       h += '<div class="cmp-sep">' + sets.map(function(st, k){
         var rowsH = ms.map(function(m, j){
@@ -8831,7 +8828,7 @@
         return '<div class="cmp-card"><div class="cmp-ct"><i style="background:' + col(st) + '"></i><b>' + escHtml(cmpLab(st)) + '</b><small>' + fmt(cmpN(st)) + ' стр. · накрыто ' + cov + ' из ' + (n * 3) + '</small></div>' + rowsH + '</div>';
       }).join("") + '</div>';
     }
-    if(cmpMode !== "sep" && sets.length > 1){
+    if(cmpMode === "over" && sets.length > 1){
       var un = 0; ms.forEach(function(m, j){ var c = OUT.filter(function(o){ return outs.every(function(x){ return x[j].indexOf(o) >= 0; }); }); if(c.length) un++; });
       h += '<p class="ev-note">Хотя бы в одном общем исходе наборы сошлись в ' + un + ' матчах из ' + n + '. В Охоте и Монстре берутся основные исходы системы, у остальных наборов — все исходы, которые встречаются в строках.</p>';
     }
