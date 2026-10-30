@@ -2386,6 +2386,7 @@
       '<span class="lv-min"' + (isMin ? ' data-ac="' + li.ph.ac + '" data-ao="' + escHtml(li.ph.ao || "") + '" data-bx="' + escHtml(li.ph.bx || "") + '" data-at="' + li.ph.at + '" data-h="' + (li.hockey ? 1 : 0) + '"' : '') + '>' +
       escHtml(txt) + (isMin && /^\d/.test(txt) ? "" : "") + '</span>';
     meta.insertBefore(chip, meta.firstChild);
+    row.classList.add("is-live");
     if(goal) row.classList.add("goal");
   }
   setInterval(function(){
@@ -4177,6 +4178,7 @@
         sc.className = "mscore" + (m.res ? "" : " live");
         fillScore(sc, m);
         sc.title = m.res ? "матч сыгран, итог " + m.res : "счёт по ходу матча, итог ещё не подведён";
+        glBurst(row, m, "m|" + state.tirazh + "|" + idx);
         if(m.res){
           var rs = document.createElement("span");
           rs.className = "mres";
@@ -7864,6 +7866,15 @@
     b.setAttribute("aria-pressed", all ? "true" : "false");
     pvSave();
   }
+  /* гол: счёт изменился с прошлой отрисовки — строка вспыхивает, плитки подпрыгивают (≈7 с) */
+  var pvScSeen = null, pvBurst = null;
+  function glBurst(row, m, key){
+    if(!pvScSeen){ pvScSeen = {}; pvBurst = {}; }
+    var sNow = String(m.score || ""), sPrev = pvScSeen[key];
+    if(sPrev != null && sPrev !== sNow && !m.res && sNow) pvBurst[key] = Date.now();
+    pvScSeen[key] = sNow;
+    if(pvBurst[key] && Date.now() - pvBurst[key] < 7000) row.classList.add("gl-burst");
+  }
   function renderPrevView(){
     var p = state.prev;
     rowsEl.innerHTML = "";
@@ -7911,6 +7922,7 @@
         sc.className = "mscore" + (m.res ? "" : " live");
         fillScore(sc, m);
         sc.title = m.res ? "матч сыгран, итог " + m.res : "счёт по ходу матча, итог ещё не подведён";
+        glBurst(row, m, "p|" + p.tirazh + "|" + idx);
         if(m.res){
           var rs = document.createElement("span");
           rs.className = "mres";
@@ -12125,6 +12137,17 @@
                viewPrev: !!state.viewPrev, book: !!book };
     },
     team: teamInfo, emb: mkEmb, embSrc: embSrc, fmt: fmt,
+    /* состояние матча для обложки: ждёт / идёт (минута) / конец / сыгран */
+    liveOf: function(m){
+      if(!m) return { st: "wait" };
+      if(m.res === VOID) return { st: "void" };
+      if(m.res) return { st: "done" };
+      var li = liveInfo(m);
+      if(!li) return { st: m.score ? "live" : "wait", min: "LIVE" };
+      if(li.end) return { st: "end" };
+      var mn = liveMinute(li.ph, li.hockey, true);
+      return { st: "live", min: mn && mn.t !== "" ? String(mn.t) : "LIVE", goal: goalOn(m) };
+    },
     nat: function(name, league){ return !!(isNatLeague(league) || (continentCode(league).hit && teamCode(name))); }, render: function(){ render(); }
   };
   var renderBase = render;

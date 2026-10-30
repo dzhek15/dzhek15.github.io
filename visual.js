@@ -33,6 +33,7 @@
   }
   function renderCover(){
     if(!cover || !window.DZ) return;
+    ensureFx();
     var g = window.DZ.get();
     cvNum.innerHTML = '<small>№</small>' + (g.tirazh ? esc(g.tirazh) : "—");
     var jt = g.jackpot ? fmt(g.jackpot) + "\u00a0₽" : "—";
@@ -59,6 +60,145 @@
       var n = g.matches.length;
       cvTrack.style.setProperty("--cv-dur", Math.max(40, n * 5) + "s");
     }
+    renderFeat(); renderCd();
+  }
+
+  /* ---------- обложка-журнал: матч тура, лента из 15 меток, отсчёт, пыль, блик, параллакс ---------- */
+  var fxs = { idx: 0, rot: 0, cd: 0, kick: 0, scSeen: {}, list: [] };
+  function koKey(m){
+    var d = /(\d{1,2})\.(\d{1,2})/.exec(m.date || ""), t = /(\d{1,2}):(\d{2})/.exec(m.time || "");
+    if(!t) return 1e9;
+    return (d ? Number(d[2]) * 1e6 + Number(d[1]) * 1e4 : 5e8) + Number(t[1]) * 100 + Number(t[2]);
+  }
+  function embImg(D, name, m){
+    var src = D && D.embSrc && D.embSrc(name, D.nat && D.nat(name, m.league));
+    return src ? '<img class="ft-emb" src="' + esc(src) + '" width="44" height="44" alt="" decoding="async">' : '<i class="ft-emb ft-noemb" aria-hidden="true"></i>';
+  }
+  function pickFeat(g){
+    var D = window.DZ, L = g.matches.map(function(m, i){ return { m: m, i: i, s: D.liveOf(m) }; });
+    var live = L.filter(function(x){ return x.s.st === "live"; });
+    if(live.length) return { mode: "live", list: live, all: L };
+    var wait = L.filter(function(x){ return x.s.st === "wait"; }).sort(function(a, b){ return koKey(a.m) - koKey(b.m) || a.i - b.i; });
+    if(wait.length) return { mode: "next", list: wait.slice(0, 1), all: L };
+    var done = L.filter(function(x){ return x.s.st === "done" || x.s.st === "end"; });
+    done.sort(function(a, b){ var ga = (String(a.m.score || "").match(/\d+/g) || []).reduce(function(s, v){ return s + Number(v); }, 0), gb = (String(b.m.score || "").match(/\d+/g) || []).reduce(function(s, v){ return s + Number(v); }, 0); return gb - ga || a.i - b.i; });
+    return { mode: "done", list: done.slice(0, 1), all: L };
+  }
+  function scoreHtml(m){
+    var r = /(\d+)\D+(\d+)/.exec(String(m.score || ""));
+    return r ? '<b>' + r[1] + '</b><i>:</i><b>' + r[2] + '</b>' : "";
+  }
+  function renderFeat(){
+    var el = $("cvFeat"), pe = $("cvPips"), D = window.DZ; if(!el || !D) return;
+    var g = D.get(); if(!g.matches || !g.matches.length){ el.hidden = true; pe.hidden = true; return; }
+    var f = pickFeat(g); fxs.list = f.list;
+    var x = f.list[fxs.idx % Math.max(1, f.list.length)];
+    pe.hidden = false;
+    var nd = 0, nl = 0, nw = 0;
+    pe.innerHTML = '<span class="pp-d">' + f.all.map(function(y){
+      var c = y.s.st === "live" ? "lv" : (y.s.st === "done" || y.s.st === "end") ? "dn" : y.s.st === "void" ? "vd" : "wt";
+      if(c === "lv") nl++; else if(c === "dn") nd++; else if(c === "wt") nw++;
+      return '<b class="' + c + '" data-i="' + y.i + '"></b>';
+    }).join("") + '</span><span class="pp-t">' + (nl ? '<em>идут ' + nl + '</em> · ' : '') + 'сыграно ' + nd + ' из ' + f.all.length + '</span>';
+    if(!x){ el.hidden = true; return; }
+    el.hidden = false;
+    var m = x.m, k, cls = "cv-ft m-" + f.mode;
+    var key = g.tirazh + "|" + x.i, sc = String(m.score || "");
+    if(fxs.scSeen[key] != null && fxs.scSeen[key] !== sc && f.mode === "live") cls += " ft-goal";
+    fxs.scSeen[key] = sc;
+    if(f.mode === "live") k = '<b class="ft-dot"></b>В эфире' + (x.s.min ? ' · <span class="ft-min">' + esc(x.s.min) + '</span>' : "");
+    else if(f.mode === "next") k = 'Ближайший матч · ' + esc([m.date, m.time].filter(Boolean).join(" "));
+    else k = 'Главный итог тура';
+    var mid = sc ? '<div class="ft-sc">' + scoreHtml(m) + '</div>' : '<div class="ft-sc ft-vs"><span>' + esc(m.time || "—") + '</span></div>';
+    var sig = f.mode + "|" + x.i + "|" + sc + "|" + (x.s.min || "") + "|" + m.home + m.away;
+    if(el.dataset.sig === sig) return;
+    var swap = el.dataset.sig && el.dataset.sig.split("|")[1] !== String(x.i);
+    el.dataset.sig = sig;
+    el.innerHTML = '<div class="' + cls + '" data-i="' + x.i + '"><div class="ft-k">' + k + '</div><div class="ft-m">' +
+      '<div class="ft-t">' + embImg(D, m.home, m) + '<span>' + esc(m.home) + '</span></div>' + mid +
+      '<div class="ft-t">' + embImg(D, m.away, m) + '<span>' + esc(m.away) + '</span></div></div>' +
+      (m.league ? '<div class="ft-l">' + esc(m.league) + '</div>' : "") + '</div>';
+    if(swap && !RM) { el.classList.remove("ft-swap"); void el.offsetWidth; el.classList.add("ft-swap"); }
+    if(!fxs.rot){
+      fxs.rot = setInterval(function(){ if(document.hidden || fxs.list.length < 2) return; fxs.idx++; renderFeat(); }, 7000);
+    }
+  }
+  function renderCd(){
+    var el = $("cvCd"), g = window.DZ && window.DZ.get(); if(!el || !g) return;
+    var ms = (g.kickoff || 0) - Date.now();
+    if(g.prev || !(g.kickoff > 0) || ms <= 0){ el.hidden = true; if(fxs.cd){ clearInterval(fxs.cd); fxs.cd = 0; } return; }
+    el.hidden = false; fxs.kick = g.kickoff;
+    var tick = function(){
+      var r = Math.max(0, Math.floor((fxs.kick - Date.now()) / 1000));
+      if(r <= 0){ clearInterval(fxs.cd); fxs.cd = 0; try{ renderCover(); }catch(e){} return; }
+      var d = Math.floor(r / 86400), h = Math.floor(r % 86400 / 3600), mi = Math.floor(r % 3600 / 60), se = r % 60;
+      var z = function(n){ return (n < 10 ? "0" : "") + n; };
+      var b = el.querySelector(".cd-d");
+      if(!b){
+        el.innerHTML = '<div class="cd-k">до закрытия приёма</div><div class="cd-d"><span class="cd-dd"></span><b></b><i>:</i><b></b><i>:</i><b></b></div>';
+        b = el.querySelector(".cd-d");
+      }
+      var bs = b.querySelectorAll("b"), dd = b.querySelector(".cd-dd");
+      dd.textContent = d > 0 ? d + " д" : ""; dd.style.display = d > 0 ? "" : "none";
+      bs[0].textContent = z(h); bs[1].textContent = z(mi); bs[2].textContent = z(se);
+      el.classList.toggle("is-hot", r <= 3600); el.classList.toggle("is-last", r <= 300);
+    };
+    if(fxs.cd) clearInterval(fxs.cd);
+    tick(); fxs.cd = setInterval(tick, 1000);
+  }
+  function dust(){
+    var cv = cover.querySelector(".cv-dust"); if(!cv || RM || !cv.getContext) return;
+    var x = cv.getContext("2d"), W = 0, H = 0, dpr = Math.min(2, window.devicePixelRatio || 1), P = [], on = true, raf = 0;
+    function size(){ var r = cover.getBoundingClientRect(); W = r.width; H = r.height; cv.width = W * dpr; cv.height = H * dpr; x.setTransform(dpr, 0, 0, dpr, 0, 0); }
+    function mk(init){ return { x: Math.random() * W, y: init ? Math.random() * H : H + 10, r: .5 + Math.random() * 1.6, v: 6 + Math.random() * 16, ph: Math.random() * 6.28, a: .25 + Math.random() * .55 }; }
+    size(); for(var i = 0; i < 38; i++) P.push(mk(true));
+    var t0 = performance.now();
+    function step(t){
+      raf = 0; if(!on || document.hidden) return;
+      var dt = Math.min(.05, (t - t0) / 1000); t0 = t;
+      x.clearRect(0, 0, W, H);
+      for(var i = 0; i < P.length; i++){
+        var p = P[i]; p.y -= p.v * dt; p.x += Math.sin(t / 1800 + p.ph) * 6 * dt; p.ph += dt;
+        if(p.y < -10){ P[i] = p = mk(false); }
+        var tw = .55 + .45 * Math.sin(t / 500 + p.ph * 3), al = p.a * tw * Math.min(1, (H - p.y) / 60, p.y / 60 + .2);
+        x.beginPath(); x.fillStyle = "rgba(246,221,149," + Math.max(0, al).toFixed(3) + ")"; x.arc(p.x, p.y, p.r, 0, 6.283); x.fill();
+        if(p.r > 1.2){ x.beginPath(); x.fillStyle = "rgba(246,221,149," + (al * .18).toFixed(3) + ")"; x.arc(p.x, p.y, p.r * 3.2, 0, 6.283); x.fill(); }
+      }
+      raf = requestAnimationFrame(step);
+    }
+    var go = function(){ if(!raf && on && !document.hidden){ t0 = performance.now(); raf = requestAnimationFrame(step); } };
+    if(window.IntersectionObserver) new IntersectionObserver(function(es){ on = es[0].isIntersecting; if(on) go(); }).observe(cover);
+    document.addEventListener("visibilitychange", go);
+    window.addEventListener("resize", function(){ size(); });
+    go();
+  }
+  function parallax(){
+    if(RM) return;
+    var raf = 0, tx = 0, ty = 0;
+    function set(){ raf = 0; cover.style.setProperty("--mx", tx.toFixed(3)); cover.style.setProperty("--my", ty.toFixed(3)); }
+    cover.addEventListener("pointermove", function(e){
+      var r = cover.getBoundingClientRect();
+      tx = (e.clientX - r.left) / r.width * 2 - 1; ty = (e.clientY - r.top) / r.height * 2 - 1;
+      if(!raf) raf = requestAnimationFrame(set);
+    }, { passive: true });
+    cover.addEventListener("pointerleave", function(){ tx = 0; ty = 0; if(!raf) raf = requestAnimationFrame(set); });
+    var sraf = 0;
+    window.addEventListener("scroll", function(){
+      if(sraf) return; sraf = requestAnimationFrame(function(){ sraf = 0;
+        var r = cover.getBoundingClientRect(); if(r.bottom < 0) return;
+        cover.style.setProperty("--sy", Math.max(-1, Math.min(1, r.top / 400)).toFixed(3)); });
+    }, { passive: true });
+  }
+  function ensureFx(){
+    if(!cover || cover.dataset.fx) return; cover.dataset.fx = "1";
+    var fxEl = cover.querySelector(".cv-fx"), inEl = cover.querySelector(".cv-in"), foot = cover.querySelector(".cv-foot");
+    if(!fxEl || !inEl || !foot) return;
+    fxEl.insertAdjacentHTML("beforeend", '<b class="cv-frame"></b><b class="cv-sheen"></b><b class="cv-grain"></b><canvas class="cv-dust"></canvas>');
+    inEl.insertAdjacentHTML("afterend", '<div class="cv-feat" id="cvFeat" hidden></div><div class="cv-pips" id="cvPips" hidden></div>');
+    foot.insertAdjacentHTML("afterbegin", '<div class="cv-cd" id="cvCd" hidden></div>');
+    var go = function(e){ var t = e.target.closest && e.target.closest("[data-i]"); if(t) goRow(Number(t.getAttribute("data-i"))); };
+    $("cvFeat").addEventListener("click", go); $("cvPips").addEventListener("click", go);
+    dust(); parallax();
   }
   if(cvTrack){
     cvTrack.addEventListener("click", function(e){
