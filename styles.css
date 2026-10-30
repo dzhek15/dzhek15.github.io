@@ -3363,3 +3363,32 @@ body.is-prev .pcsv > .pc-vars:not(.wpPane):not([hidden]):not(:empty), body.is-pr
 @keyframes ppPulseC{0%,100%{opacity:1; box-shadow:0 0 8px 0 rgba(143,224,200,.65)} 50%{opacity:.7; box-shadow:0 0 3px 0 rgba(143,224,200,.3)}}
 .pp-t em{color:#8fe0c8}
 @media (prefers-reduced-motion: reduce){ .cv-ft.m-live::before, .m-live .ft-dot, .pp-d b.lv{animation:none} }
+
+/* таблицы в просмотре: по центру и с большим отступом от тёмных краёв */
+body.is-prev .coupon, body.is-prev .pcsv{margin-inline:clamp(4px, calc((100vw - 340px) / 4), 30px)}
+body.is-prev #rows{padding:clamp(9px, calc((100vw - 300px) / 14), 20px)}
+body.is-prev .pcsv{padding:clamp(10px, calc((100vw - 300px) / 14), 20px)}
+body.is-prev .pcsv > :not(.wpPane):not([hidden]):not(:empty){width:100%; min-width:0; margin-inline:auto !important}
+body.is-prev #rows > .row{min-width:0}
+/* плашки и табло живых матчей — полностью непрозрачные, обои под ними не просвечивают */
+body.is-prev .row .tc-t.tc-live, :root:not([data-compact="1"]) body.is-prev .row .tc-t.tc-live{background:#2e2815}
+.cv-ft.m-live{background:linear-gradient(135deg,#17504a,#0b2128 55%,#1b3a55)}
+
+/* светлая тема: плитки счёта, статуса и FS — светлые, без чёрной заливки */
+:root[data-theme="light"]:not([data-compact="1"]) body.is-prev .row .teams .mscore .sh,
+:root[data-theme="light"]:not([data-compact="1"]) body.is-prev .row .teams .mscore .sa,
+:root[data-theme="light"]:not([data-compact="1"]) body.is-prev .row .teams .mscore.live .sh,
+:root[data-theme="light"]:not([data-compact="1"]) body.is-prev .row .teams .mscore.live .sa{color:#3a2a0e; background:linear-gradient(180deg,#fffdf6,#f3e8c9); border-color:rgba(160,120,40,.55); text-shadow:none; box-shadow:inset 0 1px 0 #fff, 0 3px 8px -6px rgba(90,60,10,.45)}
+:root[data-theme="light"]:not([data-compact="1"]) body.is-prev .row .teams .mscore .sh.tr,
+:root[data-theme="light"]:not([data-compact="1"]) body.is-prev .row .teams .mscore .sa.tr,
+:root[data-theme="light"]:not([data-compact="1"]) body.is-prev .row .teams .mscore.live .sh.tr,
+:root[data-theme="light"]:not([data-compact="1"]) body.is-prev .row .teams .mscore.live .sa.tr{color:#8c7a55; background:linear-gradient(180deg,#faf6ea,#eee5cd); border-color:rgba(160,120,40,.28); box-shadow:none}
+:root[data-theme="light"]:not([data-compact="1"]) body.is-prev .row .tc-t{background:#f7f0dc; border-color:rgba(160,120,40,.4); color:#3a2a0e}
+:root[data-theme="light"]:not([data-compact="1"]) body.is-prev .row .tc-t.tc-ft{color:#1F3A52; background:#f1f4f7; border-color:rgba(31,58,82,.3)}
+:root[data-theme="light"]:not([data-compact="1"]) body.is-prev .row .tc-t.tc-live,
+:root[data-theme="light"] body.is-prev .row .tc-t.tc-live{color:#7a5410; background:#fbefc9; border-color:rgba(160,120,40,.6); box-shadow:none}
+:root[data-theme="light"]:not([data-compact="1"]) body.is-prev .row .tc-t.tc-end{color:#7a5410; background:#f3ead0}
+:root[data-theme="light"] .mode.srch, :root[data-theme="light"] body.is-prev .row .teams .mode.fs-near{background:#fff8e6; border-color:rgba(160,120,40,.6)}
+:root[data-theme="light"] .mode.srch:hover{background:#f6e9c2}
+:root[data-theme="light"] .mode.srch .fs-mark{color:#7a5410}
+:root[data-theme="light"] .row .lv-dot{background:#c9963c}
