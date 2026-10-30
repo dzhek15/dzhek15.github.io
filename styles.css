@@ -3315,13 +3315,13 @@ body.is-prev .row.is-live::after{display:none}
 :root:not([data-compact="1"]) body.is-prev .row .teams .mscore.live .sa.tr{color:rgba(243,234,210,.55); box-shadow:none}
 :root[data-theme="light"] body.is-prev .row.is-live{background-image:linear-gradient(90deg,#fbf3dc,transparent 70%); box-shadow:inset 3px 0 0 rgba(160,120,40,.8)}
 
-/* ---------- Обои за таблицами (режим просмотра) ---------- */
-#wpBg{position:fixed; inset:0; z-index:-1; pointer-events:none; overflow:hidden}
-#wpBg i{position:absolute; inset:-3%; background-size:cover; background-position:center; opacity:0; transition:opacity 2.8s ease-in-out; will-change:opacity,transform}
-#wpBg i.wp-on{opacity:.95; animation:wpDrift 34s ease-in-out forwards}
+/* ---------- Обои внутри таблиц (режим просмотра) ---------- */
+.wpPane{display:none}
+html:not([data-theme="light"]) body.is-prev .coupon, html:not([data-theme="light"]) body.is-prev .pcsv{position:relative; isolation:isolate}
+html:not([data-theme="light"]) body.is-prev .wpPane{display:block; position:absolute; inset:0; z-index:-1; pointer-events:none; overflow:hidden; border-radius:inherit}
+.wpPane i{position:absolute; inset:-3%; background-size:cover; background-position:center; opacity:0; transition:opacity 2.8s ease-in-out; will-change:opacity,transform}
+.wpPane i.wp-on{opacity:.9; animation:wpDrift 34s ease-in-out forwards}
 @keyframes wpDrift{from{transform:scale(1.02) translate3d(0,0,0)} to{transform:scale(1.1) translate3d(-1.2%,-1%,0)}}
-#wpBg::after{content:""; position:absolute; inset:0; background:linear-gradient(180deg,rgba(11,16,18,.3),rgba(11,16,18,.05) 40%,rgba(11,16,18,.35))}
-html:not([data-theme="light"]) body.is-prev .prev-bar, html:not([data-theme="light"]) body.is-prev .coupon, html:not([data-theme="light"]) body.is-prev .pcsv{background:rgba(24,33,38,.5); -webkit-backdrop-filter:blur(1.5px); backdrop-filter:blur(1.5px)}
-html:not([data-theme="light"]) body.is-prev .console{background:rgba(24,33,38,.32)}
-:root[data-theme="light"] #wpBg{display:none !important}
-@media (prefers-reduced-motion: reduce){ #wpBg i{transition:none} #wpBg i.wp-on{animation:none} }
+.wpPane::after{content:""; position:absolute; inset:0; background:linear-gradient(180deg,rgba(11,16,18,.5),rgba(11,16,18,.36) 45%,rgba(11,16,18,.55))}
+html:not([data-theme="light"]) body.is-prev .coupon, html:not([data-theme="light"]) body.is-prev .pcsv{background:rgba(24,33,38,.4); -webkit-backdrop-filter:none; backdrop-filter:none}
+@media (prefers-reduced-motion: reduce){ .wpPane i{transition:none} .wpPane i.wp-on{animation:none} }

@@ -346,9 +346,23 @@
   }
   if($("btnHistDoc")) $("btnHistDoc").addEventListener("click", basketDoc);
 
-  /* Обои за таблицами в режиме просмотра: плавно сменяющиеся прозрачные картинки на тему футбольных новостей.
-     Список берётся из data/wallpapers.json (после ИИ-разбора конвейер подставляет свежий набор). */
-  var wp = { list: null, i: -1, front: 0, timer: 0, box: null, loading: false };
+  /* Обои внутри таблиц в режиме просмотра: вместо чёрного фона таблиц — плавно сменяющиеся прозрачные картинки
+     на тему футбольных новостей. Список берётся из data/wallpapers.json (после ИИ-разбора конвейер подставляет свежий набор). */
+  var wp = { list: null, i: -1, front: 0, timer: 0, loading: false, cur: "" };
+  function wpPanels(){ return [$("coupon"), $("prevCsv")].filter(Boolean); }
+  function wpEnsure(){
+    wpPanels().forEach(function(p){
+      var f = null; for(var k = 0; k < p.children.length; k++){ if(p.children[k].classList.contains("wpPane")){ f = p.children[k]; break; } }
+      if(!f){
+        f = document.createElement("div"); f.className = "wpPane"; f.setAttribute("aria-hidden", "true"); f.innerHTML = "<i></i><i></i>";
+        p.insertBefore(f, p.firstChild);
+      }
+      if(wp.cur){
+        var ii = f.children, fr = wp.front;
+        if(!ii[fr].style.backgroundImage){ ii[fr].style.backgroundImage = "url(" + wp.cur + ")"; ii[fr].classList.add("wp-on"); }
+      }
+    });
+  }
   function wpLoad(cb){
     if(wp.list){ cb(); return; }
     if(wp.loading) return;
@@ -359,33 +373,36 @@
     }).catch(function(){ wp.loading = false; });
   }
   function wpShow(){
-    if(!wp.list || !wp.list.length || !wp.box) return;
+    if(!wp.list || !wp.list.length) return;
     wp.i = (wp.i + 1) % wp.list.length;
     var it = wp.list[wp.i], im = new Image();
     im.onload = function(){
-      var a = wp.box.children[wp.front ^ 1], b = wp.box.children[wp.front];
-      a.style.backgroundImage = "url(" + it.src + ")";
-      a.classList.remove("wp-on"); void a.offsetWidth; a.classList.add("wp-on");
-      b.classList.remove("wp-on");
-      wp.front ^= 1;
-      wp.box.setAttribute("data-theme", it.theme || "");
+      wpEnsure();
+      var nx = wp.front ^ 1;
+      wpPanels().forEach(function(p){
+        var f = p.querySelector(":scope > .wpPane"); if(!f) return;
+        var a = f.children[nx], b = f.children[wp.front];
+        a.style.backgroundImage = "url(" + it.src + ")";
+        a.classList.remove("wp-on"); void a.offsetWidth; a.classList.add("wp-on");
+        b.classList.remove("wp-on");
+      });
+      wp.front = nx; wp.cur = it.src;
     };
     im.src = it.src;
   }
   function wpSync(){
     var on = document.body.classList.contains("is-prev");
-    if(on && !wp.box){
-      wp.box = document.createElement("div"); wp.box.id = "wpBg"; wp.box.setAttribute("aria-hidden", "true");
-      wp.box.innerHTML = "<i></i><i></i>"; document.body.insertBefore(wp.box, document.body.firstChild);
-    }
-    if(!wp.box) return;
-    wp.box.style.display = on ? "" : "none";
+    if(on){ wpEnsure(); }
     if(on && !wp.timer){
       wpLoad(function(){ if(!wp.timer){ wpShow(); wp.timer = setInterval(wpShow, 24000); } });
     }
     if(!on && wp.timer){ clearInterval(wp.timer); wp.timer = 0; }
   }
-  try{ new MutationObserver(wpSync).observe(document.body, { attributes: true, attributeFilter: ["class"] }); wpSync(); }catch(e){}
+  try{
+    new MutationObserver(wpSync).observe(document.body, { attributes: true, attributeFilter: ["class"] });
+    if($("prevCsv")) new MutationObserver(function(){ if(document.body.classList.contains("is-prev")) wpEnsure(); }).observe($("prevCsv"), { childList: true });
+    wpSync();
+  }catch(e){}
 
   function all(){ try{ renderCover(); decorateBasket(); }catch(e){ if(window.console) console.warn("ДЖЕК visual:", e); } }
   document.addEventListener("dz:render", function(){ all(); setTimeout(function(){ try{ renderCover(); }catch(e){} }, 0); });
