@@ -5493,6 +5493,32 @@
     var p = 0; for(i = 12; i < dp.length; i++) p += dp[i];
     return p;
   }
+  /* точные шансы по модели: 15 из 15 и «14+» (хотя бы одна строка отличается не больше чем в одном матче), включая итоги вне купона */
+  function briefExact(lines, P){
+    var n = lines.length ? lines[0].length : 0, pw = [1], i, j;
+    for(j = 1; j <= n; j++) pw.push(pw[j - 1] * 3);
+    var Q = [];
+    for(j = 0; j < n; j++){ var pj = P[j] || [1 / 3, 1 / 3, 1 / 3], t = pj[0] + pj[1] + pj[2]; Q.push([pj[0] / t, pj[1] / t, pj[2] / t]); }
+    var seen = new Set(), p15 = 0, p14 = 0, i2 = 0;
+    for(i = 0; i < lines.length; i++){       /* сначала сами строки (шанс на 15), потом соседи на расстоянии одного матча */
+      var L0 = lines[i], c0 = 0, w0 = 1;
+      for(j = 0; j < n; j++){ c0 += L0[j] * pw[j]; w0 *= Q[j][L0[j]]; }
+      if(!seen.has(c0)){ seen.add(c0); p15 += w0; p14 += w0; }
+    }
+    for(i = 0; i < lines.length; i++){
+      var L = lines[i], c = 0, w = 1;
+      for(j = 0; j < n; j++){ c += L[j] * pw[j]; w *= Q[j][L[j]]; }
+      for(j = 0; j < n; j++){
+        for(var a = 0; a < 3; a++){
+          if(a === L[j]) continue;
+          var c2 = c + (a - L[j]) * pw[j];
+          if(seen.has(c2)) continue;
+          seen.add(c2); p14 += w / Q[j][L[j]] * Q[j][a];
+        }
+      }
+    }
+    return { p15: p15, p14: p14 };
+  }
   function briefP12(lines, P, Nfix){
     var n = lines.length ? lines[0].length : 0, R = lines.length, i, j;
     if(!R || n < 12) return null;
@@ -5516,36 +5542,46 @@
     }
     return ok / N;
   }
-  /* «Рекомендации»: что сделать с собранной системой, чтобы шанс «12+» вырос */
+  /* «Рекомендации»: что сделать с собранной системой, чтобы выросли шансы.
+     Для гарантии 14 цель — 15 из 15 и 14+, для более слабых гарантий — 12+ (как у форм с ИИ). */
   function briefRecHtml(sets, g){
     var res = briefCache(sets)["g" + g]; if(!res || !res.lines) return '';
-    var P = briefProbs(), price = briefPrice(), U = 1, NF = 12000;
+    var P = briefProbs(), price = briefPrice(), U = 1, NF = 12000, hi = g >= 14;
     sets.forEach(function(st){ U *= st.length; });
     var lines = res.lines, rows = lines.length;
-    var base = briefP12(lines, P, NF);
-    var pc = function(p){ return (p * 100).toFixed(p >= 0.1 ? 1 : 2) + '%'; };
-    var dl = function(p){ var d = (p - base) * 100; return (d >= 0 ? '+' : '\u2212') + Math.abs(d).toFixed(Math.abs(d) >= 1 ? 1 : 2) + ' п.п.'; };
+    var mt = function(lns, q){
+      if(q >= 14){ var e = briefExact(lns, P); return { v: e.p15, t: '15: ' + stratChance(e.p15) + ' · 14+: ' + stratChance(e.p14) }; }
+      var p = briefP12(lns, P, NF); return { v: p, t: '12+ ' + stratChance(p) };
+    };
+    var base = mt(lines, g);
+    var dl = function(m){
+      if(hi) return '×' + (m.v / Math.max(base.v, 1e-12)).toFixed(2);
+      var d = (m.v - base.v) * 100; return (d >= 0 ? '+' : '\u2212') + Math.abs(d).toFixed(Math.abs(d) >= 1 ? 1 : 2) + ' п.п.';
+    };
     var maxK = Math.min(U - rows, BRIEF_EXTRA_MAX), h = '<div class="brief-rec"><h3>Рекомендации к системе ' + g + ' из 15</h3>' +
-      '<p class="ev-note">Сейчас: <b>' + fmt(rows) + '</b> строк на ' + fmt(rows * price) + ' ₽, шанс 12+ — <b>' + pc(base) + '</b>. Ниже — что добавляет шанс; все цифры по модели (линия конторы), оценка по розыгрышу итогов.</p>';
+      '<p class="ev-note">Сейчас: <b>' + fmt(rows) + '</b> строк на ' + fmt(rows * price) + ' ₽, шанс — <b>' + base.t + '</b>. ' +
+      (hi ? 'Для гарантии 14 смотрим на 15 из 15 и на 14+. ' : '') + 'Все цифры по модели (линия конторы).</p>';
     var ks = [], seen = {};
     [0.25, 0.5, 1, 2].forEach(function(f){ var kk = Math.max(10, Math.round(rows * f / 10) * 10); kk = Math.min(kk, maxK); if(kk > 0 && !seen[kk]){ seen[kk] = 1; ks.push(kk); } });
     if(ks.length){
       var skip = new Set(lines.map(function(L){ return L.join(""); })), top = briefTopLines(sets, ks[ks.length - 1], skip);
-      h += '<p class="brief-rec-h">1. Добавить строки (добивка самыми вероятными)</p><table class="ev-tab brief-rec-tab"><tbody>';
+      h += '<p class="brief-rec-h">1. Добавить строки (самые вероятные)</p><table class="ev-tab brief-rec-tab"><tbody>';
       ks.forEach(function(kk){
-        var p = briefP12(lines.concat(top.slice(0, kk)), P, NF);
-        h += '<tr><td>+' + fmt(kk) + ' строк</td><td>+' + fmt(kk * price) + ' ₽</td><td><b>12+ ' + pc(p) + '</b> <span class="brief-rec-d">' + dl(p) + '</span></td>' +
+        var m = mt(lines.concat(top.slice(0, kk)), g);
+        h += '<tr><td>+' + fmt(kk) + ' строк</td><td>+' + fmt(kk * price) + ' ₽</td><td><b>' + m.t + '</b> <span class="brief-rec-d">' + dl(m) + '</span></td>' +
              '<td class="nw"><button type="button" class="gap-set brief-rec-add" data-g="' + g + '" data-k="' + kk + '">в добивку</button></td></tr>';
       });
       h += '</tbody></table>';
     }
-    var full0 = briefP12Full(sets, P), cand = [];
+    var pin0 = briefInside(sets, P), full0 = hi ? pin0 : briefP12Full(sets, P), cand = [];
+    var fv = function(ss){ return hi ? briefInside(ss, P) : briefP12Full(ss, P); };
+    var ft = function(v){ return hi ? '15: ' + stratChance(v) : '12+ ' + stratChance(v); };
     sets.forEach(function(st, ix){
       if(st.length >= 3 || (state.matches[ix] && state.matches[ix].fsVoid)) return;
       for(var o = 0; o < 3; o++){
         if(st.indexOf(o) >= 0) continue;
         var ns = sets.map(function(a){ return a.slice(); }); ns[ix].push(o);
-        var f1 = briefP12Full(ns, P), U1 = U / st.length * (st.length + 1);
+        var f1 = fv(ns), U1 = U / st.length * (st.length + 1);
         cand.push({ ix: ix, o: o, f1: f1, U1: U1, gain: (f1 - full0) / Math.max(1, U1 - U) });
       }
     });
@@ -5555,23 +5591,23 @@
       cand.slice(0, 3).forEach(function(c){
         var m = state.matches[c.ix];
         h += '<tr><td>№' + (c.ix + 1) + ' ' + escHtml(m ? m.home + ' — ' + m.away : '') + ': <b>+' + OUT[c.o] + '</b></td><td>полное покрытие ' + fmt(U) + ' → ' + fmt(Math.round(c.U1)) + ' стр.</td>' +
-             '<td><b>12+ ' + pc(full0) + ' → ' + pc(c.f1) + '</b></td></tr>';
+             '<td><b>' + ft(full0) + ' → ' + stratChance(c.f1) + '</b></td></tr>';
       });
-      h += '</tbody></table><p class="ev-note">Шанс указан для полного покрытия купона. У пересобранной системы он будет ниже, но вырастет пропорционально.</p>';
+      h += '</tbody></table><p class="ev-note">' + (hi ? 'Шанс на 15 из 15 указан для полного покрытия: он равен шансу, что все итоги окажутся внутри купона. У пересобранной системы он будет ниже, но вырастет примерно во столько же раз.' : 'Шанс указан для полного покрытия купона. У пересобранной системы он будет ниже, но вырастет пропорционально.') + '</p>';
     }
     var other = [];
     for(var q = 14; q >= 9; q--){
       var r2 = briefCache(sets)["g" + q];
-      if(q !== g && r2 && r2.lines) other.push({ g: q, rows: r2.lines.length, p: briefP12(r2.lines, P, NF) });
+      if(q !== g && r2 && r2.lines) other.push({ g: q, rows: r2.lines.length, m: mt(r2.lines, q) });
     }
     if(other.length){
       h += '<p class="brief-rec-h">3. Другие собранные системы этого купона</p><table class="ev-tab brief-rec-tab"><tbody>';
       other.forEach(function(o){
-        h += '<tr><td>' + o.g + ' из 15</td><td>' + fmt(o.rows) + ' стр. · ' + fmt(o.rows * price) + ' ₽</td><td><b>12+ ' + pc(o.p) + '</b> <span class="brief-rec-d">' + dl(o.p) + '</span></td></tr>';
+        h += '<tr><td>' + o.g + ' из 15</td><td>' + fmt(o.rows) + ' стр. · ' + fmt(o.rows * price) + ' ₽</td><td><b>' + o.m.t + '</b></td></tr>';
       });
       h += '</tbody></table>';
     } else if(g > 9){
-      h += '<p class="ev-note">Чем ниже гарантия, тем дешевле система и тем меньше шанс на 12+. Нужен шанс выше — соберите систему с более высокой гарантией или добавьте строки.</p>';
+      h += '<p class="ev-note">Чем ниже гарантия, тем дешевле система и тем меньше шанс на верхние категории. Нужен шанс выше — соберите систему с более высокой гарантией или добавьте строки.</p>';
     }
     return h + '</div>';
   }
@@ -5712,14 +5748,14 @@
       var cost = have.rows * briefPrice();
       var save = U > 0 ? (100 * (1 - have.rows / U)) : 0;
       var ch = "";
-      if(have.w15 != null){
-        var pin = briefInside(sets, briefProbs());
-        ch = '<div class="brief-ch" title="Шанс по модели: 15 из 15 и хотя бы 14 при условии, что все исходы попали в купон, умноженный на шанс такого попадания">15: ' +
-             stratChance(pin * have.w15) + '</div><div class="brief-ch">14+: ' + stratChance(pin * have.w14) + '</div>';
-      }
       if(have.lines){
-        if(have.p12 == null) have.p12 = briefP12(have.lines, briefProbs(), 12000);
-        if(have.p12 != null) ch += '<div class="brief-ch brief-ch12" title="Шанс по модели на 12 и больше угаданных в этой системе — как «12+» у форм с ИИ">12+: ' + stratChance(have.p12) + '</div>';
+        if(!have.ex) have.ex = briefExact(have.lines, briefProbs());
+        ch = '<div class="brief-ch" title="Шанс по модели, что одна из строк системы угадает все 15 итогов">15: ' + stratChance(have.ex.p15) +
+             '</div><div class="brief-ch" title="Шанс по модели, что хотя бы одна строка угадает 14 и больше (в том числе когда один итог выпал вне купона)">14+: ' + stratChance(have.ex.p14) + '</div>';
+        if(g <= 13){
+          if(have.p12 == null) have.p12 = briefP12(have.lines, briefProbs(), 12000);
+          if(have.p12 != null) ch += '<div class="brief-ch brief-ch12" title="Шанс по модели на 12 и больше угаданных в этой системе — как «12+» у форм с ИИ">12+: ' + stratChance(have.p12) + '</div>';
+        }
       }
       cells = '<td><b>' + fmt(have.rows) + '</b>' + ch + '</td><td>' + fmt(cost) + ' ₽</td>' +
               '<td class="brief-save">' + (U === have.rows ? "—" : "−" + save.toFixed(0) + "%") + '</td>' +
@@ -5979,8 +6015,7 @@
 
     h += '<p class="ev-note">Все исходы купона равноправны. Шансы 15 и 14+ под числом строк считаются по линии конторы и только как справка, на состав системы они не влияют.</p>';
     h += '<table class="ev-tab brief-tab"><thead><tr><th><span class="bt-of">Гарантия</span><span class="bt-sh">Из 15</span></th><th>Строк</th><th>Цена</th><th>Дешевле</th><th></th></tr></thead><tbody>';
-    var pFull12 = briefP12Full(sets, briefProbs());
-    h += '<tr><td>15<span class="bt-of"> из 15</span></td><td><b>' + fmt(U) + '</b><div class="brief-ch brief-ch12" title="Шанс по модели на 12 и больше угаданных при полном покрытии купона">12+: ' + stratChance(pFull12) + '</div></td><td>' + fmt(U * price) + ' ₽</td><td class="brief-save">—</td>' +
+    h += '<tr><td>15<span class="bt-of"> из 15</span></td><td><b>' + fmt(U) + '</b><div class="brief-ch brief-ch12" title="Шанс по модели, что все 15 итогов окажутся в купоне — при полном покрытии это и есть шанс на 15 из 15">15: ' + stratChance(pin) + '</div></td><td>' + fmt(U * price) + ' ₽</td><td class="brief-save">—</td>' +
          '<td class="nw">полное покрытие</td></tr>';
     for(var g = 14; g >= 9; g--) h += briefRow(g, sets, sizes, U);
     h += '</tbody></table>';
