@@ -2143,7 +2143,7 @@ body.is-prev #coupon{margin-top:0}
 :root[data-theme="light"] .pc-sc.is-lv,:root[data-theme="light"] .pc-tc.is-lv{border-color:#B3261E}
 /* телефон: название матча строкой сверху, под ним счёт, время, FS и исходы */
 @media (max-width:560px){
-  .pc-cov .pc-cr{grid-template-columns:18px 48px 62px minmax(0,1fr) 28px repeat(3,36px); grid-template-rows:auto 40px; gap:4px 3px; height:auto; min-height:0; padding:4px 0 6px; box-sizing:border-box}
+  .pc-cov .pc-cr{grid-template-columns:22px 48px 62px minmax(0,1fr) 28px repeat(3,36px); grid-template-rows:auto 40px; gap:4px 3px; height:auto; min-height:0; padding:4px 0 6px; box-sizing:border-box}
   .pc-cov .pc-n{grid-column:1; grid-row:1}
   .pc-cov .pc-m{grid-column:2 / -1; grid-row:1; display:block; font-size:13.5px; line-height:1.2; min-width:0}
   .pc-cov .pc-m i{display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; hyphens:manual; overflow-wrap:normal}
@@ -2159,7 +2159,7 @@ body.is-prev #coupon{margin-top:0}
   .pc-tc .pc-tm.pc-tx{font-size:10.5px}
 }
 @media (max-width:360px){
-  .pc-cov .pc-cr{grid-template-columns:16px 42px 56px minmax(0,1fr) 26px repeat(3,32px); gap:3px 2px}
+  .pc-cov .pc-cr{grid-template-columns:20px 42px 56px minmax(0,1fr) 26px repeat(3,32px); gap:3px 2px}
   .pc-cov .pc-m{font-size:12.5px}
   .pc-cov .pc-fs{width:26px}
   .pc-cov .pc-o{font-size:14px}
@@ -3207,3 +3207,75 @@ body.is-prev .row.is-live{box-shadow:inset 3px 0 0 #e0483e, 0 0 22px -10px rgba(
 @keyframes rkUp{0%,30%{background:color-mix(in srgb,#3fae6a 38%,var(--surface-2)); transform:translateX(3px)} 100%{transform:none}}
 .pc-sc.is-lv{box-shadow:0 0 14px -4px rgba(255,90,77,.7); animation:tcLive 1.8s ease-in-out infinite}
 @media (prefers-reduced-motion: reduce){ .pc-rkx, .pc-sc.is-lv{animation:none} }
+
+/* ---------- ГЛЯНЕЦ v3: «Весь купон» в просмотре ---------- */
+.pc-sub{position:relative; gap:14px; margin:22px 0 10px; font:800 15px/1 "Chivo",sans-serif; letter-spacing:.2em; text-transform:uppercase;
+  background:linear-gradient(100deg,#c9963c,#f6dd95 30%,#e3b955 50%,#f6dd95 70%,#c9963c); background-size:220% 100%; -webkit-background-clip:text; background-clip:text; color:transparent; animation:cvShine 7s linear infinite}
+.pc-sub::before,.pc-sub::after{content:""; flex:1 1 24px; max-width:90px; height:1px; background:linear-gradient(90deg,transparent,rgba(227,185,85,.8))}
+.pc-sub::after{background:linear-gradient(270deg,transparent,rgba(227,185,85,.8))}
+:root[data-theme="light"] .pc-sub{background:none; color:#1F3A52; -webkit-text-fill-color:#1F3A52; animation:none}
+.pc-key{display:block; width:max-content; max-width:100%; margin:0 auto 8px; padding:6px 14px; border-radius:999px; background:rgba(127,127,127,.09); border:1px solid rgba(127,127,127,.2); line-height:1.5}
+.pc-cvst{display:flex; justify-content:center; flex-wrap:wrap; gap:6px; margin:0 auto 10px}
+.pc-cvst span{display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border-radius:999px; font:800 11px/1 "Chivo",sans-serif; letter-spacing:.12em; text-transform:uppercase; color:var(--muted);
+  background:linear-gradient(180deg,rgba(127,127,127,.14),rgba(127,127,127,.05)); border:1px solid rgba(127,127,127,.28)}
+.pc-cvst .lv{color:#ffd9d3; border-color:rgba(255,122,110,.75); background:linear-gradient(180deg,rgba(224,72,62,.34),rgba(224,72,62,.12)); box-shadow:0 0 16px -4px rgba(255,90,77,.7)}
+.pc-cvst .lv i{width:7px; height:7px; border-radius:50%; background:#ff5a4d; box-shadow:0 0 8px #ff5a4d; animation:cvBlip 1.2s ease-in-out infinite}
+@keyframes cvBlip{50%{opacity:.35; transform:scale(.7)}}
+:root[data-theme="light"] .pc-cvst .lv{color:#8f1f17}
+.pc-cov{gap:7px}
+.pc-cov .pc-cr{position:relative; padding:7px 8px 8px; border-radius:12px; border:1px solid rgba(127,127,127,.22); overflow:hidden;
+  background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.012)); box-shadow:inset 0 1px 0 rgba(255,240,200,.09), 0 6px 16px -12px rgba(0,0,0,.8)}
+:root[data-theme="light"] .pc-cov .pc-cr{background:linear-gradient(180deg,#fff,#f3f5f6); box-shadow:inset 0 1px 0 #fff, 0 4px 12px -8px rgba(0,0,0,.35)}
+.pc-cov .pc-cr.wi-able:hover{background:linear-gradient(180deg,rgba(246,221,149,.11),rgba(255,255,255,.02))}
+.pc-cov .pc-cr.wi-on{border-color:rgba(227,185,85,.75); background:linear-gradient(180deg,rgba(246,221,149,.16),rgba(255,255,255,.03)); box-shadow:inset 0 1px 0 rgba(255,240,200,.18), 0 0 20px -10px rgba(246,221,149,.8)}
+.pc-cov .pc-n{display:flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%; font:800 12px/1 "Oxanium","IBM Plex Mono",monospace; color:#1a1410;
+  background:linear-gradient(180deg,#f6dd95,#c9963c); box-shadow:0 2px 6px -2px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.5)}
+.pc-cov .pc-cr.wi-able .pc-n{color:#1a1410}
+.pc-cov .pc-m{font-weight:600}
+/* состояния */
+.pc-cr.st-wait .pc-n{filter:saturate(.55) brightness(.9)}
+.pc-cr.st-done{border-color:rgba(227,185,85,.28)}
+.pc-cr.st-live{border-color:rgba(255,122,110,.55); background:linear-gradient(90deg,rgba(224,72,62,.22),rgba(224,72,62,.05) 60%,rgba(255,255,255,.01)); box-shadow:inset 3px 0 0 #e0483e, 0 0 24px -10px rgba(224,72,62,.8)}
+.pc-cr.st-live::after{content:""; position:absolute; left:0; right:0; bottom:0; height:2px; pointer-events:none;
+  background:linear-gradient(90deg,transparent,#ff7a6e,#ffd0a0,#ff7a6e,transparent); background-size:200% 100%; animation:rowScan 2.6s linear infinite; opacity:.85}
+.pc-cr.st-live .pc-n{background:linear-gradient(180deg,#ff9a8e,#d4463b); color:#fff}
+/* табло */
+.pc-cov .pc-sc,.pc-cov .pc-tc{border-radius:10px; background:linear-gradient(180deg,#2c2218,#120d09); border:1px solid rgba(227,185,85,.55); box-shadow:inset 0 1px 0 rgba(255,240,200,.18), 0 4px 10px -6px #000}
+.pc-cov .pc-sc em{color:#fff3d0; text-shadow:0 0 10px rgba(246,221,149,.5)}
+.pc-cov .pc-sc em.live{color:#ffe4df; text-shadow:0 0 12px rgba(255,150,140,.75)}
+.pc-cov .pc-sc.no{background:transparent; border-color:transparent; box-shadow:none; animation:none}
+.pc-cov .pc-tc .pc-tm{color:#f6eedb}
+.pc-cov .pc-tc .pc-tm.pc-ftm{color:#f6dd95}
+.pc-cov .pc-tc .pc-tm.pc-pp{color:rgba(243,234,210,.6)}
+.pc-cov .pc-sc.is-lv,.pc-cov .pc-tc.is-lv{border-color:rgba(255,122,110,.85); background:linear-gradient(180deg,#3a1613,#160807); box-shadow:inset 0 1px 0 rgba(255,220,210,.22), 0 0 16px -3px rgba(255,90,77,.65)}
+.pc-cov .pc-tc.is-lv .pc-tm{color:#ffd9d3}
+:root[data-theme="light"] .pc-cov .pc-tc .pc-tm{color:#f6eedb}
+:root[data-theme="light"] .pc-cov .pc-tc .pc-tm.lv{color:#ffd9d3}
+:root[data-theme="light"] .pc-cov .pc-sc,:root[data-theme="light"] .pc-cov .pc-tc{background:linear-gradient(180deg,#2c2218,#120d09); border-color:rgba(201,150,60,.8)}
+:root[data-theme="light"] .pc-cov .pc-sc.no{background:transparent; border-color:transparent}
+.pc-cov .pc-fs{border-radius:8px; background:linear-gradient(180deg,#2c2218,#120d09); box-shadow:inset 0 1px 0 rgba(255,240,200,.18)}
+/* исходы */
+.pc-cov .pc-o{position:relative; border-radius:10px; overflow:hidden; border-color:rgba(127,127,127,.28); background:linear-gradient(180deg,rgba(127,127,127,.12),rgba(127,127,127,.03))}
+.pc-cov .pc-o[style]::after{content:""; position:absolute; left:6px; right:6px; bottom:3px; height:2px; border-radius:2px; background:currentColor; opacity:.16}
+.pc-cov .pc-o[style]::before{content:""; position:absolute; left:6px; bottom:3px; height:2px; border-radius:2px; width:calc((100% - 12px) * var(--p)); background:currentColor; opacity:.75; z-index:1}
+.pc-cov .pc-o.on{background:linear-gradient(180deg,rgba(255,255,255,.3),rgba(255,255,255,.1)); border-color:rgba(255,255,255,.75); box-shadow:inset 0 1px 0 rgba(255,255,255,.35), 0 4px 10px -6px rgba(0,0,0,.8)}
+:root[data-theme="light"] .pc-cov .pc-o.on{background:linear-gradient(180deg,#fff,#dfe5e8); border-color:#0A0F10}
+.pc-cov .pc-o.on.hit{background:linear-gradient(180deg,rgba(88,200,131,.6),rgba(63,174,106,.28)); border-color:#58c883; box-shadow:inset 0 1px 0 rgba(255,255,255,.35), 0 0 16px -3px rgba(63,174,106,.85)}
+.pc-cov .pc-o.on.miss{background:linear-gradient(180deg,rgba(229,103,92,.2),rgba(229,103,92,.05))}
+.pc-cov .pc-o.on.blu{background:linear-gradient(180deg,rgba(111,164,240,.4),rgba(79,139,214,.14)); box-shadow:0 0 12px -4px rgba(79,139,214,.8)}
+.pc-cov .pc-o.hole{background:linear-gradient(180deg,rgba(229,103,92,.18),transparent)}
+/* исход, который сейчас выигрывает по счёту */
+.pc-cov .pc-o.lead{box-shadow:0 0 0 2px rgba(255,122,110,.95), 0 0 18px -2px rgba(255,90,77,.8); animation:leadPulse 1.8s ease-in-out infinite}
+@keyframes leadPulse{50%{box-shadow:0 0 0 2px rgba(255,122,110,.5), 0 0 6px -2px rgba(255,90,77,.4)}}
+.pc-cov .pc-o.lead:not(.on){opacity:1; color:#ffd9d3; border-color:rgba(255,122,110,.9)}
+/* гол */
+.pc-cr.pc-burst{animation:glRow 2.6s ease-out}
+.pc-cr.pc-burst .pc-sc{animation:glTile 1.2s cubic-bezier(.2,1.6,.4,1)}
+.pc-cr.pc-burst::before{content:"ГОЛ!"; position:absolute; right:10px; top:8px; z-index:3; pointer-events:none; padding:3px 8px; border-radius:5px; font:800 11px/1 "Chivo",sans-serif; letter-spacing:.14em; color:#1a1410; background:linear-gradient(180deg,#f6dd95,#c9963c); box-shadow:0 0 14px rgba(246,221,149,.8)}
+@media (prefers-reduced-motion: reduce){ .pc-cr.st-live::after, .pc-cr.pc-burst, .pc-cr.pc-burst .pc-sc, .pc-cov .pc-o.lead, .pc-sub, .pc-cvst .lv i{animation:none} }
+.pc-cov .pc-m{padding-left:4px}
+@media (max-width:360px){ .pc-cov .pc-n{width:20px; height:20px; font-size:11px} }
+:root[data-theme="light"] .pc-cov .pc-o.on.hit{background:linear-gradient(180deg,#8fe0ae,#5cc486); border-color:#2f9a5a; color:#0A0F10; box-shadow:0 0 14px -3px rgba(63,174,106,.8)}
+:root[data-theme="light"] .pc-cov .pc-o.on.miss{background:linear-gradient(180deg,#fde4e1,#f7c9c4); border-color:#c0392e; color:#a12118}
+:root[data-theme="light"] .pc-cov .pc-o.on.blu{background:linear-gradient(180deg,#d6e6ff,#b4cff5); border-color:#2f6fbf; color:#123d7a}
+:root[data-theme="light"] .pc-cov .pc-o.lead{box-shadow:0 0 0 2px rgba(224,72,62,.95), 0 0 16px -2px rgba(224,72,62,.55); animation:leadPulse 1.8s ease-in-out infinite}

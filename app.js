@@ -9232,13 +9232,18 @@
     var unc = [];
     ms.forEach(function(m, j){ if(res[j] && res[j] !== VOID && !rows.some(function(r){ return r.charAt(j) === res[j]; })) unc.push(j + 1); });
     h += '<div class="pc-sub">Весь купон</div>' + ((pcsv.sets[pcsv.act] || {}).core ? colorLegend() : '') + (played ? '<p class="pc-lnote pc-key"><span class="k-on">выделены</span> — ваши исходы, <span class="k-hit">зелёной заливкой</span> — зашёл, <span class="k-bad">красный контур</span> — не зашёл' +
-      (unc.length ? '. Исход не был в купоне: <b>№' + unc.slice(0, 6).join(", №") + (unc.length > 6 ? " +" + (unc.length - 6) : "") + '</b>' : '') + '</p>' : '') + '<div class="pc-cov">';
+      (unc.length ? '. Исход не был в купоне: <b>№' + unc.slice(0, 6).join(", №") + (unc.length > 6 ? " +" + (unc.length - 6) : "") + '</b>' : '') + '</p>' : '') + (function(){
+      var nl = 0, nd = 0, nw = 0;
+      ms.forEach(function(m){ if(m.res){ nd++; } else { var q = liveInfo(m); if(q && !q.end) nl++; else if(q && q.end) nd++; else nw++; } });
+      return '<div class="pc-cvst">' + (nl ? '<span class="lv"><i></i>идёт ' + nl + '</span>' : '') + '<span>сыграно ' + nd + '</span><span>впереди ' + nw + '</span></div>';
+    })() + '<div class="pc-cov">';
     ms.forEach(function(m, j){
       var c = { "1": 0, "X": 0, "2": 0 };
       rows.forEach(function(r){ var o = r.charAt(j); if(c[o] != null) c[o]++; });
       var sc = m.res === VOID ? "" : (m.score ? String(m.score).replace(/\s+/g, "") : "");
       var wiOk = !m.res && m.res !== VOID;
-      h += '<div class="pc-cr' + (wiOk ? " wi-able" + (pcsv.what === j ? " wi-on" : "") : "") + '"' + (wiOk ? ' data-w="' + j + '" title="Тап — что будет с вариантами при каждом исходе"' : '') + '><span class="pc-n">' + (j + 1) + '</span><span class="pc-m"><i><b>' + escHtml(m.home) + '</b><u> — </u><b>' + escHtml(m.away) + '</b></i></span>';
+      var liS = !m.res && liveInfo(m), stc = m.res ? " st-done" : liS ? (liS.end ? " st-done" : " st-live") : " st-wait", leadO = liS && !liS.end ? liveOutcome(m) : null;
+      h += '<div class="pc-cr' + stc + (wiOk ? " wi-able" + (pcsv.what === j ? " wi-on" : "") : "") + '" data-cj="' + j + '"' + (wiOk ? ' data-w="' + j + '" title="Тап — что будет с вариантами при каждом исходе"' : '') + '><span class="pc-n">' + (j + 1) + '</span><span class="pc-m"><i><b>' + escHtml(m.home) + '</b><u> — </u><b>' + escHtml(m.away) + '</b></i></span>';
       var liN = !m.res && liveInfo(m), lvc = liN && !liN.end ? ' is-lv' : '';
       h += '<span class="pc-sc' + (sc ? '' : ' no') + lvc + '">' + (sc ? '<em class="' + (m.res ? "" : "live") + '">' + escHtml(sc) + '</em>' : '–') + '</span>' +
         '<span class="pc-tc' + lvc + '">' + pcTime(m) + '</span>';
@@ -9246,7 +9251,7 @@
       OUT.forEach(function(o){
         var hs = pcsv.sets[pcsv.act], hc = hs && hs.core && hs.core[j] != null ? String(hs.core[j]) : null, inC = hc === null || hc.indexOf(o) >= 0, isBl = hc !== null && inC && String(hs.bl[j] || "").indexOf(o) >= 0;
         var cls = "pc-o" + (c[o] && inC ? " on" : "") + (c[o] && !inC ? " tail" : "") + (isBl && c[o] ? " blu" : "") + (res[j] === VOID ? (c[o] ? " hit" : "") : res[j] === o ? (c[o] ? " hit" : " hole") : (res[j] && c[o] ? " miss" + (res[j] && !c[res[j]] ? " bad" : "") : ""));
-        h += '<span class="' + cls + '" title="' + o + ': ' + fmt(c[o]) + ' вар.' + (c[o] && !inC ? ' — только в добавочных строках, не в системе' : '') + (isBl && c[o] ? ' — ' + (hs.wy[j + o] || 'доводы источников') : '') + '">' + o + (sysL.length === 1 ? '' : '<small>' + (c[o] ? (c[o] === total ? "все" : fmt(c[o])) : "·") + '</small>') + '</span>';
+        h += '<span class="' + cls + (leadO && leadO.o === o ? " lead" : "") + '"' + (c[o] ? ' style="--p:' + Math.max(.03, Math.round(c[o] / (total || 1) * 100) / 100) + '"' : '') + ' title="' + o + ': ' + fmt(c[o]) + ' вар.' + (c[o] && !inC ? ' — только в добавочных строках, не в системе' : '') + (isBl && c[o] ? ' — ' + (hs.wy[j + o] || 'доводы источников') : '') + '">' + o + (sysL.length === 1 ? '' : '<small>' + (c[o] ? (c[o] === total ? "все" : fmt(c[o])) : "·") + '</small>') + '</span>';
       });
       h += '</div>';
       if(wiOk && pcsv.what === j){
@@ -9378,6 +9383,15 @@
     });
     [].slice.call(box.querySelectorAll(".pc-flt button")).forEach(function(b){
       b.addEventListener("click", function(){ pcsv.flt = b.getAttribute("data-f"); pcsv.page = 0; renderPrevCsv(); });
+    });
+    [].slice.call(box.querySelectorAll(".pc-cr[data-cj]")).forEach(function(r){
+      var mj = ms[Number(r.getAttribute("data-cj"))];
+      if(!mj) return;
+      if(!pvScSeen){ pvScSeen = {}; pvBurst = {}; }
+      var kk = "cv" + r.getAttribute("data-cj"), sn = String(mj.score || ""), sp = pvScSeen[kk];
+      if(sp != null && sp !== sn && !mj.res && sn) pvBurst[kk] = Date.now();
+      pvScSeen[kk] = sn;
+      if(pvBurst[kk] && Date.now() - pvBurst[kk] < 2600) r.classList.add("pc-burst");
     });
     [].slice.call(box.querySelectorAll(".pc-cr.wi-able")).forEach(function(r){
       r.addEventListener("click", function(){ var j = Number(r.getAttribute("data-w")); pcsv.what = pcsv.what === j ? null : j; renderPrevCsv(); });
