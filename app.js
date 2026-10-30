@@ -9008,33 +9008,31 @@
     if(!all.length) h += '<p class="ev-note">В сравнении пока ничего нет. Загрузите CSV кнопкой ниже или вернитесь к таблице и нажмите «+ В сравнение».</p>';
     else if(!sets.length) h += '<p class="ev-note">Все наборы скрыты: нажмите на название набора выше.</p>';
     else if(cmpMode === "over"){
-      /* наложение: одна карточка, как во вкладке «По отдельности»; в клетке — сколько вариантов за исход, тап покажет какие */
-      var cov = 0;
+      /* наложение: на каждый матч три плитки 1 / X / 2; цвет плитки — доля вариантов, выбравших исход (синий — мало, зелёный — половина, золотой — все) */
+      var NS = sets.length;
       var rowsO = ms.map(function(m, j){
-        var boxes = OUT.map(function(o){
-          var who = []; sets.forEach(function(st, k){ if(outs[k][j].indexOf(o) >= 0) who.push(k); });
-          var c = who.length;
-          return '<b class="ov ' + (c === sets.length ? 'all' : c ? 'part' : '') + '" data-j="' + j + '" data-o="' + o + '" style="--a:' + (c / sets.length).toFixed(2) + '">' + o + (c ? '<sup>' + c + '</sup>' : '') + '</b>';
+        var tiles = OUT.map(function(o){
+          var c = 0; sets.forEach(function(st, k){ if(outs[k][j].indexOf(o) >= 0) c++; });
+          var cl = c === NS ? "all" : c ? "part" : "none", hue = Math.round(225 - (c / NS) * 175), lig = Math.round(30 + (c / NS) * 12);
+          return '<button type="button" class="cmp-tl ' + cl + '" data-j="' + j + '" data-o="' + o + '" style="--h:' + hue + ';--l:' + lig + '%"><b>' + o + '</b><small>' + (c ? c + ' из ' + NS : 'никто') + '</small></button>';
         }).join("");
-        return '<div class="cmp-sr cmp-ovr"><span class="cmp-sn">' + (j + 1) + '</span><span class="cmp-st">' + escHtml(m.home) + ' — ' + escHtml(m.away) + '</span><span class="cmp-so">' + boxes + '</span></div><div class="cmp-who" id="cmpWho' + j + '" hidden></div>';
+        return '<div class="cmp-bk"><div class="cmp-bt"><span class="cmp-mn">' + (j + 1) + '</span><span class="cmp-bn">' + escHtml(m.home) + ' — ' + escHtml(m.away) + '</span></div><div class="cmp-tls">' + tiles + '</div><div class="cmp-who" id="cmpWho' + j + '" hidden></div></div>';
       }).join("");
-      h += '<div class="cmp-sep"><div class="cmp-card"><div class="cmp-ct"><b>Все варианты вместе</b><small>вариантов: ' + sets.length + '</small></div>' + rowsO +
-        '</div></div><p class="col-leg">Число в клетке — сколько вариантов выбрали этот исход. <b class="cmp-all">Золотая</b> клетка — исход выбран во всех. Нажмите на клетку, чтобы увидеть, какие именно варианты.</p>';
+      var lg = NS > 1 ? '<div class="cmp-scale"><span>мало</span><i></i><span>все ' + NS + '</span></div>' : '';
+      h += '<p class="cmp-hd">Цвет плитки показывает, сколько вариантов выбрали исход. Нажмите на плитку, чтобы увидеть какие.</p>' + lg + '<div class="cmp-bks">' + rowsO + '</div>';
     } else if(cmpMode === "side"){
-      /* рядом: слева названия матчей (не уезжают при прокрутке), справа по столбцу на вариант с теми же клетками 1 X 2 */
-      var gt = '124px repeat(' + sets.length + ', 84px)';
-      h += '<div class="cmp-sd"><div class="cmp-sdg" style="grid-template-columns:' + gt + '">';
-      h += '<div class="cmp-sdh cmp-sdn">Матч</div>' + sets.map(function(st){ return '<div class="cmp-sdh" title="' + escHtml(cmpNmT(st)) + '"><i style="background:' + col(st) + '">' + (all.indexOf(st) + 1) + '</i><span>' + escHtml(cmpLab(st)) + '</span></div>'; }).join("");
-      ms.forEach(function(m, j){
+      /* рядом: для каждого матча название в одну строку по центру и под ним по ячейке на вариант (номер варианта и клетки 1 X 2) */
+      var rowsS = ms.map(function(m, j){
         var same = outs.every(function(x){ return x[j] === outs[0][j]; });
         if(same) uni++;
-        h += '<div class="cmp-sdn' + (same && sets.length > 1 ? ' eq' : '') + '"><span class="cmp-sn">' + (j + 1) + '</span><span class="cmp-st" title="' + escHtml(m.home) + ' — ' + escHtml(m.away) + '">' + escHtml(m.home) + ' — ' + escHtml(m.away) + '</span></div>';
-        outs.forEach(function(x, k){
-          h += '<div class="cmp-sdc"><span class="cmp-so">' + OUT.map(function(o){ var on = x[j].indexOf(o) >= 0; return '<b' + (on ? ' class="on" style="background:' + col(sets[k]) + '"' : '') + '>' + o + '</b>'; }).join("") + '</span></div>';
-        });
-      });
-      h += '</div></div>';
-      if(sets.length > 1) h += '<p class="col-leg">Таблицу можно листать вбок, названия матчей остаются на месте. Зелёная черта у матча — во всех вариантах выбор одинаковый: ' + uni + ' из ' + n + '.</p>';
+        var cells = outs.map(function(x, k){
+          return '<div class="cmp-vc"><i class="cmp-vn" style="background:' + col(sets[k]) + '" title="' + escHtml(cmpNmT(sets[k])) + '">' + (all.indexOf(sets[k]) + 1) + '</i><span class="cmp-so">' +
+            OUT.map(function(o){ var on = x[j].indexOf(o) >= 0; return '<b' + (on ? ' class="on" style="background:' + col(sets[k]) + '"' : '') + '>' + o + '</b>'; }).join("") + '</span></div>';
+        }).join("");
+        return '<div class="cmp-bk' + (same && sets.length > 1 ? ' eq' : '') + '"><div class="cmp-bt"><span class="cmp-mn">' + (j + 1) + '</span><span class="cmp-bn">' + escHtml(m.home) + ' — ' + escHtml(m.away) + '</span></div><div class="cmp-vs">' + cells + '</div></div>';
+      }).join("");
+      h += '<div class="cmp-bks">' + rowsS + '</div>';
+      if(sets.length > 1) h += '<p class="col-leg">Зелёная рамка у матча — во всех вариантах выбор одинаковый: ' + uni + ' из ' + n + '.</p>';
     } else {
       h += '<div class="cmp-sep">' + sets.map(function(st, k){
         var rowsH = ms.map(function(m, j){
@@ -9053,10 +9051,10 @@
     $("evTitle").textContent = "Сравнение наборов";
     $("evBody").innerHTML = h;
     if(window.__cmpShared) cmpvSharedBind(); else if(window.__cmpMain) cmpvPanelBind();
-    [].slice.call($("evBody").querySelectorAll(".cmp-ovr .ov")).forEach(function(bx){ bx.addEventListener("click", function(){
+    [].slice.call($("evBody").querySelectorAll(".cmp-tl")).forEach(function(bx){ bx.addEventListener("click", function(){
       var j = Number(bx.getAttribute("data-j")), o = bx.getAttribute("data-o"), box = $("cmpWho" + j);
       var wasSel = bx.classList.contains("sel");
-      [].slice.call(bx.parentNode.querySelectorAll(".ov")).forEach(function(x){ x.classList.remove("sel"); });
+      [].slice.call(bx.parentNode.querySelectorAll(".cmp-tl")).forEach(function(x){ x.classList.remove("sel"); });
       if(wasSel){ box.hidden = true; return; }
       bx.classList.add("sel");
       var who = sets.filter(function(st, k){ return outs[k][j].indexOf(o) >= 0; });
