@@ -11061,6 +11061,143 @@
       say("«Охота на 15»: " + fmt(lines.length) + " строк на " + fmt(lines.length * price) + " ₽ — в CSV.");
     });
   }
+  /* ---------- «Охота на 15» для тиража, у которого ещё нет готового набора ----------
+     Тот же расчёт, что в pipeline/mkhunt.py: исходы по матчам набираются жадно, пока бриф 14 из 15 укладывается в 10 000 строк,
+     затем перестановки исходов между матчами, затем остаток до 10 000 строк добирается самыми сильными строками ВНУТРИ исходов системы. */
+  var HUNT_ROWS = 10000;
+  function huntRowsOf(sets){
+    var t = sets.map(function(s){ return s.slice().sort(function(a, b){ return a - b; }); });
+    var r = briefBuild(t, 14, 20000, null, true);
+    if(!r || !r.lines) return { rows: Infinity };
+    return { rows: r.lines.length, lines: r.lines };
+  }
+  function* huntBriefGen(P, PT){
+    var n = 15, i, j, k, order = P.map(function(p){ return [0, 1, 2].sort(function(a, b){ return p[b] - p[a] || a - b; }); });
+    var sets = order.map(function(o){ return [o[0]]; }), sm = order.map(function(o, ii){ return P[ii][o[0]]; });
+    function pinOf(ss){ var v = 1; for(var a = 0; a < n; a++){ var s = 0; ss[a].forEach(function(q){ s += P[a][q]; }); v *= Math.min(1, s); } return v; }
+    for(;;){
+      var cand = [];
+      for(i = 0; i < n; i++){
+        var l = sets[i].length; if(l >= 3) continue;
+        k = order[i][l]; cand.push({ g: Math.log((sm[i] + P[i][k]) / sm[i]) / Math.log((l + 1) / l), i: i });
+      }
+      cand.sort(function(a, b){ return b.g - a.g; });
+      var done = false;
+      for(var c = 0; c < cand.length; c++){
+        i = cand[c].i;
+        var trial = sets.map(function(s){ return s.slice(); }); k = order[i][sets[i].length]; trial[i].push(k);
+        var rr = huntRowsOf(trial); yield;
+        if(rr.rows <= HUNT_ROWS){ sets[i].push(k); sm[i] += P[i][k]; done = true; break; }
+      }
+      if(!done) break;
+    }
+    var rows = huntRowsOf(sets).rows; yield;
+    for(var it = 0; it < 8; it++){
+      var cur = pinOf(sets), moves = [];
+      for(i = 0; i < n; i++) for(k = 0; k < 3; k++){
+        if(sets[i].indexOf(k) >= 0) continue;
+        for(j = 0; j < n; j++){
+          if(j === i || sets[j].length < 2) continue;
+          for(var qq = 0; qq < sets[j].length; qq++){
+            var t = sets.map(function(s){ return s.slice(); }); t[i].push(k); t[j].splice(qq, 1);
+            var g = pinOf(t) / cur; if(g > 1.0005) moves.push({ g: g, i: i, k: k, j: j, q: qq });
+          }
+        }
+      }
+      moves.sort(function(a, b){ return b.g - a.g; });
+      var ok = false;
+      for(var mi = 0; mi < Math.min(40, moves.length); mi++){
+        var mv = moves[mi], t2 = sets.map(function(s){ return s.slice(); }); t2[mv.i].push(mv.k); t2[mv.j].splice(mv.q, 1);
+        var r2 = huntRowsOf(t2); yield;
+        if(r2.rows <= HUNT_ROWS && r2.rows >= rows * 0.97){ sets = t2; rows = r2.rows; ok = true; break; }
+      }
+      if(!ok) break;
+    }
+    var sys = sets.map(function(s){ return s.slice().sort(function(a, b){ return a - b; }); });
+    var fin = huntRowsOf(sys); yield;
+    if(!fin.lines) return { error: "не удалось собрать систему 14 из 15" };
+    var lines = fin.lines.map(function(l){ return l.map(function(q){ return OUT[q]; }).join(""); }), nSys = lines.length, have = {};
+    lines.forEach(function(s){ have[s] = 1; });
+    /* добор: самые сильные строки внутри исходов системы (по убыванию произведения силы) */
+    var opt = sys.map(function(s, a){ return s.slice().sort(function(x, y){ return P[a][y] - P[a][x]; }); });
+    var lg = opt.map(function(o, a){ return o.map(function(q){ return Math.log(Math.max(P[a][q], 1e-9)); }); });
+    var heap = [];
+    function hpush(x){ heap.push(x); var c2 = heap.length - 1; while(c2 > 0){ var p = (c2 - 1) >> 1; if(heap[p].s >= heap[c2].s) break; var tt = heap[p]; heap[p] = heap[c2]; heap[c2] = tt; c2 = p; } }
+    function hpop(){ var top = heap[0], last = heap.pop();
+      if(heap.length){ heap[0] = last; var c3 = 0; for(;;){ var l2 = 2 * c3 + 1, r3 = l2 + 1, m3 = c3;
+        if(l2 < heap.length && heap[l2].s > heap[m3].s) m3 = l2; if(r3 < heap.length && heap[r3].s > heap[m3].s) m3 = r3;
+        if(m3 === c3) break; var tt2 = heap[m3]; heap[m3] = heap[c3]; heap[c3] = tt2; c3 = m3; } }
+      return top; }
+    var z0 = [], s0 = 0; for(i = 0; i < n; i++){ z0.push(0); s0 += lg[i][0]; }
+    hpush({ s: s0, v: z0 }); var seen = {}; seen[z0.join("")] = 1;
+    var need = HUNT_ROWS - lines.length, added = 0, guard = 0;
+    while(heap.length && added < need){
+      var cu = hpop(), ln = cu.v.map(function(r4, a){ return OUT[opt[a][r4]]; }).join("");
+      if(!have[ln]){ lines.push(ln); have[ln] = 1; added++; }
+      for(i = 0; i < n; i++){
+        if(cu.v[i] >= opt[i].length - 1) continue;
+        var w = cu.v.slice(); w[i]++; var key = w.join("");
+        if(seen[key]) continue; seen[key] = 1;
+        hpush({ s: cu.s - lg[i][cu.v[i]] + lg[i][w[i]], v: w });
+      }
+      if(++guard % 2000 === 0) yield;
+    }
+    var pin = 1, p15 = 0;
+    for(i = 0; i < n; i++){ var sp = 0; sys[i].forEach(function(q){ sp += PT[i][q]; }); pin *= Math.min(1, sp); }
+    lines.forEach(function(s){ var pr = 1; for(var a = 0; a < n; a++) pr *= PT[a][OUT.indexOf(s.charAt(a))]; p15 += pr; });
+    var z = lines.map(function(s){
+      var v = 0, a, o = ""; for(a = 0; a < n; a++) v = v * 3 + OUT.indexOf(s.charAt(a));
+      for(a = 0; a < 5; a++){ o = "0123456789abcdefghijklmnopqrstuvwxyz".charAt(v % 36) + o; v = Math.floor(v / 36); }
+      return o;
+    }).join("");
+    return { sys: sys, nSys: nSys, n: lines.length, pin: pin, p15: p15, z: z };
+  }
+  function huntRunGen(gen, onDone){
+    function step(){
+      var t0 = Date.now(), x;
+      try {
+        do { x = gen.next(); if(x.done){ onDone(x.value); return; } } while(Date.now() - t0 < 60);
+      } catch(e){ onDone({ error: String(e && e.message || e) }); return; }
+      setTimeout(step, 0);
+    }
+    step();
+  }
+  function huntLocalKey(){
+    return String(state.tirazh) + "|" + (FON ? "f" : "b") + "|" + state.matches.map(function(m){ return (m.pct && m.pct.bk ? m.pct.bk.join(",") : "") + ";" + (m.pct && m.pct.pool ? m.pct.pool.join(",") : ""); }).join("|")
+      + "|" + (ai.data ? String(ai.data.number) + (ai.data.at || ai.data.updated || "") : "") + "|" + (LEARN && LEARN.at || "");
+  }
+  var huntLocal = { key: null, rec: null, busy: null };
+  /* запись того же вида, что в virt.json, из расчёта на устройстве */
+  function huntLocalRec(onDone){
+    var P = [], bad = null, i, MS = monsterHuntStrength(), PS;
+    state.matches.forEach(function(m){ var p = huntProbs(m); if(!p) bad = bad || ("нет линии конторы в матче «" + m.home + " — " + m.away + "»"); P.push(p); });
+    if(bad){ onDone({ error: bad }); return; }
+    PS = P;
+    if(MS){ PS = MS.W1; P = MS.probs; }
+    huntRunGen(huntBriefGen(PS, P), function(r){
+      if(r.error){ onDone(r); return; }
+      var txt = r.sys.map(function(s){ return s.map(function(q){ return OUT[q]; }).join(""); });
+      var bl = [], wy = {};
+      for(i = 0; i < 15; i++){
+        var b = "";
+        if(MS){
+          var raw = evProbs(state.matches[i]) || P[i];
+          var top = [0, 1, 2].sort(function(a, c){ return raw[c] - raw[a] || a - c; }).slice(0, r.sys[i].length);
+          var srcs = withEdges(true, function(){ return monsterSrc(i); }) || [];
+          r.sys[i].forEach(function(k){
+            if(top.indexOf(k) >= 0) return;
+            var why = srcs.filter(function(s){ return s.o === OUT[k] && !({ "ИИ: факты": 1, "Усталость": 1 })[s.src]; }).map(function(s){ return s.src; });
+            var dAi = ai.data && String(ai.data.number) === String(state.tirazh) && ai.data.m ? ai.data.m[i] : null;
+            if(dAi && dAi.rank && dAi.rank.length === 3 && dAi.rank.indexOf(OUT[k]) === 0) why.push("Разбор ИИ");
+            if(why.length){ b += OUT[k]; wy[i + OUT[k]] = why.join(", "); }
+          });
+        }
+        bl.push(b);
+      }
+      onDone({ at: new Date().toISOString().slice(0, 16) + "Z", name: "Охота на 15 · бриф 14 из 15", price: briefPrice(), sets: txt, sys: txt,
+        n_sys: r.nSys, n: r.n, pin: r.pin, p15: r.p15, bl: bl, wy: wy, add: new Array(15).fill(""), an: {}, algo: MS ? "monster" : "line", z: r.z, local: true });
+    });
+  }
   function showHunt(){
     var box = stratGuard("Стратегия «Охота на 15»"); if(!box) return;
     if(!virt.data && !virt.huntTry){
@@ -11069,6 +11206,23 @@
     }
     var vrec = virt.data && virt.data[String(state.tirazh)];
     if(vrec && vrec.z && vrec.sets && vrec.sets.length === 15 && state.matches.length === 15){ showHuntSet(box, vrec); return; }
+    /* набора на сервере ещё нет (он собирается вместе с разбором в день закрытия) — тот же расчёт на устройстве */
+    if(state.matches.length === 15 && !window.__huntOld){
+      var lk = huntLocalKey();
+      if(huntLocal.rec && huntLocal.key === lk){ showHuntSet(box, huntLocal.rec); return; }
+      box.innerHTML = '<p id="huntWait" class="ev-sub dt-center">Собираю «Охоту на 15»: система 14 из 15 и добор до ' + fmt(HUNT_ROWS) + ' строк внутри её исходов. Это занимает до минуты, окно не закрывай.</p>';
+      $("evBack").hidden = false;
+      if(huntLocal.busy === lk) return;
+      huntLocal.busy = lk;
+      huntLocalRec(function(rec){
+        huntLocal.busy = null;
+        var bx = $("evBody");
+        if(rec.error){ if(bx && bx.querySelector("#huntWait")) bx.innerHTML = '<p class="ev-warn">Посчитать не получилось: ' + escHtml(rec.error) + '.</p>'; return; }
+        huntLocal.key = lk; huntLocal.rec = rec;
+        if(bx && bx.querySelector("#huntWait")) showHuntSet(bx, rec);
+      });
+      return;
+    }
     var N = Number(state.huntSize) || 100;
     if(HUNT_SIZES.indexOf(N) < 0) N = 100;
     var plan = planHunt(N);
