@@ -15,7 +15,7 @@ WOUT = os.environ.get("FSLIVE_OUT") or OUT
 FEED = "https://sweet-heart-f51d.dzhek15-api.workers.dev/?sport=%d&day=0"
 HDR = {"User-Agent": "Mozilla/5.0 (dzhek15 fslive)", "Origin": "https://dzhek15.github.io",
        "Referer": "https://dzhek15.github.io/"}
-# FSLIVE_FAST=1: только fs-now (матчи тиража, быстрый круг раз в минуту); FSLIVE_FORCE=1: писать файл всегда, чтобы обновить время снимка
+# FSLIVE_FAST=1: только fs-now (матчи тиража, быстрый круг каждые 20 с); FSLIVE_FORCE=1: писать файл всегда, чтобы обновить время снимка
 FAST = os.environ.get("FSLIVE_FAST") == "1"
 FORCE = os.environ.get("FSLIVE_FORCE") == "1"
 KEEP = ("AA", "AB", "AC", "AD", "AE", "AF", "AG", "AH", "AO", "BX", "OA", "OB", "PX", "PY", "WU", "WV")

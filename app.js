@@ -2442,7 +2442,7 @@
     };
     /* fs-now — только матчи тиража (обновляется раз в минуту при изменениях), fs — все идущие матчи раз в 5 минут */
     var mirror = function(){
-      var q = ".txt?t=" + Math.floor(Date.now() / 30000), sp = FS_SPORT_ID[k];
+      var q = ".txt?t=" + Math.floor(Date.now() / 10000), sp = FS_SPORT_ID[k];
       var full = function(){ return getMir("fs-" + sp + q, 8000).catch(function(){ return []; }); };
       return getMir("fs-now-" + sp + q, 8000).then(function(g){
         return (g && g.ts && Date.now() - g.ts < 30 * 60000) ? g : full();
@@ -2458,7 +2458,7 @@
   }
   function fsLiveTick(){
     if(fsLiveBusy || document.hidden || typeof fetch !== "function") return;
-    if(Date.now() - fsLiveAt < (fsLastMir ? 30000 : FS_LIVE_EVERY) - 1500) return;
+    if(Date.now() - fsLiveAt < FS_LIVE_EVERY - 1500) return;
     var lists = [];
     if(state.matches.length) lists.push(state.matches);
     if(state.prev && Array.isArray(state.prev.matches) && !prevDone()) lists.push(state.prev.matches);

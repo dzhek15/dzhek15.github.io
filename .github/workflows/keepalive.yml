@@ -1,7 +1,7 @@
 name: keepalive
 
 # Страховка от пропусков расписания GitHub: одно долгое задание само снимает данные
-# (живые матчи — каждую минуту, коммит только при изменении; зеркало totobrief/stavka и эмблемы — каждые 30 минут),
+# (живые матчи — каждые 20 секунд, коммит только при изменении; зеркало totobrief/stavka и эмблемы — каждые 30 минут),
 # а в конце запускает себя заново. Расписание ниже только поднимает цепочку, если она оборвалась.
 # Снимки Flashscore (fs-*.txt) пишутся в отдельную ветку live, чтобы коммиты каждую минуту не отменяли сборки Pages.
 # Обычные feed-mirror и fs-live остаются как есть.
@@ -54,12 +54,12 @@ jobs:
             sync || true
             sync_live || true
             kind="fs-live"
-            if [ $((n % 5)) -eq 0 ]; then
-              # раз в 5 минут: полный снимок (с файлами тиража), время снимка обновляется всегда
+            if [ $((n % 15)) -eq 0 ]; then
+              # раз в 5 минут (каждый 15-й круг по 20 с): полный снимок (с файлами тиража), время снимка обновляется всегда
               FSLIVE_FORCE=1 python3 scripts/fslive.py || true
               # автозапуск разбора ИИ: расписание GitHub в закрытом репозитории опаздывает на часы
               python3 scripts/ai_kick.py || true
-              if [ $((n % 30)) -eq 0 ]; then
+              if [ $((n % 90)) -eq 0 ]; then
                 kind="feed"
                 python3 scripts/feed.py || true
                 python3 scripts/emblems.py || true
@@ -82,7 +82,7 @@ jobs:
               git fetch -q origin "$B" && git status -sb | head -1 | grep -q "ahead" && git reset -q --hard "origin/$B" || true
             fi
             n=$((n+1))
-            d=$(( 60 - ($(date +%s) - t0) )); [ "$d" -gt 5 ] && sleep "$d" || sleep 5
+            d=$(( 20 - ($(date +%s) - t0) )); [ "$d" -gt 3 ] && sleep "$d" || sleep 3
           done
 
       - name: Запустить цепочку заново
