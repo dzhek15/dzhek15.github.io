@@ -3413,9 +3413,10 @@
         var rows = ((j && j.data) || []).filter(function(d){ return d.status === "finished" || d.status === "expected"; })
           .sort(function(a, b){ return accOrd(b.ended_at, b.number) - accOrd(a.ended_at, a.number); })
           .filter(function(d, i){ return i < ACC_N || payFor(d.number); });
-        return Promise.all(rows.map(function(d){
+        return Promise.all(rows.map(function(d, di){
           var have = store[d.number];
-          if(have && have.key === key) return null;
+          /* расчёт, сделанный до закрытия тиража (fin:false), и свежие старые записи без метки пересчитываем: иначе статистика расходится с просмотром */
+          if(have && have.key === key && have.fin !== false && !(have.fin === undefined && di < 3)) return null;
           return apiFetch("drawing-info/" + d.id).then(function(r){ return r.ok ? r.json() : null; })
             .then(function(j2){
               var info = j2 && (j2.data || j2);
@@ -3424,7 +3425,7 @@
               var allRes = (info.events || []).length >= 15 && (info.events || []).every(function(e){ return !!normOut(e && e.result) || (FON && e && e.result === VOID); });
               if(info.status !== "finished" && !allRes) return;
               info.number = info.number || d.number;
-              store[d.number] = stratForInfo(info); store[d.number].at = d.ended_at || "";
+              store[d.number] = stratForInfo(info); store[d.number].at = d.ended_at || ""; store[d.number].fin = info.status === "finished";
             }).catch(function(e){ if(window.console) console.warn("Статистика: тираж " + d.number, e); });
         }));
       }).catch(function(){});
@@ -8153,6 +8154,11 @@
     var p = state.prev; if(!p || pcsv.tir !== String(p.tirazh) || !p.id) return;
     var tir = String(p.tirazh), c = stratView[tir];
     if(c && p.cur && Date.now() - c.t > 10 * 60000) c = null;          /* идущий приём: толпа меняется — пересчёт раз в 10 минут */
+    if(!c && !p.cur && stratView[tir] !== 0){
+      /* закрытый тираж: берём тот же готовый расчёт, что и в статистике, — цифры «угадано» совпадают */
+      var cs = accRead()[tir];
+      if(cs && cs.key === accSetKey() && cs.fin === true && Array.isArray(cs.kel)){ c = stratView[tir] = cs; c.t = Date.now(); }
+    }
     if(!c){
       if(stratView[tir] === 0) return;
       stratView[tir] = 0;
@@ -8165,7 +8171,7 @@
       }).catch(function(){ delete stratView[tir]; });
       return;
     }
-    [["kel", "Келли"], ["mkel", "Монстр Келли"], ["sim", "Симуляция"]].forEach(function(q){
+    [["kel", "Келли"], ["mkel", "Монстр Келли"], ["sim", "Симуляция"], ["gap", "Расхождения"]].forEach(function(q){
       var line = c[q[0]]; if(!Array.isArray(line) || line.length !== p.matches.length) return;
       var brief = q[0] === "mkel" && Array.isArray(c.mkelR) && c.mkelR.length > 0;   /* Монстр — бриф 14 из 15: строки системы как есть */
       var sys = brief ? c.mkelR.map(function(x){ return x.replace(/,/g, "").split("").join(","); }) : [line.join(",")], sig = brief ? sys.length + "|" + sys[0] + "|" + sys[sys.length - 1] : sys[0], k = -1, i;
@@ -8727,7 +8733,7 @@
     return out;
   }
   function cmpName(st, i){
-    if(st.strat) return ({ kel: "Келли", mkel: "Монстр", sim: "Симул." })[st.strat] || "Набор";
+    if(st.strat) return ({ kel: "Келли", mkel: "Монстр", sim: "Симул.", gap: "Расхожд." })[st.strat] || "Набор";
     if(st.virt) return "Охота";
     if(st.ai) return "ИИ";
     return "Мой " + (i + 1);
@@ -9195,7 +9201,7 @@
         if(mv && Date.now() - mv.at < 90000) tr = '<u class="' + (mv.d > 0 ? "up" : "dn") + '">' + (mv.d > 0 ? "▲" : "▼") + Math.abs(mv.d) + '</u>';
         h += '<button type="button" role="tab" class="pc-rk' + (q.out ? " out" : "") + (q.i === pcsv.act ? " on" : "") + (st.ai || st.virt || st.strat ? "" : " mine") + " " + rkKind(st) + (k < 3 && pe ? " m" + (k + 1) : "") + '" data-t="' + q.i + '" data-id="' + q.i + '" aria-pressed="' + (q.i === pcsv.act) + '" title="' + escHtml(st.link && !st.lname ? "Ссылка · " + pcsvLabel(st) : pcsvNm(st.name)) + ' · ' + fmt(st.rows.length) + ' вар.">' +
           '<span class="rk-p"><b>' + (k + 1) + '</b>' + tr + '</span>' +
-          '<span class="rk-n"><b>' + escHtml(pcsvLabel(st)) + '</b>' + ((st.link && !st.lname) || st.virt || st.ai ? (st.brief ? '<span class="rk-fn">бриф 14 из 15</span>' : '') : '<span class="rk-fn">' + escHtml(pcsvNm(st.name)) + '</span>') + '<small>' + (q.out ? '<span class="rk-x" title="Набор выбыл: ни один вариант уже не наберёт ' + PAY + '+">\u00d7</span> ' : '') + (st.strat ? '<em class="rk-ai rk-st">' + ({ kel: "Келли", mkel: "Монстр", sim: "Симул." })[st.strat] + '</em>' + RK_VT : st.virt ? '<em class="rk-ai rk-hunt">Охота</em>' + RK_VT : st.ai ? '<em class="rk-ai">ИИ</em>' + RK_VT : "") + '<span class="rk-cnt">' + fmt(st.rows.length) + ' вар.</span></small></span>' +
+          '<span class="rk-n"><b>' + escHtml(pcsvLabel(st)) + '</b>' + ((st.link && !st.lname) || st.virt || st.ai ? (st.brief ? '<span class="rk-fn">бриф 14 из 15</span>' : '') : '<span class="rk-fn">' + escHtml(pcsvNm(st.name)) + '</span>') + '<small>' + (q.out ? '<span class="rk-x" title="Набор выбыл: ни один вариант уже не наберёт ' + PAY + '+">\u00d7</span> ' : '') + (st.strat ? '<em class="rk-ai rk-st">' + ({ kel: "Келли", mkel: "Монстр", sim: "Симул.", gap: "Расхожд." })[st.strat] + '</em>' + RK_VT : st.virt ? '<em class="rk-ai rk-hunt">Охота</em>' + RK_VT : st.ai ? '<em class="rk-ai">ИИ</em>' + RK_VT : "") + '<span class="rk-cnt">' + fmt(st.rows.length) + ' вар.</span></small></span>' +
           '<span class="rk-v">' + (pe ? '<i class="cn" data-k="' + q.i + 'b">' + q.b + '</i><small> из ' + pe + '</small>' : '—') + '</span>' +
           '<span class="rk-v' + (q.w ? " ok" : "") + '"><i class="cn" data-k="' + q.i + 'w">' + fmt(q.w) + '</i></span><span class="rk-v"><i class="cn" data-k="' + q.i + 'a">' + fmt(q.a) + '</i></span>' +
           '<span class="rk-bar" data-w="' + (n ? Math.round(q.b / n * 100) : 0) + '" data-pay="' + (n ? Math.round(PAY / n * 100) : 60) + '"><i></i><u></u></span></button>';
