@@ -3304,3 +3304,13 @@ body.is-prev .row.is-live{box-shadow:inset 3px 0 0 #e0483e, 0 0 22px -10px rgba(
 .pc-cr.pc-burst .pc-sc::before{content:"ГОЛ!"; position:absolute; right:calc(100% + 4px); top:50%; transform:translateY(-50%); z-index:3; pointer-events:none; padding:3px 4px; border-radius:5px;
   font:800 10px/1 "Chivo",sans-serif; letter-spacing:.05em; white-space:nowrap; color:#1a1410; background:linear-gradient(180deg,#f6dd95,#c9963c); box-shadow:0 0 12px rgba(246,221,149,.8); animation:glTag 2.6s ease-out forwards}
 @media (max-width:560px){ .pc-cr.pc-burst .pc-sc::before{right:calc(100% + 2px); padding:3px; font-size:9px; letter-spacing:.02em} }
+
+/* таблица в просмотре: живые матчи — спокойное золото, без красного и резкой пульсации */
+body.is-prev .row.is-live{background-image:linear-gradient(90deg, rgba(227,185,85,.10), rgba(227,185,85,.02) 55%, transparent 90%); box-shadow:inset 3px 0 0 rgba(201,162,75,.75)}
+body.is-prev .row.is-live::after{display:none}
+:root:not([data-compact="1"]) body.is-prev .row .tc-t.tc-live{color:#f6dd95; background:rgba(227,185,85,.14); border-color:rgba(227,185,85,.55); box-shadow:none; animation:none}
+:root:not([data-compact="1"]) body.is-prev .row .teams .mscore.live .sh,
+:root:not([data-compact="1"]) body.is-prev .row .teams .mscore.live .sa{color:#fff3d0; border-color:rgba(227,185,85,.7); text-shadow:0 0 10px rgba(246,221,149,.5); box-shadow:inset 0 1px 0 rgba(255,240,200,.18), 0 4px 10px -6px #000}
+:root:not([data-compact="1"]) body.is-prev .row .teams .mscore.live .sh.tr,
+:root:not([data-compact="1"]) body.is-prev .row .teams .mscore.live .sa.tr{color:rgba(243,234,210,.55); box-shadow:none}
+:root[data-theme="light"] body.is-prev .row.is-live{background-image:linear-gradient(90deg,#fbf3dc,transparent 70%); box-shadow:inset 3px 0 0 rgba(160,120,40,.8)}
