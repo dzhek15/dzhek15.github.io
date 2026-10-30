@@ -3537,3 +3537,13 @@ button{border-radius:8px; border-color:var(--kit-line)}
   body.is-prev .pc-cov .pc-cr{grid-template-columns:18px 40px 52px minmax(0,1fr) 24px repeat(3,31px); gap:3px 2px}
   body.is-prev .pc-cov .pc-fs{width:24px}
 }
+
+/* тёмные панели вокруг таблиц на обоях — полупрозрачные: обои просвечивают, строки читаются на своих плитках */
+body.is-prev .pcsv > :not(.wpPane):not([hidden]):not(:empty){background-color:color-mix(in srgb, var(--surface) 42%, transparent); -webkit-backdrop-filter:blur(5px) saturate(1.1); backdrop-filter:blur(5px) saturate(1.1)}
+body.is-prev .pcsv > .pc-sub{background-color:color-mix(in srgb, var(--surface) 55%, transparent)}
+body.is-prev .pcsv .pc-cr{background-color:color-mix(in srgb, var(--surface) 78%, transparent)}
+body.is-prev .pcsv .pc-cr.st-live{background-color:color-mix(in srgb, var(--surface) 82%, transparent)}
+body.is-prev #rows > .row{background-color:color-mix(in srgb, var(--surface) 84%, transparent); -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px)}
+body.is-prev #tmHint:not(:empty){background-color:color-mix(in srgb, var(--surface) 55%, transparent)}
+body.is-prev .coupon .chead{background-color:color-mix(in srgb, var(--surface) 70%, transparent)}
+body.is-prev .pcsv > :not(.wpPane):not([hidden]):not(:empty){box-shadow:0 6px 16px -14px rgba(0,0,0,.6)}
