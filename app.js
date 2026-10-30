@@ -5477,6 +5477,45 @@
     });
     return p;
   }
+  /* шанс на 12 и больше угаданных (как «12+» у форм с ИИ): у полного покрытия считается точно
+     (внутри купона должно оказаться не меньше 12 итогов), у системы — розыгрышем итогов по линии конторы */
+  function briefP12Full(sets, P){
+    var dp = [1], i, k;
+    sets.forEach(function(st, ix){
+      var q;
+      if(state.matches[ix] && state.matches[ix].fsVoid) q = 1;
+      else if(!P[ix]) q = st.length / 3;
+      else { q = 0; st.forEach(function(o){ q += P[ix][o]; }); q = Math.min(1, q); }
+      var nd = new Array(dp.length + 1).fill(0);
+      for(k = 0; k < dp.length; k++){ nd[k + 1] += dp[k] * q; nd[k] += dp[k] * (1 - q); }
+      dp = nd;
+    });
+    var p = 0; for(i = 12; i < dp.length; i++) p += dp[i];
+    return p;
+  }
+  function briefP12(lines, P){
+    var n = lines.length ? lines[0].length : 0, R = lines.length, i, j;
+    if(!R || n < 12) return null;
+    var code = new Int32Array(R);
+    for(i = 0; i < R; i++){ var c = 0; for(j = 0; j < n; j++) c |= lines[i][j] << (2 * j); code[i] = c; }
+    var cum = [];
+    for(j = 0; j < n; j++){
+      var pj = P[j] || [1 / 3, 1 / 3, 1 / 3], t = pj[0] + pj[1] + pj[2];
+      cum.push([pj[0] / t, (pj[0] + pj[1]) / t]);
+    }
+    var N = Math.max(4000, Math.min(20000, Math.floor(6e7 / R))), seed = 20261030, ok = 0, MASK = 0x15555555;
+    function rnd(){ seed = (seed + 0x6D2B79F5) | 0; var z = Math.imul(seed ^ (seed >>> 15), 1 | seed); z = (z + Math.imul(z ^ (z >>> 7), 61 | z)) ^ z; return ((z ^ (z >>> 14)) >>> 0) / 4294967296; }
+    for(var s0 = 0; s0 < N; s0++){
+      var y = 0;
+      for(j = 0; j < n; j++){ var u = rnd(); y |= (u < cum[j][0] ? 0 : u < cum[j][1] ? 1 : 2) << (2 * j); }
+      for(i = 0; i < R; i++){
+        var x = code[i] ^ y; x = (x | (x >>> 1)) & MASK;
+        x = x - ((x >>> 1) & 0x55555555); x = (x & 0x33333333) + ((x >>> 2) & 0x33333333); x = (((x + (x >>> 4)) & 0x0F0F0F0F) * 0x01010101) >>> 24;
+        if(x <= n - 12){ ok++; break; }
+      }
+    }
+    return ok / N;
+  }
   /* строки «Брифа» — в корзину, как броски и прокрутки */
   var BASKET_MAX = 12000;   /* строки охоты/брифа хранятся сжато (без snap), поэтому влезает 10 000 */
   function briefToBasket(lines, g){
@@ -5618,6 +5657,10 @@
         var pin = briefInside(sets, briefProbs());
         ch = '<div class="brief-ch" title="Шанс по модели: 15 из 15 и хотя бы 14 при условии, что все исходы попали в купон, умноженный на шанс такого попадания">15: ' +
              stratChance(pin * have.w15) + '</div><div class="brief-ch">14+: ' + stratChance(pin * have.w14) + '</div>';
+      }
+      if(have.lines){
+        if(have.p12 == null) have.p12 = briefP12(have.lines, briefProbs());
+        if(have.p12 != null) ch += '<div class="brief-ch brief-ch12" title="Шанс по модели на 12 и больше угаданных в этой системе — как «12+» у форм с ИИ">12+: ' + stratChance(have.p12) + '</div>';
       }
       cells = '<td><b>' + fmt(have.rows) + '</b>' + ch + '</td><td>' + fmt(cost) + ' ₽</td>' +
               '<td class="brief-save">' + (U === have.rows ? "—" : "−" + save.toFixed(0) + "%") + '</td>' +
@@ -5876,7 +5919,8 @@
 
     h += '<p class="ev-note">Все исходы купона равноправны. Шансы 15 и 14+ под числом строк считаются по линии конторы и только как справка, на состав системы они не влияют.</p>';
     h += '<table class="ev-tab brief-tab"><thead><tr><th><span class="bt-of">Гарантия</span><span class="bt-sh">Из 15</span></th><th>Строк</th><th>Цена</th><th>Дешевле</th><th></th></tr></thead><tbody>';
-    h += '<tr><td>15<span class="bt-of"> из 15</span></td><td><b>' + fmt(U) + '</b></td><td>' + fmt(U * price) + ' ₽</td><td class="brief-save">—</td>' +
+    var pFull12 = briefP12Full(sets, briefProbs());
+    h += '<tr><td>15<span class="bt-of"> из 15</span></td><td><b>' + fmt(U) + '</b><div class="brief-ch brief-ch12" title="Шанс по модели на 12 и больше угаданных при полном покрытии купона">12+: ' + stratChance(pFull12) + '</div></td><td>' + fmt(U * price) + ' ₽</td><td class="brief-save">—</td>' +
          '<td class="nw">полное покрытие</td></tr>';
     for(var g = 14; g >= 9; g--) h += briefRow(g, sets, sizes, U);
     h += '</tbody></table>';

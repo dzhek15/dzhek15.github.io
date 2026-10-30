@@ -2881,3 +2881,4 @@ html[data-bk="fonbet"] .fon-only{display:flex}
 .pick:not([aria-pressed="true"]):not(.won):not(.in-pool):not(.bk-real):not(.mine-hit):focus,
 .pick:not([aria-pressed="true"]):not(.won):not(.in-pool):not(.bk-real):not(.mine-hit):focus-visible{outline:none}
 .pick.kel-up:not([aria-pressed="true"]){box-shadow:none; outline:none}
+.brief-ch12{color:var(--brand-gold, #c9a24b); font-weight:600}
