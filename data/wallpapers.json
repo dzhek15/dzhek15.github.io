@@ -1,6 +1,26 @@
-{"updated":"2026-10-30","note":"пробный набор; позже подставляется после ИИ-разбора по темам новостей","items":[
- {"src":"img/wp/wp1.webp","theme":"Вечерний стадион"},
- {"src":"img/wp/wp2.webp","theme":"Мяч под дождём"},
- {"src":"img/wp/wp3.webp","theme":"Тактическая доска"},
- {"src":"img/wp/wp4.webp","theme":"Трибуны в дымке"}
-]}
+{
+ "updated": "2026-10-30",
+ "note": "пробный набор; позже подставляется после ИИ-разбора по темам новостей",
+ "items": [
+  {
+   "src": "img/wp/wp1.webp",
+   "theme": "Вечерний стадион",
+   "light": "img/wp/wl1.webp"
+  },
+  {
+   "src": "img/wp/wp2.webp",
+   "theme": "Мяч под дождём",
+   "light": "img/wp/wl2.webp"
+  },
+  {
+   "src": "img/wp/wp3.webp",
+   "theme": "Тактическая доска",
+   "light": "img/wp/wl3.webp"
+  },
+  {
+   "src": "img/wp/wp4.webp",
+   "theme": "Трибуны в дымке",
+   "light": "img/wp/wl4.webp"
+  }
+ ]
+}

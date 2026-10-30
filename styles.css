@@ -3317,23 +3317,33 @@ body.is-prev .row.is-live::after{display:none}
 
 /* ---------- Обои внутри таблиц (режим просмотра) ---------- */
 .wpPane{display:none}
-html:not([data-theme="light"]) body.is-prev .coupon, html:not([data-theme="light"]) body.is-prev .pcsv{position:relative; isolation:isolate}
-html:not([data-theme="light"]) body.is-prev .wpPane{display:block; position:absolute; inset:0; z-index:-1; pointer-events:none; overflow:hidden; border-radius:inherit}
+body.is-prev .coupon, body.is-prev .pcsv{position:relative; isolation:isolate}
+body.is-prev .wpPane{display:block; position:absolute; inset:0; z-index:-1; pointer-events:none; overflow:hidden; border-radius:inherit}
 .wpPane i{position:absolute; inset:-3%; background-size:cover; background-position:center; opacity:0; transition:opacity 2.8s ease-in-out; will-change:opacity,transform}
 .wpPane i.wp-on{opacity:.9; animation:wpDrift 34s ease-in-out forwards}
 @keyframes wpDrift{from{transform:scale(1.02) translate3d(0,0,0)} to{transform:scale(1.1) translate3d(-1.2%,-1%,0)}}
 .wpPane::after{content:""; position:absolute; inset:0; background:linear-gradient(180deg,rgba(11,16,18,.5),rgba(11,16,18,.36) 45%,rgba(11,16,18,.55))}
-html:not([data-theme="light"]) body.is-prev .coupon, html:not([data-theme="light"]) body.is-prev .pcsv{background:rgba(24,33,38,.4); -webkit-backdrop-filter:none; backdrop-filter:none}
+body.is-prev .coupon, body.is-prev .pcsv{background:rgba(24,33,38,.4); -webkit-backdrop-filter:none; backdrop-filter:none}
 @media (prefers-reduced-motion: reduce){ .wpPane i{transition:none} .wpPane i.wp-on{animation:none} }
 
 /* обои видны в рамке и в промежутках между блоками; под текстом и данными — однотонный фон темы */
-html:not([data-theme="light"]) body.is-prev .pcsv, html:not([data-theme="light"]) body.is-prev .coupon{background:rgba(24,33,38,.12)}
-html:not([data-theme="light"]) body.is-prev .wpPane::after{background:linear-gradient(180deg,rgba(11,16,18,.22),rgba(11,16,18,.06) 45%,rgba(11,16,18,.28))}
-html:not([data-theme="light"]) body.is-prev .pcsv{display:flex; flex-direction:column; gap:10px}
-html:not([data-theme="light"]) body.is-prev .pcsv > :not(.wpPane):not([hidden]):not(:empty){background:var(--surface); border-radius:12px; padding:10px 12px; margin:0 !important; box-shadow:0 6px 16px -12px #000}
-html:not([data-theme="light"]) body.is-prev .pcsv > .pc-sub{background:var(--surface); -webkit-background-clip:border-box; background-clip:border-box; color:#e3b955; -webkit-text-fill-color:#e3b955; animation:none; padding:12px; justify-content:center}
-html:not([data-theme="light"]) body.is-prev .pcsv > .wpPane{display:block}
-html:not([data-theme="light"]) body.is-prev #tmHint:not(:empty){background:var(--surface); margin:8px 8px 0; border-radius:10px; padding:6px 10px}
-html:not([data-theme="light"]) body.is-prev #rows{padding:9px; display:flex; flex-direction:column; gap:9px}
-html:not([data-theme="light"]) body.is-prev #rows > .row{background-color:var(--surface); border-radius:12px; border:1px solid rgba(255,255,255,.06); box-shadow:inset 3px 0 0 var(--stripe,transparent), 0 6px 14px -10px #000}
-html:not([data-theme="light"]) body.is-prev .coupon .chead{border-radius:0}
+body.is-prev .pcsv, body.is-prev .coupon{background:rgba(24,33,38,.12)}
+body.is-prev .wpPane::after{background:linear-gradient(180deg,rgba(11,16,18,.22),rgba(11,16,18,.06) 45%,rgba(11,16,18,.28))}
+body.is-prev .pcsv{display:flex; flex-direction:column; gap:10px}
+body.is-prev .pcsv > :not(.wpPane):not([hidden]):not(:empty){background:var(--surface); border-radius:12px; padding:10px 12px; margin:0 !important; box-shadow:0 6px 16px -12px #000}
+body.is-prev .pcsv > .pc-sub{background:var(--surface); -webkit-background-clip:border-box; background-clip:border-box; color:#e3b955; -webkit-text-fill-color:#e3b955; animation:none; padding:12px; justify-content:center}
+body.is-prev .pcsv > .wpPane{display:block}
+body.is-prev #tmHint:not(:empty){background:var(--surface); margin:8px 8px 0; border-radius:10px; padding:6px 10px}
+body.is-prev #rows{padding:9px; display:flex; flex-direction:column; gap:9px}
+body.is-prev #rows > .row{background-color:var(--surface); border-radius:12px; border:1px solid rgba(255,255,255,.06); box-shadow:inset 3px 0 0 var(--stripe,transparent), 0 6px 14px -10px #000}
+body.is-prev .coupon .chead{border-radius:0}
+
+/* светлая тема: светлые обои, светлая вуаль, плашки в цвет темы */
+:root[data-theme="light"] body.is-prev .pcsv, :root[data-theme="light"] body.is-prev .coupon{background:rgba(255,255,255,.1)}
+:root[data-theme="light"] body.is-prev .wpPane::after{background:linear-gradient(180deg,rgba(255,255,255,.3),rgba(255,255,255,.08) 45%,rgba(255,255,255,.34))}
+:root[data-theme="light"] body.is-prev .pcsv > :not(.wpPane):not([hidden]):not(:empty){box-shadow:0 6px 16px -12px rgba(0,0,0,.35)}
+:root[data-theme="light"] body.is-prev .pcsv > .pc-sub{color:#1F3A52; -webkit-text-fill-color:#1F3A52}
+:root[data-theme="light"] body.is-prev #rows > .row{border-color:rgba(0,0,0,.08); box-shadow:inset 3px 0 0 var(--stripe,transparent), 0 6px 14px -10px rgba(0,0,0,.35)}
+body.is-prev .pcsv{padding:10px}
+body.is-prev .pcsv > .pc-cov:not(.wpPane):not([hidden]):not(:empty){padding:6px 0}
+body.is-prev .pcsv > .pc-vars:not(.wpPane):not([hidden]):not(:empty), body.is-prev .pcsv > .pc-pager:not(.wpPane):not([hidden]):not(:empty){padding-inline:8px}

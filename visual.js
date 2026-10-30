@@ -372,23 +372,25 @@
       wp.loading = false; if(wp.list.length) cb();
     }).catch(function(){ wp.loading = false; });
   }
-  function wpShow(){
+  function wpSrc(it){ return (document.documentElement.getAttribute("data-theme") === "light" && it.light) ? it.light : it.src; }
+  function wpShow(keep){
     if(!wp.list || !wp.list.length) return;
-    wp.i = (wp.i + 1) % wp.list.length;
-    var it = wp.list[wp.i], im = new Image();
+    if(keep !== true) wp.i = (wp.i + 1) % wp.list.length;
+    if(wp.i < 0) wp.i = 0;
+    var it = wp.list[wp.i], im = new Image(), src = wpSrc(it);
     im.onload = function(){
       wpEnsure();
       var nx = wp.front ^ 1;
       wpPanels().forEach(function(p){
         var f = p.querySelector(":scope > .wpPane"); if(!f) return;
         var a = f.children[nx], b = f.children[wp.front];
-        a.style.backgroundImage = "url(" + it.src + ")";
+        a.style.backgroundImage = "url(" + src + ")";
         a.classList.remove("wp-on"); void a.offsetWidth; a.classList.add("wp-on");
         b.classList.remove("wp-on");
       });
-      wp.front = nx; wp.cur = it.src;
+      wp.front = nx; wp.cur = src;
     };
-    im.src = it.src;
+    im.src = src;
   }
   function wpSync(){
     var on = document.body.classList.contains("is-prev");
@@ -401,6 +403,7 @@
   try{
     new MutationObserver(wpSync).observe(document.body, { attributes: true, attributeFilter: ["class"] });
     if($("prevCsv")) new MutationObserver(function(){ if(document.body.classList.contains("is-prev")) wpEnsure(); }).observe($("prevCsv"), { childList: true });
+    new MutationObserver(function(){ if(wp.timer) wpShow(true); }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
     wpSync();
   }catch(e){}
 
