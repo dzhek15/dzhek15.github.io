@@ -2912,7 +2912,16 @@ html[data-bk="fonbet"] .fon-only{display:flex}
 .cmp-so b.on{color:#14171a; font-weight:800}
 .cmpv-bar{display:flex; justify-content:center; flex-wrap:wrap; gap:8px; margin:8px 0}
 .cmpv-bar[hidden]{display:none}
-.cmpv-bar button{flex:1 1 0; max-width:200px; min-height:40px; padding:0 12px; border:1px solid var(--brand-gold); border-radius:10px; background:transparent; color:var(--brand-gold); font-size:14px; font-weight:600; cursor:pointer}
+.cmpv-bar button{position:relative; flex:1 1 0; max-width:200px; min-height:40px; padding:0 12px; border:1px solid var(--brand-gold); border-radius:10px; background:transparent; color:var(--brand-gold); font-size:14px; font-weight:600; cursor:pointer}
 .cmpv-bar button.on{background:color-mix(in srgb,var(--brand-gold) 16%, transparent)}
 .cmpv-bar button.ghost{border-color:var(--rule-strong); color:var(--muted); font-weight:500}
 .cmp-x{margin-left:4px; padding:0 3px; text-decoration:none; opacity:.7} .cmp-x:hover{opacity:1}
+
+.cmpv-bar .cmpv-add{background:linear-gradient(180deg,#f2cf6d,#c9992c); color:#2a1d00; border-color:#e8c25a; box-shadow:0 0 0 0 rgba(232,194,90,.55); animation:cmpvIdle 2.8s ease-in-out infinite}
+.cmpv-bar .cmpv-add:active{transform:scale(.97)}
+.cmpv-bar .cmpv-add.done{background:linear-gradient(180deg,#8fe0a8,#3fa86a); color:#06210f; border-color:#6fcf97; animation:cmpvDone .9s ease-out 1}
+.cmpv-bar .bump{animation:cmpvBump .7s ease-out 1}
+@keyframes cmpvIdle{0%,100%{box-shadow:0 0 0 0 rgba(232,194,90,.0)}50%{box-shadow:0 0 0 6px rgba(232,194,90,.18)}}
+@keyframes cmpvDone{0%{transform:scale(.94); box-shadow:0 0 0 0 rgba(111,207,151,.7)}40%{transform:scale(1.06)}100%{transform:scale(1); box-shadow:0 0 0 16px rgba(111,207,151,0)}}
+@keyframes cmpvBump{0%{transform:scale(1)}30%{transform:scale(1.12); background:color-mix(in srgb,var(--brand-gold) 40%, transparent)}100%{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){ .cmpv-bar .cmpv-add,.cmpv-bar .cmpv-add.done,.cmpv-bar .bump{animation:none} }

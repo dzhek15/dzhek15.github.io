@@ -8710,7 +8710,7 @@
   function cmpNmT(st){ return st.vnm || pcsvNm(st.name); }
   function cmpN(st){ return st.cnt != null ? st.cnt : st.rows.length; }
   /* варианты купона на главной: снимок исходов сейчас лежащего купона, потом — наложение, рядом, по отдельности */
-  var CMPV_KEY = "dz_cmpv";
+  var CMPV_KEY = "dz_cmpv", cmpvFlash = 0, cmpvTimer = 0;
   function cmpvLoad(){
     var o = null; try{ o = JSON.parse(localStorage.getItem(CMPV_KEY) || "null"); }catch(e){}
     if(!o || o.tir !== String(state.tirazh)) o = { tir: String(state.tirazh), n: 0, items: [] };
@@ -8721,8 +8721,9 @@
     var bar = $("cmpvBar"); if(!bar) return;
     var o = cmpvLoad(), n = o.items.length;
     bar.hidden = !!state.viewPrev || !state.matches.length;
-    bar.innerHTML = '<button type="button" id="cmpvAdd" title="Запомнить исходы купона, который сейчас в таблице, и потом сравнить его с другими вариантами">+ В сравнение</button>' +
-      (n ? '<button type="button" id="cmpvGo" class="on">Сравнение (' + n + ')</button><button type="button" id="cmpvClr" class="ghost">Очистить</button>' : '');
+    var fl = cmpvFlash && Date.now() - cmpvFlash < 1600;
+    bar.innerHTML = '<button type="button" id="cmpvAdd" class="cmpv-add' + (fl ? ' done' : '') + '" title="Запомнить исходы купона, который сейчас в таблице, и потом сравнить его с другими вариантами">' + (fl ? '\u2713 Добавлено' : '+ В сравнение') + '</button>' +
+      (n ? '<button type="button" id="cmpvGo" class="on' + (fl ? ' bump' : '') + '">Сравнение (' + n + ')</button><button type="button" id="cmpvClr" class="ghost">Очистить</button>' : '');
     $("cmpvAdd").addEventListener("click", function(){
       var core = state.matches.map(function(m){ return OUT.filter(function(x){ return m.picks[x]; }).join(""); });
       if(core.some(function(c){ return !c; })){ say("В купоне есть матч без исхода: сначала выберите исход в каждом матче."); return; }
@@ -8732,7 +8733,9 @@
       var t = tally();
       o2.n = (o2.n || 0) + 1;
       o2.items.push({ name: "Вариант " + o2.n, core: core, cnt: t.combos, cost: t.combos * briefPrice() });
-      cmpvSave(o2); cmpvRender();
+      cmpvSave(o2); cmpvFlash = Date.now(); cmpvRender();
+      clearTimeout(cmpvTimer); cmpvTimer = setTimeout(cmpvRender, 1650);
+      try{ if(navigator.vibrate) navigator.vibrate(25); }catch(e){}
       say("«Вариант " + o2.n + "» добавлен в сравнение: " + fmt(t.combos) + " строк на " + fmt(t.combos * briefPrice()) + " ₽.");
     });
     if($("cmpvGo")) $("cmpvGo").addEventListener("click", showCouponCompare);
