@@ -6829,7 +6829,7 @@
   }
 
   var pullDone = false;               /* свежий тираж уже подтянут (или не вышло) — можно разбирать ссылку */
-  function tryPending(){ pullDone = true; tryPendingLink(); tryPendingBook(); }
+  function tryPending(){ pullDone = true; tryPendingLink(); tryPendingBook(); tryPendingCmp(); }
   /* ссылку вставили в уже открытую вкладку: меняется только #хвост, страница сама не перезагружается — перезагружаем, чтобы ссылка разобралась */
   window.addEventListener("hashchange", function(){
     if(/^#(?:s|v|vs|k)=/.test(String(location.hash || ""))) location.reload();
@@ -8502,7 +8502,7 @@
   function linkBase(){ return location.origin + location.pathname + "?bk=" + BKID; }
   function linkBk(t){ var m = /[?&]bk=(baltbet|fonbet)\b/.exec(String(t || "")); return m ? m[1] : ""; }
   function linkCleanUrl(){
-    var q = String(location.search || "").replace(/^\?/, "").split("&").filter(function(x){ return x && !/^(s|v|vs|k)=/.test(x); }).join("&");
+    var q = String(location.search || "").replace(/^\?/, "").split("&").filter(function(x){ return x && !/^(s|v|vs|k|cmp)=/.test(x); }).join("&");
     return location.pathname + (q ? "?" + q : "");
   }
   function linkNorm(t){
@@ -8704,7 +8704,7 @@
     return "Мой " + (i + 1);
   }
   /* сравнение наборов: выбранные кнопкой «В сравнение» (или все, если ничего не выбрано); три вида — наложение, рядом, по отдельности */
-  var CMP_COL = ["#e8c25a", "#7fb0ff", "#6fcf97", "#ff8a65", "#c792ea", "#4dd0e1", "#f48fb1", "#aed581"];
+  var CMP_COL = ["#e8c25a", "#7fb0ff", "#6fcf97", "#ff8a65", "#c792ea", "#4dd0e1", "#f48fb1", "#aed581", "#ffd54f", "#9575cd", "#4db6ac", "#e57373"];
   var cmpMode = "over", cmpHide = {};
   function cmpLab(st){ return st.vlabel || pcsvLabel(st); }
   function cmpNmT(st){ return st.vnm || pcsvNm(st.name); }
@@ -8723,35 +8723,216 @@
     bar.hidden = !!state.viewPrev || !state.matches.length;
     var fl = cmpvFlash && Date.now() - cmpvFlash < 1600;
     bar.innerHTML = '<button type="button" id="cmpvAdd" class="cmpv-add' + (fl ? ' done' : '') + '" title="Запомнить исходы купона, который сейчас в таблице, и потом сравнить его с другими вариантами">' + (fl ? '\u2713 Добавлено' : '+ В сравнение') + '</button>' +
-      (n ? '<button type="button" id="cmpvGo" class="on' + (fl ? ' bump' : '') + '">Сравнение (' + n + ')</button><button type="button" id="cmpvClr" class="ghost">Очистить</button>' : '');
+      '<button type="button" id="cmpvGo" class="' + (n ? 'on' : 'ghost') + (fl ? ' bump' : '') + '" title="Открыть сравнение: можно добавить купоны и CSV, дать им имена">Сравнение' + (n ? ' (' + n + ')' : '') + '</button>' + (n ? '<button type="button" id="cmpvClr" class="ghost">Очистить</button>' : '');
     $("cmpvAdd").addEventListener("click", function(){
       var core = state.matches.map(function(m){ return OUT.filter(function(x){ return m.picks[x]; }).join(""); });
       if(core.some(function(c){ return !c; })){ say("В купоне есть матч без исхода: сначала выберите исход в каждом матче."); return; }
-      var o2 = cmpvLoad();
-      if(o2.items.some(function(it){ return it.core.join("|") === core.join("|"); })){ say("Такой купон уже в сравнении."); return; }
-      if(o2.items.length >= 8){ say("В сравнении уже 8 вариантов: уберите лишние или очистите список."); return; }
       var t = tally();
-      o2.n = (o2.n || 0) + 1;
-      o2.items.push({ name: "Вариант " + o2.n, core: core, cnt: t.combos, cost: t.combos * briefPrice() });
-      cmpvSave(o2); cmpvFlash = Date.now(); cmpvRender();
+      var r = cmpvPush({ core: core, cnt: t.combos }, "");
+      if(r.err){ say(r.err); return; }
+      cmpvFlash = Date.now(); cmpvRender();
       clearTimeout(cmpvTimer); cmpvTimer = setTimeout(cmpvRender, 1650);
       try{ if(navigator.vibrate) navigator.vibrate(25); }catch(e){}
-      say("«Вариант " + o2.n + "» добавлен в сравнение: " + fmt(t.combos) + " строк на " + fmt(t.combos * briefPrice()) + " ₽.");
+      say("«" + r.name + "» добавлен в сравнение: " + fmt(t.combos) + " строк на " + fmt(t.combos * briefPrice()) + " ₽.");
     });
     if($("cmpvGo")) $("cmpvGo").addEventListener("click", showCouponCompare);
     if($("cmpvClr")) $("cmpvClr").addEventListener("click", function(){ var o3 = cmpvLoad(); o3.items = []; o3.n = 0; cmpvSave(o3); cmpvRender(); });
   }
+  var CMPV_MAX = 12, cmpvNewName = "", cmpvMsg = "";
+  /* добавляет вариант в список сравнения; имя пустое — «Вариант N» */
+  function cmpvPush(it, name){
+    var o = cmpvLoad(), key = it.core.join("|") + "#" + it.cnt;
+    if(o.items.some(function(x){ return x.core.join("|") + "#" + x.cnt === key; })) return { err: "Такой купон уже в сравнении." };
+    if(o.items.length >= CMPV_MAX) return { err: "В сравнении уже " + CMPV_MAX + " вариантов: уберите лишние или очистите список." };
+    o.n = (o.n || 0) + 1;
+    name = String(name || "").trim() || "Вариант " + o.n;
+    o.items.push({ name: name, core: it.core, cnt: it.cnt, cost: it.cnt * briefPrice(), csv: it.csv ? 1 : 0 });
+    cmpvSave(o);
+    return { name: name };
+  }
   function cmpvRemove(i){
     var o = cmpvLoad(); o.items.splice(i, 1); cmpvSave(o); cmpvRender();
-    if(!o.items.length){ $("evBack").hidden = true; return; }
-    cmpHide = {}; showCouponCompare();
+    cmpHide = {}; cmpvRefresh();
   }
-  function showCouponCompare(){
-    var o = cmpvLoad(); if(!o.items.length) return;
-    window.__cmpMain = true; cmpHide = {};
+  function cmpvRefresh(){
+    var o = cmpvLoad();
+    window.__cmpMain = true; window.__cmpShared = false; window.__cmpMs = null;
     window.__cmpSets = o.items.map(function(it){ return { core: it.core, cnt: it.cnt, vlabel: it.name, vnm: it.name + " · " + fmt(it.cnt) + " стр. · " + fmt(it.cost) + " ₽" }; });
     cmpRender();
     $("evBack").hidden = false;
+  }
+  function showCouponCompare(){ cmpHide = {}; cmpvMsg = ""; cmpvRefresh(); try{ $("evBody").scrollIntoView({ block: "start" }); }catch(e){} }
+  /* загрузка CSV прямо в сравнении: каждый файл — отдельный вариант; имя — из строки «Имя варианта» или имя файла */
+  function cmpvLoadFiles(files){
+    var need = state.matches.length, k = 0, ok = [], bad = [], dup = [], full = 0, over = 0;
+    var nm = String(cmpvNewName || "").trim();
+    var next = function(){
+      if(k >= files.length){
+        cmpvMsg = (ok.length ? "Добавлено вариантов: " + ok.length + " (" + ok.slice(0, 4).join(", ") + (ok.length > 4 ? " и ещё " + (ok.length - 4) : "") + "). " : "") +
+          (dup.length ? "Уже есть в сравнении: " + dup.slice(0, 4).join(", ") + ". " : "") +
+          (bad.length ? "Не подошли (нужно " + need + " матчей в строке): " + bad.slice(0, 4).join(", ") + (bad.length > 4 ? " и ещё " + (bad.length - 4) : "") + ". " : "") +
+          (full ? "Лимит " + CMPV_MAX + " вариантов: остальные не добавлены. " : "") +
+          (over ? "В файлах больше " + fmt(MAX_CSV) + " вариантов — посчитаны первые " + fmt(MAX_CSV) + ". " : "");
+        if(ok.length) cmpvNewName = "";
+        cmpvRender(); cmpHide = {}; cmpvRefresh();
+        return;
+      }
+      var f = files[k++], rd = new FileReader();
+      rd.onload = function(){
+        var res = parseCsvVariants(rd.result, need);
+        if(!res.pages.length){ bad.push("«" + f.name + "»"); next(); return; }
+        var core = [];
+        for(var j = 0; j < need; j++){
+          var seen = {}; res.pages.forEach(function(pg){ String(pg[j]).split("").forEach(function(c){ seen[c] = 1; }); });
+          core.push(OUT.filter(function(o){ return seen[o]; }).join(""));
+        }
+        var nameK = nm ? (files.length > 1 ? nm + " " + k : nm) : pcsvNm(f.name);
+        var r = cmpvPush({ core: core, cnt: res.rows.length, csv: 1 }, nameK);
+        if(r.err){ if(/уже в сравнении/.test(r.err)) dup.push("«" + nameK + "»"); else full++; }
+        else { ok.push("«" + r.name + "»"); if(res.over) over = 1; }
+        next();
+      };
+      rd.onerror = function(){ bad.push("«" + f.name + "»"); next(); };
+      rd.readAsText(f);
+    };
+    next();
+  }
+  function cmpvPick(){
+    var inp = $("fileCmpCsv");
+    if(!inp){
+      inp = document.createElement("input");
+      inp.type = "file"; inp.id = "fileCmpCsv"; inp.accept = ".csv,text/csv,text/plain"; inp.hidden = true; inp.multiple = true;
+      document.body.appendChild(inp);
+      inp.addEventListener("change", function(e){
+        var files = [].slice.call(e.target.files || []); e.target.value = "";
+        if(files.length) cmpvLoadFiles(files);
+      });
+    }
+    inp.click();
+  }
+  /* блок под сравнением: имена вариантов и загрузка CSV */
+  function cmpvPanelHtml(all){
+    var h = '<div class="cmpv-pn">';
+    if(all.length) h += '<div class="cmpv-pt">Ссылка на сравнение</div><div class="cmpv-nl"><button type="button" class="pc-btn cmpv-share" id="cmpvShare">Скопировать ссылку</button></div><p class="cmpv-hint">Ссылка откроет у другого человека это же сравнение: все варианты с именами, вкладки «Наложение», «Рядом» и «По отдельности». Ваш список у него не меняется.</p><div class="cmpv-pt">Имя варианта</div>';
+    else h += '<div class="cmpv-pt">Имя варианта</div>';
+    h += '<div class="cmpv-nl"><input type="text" id="cmpvName" class="cmpv-in" maxlength="40" autocomplete="off" placeholder="Имя для следующего CSV (пусто — имя файла)" value="' + escHtml(cmpvNewName) + '" aria-label="Имя варианта перед загрузкой"><button type="button" class="pc-btn" id="cmpvCsv">Загрузить CSV</button></div>';
+    h += '<p class="cmpv-hint">Выберите файл (можно несколько): каждый станет отдельным вариантом. Если имя не задано, берётся имя файла. Тираж ' + escHtml(String(state.tirazh)) + ' — в файле должно быть ' + state.matches.length + ' матчей в строке.</p>';
+    if(cmpvMsg) h += '<p class="cmpv-msg">' + escHtml(cmpvMsg) + '</p>';
+    if(all.length){
+      h += '<div class="cmpv-pt">Названия вариантов</div><div class="cmpv-rn">' + all.map(function(st, i){
+        return '<div class="cmpv-rr"><i class="cmp-dot" style="background:' + CMP_COL[i % CMP_COL.length] + '">' + (i + 1) + '</i><input type="text" class="cmpv-in cmpv-rin" data-i="' + i + '" maxlength="40" value="' + escHtml(st.vlabel) + '" aria-label="Имя варианта ' + (i + 1) + '"><small>' + fmt(cmpN(st)) + ' стр.</small><button type="button" class="cmpv-del" data-d="' + i + '" title="Убрать из сравнения" aria-label="Убрать">\u00d7</button></div>';
+      }).join("") + '</div>';
+    }
+    return h + '</div>';
+  }
+  function cmpvPanelBind(){
+    var b = $("evBody"), nm = b.querySelector("#cmpvName");
+    if(!nm) return;
+    nm.addEventListener("input", function(){ cmpvNewName = nm.value; });
+    var shb = b.querySelector("#cmpvShare"); if(shb) shb.addEventListener("click", cmpvShareLink);
+    b.querySelector("#cmpvCsv").addEventListener("click", function(){ cmpvNewName = nm.value; cmpvPick(); });
+    [].slice.call(b.querySelectorAll(".cmpv-rin")).forEach(function(inp){
+      inp.addEventListener("change", function(){
+        var o = cmpvLoad(), i = Number(inp.getAttribute("data-i")), v = inp.value.trim();
+        if(!o.items[i]) return;
+        if(v) o.items[i].name = v;
+        cmpvSave(o); cmpvRefresh();
+      });
+    });
+    [].slice.call(b.querySelectorAll(".cmpv-del")).forEach(function(x){ x.addEventListener("click", function(){ cmpvRemove(Number(x.getAttribute("data-d"))); }); });
+  }
+  /* ---------- ссылка на сравнение: все варианты (исходы по матчам + имя) упакованы прямо в адрес ---------- */
+  function cmpB64(t){ return btoa(unescape(encodeURIComponent(t))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
+  function cmpUnB64(t){ t = String(t).replace(/-/g, "+").replace(/_/g, "/"); while(t.length % 4) t += "="; return decodeURIComponent(escape(atob(t))); }
+  function cmpvPack(items){
+    return items.map(function(it){
+      var d = it.core.map(function(c){ return String((c.indexOf("1") >= 0 ? 1 : 0) + (c.indexOf("X") >= 0 ? 2 : 0) + (c.indexOf("2") >= 0 ? 4 : 0)); }).join("");
+      return d + "." + Number(it.cnt || 0).toString(36) + "." + cmpB64(it.name);
+    }).join("~");
+  }
+  function cmpvUnpack(str, n){
+    var out = [];
+    String(str).split("~").filter(Boolean).forEach(function(x){
+      var q = x.split(".");
+      if(q.length < 3 || q[0].length !== n || !/^[1-7]+$/.test(q[0])) return;
+      var core = q[0].split("").map(function(d){ d = Number(d); return (d & 1 ? "1" : "") + (d & 2 ? "X" : "") + (d & 4 ? "2" : ""); });
+      var nm = ""; try{ nm = cmpUnB64(q.slice(2).join(".")); }catch(e){}
+      var cnt = parseInt(q[1], 36) || 0;
+      out.push({ name: (nm || "Вариант " + (out.length + 1)).slice(0, 40), core: core, cnt: cnt, cost: cnt * briefPrice() });
+    });
+    return out.slice(0, CMPV_MAX);
+  }
+  function cmpvShareUrl(){
+    var o = cmpvLoad(); if(!o.items.length) return "";
+    return linkBase() + "&cmp=" + encodeURIComponent(String(state.tirazh)) + "~" + cmpvPack(o.items);
+  }
+  function cmpvCopy(url, okText){
+    var done = function(t){ cmpvMsg = t; cmpvRefresh(); };
+    var manual = function(){ done("Скопировать автоматически не вышло — ссылка в окне, скопируйте её оттуда."); try{ window.prompt("Ссылка на сравнение — скопируйте:", url); }catch(e){} };
+    if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(function(){ done(okText); }, manual); else manual();
+  }
+  function cmpvShareLink(){
+    var url = cmpvShareUrl(), n = cmpvLoad().items.length; if(!url) return;
+    cmpvCopy(url, "Ссылка скопирована: " + n + " вариант(ов), тираж №" + state.tirazh + "." + (url.length > 3500 ? " Адрес длинный (" + fmt(url.length) + " символов): если мессенджер его обрежет, пришлите по частям, убрав лишние варианты." : " Отправьте её — у получателя откроется это сравнение."));
+  }
+  var cmpPend = (function(){
+    var m = String(location.search || "").match(/[?&]cmp=([^&#]+)/);
+    if(!m) return null;
+    var v = m[1]; try{ v = decodeURIComponent(v); }catch(e){}
+    var i = v.indexOf("~"); if(i < 1) return null;
+    return { tir: v.slice(0, i), data: v.slice(i + 1) };
+  })();
+  function cmpvSharedOpen(tir, items, ms){
+    window.__cmpMain = true; window.__cmpShared = true; window.__cmpMs = ms; window.__cmpShTir = tir; window.__cmpShItems = items; cmpHide = {};
+    window.__cmpSets = items.map(function(it){ return { core: it.core, cnt: it.cnt, vlabel: it.name, vnm: it.name + " · " + fmt(it.cnt) + " стр. · " + fmt(it.cost) + " ₽" }; });
+    cmpRender();
+    $("evBack").hidden = false;
+    try{ $("evBody").scrollIntoView({ block: "start" }); }catch(e){}
+  }
+  function cmpvSharedHtml(){
+    var cur = String(window.__cmpShTir) === String(state.tirazh);
+    return '<div class="cmpv-pn"><div class="cmpv-pt">Сравнение по ссылке</div><p class="cmpv-hint">Тираж №' + escHtml(String(window.__cmpShTir)) + ', вариантов: ' + window.__cmpShItems.length + '. Ваш собственный список сравнения не тронут.</p>' +
+      (cur ? '<div class="cmpv-nl"><button type="button" class="pc-btn" id="cmpvSave">Добавить в моё сравнение</button></div>' : '') +
+      (cmpvMsg ? '<p class="cmpv-msg">' + escHtml(cmpvMsg) + '</p>' : '') + '</div>';
+  }
+  function cmpvSharedBind(){
+    var sv = $("evBody").querySelector("#cmpvSave"); if(!sv) return;
+    sv.addEventListener("click", function(){
+      var add = 0, dup = 0, full = 0;
+      window.__cmpShItems.forEach(function(it){
+        var r = cmpvPush({ core: it.core, cnt: it.cnt, csv: 1 }, it.name);
+        if(!r.err) add++; else if(/уже в сравнении/.test(r.err)) dup++; else full++;
+      });
+      cmpvRender();
+      cmpvMsg = "Добавлено в ваше сравнение: " + add + (dup ? ", уже были: " + dup : "") + (full ? ", не влезло (лимит " + CMPV_MAX + "): " + full : "") + ".";
+      cmpvRefresh();
+    });
+  }
+  function tryPendingCmp(){
+    if(!cmpPend || !state.matches.length) return;
+    var p = cmpPend, n = state.matches.length;
+    var open = function(ms){
+      cmpPend = null;
+      var items = cmpvUnpack(p.data, ms.length);
+      try{ history.replaceState(null, "", linkCleanUrl()); }catch(e){}
+      if(!items.length){ say("Ссылку на сравнение открыть не удалось: адрес повреждён или сравнение сделано для другого числа матчей."); return; }
+      cmpvMsg = "";
+      cmpvSharedOpen(p.tir, items, ms);
+    };
+    if(String(p.tir) === String(state.tirazh)){ open(state.matches); return; }
+    if(state.prev && String(state.prev.tirazh) === String(p.tir)){ open(state.prev.matches); return; }
+    if(Number(p.tir) < Number(state.tirazh)){
+      if(p.loading) return;
+      p.loading = true; var left = 20;
+      prevLoad(Number(p.tir), false, function(){});
+      var iv = setInterval(function(){
+        if(state.prev && String(state.prev.tirazh) === String(p.tir)){ clearInterval(iv); open(state.prev.matches); return; }
+        if(--left <= 0){ clearInterval(iv); cmpPend = null; say("Сравнение сделано для тиража №" + p.tir + ", его матчи подгрузить не удалось."); }
+      }, 1000);
+      return;
+    }
+    cmpPend = null;
+    say("Сравнение сделано для тиража №" + p.tir + ", а он ещё не начался (сейчас №" + state.tirazh + "). Откройте ссылку после старта тиража.");
   }
   function showSetCompare(){
     var p = state.prev; if(!p) return;
@@ -8780,7 +8961,7 @@
     $("evBack").hidden = false;
   }
   function cmpRender(){
-    var ms = window.__cmpMain ? state.matches : (state.prev ? state.prev.matches : null); if(!ms) return;
+    var ms = window.__cmpMs || (window.__cmpMain ? state.matches : (state.prev ? state.prev.matches : null)); if(!ms) return;
     var n = ms.length, all = window.__cmpSets || [];
     var sets = all.filter(function(x, i){ return !cmpHide[i]; });
     var col = function(st){ return CMP_COL[all.indexOf(st) % CMP_COL.length]; };
@@ -8788,10 +8969,11 @@
     var tabs = '<div class="cmp-tabs" role="tablist">' + [["over", "Наложение"], ["side", "Рядом"], ["sep", "По отдельности"]].map(function(t){
       return '<button type="button" role="tab" data-m="' + t[0] + '" aria-selected="' + (cmpMode === t[0]) + '">' + t[1] + '</button>'; }).join("") + '</div>';
     var leg = '<div class="cmp-leg">' + all.map(function(st, i){
-      return '<button type="button" class="cmp-chip' + (cmpHide[i] ? ' off' : '') + '" data-i="' + i + '" title="' + escHtml(cmpNmT(st)) + ' — нажмите, чтобы скрыть или показать"><i style="background:' + CMP_COL[i % CMP_COL.length] + '"></i>' + escHtml(cmpLab(st)) + (window.__cmpMain ? '<u class="cmp-x" data-d="' + i + '" title="Убрать из сравнения">\u00d7</u>' : '') + '</button>';
+      return '<button type="button" class="cmp-chip' + (cmpHide[i] ? ' off' : '') + '" data-i="' + i + '" title="' + escHtml(cmpNmT(st)) + ' — нажмите, чтобы скрыть или показать"><i style="background:' + CMP_COL[i % CMP_COL.length] + '">' + (i + 1) + '</i><span class="cmp-cl">' + escHtml(cmpLab(st)) + '</span>' + (window.__cmpMain && !window.__cmpShared ? '<u class="cmp-x" data-d="' + i + '" title="Убрать из сравнения">\u00d7</u>' : '') + '</button>';
     }).join("") + '</div>';
-    var h = tabs + leg, uni = 0;
-    if(!sets.length) h += '<p class="ev-note">Все наборы скрыты: нажмите на название набора выше.</p>';
+    var h = all.length ? tabs + leg : '', uni = 0;
+    if(!all.length) h += '<p class="ev-note">В сравнении пока ничего нет. Загрузите CSV кнопкой ниже или вернитесь к таблице и нажмите «+ В сравнение».</p>';
+    else if(!sets.length) h += '<p class="ev-note">Все наборы скрыты: нажмите на название набора выше.</p>';
     else if(cmpMode === "over"){
       /* наложение: на каждый исход — полоска из ячеек, по одной на набор (цвет набора, если исход в нём есть) */
       h += '<div class="cmp-hd"><span>Каждая полоска — один набор: цветная, если в нём есть этот исход. Золотая рамка — исход есть во всех.</span></div><div class="cmp-grid">';
@@ -8807,13 +8989,13 @@
       h += '</div>';
     } else if(cmpMode === "side"){
       /* рядом: для каждого матча — по ячейке на набор, внутри 1 / X / 2, выбранные закрашены цветом набора */
-      h += '<div class="cmp-hd cmp-hs' + (sets.length > 5 ? ' many' : '') + '">' + sets.map(function(st){ return '<span class="cmp-hn" style="background:' + col(st) + '" title="' + escHtml(cmpNmT(st)) + '">' + escHtml(String(cmpLab(st)).replace(/^\D+/, "") || cmpLab(st)) + '</span>'; }).join("") + '</div><div class="cmp-grid' + (sets.length > 5 ? ' many' : '') + '">';
+      h += '<div class="cmp-hd cmp-hs' + (sets.length > 5 ? ' many' : '') + '">' + sets.map(function(st){ return '<span class="cmp-hn" style="background:' + col(st) + '" title="' + escHtml(cmpNmT(st)) + '">' + (all.indexOf(st) + 1) + '</span>'; }).join("") + '</div><div class="cmp-grid' + (sets.length > 5 ? ' many' : '') + '">';
       ms.forEach(function(m, j){
         var same = outs.every(function(x){ return x[j] === outs[0][j]; });
         if(same) uni++;
         h += '<div class="cmp-mr"><div class="cmp-mt"><span class="cmp-mn">' + (j + 1) + '</span>' + escHtml(m.home) + ' — ' + escHtml(m.away) + (same && sets.length > 1 ? '<u class="cmp-eq">одинаково</u>' : '') + '</div><div class="cmp-ss">' +
           outs.map(function(x, k){
-            return '<div class="cmp-sc">' + OUT.map(function(o){ var on = x[j].indexOf(o) >= 0; return '<b' + (on ? ' class="on" style="background:' + col(sets[k]) + '"' : '') + '>' + o + '</b>'; }).join("") + '</div>';
+            return '<div class="cmp-sc"><span class="cmp-cn" style="background:' + col(sets[k]) + '">' + (all.indexOf(sets[k]) + 1) + '</span>' + OUT.map(function(o){ var on = x[j].indexOf(o) >= 0; return '<b' + (on ? ' class="on" style="background:' + col(sets[k]) + '"' : '') + '>' + o + '</b>'; }).join("") + '</div>';
           }).join("") + '</div></div>';
       });
       h += '</div>';
@@ -8832,8 +9014,10 @@
       var un = 0; ms.forEach(function(m, j){ var c = OUT.filter(function(o){ return outs.every(function(x){ return x[j].indexOf(o) >= 0; }); }); if(c.length) un++; });
       h += '<p class="ev-note">Хотя бы в одном общем исходе наборы сошлись в ' + un + ' матчах из ' + n + '. В Охоте и Монстре берутся основные исходы системы, у остальных наборов — все исходы, которые встречаются в строках.</p>';
     }
+    if(window.__cmpShared) h += cmpvSharedHtml(); else if(window.__cmpMain) h += cmpvPanelHtml(all);
     $("evTitle").textContent = "Сравнение наборов";
     $("evBody").innerHTML = h;
+    if(window.__cmpShared) cmpvSharedBind(); else if(window.__cmpMain) cmpvPanelBind();
     [].slice.call($("evBody").querySelectorAll(".cmp-tabs button")).forEach(function(b){ b.addEventListener("click", function(){ cmpMode = b.getAttribute("data-m"); cmpRender(); }); });
     [].slice.call($("evBody").querySelectorAll(".cmp-chip")).forEach(function(b){ b.addEventListener("click", function(e){
       var x = e.target.closest ? e.target.closest(".cmp-x") : null;

@@ -2956,3 +2956,27 @@ html[data-bk="fonbet"] .fon-only{display:flex}
 .cmp-grid.many .cmp-sc{padding:2px; gap:1px}
 .cmp-grid.many .cmp-sc b{height:20px; font-size:10px; border-radius:3px}
 .cmp-hs.many{gap:5px} .cmp-hs.many .cmp-hn{font-size:11px}
+
+/* сравнение: нумерованные цвета, имена и загрузка CSV */
+.cmp-chip i,.cmp-dot{display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; border-radius:50%; color:#14171a; font-size:10px; font-weight:800; font-style:normal; flex:none}
+.cmp-chip{max-width:100%} .cmp-cl{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:150px}
+.cmp-cn{display:none}
+.cmp-grid.many .cmp-ss{flex-wrap:wrap}
+.cmp-grid.many .cmp-sc{flex:0 0 calc(25% - 5px); max-width:none; align-items:center}
+.cmp-grid.many .cmp-cn{display:inline-flex; flex:none; width:16px; height:16px; border-radius:50%; align-items:center; justify-content:center; color:#14171a; font-size:10px; font-weight:800}
+.cmp-hs.many{display:none}
+.cmpv-pn{margin-top:14px; padding:10px; border:1px solid var(--rule-strong,rgba(255,255,255,.18)); border-radius:12px; background:rgba(255,255,255,.025)}
+.cmpv-pt{font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin:0 0 6px}
+.cmpv-pt:not(:first-child){margin-top:12px}
+.cmpv-nl{display:flex; gap:8px; align-items:stretch}
+.cmpv-in{flex:1; min-width:0; padding:9px 10px; border:1px solid var(--rule-strong,rgba(255,255,255,.22)); border-radius:8px; background:rgba(0,0,0,.25); color:inherit; font:inherit; font-size:14px}
+.cmpv-in:focus{outline:none; border-color:var(--brand-gold)}
+.cmpv-nl .pc-btn{flex:none; white-space:nowrap}
+.cmpv-hint{margin:6px 0 0; font-size:11.5px; line-height:1.35; color:var(--muted)}
+.cmpv-msg{margin:8px 0 0; padding:7px 9px; border-radius:8px; font-size:12.5px; line-height:1.35; background:rgba(232,194,90,.12); color:var(--brand-gold)}
+.cmpv-rn{display:grid; gap:6px}
+.cmpv-rr{display:flex; align-items:center; gap:8px}
+.cmpv-rr .cmp-dot{width:22px; height:22px; font-size:12px}
+.cmpv-rr small{flex:none; color:var(--muted); font-size:11px; min-width:52px; text-align:right}
+.cmpv-del{flex:none; width:30px; height:30px; border:1px solid var(--rule-strong,rgba(255,255,255,.22)); border-radius:8px; background:transparent; color:inherit; font-size:18px; line-height:1}
+.cmpv-share{width:100%; min-height:40px}
