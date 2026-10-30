@@ -3372,8 +3372,8 @@ body.is-prev .pcsv > .pc-vars:not(.wpPane):not([hidden]):not(:empty), body.is-pr
 
 /* таблицы в просмотре: по центру и с большим отступом от тёмных краёв */
 body.is-prev .coupon, body.is-prev .pcsv{margin-inline:clamp(4px, calc((100vw - 340px) / 4), 30px)}
-body.is-prev #rows{padding:clamp(9px, calc((100vw - 300px) / 14), 20px)}
-body.is-prev .pcsv{padding:clamp(10px, calc((100vw - 300px) / 14), 20px)}
+body.is-prev #rows{padding:clamp(10px, calc((100vw - 300px) / 10), 44px); gap:clamp(9px, calc((100vw - 300px) / 60), 15px)}
+body.is-prev .pcsv{padding:clamp(10px, calc((100vw - 300px) / 10), 44px); gap:clamp(10px, calc((100vw - 300px) / 60), 16px)}
 body.is-prev .pcsv > :not(.wpPane):not([hidden]):not(:empty){width:100%; min-width:0; margin-inline:auto !important}
 body.is-prev #rows > .row{min-width:0}
 /* плашки и табло живых матчей — полностью непрозрачные, обои под ними не просвечивают */
