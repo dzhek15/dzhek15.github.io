@@ -2910,3 +2910,9 @@ html[data-bk="fonbet"] .fon-only{display:flex}
 .cmp-so{display:flex; gap:3px}
 .cmp-so b{display:inline-flex; align-items:center; justify-content:center; width:22px; height:20px; border-radius:5px; background:rgba(255,255,255,.06); color:var(--muted); font-size:12px}
 .cmp-so b.on{color:#14171a; font-weight:800}
+.cmpv-bar{display:flex; justify-content:center; flex-wrap:wrap; gap:8px; margin:8px 0}
+.cmpv-bar[hidden]{display:none}
+.cmpv-bar button{flex:1 1 0; max-width:200px; min-height:40px; padding:0 12px; border:1px solid var(--brand-gold); border-radius:10px; background:transparent; color:var(--brand-gold); font-size:14px; font-weight:600; cursor:pointer}
+.cmpv-bar button.on{background:color-mix(in srgb,var(--brand-gold) 16%, transparent)}
+.cmpv-bar button.ghost{border-color:var(--rule-strong); color:var(--muted); font-weight:500}
+.cmp-x{margin-left:4px; padding:0 3px; text-decoration:none; opacity:.7} .cmp-x:hover{opacity:1}

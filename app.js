@@ -4104,7 +4104,7 @@
   }
   function render(){
     var t0 = performance.now();
-    renderCore(); ujSoon(); renderWaitNote();
+    renderCore(); ujSoon(); renderWaitNote(); cmpvRender();
     if(typeof DBG !== "object") return;
     var d = performance.now() - t0; DBG.rn++; DBG.rsum += d; if(d > DBG.rmax) DBG.rmax = d;
     if(d > 80){ DBG.slow++; dbgLog("медленно", "перерисовка " + Math.round(d) + " мс"); }
@@ -8706,52 +8706,86 @@
   /* сравнение наборов: выбранные кнопкой «В сравнение» (или все, если ничего не выбрано); три вида — наложение, рядом, по отдельности */
   var CMP_COL = ["#e8c25a", "#7fb0ff", "#6fcf97", "#ff8a65", "#c792ea", "#4dd0e1", "#f48fb1", "#aed581"];
   var cmpMode = "over", cmpHide = {};
-  function cmpKey(st, i){ return (st.strat || "") + (st.virt ? "v" : "") + (st.ai ? "a" : "") + "|" + (st.name != null ? st.name : i); }
-  function cmpIds(){
-    if(!pcsv.cmp || pcsv.cmp.tir !== pcsv.tir) pcsv.cmp = { tir: pcsv.tir, ids: [] };
-    return pcsv.cmp.ids;
+  function cmpLab(st){ return st.vlabel || pcsvLabel(st); }
+  function cmpNmT(st){ return st.vnm || pcsvNm(st.name); }
+  function cmpN(st){ return st.cnt != null ? st.cnt : st.rows.length; }
+  /* варианты купона на главной: снимок исходов сейчас лежащего купона, потом — наложение, рядом, по отдельности */
+  var CMPV_KEY = "dz_cmpv";
+  function cmpvLoad(){
+    var o = null; try{ o = JSON.parse(localStorage.getItem(CMPV_KEY) || "null"); }catch(e){}
+    if(!o || o.tir !== String(state.tirazh)) o = { tir: String(state.tirazh), n: 0, items: [] };
+    return o;
   }
-  function cmpChosen(){
-    var ids = cmpIds();
-    return pcsv.sets.filter(function(x, i){ return x.rows && x.rows.length && ids.indexOf(cmpKey(x, i)) >= 0; });
+  function cmpvSave(o){ try{ localStorage.setItem(CMPV_KEY, JSON.stringify(o)); }catch(e){} }
+  function cmpvRender(){
+    var bar = $("cmpvBar"); if(!bar) return;
+    var o = cmpvLoad(), n = o.items.length;
+    bar.hidden = !!state.viewPrev || !state.matches.length;
+    bar.innerHTML = '<button type="button" id="cmpvAdd" title="Запомнить исходы купона, который сейчас в таблице, и потом сравнить его с другими вариантами">+ В сравнение</button>' +
+      (n ? '<button type="button" id="cmpvGo" class="on">Сравнение (' + n + ')</button><button type="button" id="cmpvClr" class="ghost">Очистить</button>' : '');
+    $("cmpvAdd").addEventListener("click", function(){
+      var core = state.matches.map(function(m){ return OUT.filter(function(x){ return m.picks[x]; }).join(""); });
+      if(core.some(function(c){ return !c; })){ say("В купоне есть матч без исхода: сначала выберите исход в каждом матче."); return; }
+      var o2 = cmpvLoad();
+      if(o2.items.some(function(it){ return it.core.join("|") === core.join("|"); })){ say("Такой купон уже в сравнении."); return; }
+      if(o2.items.length >= 8){ say("В сравнении уже 8 вариантов: уберите лишние или очистите список."); return; }
+      var t = tally();
+      o2.n = (o2.n || 0) + 1;
+      o2.items.push({ name: "Вариант " + o2.n, core: core, cnt: t.combos, cost: t.combos * briefPrice() });
+      cmpvSave(o2); cmpvRender();
+      say("«Вариант " + o2.n + "» добавлен в сравнение: " + fmt(t.combos) + " строк на " + fmt(t.combos * briefPrice()) + " ₽.");
+    });
+    if($("cmpvGo")) $("cmpvGo").addEventListener("click", showCouponCompare);
+    if($("cmpvClr")) $("cmpvClr").addEventListener("click", function(){ var o3 = cmpvLoad(); o3.items = []; o3.n = 0; cmpvSave(o3); cmpvRender(); });
   }
-  function cmpToggleAct(){
-    var st = pcsv.sets[pcsv.act]; if(!st || !(st.rows && st.rows.length)) return;
-    var ids = cmpIds(), k = cmpKey(st, pcsv.act), at = ids.indexOf(k);
-    if(at >= 0) ids.splice(at, 1); else if(ids.length < 8) ids.push(k);
-    renderPrevCsv();
+  function cmpvRemove(i){
+    var o = cmpvLoad(); o.items.splice(i, 1); cmpvSave(o); cmpvRender();
+    if(!o.items.length){ $("evBack").hidden = true; return; }
+    cmpHide = {}; showCouponCompare();
   }
-  function cmpBarHtml(){
-    var ids = cmpIds(), act = pcsv.sets[pcsv.act], inCmp = act && ids.indexOf(cmpKey(act, pcsv.act)) >= 0, ch = cmpChosen();
-    var h = '<div class="pc-cmpbar"><button type="button" class="pc-btn' + (inCmp ? ' ghost' : '') + '" id="pcCmpAdd" title="Открытый сейчас набор попадёт в сравнение: откройте набор в рейтинге и нажмите кнопку">' +
-      (inCmp ? 'Убрать из сравнения' : '+ В сравнение') + '</button>';
-    if(ch.length) h += '<button type="button" class="pc-btn" id="pcCmpGo">Сравнить (' + ch.length + ')</button><button type="button" class="pc-btn ghost" id="pcCmpClr">Очистить</button>';
-    h += '</div>';
-    if(ch.length){
-      h += '<div class="pc-cmpchips">' + ch.map(function(x, k){
-        return '<span class="pc-cchip"><i style="background:' + CMP_COL[k % CMP_COL.length] + '"></i>' + escHtml(pcsvLabel(x)) + '</span>';
-      }).join("") + '</div>';
-    } else h += '<p class="pc-lnote pc-rknote">Откройте набор в рейтинге и нажмите «+ В сравнение». Так можно собрать до 8 наборов и посмотреть их вместе.</p>';
-    return h;
-  }
-  function showSetCompare(){
-    var p = state.prev; if(!p) return;
-    cmpHide = {};
-    var ch = cmpChosen();
-    window.__cmpSets = ch.length ? ch : pcsv.sets.filter(function(x){ return x.rows && x.rows.length; }).slice(0, 8);
+  function showCouponCompare(){
+    var o = cmpvLoad(); if(!o.items.length) return;
+    window.__cmpMain = true; cmpHide = {};
+    window.__cmpSets = o.items.map(function(it){ return { core: it.core, cnt: it.cnt, vlabel: it.name, vnm: it.name + " · " + fmt(it.cnt) + " стр. · " + fmt(it.cost) + " ₽" }; });
     cmpRender();
     $("evBack").hidden = false;
   }
-  function cmpRender(){
+  function showSetCompare(){
     var p = state.prev; if(!p) return;
-    var ms = p.matches, n = ms.length, all = window.__cmpSets || [];
+    var ms = p.matches, n = ms.length;
+    var sets = pcsv.sets.filter(function(x){ return x.rows && x.rows.length; }).slice(0, 8);
+    var outs = sets.map(function(st){ return setOutcomesOf(st, n); });
+    var h = '<div class="cmp-wrap"><table class="ev-tab cmp-tab"><thead><tr><th>№</th><th>Матч</th>' + sets.map(function(st, i){ return '<th title="' + escHtml(pcsvNm(st.name)) + '">' + escHtml(cmpName(st, i)) + '</th>'; }).join("") + '</tr></thead><tbody>';
+    var uni = 0;
+    ms.forEach(function(m, j){
+      var common = OUT.filter(function(o){ return outs.every(function(x){ return x[j].indexOf(o) >= 0; }); });
+      if(common.length === 1) uni++;
+      h += '<tr><td class="nw">' + (j + 1) + '</td><td class="cmp-m">' + escHtml(m.home) + ' — ' + escHtml(m.away) + '</td>';
+      outs.forEach(function(x){
+        h += '<td class="nw"><span class="dt-pick">' + x[j].split("").map(function(o){
+          var cnt = outs.filter(function(y){ return y[j].indexOf(o) >= 0; }).length;
+          var cls = cnt === outs.length ? "cmp-all" : cnt === 1 ? "cmp-one" : "";
+          return cls ? '<b class="' + cls + '" title="' + (cnt === outs.length ? "есть во всех наборах" : "только в этом наборе") + '">' + o + '</b>' : o;
+        }).join("") + '</span></td>';
+      });
+      h += '</tr>';
+    });
+    h += '</tbody></table></div><p class="col-leg"><b class="cmp-all">1</b> исход есть во всех наборах (консенсус) &nbsp; <b class="cmp-one">X</b> исход только в одном наборе (спорный)</p>';
+    h += '<p class="ev-note">Единодушно в одном исходе наборы сошлись в ' + uni + ' матчах из ' + n + '. В Охоте и Монстре берутся основные исходы системы, у остальных наборов — все исходы, которые встречаются в строках.</p>';
+    $("evTitle").textContent = "Сравнение наборов";
+    $("evBody").innerHTML = h;
+    $("evBack").hidden = false;
+  }
+  function cmpRender(){
+    var ms = window.__cmpMain ? state.matches : (state.prev ? state.prev.matches : null); if(!ms) return;
+    var n = ms.length, all = window.__cmpSets || [];
     var sets = all.filter(function(x, i){ return !cmpHide[i]; });
     var col = function(st){ return CMP_COL[all.indexOf(st) % CMP_COL.length]; };
     var outs = sets.map(function(st){ return setOutcomesOf(st, n); });
     var tabs = '<div class="cmp-tabs" role="tablist">' + [["over", "Наложение"], ["side", "Рядом"], ["sep", "По отдельности"]].map(function(t){
       return '<button type="button" role="tab" data-m="' + t[0] + '" aria-selected="' + (cmpMode === t[0]) + '">' + t[1] + '</button>'; }).join("") + '</div>';
     var leg = '<div class="cmp-leg">' + all.map(function(st, i){
-      return '<button type="button" class="cmp-chip' + (cmpHide[i] ? ' off' : '') + '" data-i="' + i + '" title="' + escHtml(pcsvNm(st.name)) + ' — нажмите, чтобы скрыть или показать"><i style="background:' + CMP_COL[i % CMP_COL.length] + '"></i>' + escHtml(pcsvLabel(st)) + '</button>';
+      return '<button type="button" class="cmp-chip' + (cmpHide[i] ? ' off' : '') + '" data-i="' + i + '" title="' + escHtml(cmpNmT(st)) + ' — нажмите, чтобы скрыть или показать"><i style="background:' + CMP_COL[i % CMP_COL.length] + '"></i>' + escHtml(cmpLab(st)) + (window.__cmpMain ? '<u class="cmp-x" data-d="' + i + '" title="Убрать из сравнения">\u00d7</u>' : '') + '</button>';
     }).join("") + '</div>';
     var h = tabs + leg, uni = 0;
     if(!sets.length) h += '<p class="ev-note">Все наборы скрыты: нажмите на название набора выше.</p>';
@@ -8769,7 +8803,7 @@
       });
       h += '</tbody></table></div><p class="col-leg">Цветные точки — наборы, в которых есть исход. Чем плотнее фон ячейки, тем больше наборов за этот исход; золотая рамка — исход есть во всех показанных наборах.</p>';
     } else if(cmpMode === "side"){
-      h += '<div class="cmp-wrap"><table class="ev-tab cmp-tab"><thead><tr><th>№</th><th>Матч</th>' + sets.map(function(st){ return '<th title="' + escHtml(pcsvNm(st.name)) + '"><i class="cmp-th" style="background:' + col(st) + '"></i>' + escHtml(pcsvLabel(st)) + '</th>'; }).join("") + '</tr></thead><tbody>';
+      h += '<div class="cmp-wrap"><table class="ev-tab cmp-tab"><thead><tr><th>№</th><th>Матч</th>' + sets.map(function(st){ return '<th title="' + escHtml(cmpNmT(st)) + '"><i class="cmp-th" style="background:' + col(st) + '"></i>' + escHtml(cmpLab(st)) + '</th>'; }).join("") + '</tr></thead><tbody>';
       ms.forEach(function(m, j){
         var common = OUT.filter(function(o){ return outs.every(function(x){ return x[j].indexOf(o) >= 0; }); });
         if(common.length === 1) uni++;
@@ -8791,7 +8825,7 @@
             OUT.map(function(o){ return '<b class="' + (outs[k][j].indexOf(o) >= 0 ? 'on' : '') + '"' + (outs[k][j].indexOf(o) >= 0 ? ' style="background:' + col(st) + '"' : '') + '>' + o + '</b>'; }).join("") + '</span></div>';
         }).join("");
         var cov = outs[k].reduce(function(a, x){ return a + x.length; }, 0);
-        return '<div class="cmp-card"><div class="cmp-ct"><i style="background:' + col(st) + '"></i><b>' + escHtml(pcsvLabel(st)) + '</b><small>' + fmt(st.rows.length) + ' стр. · накрыто ' + cov + ' из ' + (n * 3) + '</small></div>' + rowsH + '</div>';
+        return '<div class="cmp-card"><div class="cmp-ct"><i style="background:' + col(st) + '"></i><b>' + escHtml(cmpLab(st)) + '</b><small>' + fmt(cmpN(st)) + ' стр. · накрыто ' + cov + ' из ' + (n * 3) + '</small></div>' + rowsH + '</div>';
       }).join("") + '</div>';
     }
     if(cmpMode !== "sep" && sets.length > 1){
@@ -8801,7 +8835,11 @@
     $("evTitle").textContent = "Сравнение наборов";
     $("evBody").innerHTML = h;
     [].slice.call($("evBody").querySelectorAll(".cmp-tabs button")).forEach(function(b){ b.addEventListener("click", function(){ cmpMode = b.getAttribute("data-m"); cmpRender(); }); });
-    [].slice.call($("evBody").querySelectorAll(".cmp-chip")).forEach(function(b){ b.addEventListener("click", function(){ var i = Number(b.getAttribute("data-i")); cmpHide[i] = !cmpHide[i]; cmpRender(); }); });
+    [].slice.call($("evBody").querySelectorAll(".cmp-chip")).forEach(function(b){ b.addEventListener("click", function(e){
+      var x = e.target.closest ? e.target.closest(".cmp-x") : null;
+      if(x){ cmpvRemove(Number(x.getAttribute("data-d"))); return; }
+      var i = Number(b.getAttribute("data-i")); cmpHide[i] = !cmpHide[i]; cmpRender();
+    }); });
   }
   function renderPrevCsv(){
 
@@ -8888,7 +8926,6 @@
         '<p class="pc-lnote pc-rknote">Считаются сыгранные матчи' + (liveN ? ' и идущие по текущему счёту' : '') + '. Тап по набору открывает его.' +
         (pcsv.sets.some(function(x){ return x.ai; }) ? '<br>' + RK_VT + '\u2014 набор не ставится на деньги, он нужен для отслеживания.' : '') +
         (sc.some(function(q){ return q.out; }) ? '<br><span class="rk-x" aria-hidden="true">\u00d7</span> \u2014 набор выбыл: после сыгранных матчей ни один его вариант уже не наберёт ' + PAY + '+.' : '') + '</p>' +
-        cmpBarHtml() +
         '<div class="pc-rkt' + (pcsv.rkLive ? " live-only" : "") + '" role="tablist"><div class="pc-rkh"><span>#</span><span>Набор</span><span>Лучший</span><span>9+</span><span>Живых</span></div><div class="pc-rkb">';
       sc.forEach(function(q, k){
         var st = pcsv.sets[q.i], mv = rk.mv[q.i], tr = "";
@@ -9058,9 +9095,6 @@
     $("pcLoad").addEventListener("click", pcsvPick);
     pcPasteBind();
     var bcmp = $("pcCmp"); if(bcmp) bcmp.addEventListener("click", showSetCompare);
-    var bca = $("pcCmpAdd"); if(bca) bca.addEventListener("click", cmpToggleAct);
-    var bcg = $("pcCmpGo"); if(bcg) bcg.addEventListener("click", showSetCompare);
-    var bcc = $("pcCmpClr"); if(bcc) bcc.addEventListener("click", function(){ cmpIds().length = 0; renderPrevCsv(); });
     var blv = $("pcRkLive"); if(blv) blv.addEventListener("click", function(){ pcsv.rkLive = !pcsv.rkLive; renderPrevCsv(); });
     $("pcShareAll").addEventListener("click", pcsvShareAll);
     if($("pcDropAll")) $("pcDropAll").addEventListener("click", function(){
