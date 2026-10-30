@@ -3298,3 +3298,9 @@ body.is-prev .row.is-live{box-shadow:inset 3px 0 0 #e0483e, 0 0 22px -10px rgba(
 :root[data-theme="light"] .pc-cov .pc-o.lead{box-shadow:0 0 0 1.5px rgba(160,120,40,.85), 0 0 8px -3px rgba(160,120,40,.4); animation:leadPulse 4.5s ease-in-out infinite}
 :root[data-theme="light"] .pc-cr.st-live{border-color:rgba(160,120,40,.5); background:linear-gradient(90deg,#fbf3dc,#fff 70%); box-shadow:inset 3px 0 0 rgba(160,120,40,.8)}
 .pc-cov .pc-tm .lv-dot, .pc-cov .pc-tm.lv .lv-dot{background:#e3b955; box-shadow:0 0 5px rgba(227,185,85,.55); animation-duration:3.6s}
+/* «ГОЛ!» — слева от счёта */
+.pc-cr.pc-burst::before{content:none}
+.pc-cr.pc-burst .pc-sc{position:relative; overflow:visible}
+.pc-cr.pc-burst .pc-sc::before{content:"ГОЛ!"; position:absolute; right:calc(100% + 4px); top:50%; transform:translateY(-50%); z-index:3; pointer-events:none; padding:3px 4px; border-radius:5px;
+  font:800 10px/1 "Chivo",sans-serif; letter-spacing:.05em; white-space:nowrap; color:#1a1410; background:linear-gradient(180deg,#f6dd95,#c9963c); box-shadow:0 0 12px rgba(246,221,149,.8); animation:glTag 2.6s ease-out forwards}
+@media (max-width:560px){ .pc-cr.pc-burst .pc-sc::before{right:calc(100% + 2px); padding:3px; font-size:9px; letter-spacing:.02em} }
