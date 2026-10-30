@@ -2980,3 +2980,30 @@ html[data-bk="fonbet"] .fon-only{display:flex}
 .cmpv-rr small{flex:none; color:var(--muted); font-size:11px; min-width:52px; text-align:right}
 .cmpv-del{flex:none; width:30px; height:30px; border:1px solid var(--rule-strong,rgba(255,255,255,.22)); border-radius:8px; background:transparent; color:inherit; font-size:18px; line-height:1}
 .cmpv-share{width:100%; min-height:40px}
+
+/* наложение и рядом — в стиле «По отдельности» */
+.cmp-ovr .cmp-so{gap:4px}
+.cmp-so b.ov{position:relative; width:36px; height:26px; cursor:pointer; font-weight:700; color:var(--muted); background:color-mix(in srgb,var(--brand-gold) calc(var(--a,0) * 38%), rgba(255,255,255,.06))}
+.cmp-so b.ov sup{font-size:9px; font-weight:700; margin-left:1px; color:inherit; opacity:.85}
+.cmp-so b.ov.part{color:var(--text,#f2efe6)}
+.cmp-so b.ov.all{background:var(--brand-gold); color:#14171a}
+.cmp-so b.ov.sel{outline:2px solid var(--text,#fff); outline-offset:1px}
+.cmp-who{margin:2px 0 6px 26px; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,.05); font-size:12px; display:flex; flex-wrap:wrap; gap:6px; align-items:center}
+.cmp-who[hidden]{display:none}
+.cmp-wc{display:inline-flex; align-items:center; gap:5px; padding:2px 8px 2px 3px; border-radius:999px; border:1px solid var(--rule-strong,rgba(255,255,255,.2))}
+.cmp-wc i{display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; border-radius:50%; color:#14171a; font-size:10px; font-weight:800; font-style:normal}
+.cmp-sd{overflow-x:auto; border:1px solid var(--rule-strong,rgba(255,255,255,.2)); border-radius:10px; background:var(--bg-card,rgba(255,255,255,.02)); -webkit-overflow-scrolling:touch}
+.cmp-sdg{display:grid; width:max-content; min-width:100%}
+.cmp-sdg>div{height:30px; display:flex; align-items:center; border-bottom:1px solid rgba(255,255,255,.06)}
+.cmp-sdg>.cmp-sdh{height:44px; justify-content:center; flex-direction:column; gap:2px; font-size:11px; padding:0 4px; text-align:center; color:var(--muted)}
+.cmp-sdh i{display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; border-radius:50%; color:#14171a; font-size:10px; font-weight:800; font-style:normal}
+.cmp-sdh span{max-width:76px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.cmp-sdn{position:sticky; left:0; z-index:1; gap:6px; padding:0 6px; background:#161a1d; font-size:12px; border-right:1px solid rgba(255,255,255,.1)}
+.cmp-sdn .cmp-st{flex:1; min-width:0}
+.cmp-sdn.eq{box-shadow:inset 3px 0 0 #6fcf97}
+.cmp-sdc{justify-content:center}
+.cmp-sep{grid-template-columns:minmax(0,1fr)}
+.cmp-so b.ov{width:34px}
+.cmp-sdg>div{height:38px}
+.cmp-sdn .cmp-st{white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; line-height:1.15; font-size:11.5px}
+.cmp-sdn .cmp-sn{flex:none; width:16px}
