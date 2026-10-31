@@ -3819,7 +3819,9 @@
       ownTok() ? fetch(AI_WF + "/runs?per_page=1&t=" + t, { headers: aiRunHdr(), cache: "no-store" }).then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; }) : null
     ]).then(function(r){
       var st = r[0], gr = r[1] && r[1].workflow_runs && r[1].workflow_runs[0];
-      var act = !!(st && st.state === "run" && ageMin(st.start) <= 70) || !!(gr && gr.status !== "completed" && ageMin(gr.created_at) <= 70);
+      /* запуск в GitHub без статуса: на вкладке Балтбета (статус пишет только его цепочка) считаем его своим лишь первые минуты; иначе идущий разбор Фонбета держал бы кнопки Балтбета выключенными весь час */
+      var grOn = !!(gr && gr.status !== "completed" && ageMin(gr.created_at) <= 70 && (FON || ageMin(gr.run_started_at || gr.created_at) <= 4));
+      var act = !!(st && st.state === "run" && ageMin(st.start) <= 70) || grOn;
       var was = aiRun.active;
       aiRun.active = act; aiRun.since = act ? (st && st.state === "run" ? st.start : gr.run_started_at || gr.created_at) : "";
       if(act !== was) aiRunChanged(was && !act);
