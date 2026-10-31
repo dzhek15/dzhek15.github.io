@@ -3630,3 +3630,6 @@ body.is-prev .pc-vars .pc-vr.win .pc-h{font-size:17px; box-shadow:0 0 0 1.5px va
 body.is-prev .row .teams .tm:not(:has(.temb)){padding-left:24px}
 [data-compact="1"] body.is-prev .row .teams .tm:not(:has(.temb)){padding-left:18px}
 @media (max-width:440px){ body.is-prev .row .teams .tm:not(:has(.temb)){padding-left:33px} }
+
+/* в корзине золотой ромбик перед заголовком не нужен */
+.hist-panel .panel-head h2::before{display:none !important}
