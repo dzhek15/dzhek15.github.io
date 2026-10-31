@@ -3769,3 +3769,50 @@ body:not(.is-prev):not([data-book="1"]) .row .pick.pop::after{content:""; positi
   .hist-panel.hist-closed{padding-bottom:8px !important}
   .hist-panel.hist-closed .panel-head{gap:4px}
 }
+
+/* ======================================================================
+   Блок «Аналитика»: объёмные кнопки стратегий, блик и подъём, плавное появление,
+   флагман «Монстр Келли», живая кнопка «Статистика стратегий» (v20261031z)
+   ====================================================================== */
+.roll .roll-tools .roll-cap{gap:10px; color:var(--gold-ink); font-weight:700; letter-spacing:.2em}
+.roll .roll-tools .roll-cap::before, .roll .roll-tools .roll-cap::after{content:""; display:block; width:5px; height:5px; background:var(--brand-gold); transform:rotate(45deg); flex:none}
+.roll-ev .btn-ev{position:relative; overflow:hidden; border-radius:10px; font-weight:600; letter-spacing:.02em;
+  background:linear-gradient(180deg,var(--surface-2),var(--surface)); border:1px solid color-mix(in srgb,var(--brand-gold) 55%,var(--rule));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.07), 0 1px 0 rgba(0,0,0,.2);
+  transition:transform .18s cubic-bezier(.2,.9,.3,1), box-shadow .25s ease, border-color .2s ease, color .2s ease;
+  animation:jmEvIn .5s cubic-bezier(.2,.9,.3,1) both}
+.roll-ev .btn-ev svg{width:16px; height:16px; color:var(--gold-ink); transition:transform .28s cubic-bezier(.2,.9,.3,1)}
+.roll-ev .btn-ev::before{content:""; position:absolute; top:0; bottom:0; left:-70%; width:45%; pointer-events:none; opacity:0;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.28),transparent); transform:skewX(-20deg)}
+.roll-ev .btn-ev:hover:not(:disabled){transform:translateY(-2px); border-color:var(--brand-gold); color:var(--gold-ink); background:linear-gradient(180deg,color-mix(in srgb,var(--brand-gold) 14%,var(--surface-2)),var(--surface));
+  box-shadow:0 9px 18px -10px rgba(201,162,75,.85), inset 0 1px 0 rgba(255,255,255,.12)}
+.roll-ev .btn-ev:hover:not(:disabled) svg{transform:scale(1.22) rotate(-8deg)}
+.roll-ev .btn-ev:hover:not(:disabled)::before{opacity:1; animation:jmSheen .65s ease-out}
+.roll-ev .btn-ev:active:not(:disabled){transform:scale(.95); transition-duration:.06s}
+.roll-ev .btn-ev:nth-child(1){animation-delay:.02s} .roll-ev .btn-ev:nth-child(2){animation-delay:.07s} .roll-ev .btn-ev:nth-child(3){animation-delay:.12s}
+.roll-ev .btn-ev:nth-child(4){animation-delay:.17s} .roll-ev .btn-ev:nth-child(5){animation-delay:.22s} .roll-ev .btn-ev:nth-child(6){animation-delay:.27s} .roll-ev .btn-ev:nth-child(7){animation-delay:.32s}
+/* флагман */
+.roll-ev #btnMonster{font-weight:800; letter-spacing:.05em; border-color:#e9cd80; color:var(--gold-ink);
+  background:linear-gradient(135deg,rgba(243,218,142,.26),rgba(201,162,75,.1) 55%,rgba(169,129,47,.22)); box-shadow:0 0 0 1px rgba(201,162,75,.28), 0 6px 18px -8px rgba(201,162,75,.8), inset 0 1px 0 rgba(255,255,255,.14)}
+.roll-ev #btnMonster:hover:not(:disabled){background:linear-gradient(135deg,#f3da8e,#c9a24b 55%,#a9812f); color:#1a1410; border-color:#f3da8e}
+.roll-ev #btnMonster:hover:not(:disabled) svg{color:#1a1410}
+:root[data-theme="light"] .roll-ev .btn-ev{border-color:color-mix(in srgb,#a67a1c 45%,var(--rule)); box-shadow:inset 0 1px 0 #fff, 0 1px 2px rgba(60,40,10,.12)}
+:root[data-theme="light"] .roll-ev .btn-ev svg{color:#8a6112}
+:root[data-theme="light"] .roll-ev .btn-ev:hover:not(:disabled){color:#6b4a08; border-color:#a67a1c; box-shadow:0 9px 18px -10px rgba(120,86,20,.6), inset 0 1px 0 #fff}
+:root[data-theme="light"] .roll-ev #btnMonster{color:#6b4a08; border-color:#a67a1c; background:linear-gradient(135deg,rgba(243,218,142,.55),rgba(201,162,75,.2)); box-shadow:0 0 0 1px rgba(166,122,28,.3), 0 6px 18px -8px rgba(120,86,20,.6), inset 0 1px 0 #fff}
+:root[data-theme="light"] .roll-ev #btnMonster:hover:not(:disabled){color:#1a1410; background:linear-gradient(135deg,#f3da8e,#c9a24b 55%,#a9812f)}
+@keyframes jmEvIn{from{opacity:0; transform:translateY(8px) scale(.96)} to{opacity:1; transform:none}}
+@keyframes jmSheen{from{left:-70%} to{left:130%}}
+/* статистика стратегий: блик по кнопке, подъём, столбики растут при наведении */
+.btn-stat{position:relative; overflow:hidden; border-radius:10px; transition:transform .18s cubic-bezier(.2,.9,.3,1), box-shadow .25s ease, filter .2s ease}
+.btn-stat::after{content:""; position:absolute; top:0; bottom:0; left:-60%; width:35%; pointer-events:none; transform:skewX(-20deg);
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent); animation:jmSheen 4.5s ease-in-out 1.2s infinite}
+.btn-stat:hover{transform:translateY(-2px); filter:brightness(1.08); box-shadow:0 0 0 1px rgba(231,200,115,.6), 0 12px 24px -10px rgba(201,162,75,.95)}
+.btn-stat:active{transform:scale(.97); transition-duration:.06s}
+.btn-stat svg path{transform-box:fill-box; transform-origin:50% 100%}
+.btn-stat:hover svg path{animation:jmBars .6s cubic-bezier(.2,.9,.3,1) both}
+.btn-stat:hover svg path:nth-of-type(1){animation-delay:0s}
+@keyframes jmBars{0%{transform:scaleY(.3)} 100%{transform:scaleY(1)}}
+.strat-help{transition:color .2s ease, letter-spacing .25s ease}
+.strat-help:hover{color:var(--gold-ink); letter-spacing:.02em}
+@media (prefers-reduced-motion: reduce){ .roll-ev .btn-ev, .btn-stat::after, .roll-ev .btn-ev::before{animation:none !important} .roll-ev .btn-ev, .btn-stat{transition:none} }
