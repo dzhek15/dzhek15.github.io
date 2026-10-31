@@ -416,5 +416,16 @@
   function all(){ try{ renderCover(); decorateBasket(); }catch(e){ if(window.console) console.warn("ДЖЕК visual:", e); } }
   document.addEventListener("dz:render", function(){ all(); setTimeout(function(){ try{ renderCover(); }catch(e){} }, 0); });
   setInterval(function(){ try{ renderCover(); }catch(e){} }, 30000);
+  /* длинные числа на обложке (суперприз 14 287 926) не обрезаются: шрифт уменьшается, пока число не поместится */
+  function fitNum(el){
+    if(!el) return;
+    el.style.fontSize = "";
+    var fs = parseFloat(getComputedStyle(el).fontSize) || 32;
+    while(el.scrollWidth > el.clientWidth + 1 && fs > 14){ fs -= 1; el.style.fontSize = fs + "px"; }
+  }
+  function fitAll(){ try{ fitNum(cvJack); fitNum(cvNum); }catch(e){} }
+  [cvJack, cvNum].forEach(function(el){ if(el && window.MutationObserver) new MutationObserver(fitAll).observe(el, { childList: true, characterData: true, subtree: true }); });
+  window.addEventListener("resize", fitAll);
+  setTimeout(fitAll, 400);
   all();
 })();

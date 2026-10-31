@@ -3616,3 +3616,17 @@ body.is-prev .pc-vars .pc-vr.win .pc-h{font-size:17px; box-shadow:0 0 0 1.5px va
 /* строка рейтинга растёт по содержимому, а полоска прогресса всегда под текстом и не наезжает на него */
 .pc-rkw .pc-rk{height:auto !important; min-height:62px; padding-top:6px; padding-bottom:16px; box-sizing:border-box}
 .pc-rkw .rk-bar{bottom:6px}
+
+/* телефон, просмотр тиража: меньше пустых полей вокруг матчей, названия команд не рвутся посреди слова */
+@media (max-width:440px){
+  body.is-prev .coupon{margin-inline:0}
+  body.is-prev #rows{padding:8px 6px; gap:8px}
+  :root:not([data-compact="1"]) body.is-prev .row{padding-left:6px; padding-right:8px}
+  :root:not([data-compact="1"]) body.is-prev .row .teams{font-size:16px; overflow-wrap:break-word; word-break:normal; hyphens:manual}
+  body.is-prev .row .tm{overflow-wrap:break-word; word-break:normal}
+}
+
+/* у команды без эмблемы название встаёт на то же место, что и у остальных (без «съезда» влево) */
+body.is-prev .row .teams .tm:not(:has(.temb)){padding-left:24px}
+[data-compact="1"] body.is-prev .row .teams .tm:not(:has(.temb)){padding-left:18px}
+@media (max-width:440px){ body.is-prev .row .teams .tm:not(:has(.temb)){padding-left:33px} }
