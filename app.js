@@ -11133,6 +11133,13 @@
         if(F.length) out.push({ o: o, t: t, src: "Балтсистема: история", why: F.map(function(x){ return x.why; }).join("; ") });
       });
     }
+    [["Расчёт: xG", "xG", 9], ["Расчёт: мотивация", "мотивация", 10]].forEach(function(c){
+      var tc = learnRank(c[0], c[2], md);
+      if(tc && d && d.cx && d.cx.length) OUT.forEach(function(o){
+        var F = d.cx.filter(function(x){ return x.s === o && x.k === c[1]; });
+        if(F.length) out.push({ o: o, t: tc, src: c[0], why: F.map(function(x){ return x.why; }).join("; ") });
+      });
+    });
     t = learnRank("Betzona: события", 7, md);
     if(t && d && d.bze && d.bze.length){
       OUT.forEach(function(o){

@@ -330,6 +330,10 @@ def ai_src(num):
         t = rk("Балтсистема: история", 8, md)
         for o in set(x.get("s") for x in (m.get("bth") or [])):
             if o in OUT and t: L.append((OUT.index(o), t, "Балтсистема: история"))
+        for nm_, k_, t0_ in (("Расчёт: xG", "xG", 9), ("Расчёт: мотивация", "мотивация", 10)):
+            t = rk(nm_, t0_)
+            for o in set(x.get("s") for x in (m.get("cx") or []) if x.get("k") == k_):
+                if o in OUT and t: L.append((OUT.index(o), t, nm_))
         t = rk("Betzona: события", 7, md)
         for o in set(x.get("s") for x in (m.get("bze") or []) if (x.get("w") or 0) >= 2):
             if o in OUT and t: L.append((OUT.index(o), t, "Betzona: события"))
@@ -417,7 +421,7 @@ def deser(rows):
 
 # ---------- самообучение Монстра Келли ----------
 FIX_BASE = dict(FIX)                     # стартовые поправки выплат (из кода), от них идёт обучение
-SRC_PRIOR = {"ИИ: факты": .03, "Усталость": .02, "Разбор ИИ": 0.0, "ИИ-критик": 0.0, "Betzona: факты": 0.0, "Betzona: голоса": 0.0, "Betzona: события": 0.0, "Балтсистема: история": 0.0}   # стартовая вера в перевес, доля
+SRC_PRIOR = {"ИИ: факты": .03, "Усталость": .02, "Разбор ИИ": 0.0, "ИИ-критик": 0.0, "Betzona: факты": 0.0, "Betzona: голоса": 0.0, "Betzona: события": 0.0, "Балтсистема: история": 0.0, "Расчёт: xG": 0.0, "Расчёт: мотивация": 0.0}   # стартовая вера в перевес, доля
 SRC_K, SRC_MIN, FIX_K, FIX_WIN = 300, 30, 8, 30
 
 
