@@ -3612,3 +3612,7 @@ body.is-prev .pc-vars .pc-vr.win .pc-h{font-size:17px; box-shadow:0 0 0 1.5px va
   .pc-rkx::before,.pc-rkx::after{display:none}
   .pc-rkttl{gap:8px; flex-wrap:nowrap}
 }
+
+/* строка рейтинга растёт по содержимому, а полоска прогресса всегда под текстом и не наезжает на него */
+.pc-rkw .pc-rk{height:auto !important; min-height:62px; padding-top:6px; padding-bottom:16px; box-sizing:border-box}
+.pc-rkw .rk-bar{bottom:6px}
