@@ -3816,3 +3816,43 @@ body:not(.is-prev):not([data-book="1"]) .row .pick.pop::after{content:""; positi
 .strat-help{transition:color .2s ease, letter-spacing .25s ease}
 .strat-help:hover{color:var(--gold-ink); letter-spacing:.02em}
 @media (prefers-reduced-motion: reduce){ .roll-ev .btn-ev, .btn-stat::after, .roll-ev .btn-ev::before{animation:none !important} .roll-ev .btn-ev, .btn-stat{transition:none} }
+
+/* ===== Главная: визуал обложки (v20261031z2) ===== */
+/* прожектор за курсором, два круга «центра поля», бледная надпись, плывущая за блоками */
+.cv-fx::before{content:""; position:absolute; inset:0; pointer-events:none;
+  background:
+    radial-gradient(280px circle at calc(50% + var(--mx,0) * 42%) calc(46% + var(--my,0) * 40%), rgba(255,236,180,.11), transparent 70%),
+    radial-gradient(circle at 50% 22%, transparent 0 86px, rgba(227,185,85,.17) 86px 87px, transparent 87px 150px, rgba(227,185,85,.10) 150px 151px, transparent 151px 230px, rgba(227,185,85,.06) 230px 231px, transparent 231px)}
+.cv-fx::after{content:"ДЖЕК 15 · АНАЛИТИКА · ДЖЕК 15 · АНАЛИТИКА · ДЖЕК 15 · АНАЛИТИКА · ДЖЕК 15 · АНАЛИТИКА · "; position:absolute; left:0; top:46%; white-space:nowrap; pointer-events:none;
+  font:800 132px/1 var(--f-display); letter-spacing:.04em; color:transparent; -webkit-text-stroke:1px rgba(227,185,85,.09);
+  animation:cvGhost 90s linear infinite}
+@keyframes cvGhost{from{transform:translateX(0)} to{transform:translateX(-50%)}}
+/* табло: точечная сетка поверх цифр отсчёта и счёта */
+.cd-d b, .ft-sc b{position:relative}
+.cd-d b::after, .ft-sc b::after{content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+  background:radial-gradient(circle at 50% 50%, transparent 0 .85px, rgba(10,7,4,.42) 1.3px) 0 0/3px 3px}
+.cv-cd.is-last .cd-d b::after{opacity:.5}
+/* подсветка карточки матча цветами гербов */
+.ft-t{position:relative; isolation:isolate}
+.ft-t::before{content:""; position:absolute; left:50%; top:-8px; width:84px; height:84px; translate:-50% 0; z-index:-1; pointer-events:none; opacity:0;
+  background:radial-gradient(circle, rgba(var(--tc,227,185,85),.5), transparent 66%); transition:opacity .8s ease}
+.ft-tint .ft-t[style*="--tc"]::before{opacity:1}
+.cv-ft.ft-tint:not(.m-live){
+  background:
+    radial-gradient(180px 110px at 0% 55%, rgba(var(--c1,201,162,75),.20), transparent 75%),
+    radial-gradient(180px 110px at 100% 55%, rgba(var(--c2,201,162,75),.20), transparent 75%),
+    linear-gradient(180deg, rgba(255,240,200,.07), rgba(0,0,0,.28))}
+.ft-emb{transition:transform .35s ease}
+.cv-ft:hover .ft-emb{transform:scale(1.08)}
+:root[data-theme="light"] .cd-d b::after, :root[data-theme="light"] .ft-sc b::after{display:none}
+:root[data-theme="light"] .cv-fx::after{-webkit-text-stroke-color:rgba(138,97,18,.10)}
+:root[data-theme="light"] .cv-fx::before{background:
+    radial-gradient(280px circle at calc(50% + var(--mx,0) * 42%) calc(46% + var(--my,0) * 40%), rgba(255,255,255,.55), transparent 70%),
+    radial-gradient(circle at 50% 22%, transparent 0 86px, rgba(138,97,18,.16) 86px 87px, transparent 87px 150px, rgba(138,97,18,.09) 150px 151px, transparent 151px)}
+@media (max-width:560px){ .cv-fx::after{font-size:84px; top:40%} }
+:root[data-theme="light"] .cv-ft.ft-tint:not(.m-live){
+  background:
+    radial-gradient(180px 110px at 0% 55%, rgba(var(--c1,201,162,75),.16), transparent 75%),
+    radial-gradient(180px 110px at 100% 55%, rgba(var(--c2,201,162,75),.16), transparent 75%),
+    linear-gradient(180deg,#ffffff,#f1f5f4)}
+@media (prefers-reduced-motion: reduce){ .cv-fx::after{animation:none} .ft-emb{transition:none} }
