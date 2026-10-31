@@ -6977,7 +6977,7 @@
       /* страница просмотра — строка файла как есть: «1X» в матче подсвечивает обе кнопки */
       pages.push(cols.map(function(set){ return OUT.filter(function(o){ return set.indexOf(o) >= 0; }).join(""); }));
       var lcomb = 1; cols.forEach(function(set){ lcomb *= set.length; });
-      if(lp != null && Math.abs(lp - lcomb * unit) > 0.005){ custom = true; cost += lp; } else cost += lcomb * unit;
+      if(lp != null && Math.abs(lp - unit) > 0.005){ custom = true; cost += lcomb * lp; } else cost += lcomb * unit;   /* первое поле — цена одного варианта; у строки-системы она умножается на число её комбинаций */
       var combo = [[]];
       for(var j2=0;j2<cols.length;j2++){
         var nx = [];
