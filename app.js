@@ -7508,8 +7508,31 @@
     if(!FON) return x;
     var m = /^(\d+:\d+\s+)?(.*?)(\s*\((?:w|W)\))?$/.exec(String(x || "").trim());
     if(!m) return x;
-    var base = FON_RU.t[m[2]] || m[2];
+    var base = FON_RU.t[m[2]] || latRu(m[2]);
     return (m[1] || "") + base + (m[3] ? " (ж)" : "");
+  }
+  /* запасной перевод: названия, которых ещё нет в словаре (конвейер пополняет его сам), пишем русскими буквами по правилам */
+  var LR_MULTI = [["shch","щ"],["sch","ш"],["tsch","ч"],["dzh","дж"],["zh","ж"],["kh","х"],["ch","ч"],["sh","ш"],["ts","ц"],["tz","ц"],["ph","ф"],["th","т"],["ck","к"],["qu","кв"],["yu","ю"],["ya","я"],["yo","ё"],["ye","е"],["ou","у"],["oo","у"],["ee","и"],["ei","ей"],["ai","ай"],["ay","эй"],["dj","дж"],["lj","ль"],["nj","нь"],["ij","ий"],["gh","г"]],
+      LR_ONE = { a:"а",b:"б",c:"к",d:"д",e:"е",f:"ф",g:"г",h:"х",i:"и",j:"й",k:"к",l:"л",m:"м",n:"н",o:"о",p:"п",q:"к",r:"р",s:"с",t:"т",u:"у",v:"в",w:"в",x:"кс",y:"и",z:"з","č":"ч","ć":"ч","š":"ш","ž":"ж","đ":"дж","ł":"л","ñ":"нь","ø":"ё","æ":"э","ß":"сс" };
+  var LR_WORD = { city:"Сити", united:"Юнайтед", town:"Таун", county:"Каунти", rovers:"Роверс", athletic:"Атлетик", albion:"Альбион", wanderers:"Уондерерс", real:"Реал", sporting:"Спортинг", sport:"Спорт", club:"Клуб", fc:"ФК", sc:"СК", cf:"КФ", ac:"АК", as:"АС", fk:"ФК", sk:"СК", de:"де", la:"Ла", el:"Эль", al:"Аль", san:"Сан", santa:"Санта", saint:"Сент", st:"Сент", rangers:"Рейнджерс", hotspur:"Хотспур", forest:"Форест", villa:"Вилла", palace:"Пэлас", wednesday:"Уэнсдей", athletico:"Атлетико", atletico:"Атлетико", dynamo:"Динамо", dinamo:"Динамо", spartak:"Спартак", lokomotiv:"Локомотив", torpedo:"Торпедо", zenit:"Зенит", cska:"ЦСКА" };
+  function latRu(x){
+    x = String(x || "");
+    if(!/[A-Za-z\u00C0-\u024F]/.test(x)) return x;
+    return x.split(/(\s+|-)/).map(function(w){
+      if(!w || /^\s+$/.test(w) || w === "-" || /^\d+$/.test(w)) return w;
+      var wl = LR_WORD[w.toLowerCase()]; if(wl) return wl;
+      var up = w.length <= 4 && w === w.toUpperCase() && /^[A-Z]+$/.test(w);
+      var t = w.toLowerCase().normalize("NFC"), r = "", i = 0, k, hit;
+      while(i < t.length){
+        hit = false;
+        for(k = 0; k < LR_MULTI.length; k++) if(t.indexOf(LR_MULTI[k][0], i) === i){ r += LR_MULTI[k][1]; i += LR_MULTI[k][0].length; hit = true; break; }
+        if(hit) continue;
+        var c = t.charAt(i), d = c.normalize("NFD").charAt(0);
+        r += LR_ONE[c] || LR_ONE[d] || (/[A-Za-z\u00C0-\u024F]/.test(c) ? "" : c); i++;
+      }
+      if(up) r = r.toUpperCase();
+      return r.charAt(0).toUpperCase() + r.slice(1);
+    }).join("");
   }
   function ruLeague(x){
     if(!FON) return x;
