@@ -11110,13 +11110,27 @@
     if(v && md && v.models && v.models[md] && v.models[md].on === false) return 0;   // эта модель ИИ у источника выключена
     return v && v.rank ? v.rank : t0;
   }
+  /* довод разбора ИИ: его главная мысль и логика матча; в старых разборах этих полей нет, тогда общая фраза */
+  function aiWhy(d){
+    var parts = [d.mn, d.lg].map(function(x){ return String(x || "").trim(); }).filter(Boolean).map(function(x){ return /[.!?…»)]$/.test(x) ? x : x + "."; });
+    var txt = parts.join(" ");
+    if(txt.length > 420){ var cut = txt.slice(0, 420), ix = cut.lastIndexOf(". "); txt = ix > 0 ? cut.slice(0, ix + 1) : cut.replace(/\s+\S*$/, "") + "…"; }
+    return txt ? "ИИ ставит «" + d.p + "»: " + txt : "в купоне ИИ по матчу «" + d.p + "», разбор учитывает травмы, мотивацию и настрой команд";
+  }
+  /* числа выбора синего исхода: шанс по модели, линия конторы, доля игроков */
+  function kupHead(i, k, p){
+    var m = state.matches[i], line = m ? evProbs(m) : null, pool = m ? evPool(m) : null, pc = function(x){ return Math.round(x * 100) + "%"; };
+    var s = (p ? "шанс по модели " + pc(p[k]) + ", " : "") + (line ? "линия конторы " + pc(line[k]) : "");
+    if(pool) s += (line ? ", " : "") + "игроки ставят " + pc(pool[k]);
+    return s.replace(/,\s*$/, "");
+  }
   function monsterSrc(idx){
     var out = [], d = ai.data && String(ai.data.number) === String(state.tirazh) && ai.data.m ? ai.data.m[idx] : null;
     if(LEARN && LEARN.mode === "growth") return out;
     var E = kelEdges(), L = (E && E[idx]) || [], t, md = d ? d.model : null;
     L.forEach(function(a){ var nm = a.src === "Усталость" ? "Усталость" : "ИИ: факты"; t = learnRank(nm, nm === "Усталость" ? 2 : 1, nm === "Усталость" ? null : md); if(t) out.push({ o: a.o, t: t, src: nm, why: a.why }); });
     t = learnRank("Разбор ИИ", 3, md);
-    if(t && d && d.p) String(d.p).split("").forEach(function(o){ if(OUT.indexOf(o) >= 0) out.push({ o: o, t: t, src: "Разбор ИИ", why: "в купоне ИИ по матчу «" + d.p + "» — разбор учитывает травмы, мотивацию и настрой команд" }); });
+    if(t && d && d.p) String(d.p).split("").forEach(function(o){ if(OUT.indexOf(o) >= 0) out.push({ o: o, t: t, src: "Разбор ИИ", why: aiWhy(d) }); });
     t = learnRank("ИИ-критик", 4, md);
     if(t && d && d.trap && OUT.indexOf(d.trap.o) >= 0) out.push({ o: d.trap.o, t: t, src: "ИИ-критик", why: "риск для фаворита: " + d.trap.why });
     t = learnRank("Betzona: факты", 5, md);
@@ -11235,7 +11249,7 @@
       rows[best.i].set = rows[best.i].set.concat([best.k]).sort();
       combos = best.nc;
       var all = src[best.i].filter(function(z){ return z.o === OUT[best.k]; }).sort(function(a, b){ return a.t - b.t; });
-      var why = all.length ? all.map(function(z){ return z.src + ": " + z.why; }).join("; ") : "добор по росту банка: из оставшихся исходов этот сильнее всего растит банк";
+      var why = kupHead(best.i, best.k, probs[best.i]) + (all.length ? ". Доводы: " + all.map(function(z){ return z.src + " — " + z.why; }).join("; ") : ". Добор по росту банка: из оставшихся исходов этот сильнее всего растит банк");
       (fill[best.i] = fill[best.i] || {})[OUT[best.k]] = why;
       added.push({ i: best.i, o: OUT[best.k], src: best.s ? best.s.src : "Рост банка" });
     }
@@ -11367,7 +11381,7 @@
         if(viaSrc){ parts.push(srcWhy[i][k].join("; ")); if(W0sets[i].indexOf(k) < 0) nSrcCh++; }
         if(topRaw.indexOf(k) < 0 && topAdj.indexOf(k) >= 0 && mine.length) parts.push(mine.map(function(e){ return e.src + ": " + e.why; }).join("; "));
         if(topAdj.indexOf(k) < 0) parts.push("толпа недоигрывает этот исход: модель " + Math.round(probs[i][k] * 100) + "%, толпа " + Math.round(pools[i][k] * 100) + "% — при выигрыше приз делится на меньшее число победителей");
-        if(parts.length){ (fill[i] = fill[i] || {})[OUT[k]] = parts.join(" · "); nFill++; }
+        if(parts.length){ (fill[i] = fill[i] || {})[OUT[k]] = kupHead(i, k, probs[i]) + ". Доводы: " + parts.join(" · "); nFill++; }
       });
     }
     /* строки готовой системы: столбцы библиотеки — сначала двойники, потом тройники; цифра 0 — самый сильный исход матча */
@@ -12193,7 +12207,7 @@
         var why = mine.filter(function(a){ return a.o === OUT[o]; }).map(function(a){ return a.src + ": " + a.why; });
         if(!why.length && mine.length) why = mine.map(function(a){ return a.src + ": " + a.why + " — сдвиг к «" + a.o + "» поменял расстановку в этом матче"; });
         if(!why.length) why = ["перестановка: улучшения в матчах " + src.map(function(i){ return i + 1; }).join(", ") + " поменяли, где выгоднее тратить двойники и тройники при той же сумме"];
-        (kup[idx] = kup[idx] || {})[OUT[o]] = why.join("; ");
+        (kup[idx] = kup[idx] || {})[OUT[o]] = kupHead(idx, o) + ". Доводы: " + why.join("; ");
         add.push((idx + 1) + ". " + OUT[o]);
       });
       minus.forEach(function(o){
