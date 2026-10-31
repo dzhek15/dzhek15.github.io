@@ -3759,3 +3759,13 @@ body:not(.is-prev):not([data-book="1"]) .row .pick.pop::after{content:""; positi
 @media (min-width:821px){ .row .modes{gap:4px} .row .modes .mode{padding-left:7px; padding-right:7px} .row .modes .mode.ai-btn{padding-left:7px; padding-right:7px} }
 /* телефон: цена за вариант по центру */
 @media (max-width:560px){ .keep-bar .knob-edge{justify-self:center; text-align:center; align-items:center} .keep-bar .knob-edge .knob-hint{white-space:normal; text-align:center} .keep-bar .keep-note{text-align:center} }
+
+/* телефон: корзина сворачивается до заголовка и итога */
+@media (max-width:560px){
+  .hist-panel .panel-head h2{cursor:pointer; -webkit-tap-highlight-color:transparent; position:relative; padding-right:0}
+  .hist-panel .panel-head h2::after{content:""; width:9px; height:9px; margin:2px auto 0; border-right:2px solid #1D1A15; border-bottom:2px solid #1D1A15; transform:rotate(-135deg) translate(-2px,-2px); transition:transform .2s ease}
+  .hist-panel.hist-closed .panel-head h2::after{transform:rotate(45deg)}
+  .hist-panel.hist-closed .hist-head-acts, .hist-panel.hist-closed .hist, .hist-panel.hist-closed .empty{display:none !important}
+  .hist-panel.hist-closed{padding-bottom:8px !important}
+  .hist-panel.hist-closed .panel-head{gap:4px}
+}

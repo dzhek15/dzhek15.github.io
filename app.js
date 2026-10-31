@@ -12342,6 +12342,21 @@
   $("btnKelly").addEventListener("click", showKellyStrat);
   if($("btnMonster")) $("btnMonster").addEventListener("click", showMonsterStrat);
   $("btnStat").addEventListener("click", function(){ showAcc(); });
+  /* телефон: корзину можно свернуть до заголовка; решение запоминается */
+  (function(){
+    var hp = document.querySelector(".hist-panel"), h = hp && hp.querySelector(".panel-head h2"); if(!hp || !h) return;
+    var K = "dzhek-hist-open";
+    h.setAttribute("role", "button"); h.setAttribute("tabindex", "0");
+    function set(on){ hp.classList.toggle("hist-closed", !on); h.setAttribute("aria-expanded", on ? "true" : "false"); }
+    try{ set(localStorage.getItem(K) === "1"); }catch(e){ set(false); }
+    function flip(){
+      if(!window.matchMedia("(max-width:560px)").matches) return;
+      var on = hp.classList.contains("hist-closed"); set(on);
+      try{ localStorage.setItem(K, on ? "1" : "0"); }catch(e){}
+    }
+    h.addEventListener("click", flip);
+    h.addEventListener("keydown", function(ev){ if(ev.key === "Enter" || ev.key === " "){ ev.preventDefault(); flip(); } });
+  })();
   /* телефон: режимы, рандом и стратегии свёрнуты, чтобы матчи были ближе к началу страницы */
   (function(){
     var rl = $("roll"), tg = $("rollTgl"); if(!rl || !tg) return;
