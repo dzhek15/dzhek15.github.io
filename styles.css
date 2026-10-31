@@ -3757,3 +3757,5 @@ body:not(.is-prev):not([data-book="1"]) .row .pick.pop::after{content:""; positi
 @media (max-width:560px){ body:not(.is-prev):not([data-book="1"]):not([data-compact="1"]) .row .pick{height:38px; font-size:16px} }
 @media (prefers-reduced-motion: reduce){ body .row .pick, body .row .pick.pop, body .row .pick.pop::after{animation:none !important; transition:none} }
 @media (min-width:821px){ .row .modes{gap:4px} .row .modes .mode{padding-left:7px; padding-right:7px} .row .modes .mode.ai-btn{padding-left:7px; padding-right:7px} }
+/* телефон: цена за вариант по центру */
+@media (max-width:560px){ .keep-bar .knob-edge{justify-self:center; text-align:center; align-items:center} .keep-bar .knob-edge .knob-hint{white-space:normal; text-align:center} .keep-bar .keep-note{text-align:center} }
