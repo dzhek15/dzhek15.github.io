@@ -3633,3 +3633,15 @@ body.is-prev .row .teams .tm:not(:has(.temb)){padding-left:24px}
 
 /* в корзине золотой ромбик перед заголовком не нужен */
 .hist-panel .panel-head h2::before{display:none !important}
+
+/* расчёты кодом и полнота данных в газетном разборе */
+.ai-s-calc{padding:7px 10px 9px; border-left:3px solid #2F6B4F; background:rgba(47,107,79,.07)}
+.ai-s-calc .ai-lb{color:#2F6B4F; border-bottom-color:rgba(47,107,79,.45)}
+.ai-s-calc p{margin:0 0 5px; font:400 13.5px/1.5 "PT Serif",Georgia,serif; color:#1D1A15; overflow-wrap:anywhere}
+.ai-s-calc p:last-child{margin-bottom:0}
+.ai-k-calc .ai-sec{margin-bottom:8px}
+.ai-cov{margin:0 0 10px; padding:4px 10px; border-left:3px solid #8D7F63; font:400 12.5px/1.45 "PT Serif",Georgia,serif; color:#5E5446; background:rgba(29,26,21,.04); overflow-wrap:anywhere}
+.ai-cov b{font-weight:700; color:#1D1A15}
+.ai-cov-hi{border-left-color:#2F6B4F}
+.ai-cov-mid{border-left-color:#B08A3E}
+.ai-cov-lo{border-left-color:#8E2A1E}

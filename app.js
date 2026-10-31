@@ -2947,6 +2947,22 @@
     if(note) out += '<p class="ai-lu-note">' + escHtml(note) + '</p>';
     return out;
   }
+  /* расчёты кодом (таблица, xG, судья, карточки, дорога, доли) и метка полноты данных; в старых разборах полей нет */
+  function aiCalcHtml(r){
+    if(!r || !Array.isArray(r.calc) || !r.calc.length) return "";
+    return '<div class="ai-blk ai-k-calc"><h4 class="ai-blk-h">Расчёты и цифры</h4>' + r.calc.map(function(c){
+      if(!c || !c[1]) return "";
+      return '<div class="ai-sec ai-s-calc"><span class="ai-lb">' + escHtml(c[0]) + '</span>' +
+        String(c[1]).split(/\n+/).map(function(x){ return '<p>' + aiFmt(escHtml(x)) + '</p>'; }).join("") + '</div>';
+    }).join("") + '</div>';
+  }
+  function aiCovHtml(r){
+    var c = r && r.cov;
+    if(!c || typeof c.score !== "number") return "";
+    var cls = c.score >= 75 ? "hi" : c.score >= 50 ? "mid" : "lo";
+    var miss = (c.miss && c.miss.length) ? ' · нет: ' + escHtml(c.miss.join(", ")) : "";
+    return '<p class="ai-cov ai-cov-' + cls + '"><b>Данные: ' + c.score + ' из 100</b>' + miss + '</p>';
+  }
   function aiHtml(r, full, mt){
     var src = (r.s || []).map(function(x){
       return '<a target="_blank" rel="noopener noreferrer" href="' + escHtml(x.u) + '">' + escHtml(x.n) + '</a>';
@@ -2963,7 +2979,7 @@
       return '<div class="ai-blk ai-k-' + kind + '">' + (b.h ? '<h4 class="ai-blk-h">' + escHtml(kind === "main" ? "Факты" : b.h) + '</h4>' : '') +
         ps.map(function(x){ return aiPara(x, r); }).join("") + '</div>';
     }).join("") : "";
-    return (full ? '<div class="ai-paper">' : '') + ((full && r.hd) ? aiHead(r.hd) : '<p class="ai-txt' + (full ? ' ai-lead' : '') + '">' + (full ? aiFmt(escHtml(r.t)) : escHtml(r.t)) + '</p>') + (blk ? '<div class="ai-blks">' + blk + '</div>' : '') + fin +
+    return (full ? '<div class="ai-paper">' : '') + ((full && r.hd) ? aiHead(r.hd) : '<p class="ai-txt' + (full ? ' ai-lead' : '') + '">' + (full ? aiFmt(escHtml(r.t)) : escHtml(r.t)) + '</p>') + (full ? aiCovHtml(r) : '') + (blk ? '<div class="ai-blks">' + blk + (full ? aiCalcHtml(r) : '') + '</div>' : '') + fin +
       (src ? '<p class="ai-src">Источники: ' + src + '</p>' : '') + (full ? '</div>' : '') +
       (full ? '<p class="ev-note">Разбор написан ИИ по открытым источникам' +
         ((r.at || (ai.data && ai.data.at)) ? ' (' + new Date(r.at || ai.data.at).toLocaleString("ru-RU", {day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit", timeZone:"Europe/Moscow"}) + ' МСК)' : '') +
