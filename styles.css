@@ -3695,8 +3695,15 @@ body.is-prev .row .teams .tm:not(:has(.temb)){padding-left:24px}
 .row .modes .mode:not(.ai-btn):not(.srch){border-color:var(--rule); color:var(--muted); background:transparent}
 .row .modes .mode:not(.ai-btn):not(.srch):hover{color:var(--ink); border-color:var(--rule-strong)}
 .row .modes .mode:not(.ai-btn):not(.srch)[aria-pressed="true"]{background:var(--ink); color:var(--surface); border-color:var(--ink)}
-.mode.ai-btn:not(:disabled):not(.ai-wait){background:var(--kit-soft); border-color:var(--brand-gold); color:var(--gold-ink); font-weight:700}
-.mode.ai-btn:disabled, .mode.ai-btn.ai-wait{background:transparent; border-color:var(--rule); border-style:dashed; color:var(--muted); opacity:.7}
+/* кнопка «ИИ»: золотая заливка со звёздочкой, когда разбор есть; золотой пунктир, пока его нет */
+.row .modes .mode.ai-btn{gap:3px; padding-left:8px; padding-right:8px; font-family:"Chivo",sans-serif; font-weight:800; letter-spacing:.08em}
+.row .modes .mode.ai-btn::before{content:"\2726"; font-size:11px; line-height:1}
+.row .modes .mode.ai-btn:not(:disabled):not(.ai-wait){background:linear-gradient(135deg,#f3da8e,#c9a24b 55%,#a9812f); border:1px solid #e9cd80; color:#1a1410; opacity:1;
+  box-shadow:0 0 0 1px rgba(201,162,75,.25), 0 4px 12px -4px rgba(201,162,75,.7), inset 0 1px 0 rgba(255,255,255,.45); text-shadow:0 1px 0 rgba(255,255,255,.3)}
+.row .modes .mode.ai-btn:not(:disabled):not(.ai-wait):hover{background:linear-gradient(135deg,#f9e5a3,#d6b258 55%,#b88d33); box-shadow:0 0 0 1px rgba(233,205,128,.6), 0 6px 16px -4px rgba(201,162,75,.9), inset 0 1px 0 rgba(255,255,255,.55); transform:translateY(-1px)}
+.row .modes .mode.ai-btn:disabled, .row .modes .mode.ai-btn.ai-wait{background:rgba(201,162,75,.07); border:1px dashed rgba(201,162,75,.65); color:var(--gold-ink); opacity:.85; box-shadow:none}
+:root[data-theme="light"] .row .modes .mode.ai-btn:disabled, :root[data-theme="light"] .row .modes .mode.ai-btn.ai-wait{color:#7a5410; border-color:rgba(160,120,40,.7); background:rgba(201,162,75,.10)}
+:root[data-theme="light"] .row .modes .mode.ai-btn:not(:disabled):not(.ai-wait){color:#2a1d06}
 
 /* «Сыграно N из 15» читается лучше */
 .pp-t{font-size:11.5px; color:rgba(243,234,210,.92)}
@@ -3717,3 +3724,36 @@ body.is-prev .row .teams .tm:not(:has(.temb)){padding-left:24px}
 @keyframes fetchSheen{0%,55%{left:-60%} 100%{left:130%}}
 @keyframes fetchPulse{0%,100%{box-shadow:0 6px 18px -6px rgba(63,191,143,.55), inset 0 1px 0 rgba(255,255,255,.35)} 50%{box-shadow:0 8px 24px -4px rgba(63,191,143,.9), inset 0 1px 0 rgba(255,255,255,.35)}}
 @media (prefers-reduced-motion: reduce){ #btnFetch, #btnFetch::after{animation:none} }
+
+/* ======================================================================
+   Кнопки исходов 1 / X / 2: объём, подъём при наведении, золотая заливка
+   выбранного и вспышка с кольцом в момент выбора (v20261031w)
+   ====================================================================== */
+body:not(.is-prev):not([data-book="1"]) .row .pick{position:relative; overflow:hidden; border-radius:9px;
+  background:linear-gradient(180deg,var(--surface-2),var(--surface)); box-shadow:inset 0 1px 0 rgba(255,255,255,.07), 0 1px 0 rgba(0,0,0,.18);
+  transition:transform .16s cubic-bezier(.2,.9,.3,1), box-shadow .22s ease, border-color .18s ease, background-color .18s ease, color .18s ease}
+body:not(.is-prev):not([data-book="1"]) .row .pick:hover:not(:disabled):not([aria-pressed="true"]){transform:translateY(-2px); border-color:var(--brand-gold); color:var(--gold-ink);
+  box-shadow:0 7px 16px -8px rgba(201,162,75,.75), inset 0 1px 0 rgba(255,255,255,.1)}
+body:not(.is-prev):not([data-book="1"]) .row .pick:active:not(:disabled){transform:scale(.94); transition-duration:.06s}
+body:not(.is-prev):not([data-book="1"]) .row .pick[aria-pressed="true"]{background:linear-gradient(135deg,#f3da8e,#c9a24b 55%,#a9812f); border-color:#ecd48a; color:#1a1410;
+  box-shadow:0 0 0 1px rgba(201,162,75,.3), 0 6px 16px -6px rgba(201,162,75,.85), inset 0 1px 0 rgba(255,255,255,.5), inset 0 -2px 0 rgba(0,0,0,.14); text-shadow:0 1px 0 rgba(255,255,255,.3)}
+body:not(.is-prev):not([data-book="1"]) .row .pick[aria-pressed="true"]:hover:not(:disabled){transform:translateY(-1px); background:linear-gradient(135deg,#f9e5a3,#d6b258 55%,#b88d33)}
+:root[data-theme="light"] body:not(.is-prev):not([data-book="1"]) .row .pick[aria-pressed="true"]{background:linear-gradient(135deg,#2f7bc6,#1D5FA6 60%,#154a86); border-color:#5b98d6; color:#fff;
+  box-shadow:0 0 0 1px rgba(29,95,166,.3), 0 6px 16px -6px rgba(29,95,166,.8), inset 0 1px 0 rgba(255,255,255,.35), inset 0 -2px 0 rgba(0,0,0,.16); text-shadow:0 1px 0 rgba(0,0,0,.2)}
+:root[data-theme="light"] body:not(.is-prev):not([data-book="1"]) .row .pick[aria-pressed="true"]:hover:not(:disabled){background:linear-gradient(135deg,#3a88d6,#2269b3 60%,#18529a)}
+:root[data-theme="light"] body:not(.is-prev):not([data-book="1"]) .row .pick:hover:not(:disabled):not([aria-pressed="true"]){color:#7a5410; box-shadow:0 7px 16px -8px rgba(160,120,40,.6)}
+body:not(.is-prev):not([data-book="1"]) .row .pick.in-pool{background:transparent; box-shadow:none}
+body:not(.is-prev):not([data-book="1"]) .row .pick.off-pool{box-shadow:none}
+body:not(.is-prev):not([data-book="1"]) .row .pick:disabled{box-shadow:none}
+/* синие исходы Монстра сохраняют свой цвет, но получают тот же объём */
+body:not(.is-prev):not([data-book="1"]) .row .pick.kel-up[aria-pressed="true"]{background:linear-gradient(135deg,#4f8fe6,#2f6fd6 55%,#2257b0) !important}
+/* момент выбора: пружинка, расходящееся кольцо и блик */
+body:not(.is-prev):not([data-book="1"]) .row .pick.pop{animation:pickPop2 .36s cubic-bezier(.2,.9,.3,1), pickRing .65s ease-out}
+body:not(.is-prev):not([data-book="1"]) .row .pick.pop::after{content:""; position:absolute; top:0; bottom:0; left:-60%; width:40%; pointer-events:none;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.7),transparent); transform:skewX(-20deg); animation:pickSheen .55s ease-out .04s both}
+@keyframes pickPop2{0%{transform:scale(.72)} 50%{transform:scale(1.1)} 75%{transform:scale(.97)} 100%{transform:scale(1)}}
+@keyframes pickRing{0%{box-shadow:0 0 0 0 rgba(236,212,138,.85), 0 6px 16px -6px rgba(201,162,75,.85)} 100%{box-shadow:0 0 0 14px rgba(236,212,138,0), 0 6px 16px -6px rgba(201,162,75,.85)}}
+@keyframes pickSheen{from{left:-60%} to{left:130%}}
+@media (max-width:560px){ body:not(.is-prev):not([data-book="1"]):not([data-compact="1"]) .row .pick{height:38px; font-size:16px} }
+@media (prefers-reduced-motion: reduce){ body .row .pick, body .row .pick.pop, body .row .pick.pop::after{animation:none !important; transition:none} }
+@media (min-width:821px){ .row .modes{gap:4px} .row .modes .mode{padding-left:7px; padding-right:7px} .row .modes .mode.ai-btn{padding-left:7px; padding-right:7px} }

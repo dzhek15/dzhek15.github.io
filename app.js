@@ -4145,6 +4145,7 @@
     t.addEventListener("click", function(){ showTeam(name, opp); });
     return t;
   }
+  var pickPopKey = "";
   function render(){
     var t0 = performance.now();
     renderCore(); ujSoon(); renderWaitNote(); cmpvRender();
@@ -4279,6 +4280,7 @@
         b.type = "button";
         b.className = "pick " + (o==="1"?"p1":o==="X"?"px":"p2");
         b.textContent = o;
+        if(pickPopKey === idx + ":" + o){ b.classList.add("pop"); pickPopKey = ""; }    /* только что выбранный исход вспыхивает */
         if(m.res === o) b.classList.add("won");
         b.setAttribute("aria-pressed", m.picks[o] ? "true" : "false");
         if(m.picks[o] && m.kup && m.kup[o]){ b.classList.add("kel-up"); b.title = "Монстр Келли: " + m.kup[o]; }
@@ -4318,6 +4320,7 @@
           if(m.mode==="lock"){ b.disabled = true; }
           b.addEventListener("click", function(){
             m.picks[o] = !m.picks[o];
+            if(m.picks[o]) pickPopKey = idx + ":" + o;
             /* синяя отметка и её довод не пропадают: снял исход и поставил снова — она возвращается */
             if(m.kupAll && m.kupAll[o]){ m.kup = m.kup || {}; m.kup[o] = m.kupAll[o]; }
             if(m.kdelAll && m.kdelAll[o]){ m.kdel = m.kdel || {}; m.kdel[o] = m.kdelAll[o]; }
