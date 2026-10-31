@@ -9056,6 +9056,36 @@
     $("evBody").innerHTML = h;
     $("evBack").hidden = false;
   }
+  /* «В купон» в сравнении: исходы выбранного варианта ставятся в таблицу купона (по каждому матчу — все исходы варианта) */
+  function cmpPutOk(){
+    if(state.viewPrev && !(state.prev && state.prev.cur)) return false;
+    if(window.__cmpShared) return false;
+    var ms = window.__cmpMs || (window.__cmpMain ? state.matches : (state.prev ? state.prev.matches : null));
+    if(!ms || !state.matches.length || ms.length !== state.matches.length) return false;
+    return window.__cmpMain || !!(state.prev && String(state.prev.tirazh) === String(state.tirazh));
+  }
+  function cmpPutCoupon(st){
+    var n = state.matches.length, outs = setOutcomesOf(st, n), j;
+    for(j = 0; j < n; j++) if(!outs[j]){ say("В этом варианте нет исхода в матче №" + (j + 1) + " — в купон не ставлю."); return; }
+    state.matches.forEach(function(m, k){
+      delete m.kup; delete m.kdel; delete m.kupAll; delete m.kdelAll;
+      m.picks = { "1": false, "X": false, "2": false };
+      outs[k].split("").forEach(function(o){ if(m.picks[o] != null) m.picks[o] = true; });
+      m.mode = "free";
+    });
+    state.viewPrev = false; save(); render();
+    $("evBack").hidden = true;
+    var t0 = tally();
+    say("Вариант «" + cmpLab(st) + "» поставлен в купон: " + fmt(t0.combos) + " стр. на " + fmt(t0.combos * (Number(state.price) || 0)) + " ₽. «Назад» откатит.");
+    try{ var tb = document.querySelector("#coupon, .tbl, #matches"); if(tb && tb.scrollIntoView) tb.scrollIntoView({ block: "start" }); }catch(e){}
+  }
+  function cmpPutHtml(all){
+    if(!all.length || !cmpPutOk()) return "";
+    return '<div class="cmp-put"><p class="brief-rec-h">Поставить вариант в купон</p>' + all.map(function(st, i){
+      return '<div class="cmp-pr"><i style="background:' + CMP_COL[i % CMP_COL.length] + '">' + (i + 1) + '</i><span class="cmp-pn"><b>' + escHtml(cmpLab(st)) + '</b><small>' + fmt(cmpN(st)) + ' стр.</small></span>' +
+        '<button type="button" class="cmp-put-b" data-i="' + i + '" title="Поставить исходы этого варианта в таблицу купона">В купон</button></div>';
+    }).join("") + '<p class="ev-note">Исходы ставятся в таблицу купона на главной; «Назад» вернёт прежний купон.</p></div>';
+  }
   function cmpRender(){
     var ms = window.__cmpMs || (window.__cmpMain ? state.matches : (state.prev ? state.prev.matches : null)); if(!ms) return;
     var n = ms.length, all = window.__cmpSets || [];
@@ -9110,10 +9140,12 @@
       var un = 0; ms.forEach(function(m, j){ var c = OUT.filter(function(o){ return outs.every(function(x){ return x[j].indexOf(o) >= 0; }); }); if(c.length) un++; });
       h += '<p class="ev-note">Хотя бы в одном общем исходе наборы сошлись в ' + un + ' матчах из ' + n + '. В Охоте и Монстре берутся основные исходы системы, у остальных наборов — все исходы, которые встречаются в строках.</p>';
     }
+    h += cmpPutHtml(all);
     if(window.__cmpShared) h += cmpvSharedHtml(); else if(window.__cmpMain) h += cmpvPanelHtml(all);
     $("evTitle").textContent = "Сравнение наборов";
     $("evBody").innerHTML = h;
     if(window.__cmpShared) cmpvSharedBind(); else if(window.__cmpMain) cmpvPanelBind();
+    [].slice.call($("evBody").querySelectorAll(".cmp-put-b")).forEach(function(b){ b.addEventListener("click", function(){ var st = all[Number(b.getAttribute("data-i"))]; if(st) cmpPutCoupon(st); }); });
     [].slice.call($("evBody").querySelectorAll(".cmp-tl")).forEach(function(bx){ bx.addEventListener("click", function(){
       var j = Number(bx.getAttribute("data-j")), o = bx.getAttribute("data-o"), box = $("cmpWho" + j);
       var wasSel = bx.classList.contains("sel");

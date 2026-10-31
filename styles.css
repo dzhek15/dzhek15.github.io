@@ -3586,3 +3586,12 @@ body.is-prev .pc-vars .pc-vr.win .pc-h{font-size:17px; box-shadow:0 0 0 1.5px va
 .brief-rec-g .up{color:#3fb37f; font-weight:800}
 .brief-rec-d2{margin-top:2px; font-size:12px; color:var(--muted)}
 :root[data-theme="light"] .brief-rec-g .up{color:#1f8a5b}
+
+/* сравнение: поставить вариант в купон */
+.cmp-put{margin:14px 0 6px}
+.cmp-pr{display:flex; align-items:center; gap:10px; padding:7px 0; border-bottom:1px solid var(--line,rgba(255,255,255,.08))}
+.cmp-pr i{flex:0 0 auto; width:22px; height:22px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-style:normal; font-size:12px; font-weight:800; color:#10161a}
+.cmp-pn{flex:1 1 auto; min-width:0; display:flex; flex-direction:column}
+.cmp-pn b{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.cmp-pn small{color:var(--muted); font-size:12px}
+.cmp-put-b{flex:0 0 auto; width:auto; min-width:0; height:auto; padding:7px 14px; font:inherit; font-size:13px; font-weight:700; color:#10161a; background:linear-gradient(180deg,#f0d27a,#c9a24b); border:0; border-radius:10px; cursor:pointer}
