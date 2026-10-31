@@ -1,7 +1,36 @@
 {
- "updated": "2026-10-30",
- "note": "обновляется конвейером wallpapers.py по свежим новостям, рисуют бесплатные нейросети",
+ "updated": "2026-10-31",
+ "count": 8,
+ "note": "база обоев: каждый день после разбора ИИ добавляются новые по свежим новостям, рисуют бесплатные нейросети",
  "items": [
+  {
+   "src": "img/wp/auto/20261031-1.webp",
+   "light": "img/wp/auto/20261031-1l.webp",
+   "theme": "Среда под прожекторами",
+   "by": "pollinations:sana",
+   "d": "2026-10-31"
+  },
+  {
+   "src": "img/wp/auto/20261031-2.webp",
+   "light": "img/wp/auto/20261031-2l.webp",
+   "theme": "Ожидание дебюта",
+   "by": "pollinations:sana",
+   "d": "2026-10-31"
+  },
+  {
+   "src": "img/wp/auto/20261031-3.webp",
+   "light": "img/wp/auto/20261031-3l.webp",
+   "theme": "Напряжение у ворот",
+   "by": "pollinations:sana",
+   "d": "2026-10-31"
+  },
+  {
+   "src": "img/wp/auto/20261031-4.webp",
+   "light": "img/wp/auto/20261031-4l.webp",
+   "theme": "Тактика в дожде",
+   "by": "pollinations:sana",
+   "d": "2026-10-31"
+  },
   {
    "src": "img/wp/auto/20261030-1.webp",
    "light": "img/wp/auto/20261030-1l.webp",
