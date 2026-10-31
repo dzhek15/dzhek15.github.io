@@ -3695,11 +3695,25 @@ body.is-prev .row .teams .tm:not(:has(.temb)){padding-left:24px}
 .row .modes .mode:not(.ai-btn):not(.srch){border-color:var(--rule); color:var(--muted); background:transparent}
 .row .modes .mode:not(.ai-btn):not(.srch):hover{color:var(--ink); border-color:var(--rule-strong)}
 .row .modes .mode:not(.ai-btn):not(.srch)[aria-pressed="true"]{background:var(--ink); color:var(--surface); border-color:var(--ink)}
-.row .modes .mode.srch{background:transparent; border-color:var(--rule)}
-.row .modes .mode.srch:hover{border-color:var(--brand-gold); box-shadow:none}
 .mode.ai-btn:not(:disabled):not(.ai-wait){background:var(--kit-soft); border-color:var(--brand-gold); color:var(--gold-ink); font-weight:700}
 .mode.ai-btn:disabled, .mode.ai-btn.ai-wait{background:transparent; border-color:var(--rule); border-style:dashed; color:var(--muted); opacity:.7}
 
 /* «Сыграно N из 15» читается лучше */
 .pp-t{font-size:11.5px; color:rgba(243,234,210,.92)}
 #btnMost .ar, #btnMid .ar, #btnLeast .ar{color:currentColor !important; opacity:.85}
+
+/* «Обновить тираж»: заливка изумрудом, блик и пульс, чтобы не сливалась с «большинство» */
+#btnFetch{position:relative; overflow:hidden; background:linear-gradient(135deg,#1f8a63,#3fbf8f 55%,#1b7454) !important; border:1px solid #7fe0b8 !important; color:#06251a !important;
+  box-shadow:0 6px 18px -6px rgba(63,191,143,.65), inset 0 1px 0 rgba(255,255,255,.35); animation:fetchPulse 3.2s ease-in-out infinite; text-shadow:0 1px 0 rgba(255,255,255,.25)}
+#btnFetch::after{content:""; position:absolute; top:0; bottom:0; left:-60%; width:40%; background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent); transform:skewX(-20deg); animation:fetchSheen 3.2s ease-in-out infinite; pointer-events:none}
+#btnFetch:hover:not(:disabled){background:linear-gradient(135deg,#25a073,#52d1a0 55%,#208a64) !important; filter:none; transform:translateY(-1px)}
+#btnFetch:hover:not(:disabled) svg{animation:fetchSpin 1.2s linear infinite; transform-origin:50% 50%}
+#btnFetch:active:not(:disabled){transform:translateY(1px)}
+#btnFetch:disabled{animation:none; opacity:.65}
+#btnFetch:disabled::after{display:none}
+#btnFetch.is-loading{animation:none}
+#btnFetch.is-loading::after{display:none}
+:root[data-theme="light"] #btnFetch{border-color:#176e4a !important; color:#fff !important; text-shadow:none; background:linear-gradient(135deg,#17794f,#2da273 55%,#126340) !important}
+@keyframes fetchSheen{0%,55%{left:-60%} 100%{left:130%}}
+@keyframes fetchPulse{0%,100%{box-shadow:0 6px 18px -6px rgba(63,191,143,.55), inset 0 1px 0 rgba(255,255,255,.35)} 50%{box-shadow:0 8px 24px -4px rgba(63,191,143,.9), inset 0 1px 0 rgba(255,255,255,.35)}}
+@media (prefers-reduced-motion: reduce){ #btnFetch, #btnFetch::after{animation:none} }
