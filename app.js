@@ -4428,8 +4428,7 @@
     var hint = $("hint");
     if(hintSticky){ hintSticky = false; }
     else if(t.empty>0){
-      hint.hidden = false;
-      hint.textContent = "В " + t.empty + " матч(ах) не выбрано ни одного исхода — купон неполный, комбинации не считаются.";
+      hint.hidden = true;     /* то же самое сказано у кнопки «Положить купон в корзину» */
     } else if(t.combos > MAX_CSV){
       hint.hidden = false;
       hint.textContent = "Комбинаций больше " + fmt(MAX_CSV) + " — выгрузка в CSV отключена, файл будет неподъёмным.";
@@ -4441,7 +4440,7 @@
     if($("btnPreset")) $("btnPreset").disabled = spinning;
     if($("btnFinal")) $("btnFinal").disabled = spinning;
     if(t.rand===0){
-      note.innerHTML = "Ни один матч не помечен «рандом». Разыгрывать нечего.";
+      note.innerHTML = "";
     } else {
       var narrow = state.matches.filter(function(m){ return m.mode==="rand" && m.pool.length < 3; }).length;
       var frozen = state.matches.filter(function(m){ return m.mode==="rand" && m.pool.length === 1; }).length;
@@ -12340,6 +12339,17 @@
   $("btnKelly").addEventListener("click", showKellyStrat);
   if($("btnMonster")) $("btnMonster").addEventListener("click", showMonsterStrat);
   $("btnStat").addEventListener("click", function(){ showAcc(); });
+  /* телефон: режимы, рандом и стратегии свёрнуты, чтобы матчи были ближе к началу страницы */
+  (function(){
+    var rl = $("roll"), tg = $("rollTgl"); if(!rl || !tg) return;
+    var K = "dzhek-rl-open";
+    function set(on){ rl.classList.toggle("rl-closed", !on); tg.setAttribute("aria-expanded", on ? "true" : "false"); }
+    try{ set(localStorage.getItem(K) === "1"); }catch(e){ set(false); }
+    tg.addEventListener("click", function(){
+      var on = rl.classList.contains("rl-closed"); set(on);
+      try{ localStorage.setItem(K, on ? "1" : "0"); }catch(e){}
+    });
+  })();
   setTimeout(checkFsVoids, 4000);
   loadAi().then(aiBtnsUpdate);
   setInterval(function(){ loadAi().then(aiBtnsUpdate); }, 30 * 60000);

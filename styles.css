@@ -3645,3 +3645,61 @@ body.is-prev .row .teams .tm:not(:has(.temb)){padding-left:24px}
 .ai-cov-hi{border-left-color:#2F6B4F}
 .ai-cov-mid{border-left-color:#B08A3E}
 .ai-cov-lo{border-left-color:#8E2A1E}
+
+/* ======================================================================
+   Главная: порядок, палитра, тише служебные подсказки (v20261031u)
+   ====================================================================== */
+:root{--jm-em:#4fbf94; --jm-em-bg:rgba(79,191,148,.12); --jm-ch:#d9c48f; --jm-gr:#9aa5a3}
+:root[data-theme="light"]{--jm-em:#1c8f5a; --jm-em-bg:rgba(28,143,90,.10); --jm-ch:#8a6a22; --jm-gr:#5c6a6b}
+
+/* кнопка-переключатель пульта: видна только на телефоне */
+.roll .roll-tgl{display:none !important}
+@media (max-width:560px){
+  .roll .roll-tgl{display:flex !important; align-items:center; justify-content:center; gap:8px; width:100%; min-height:38px; padding:0 12px; border-radius:10px;
+    border:1px dashed var(--kit-line, var(--brand-gold)); background:transparent; color:var(--gold-ink); font:600 13px/1 "Chivo",sans-serif; letter-spacing:.06em; text-transform:uppercase; cursor:pointer}
+  .roll-tgl svg{transition:transform .2s ease}
+  .roll-tgl[aria-expanded="true"] svg{transform:rotate(180deg)}
+  .roll.rl-closed .roll-modes, .roll.rl-closed .roll-primary, .roll.rl-closed .roll-tools{display:none}
+  .roll .roll-group{padding:10px; gap:8px}
+  /* три «толпы» в один ряд, а не три полосы */
+  .roll .roll-crowd{display:grid !important; grid-template-columns:repeat(3, minmax(0,1fr)) !important; gap:6px}
+  .roll .roll-crowd .btn-crowd{padding:8px 2px; font-size:12px; gap:3px; min-height:40px}
+  .roll .roll-crowd .lbl-long{display:none}
+  /* на обложке и бегущая строка, и «ближайший матч» — оставляем второе */
+  .cv-ticker{display:none}
+}
+.roll-note:empty{display:none}
+
+/* кнопки пульта: изумруд, шампань и золото вместо синего и красного */
+#btnMost{background:transparent !important; border-color:var(--jm-em) !important; color:var(--jm-em) !important}
+#btnMost:hover:not(:disabled){background:var(--jm-em-bg) !important}
+#btnMid{background:transparent !important; border-color:var(--jm-gr) !important; color:var(--jm-ch) !important}
+#btnLeast{background:transparent !important; border-color:var(--brand-gold) !important; color:var(--gold-ink) !important}
+:root[data-theme="light"] #btnLeast{color:#7a5410 !important}
+#btnMost:disabled, #btnMid:disabled, #btnLeast:disabled{border-color:var(--rule-strong) !important; color:var(--muted) !important}
+#btnFetch{background:transparent !important; border:1px solid var(--jm-em) !important; color:var(--jm-em) !important; box-shadow:none}
+#btnFetch:hover:not(:disabled){background:var(--jm-em-bg) !important; filter:none}
+#btnReset, :root[data-theme="dark"] #btnReset{background:transparent !important; border-color:var(--rule-strong) !important; color:var(--ink) !important}
+#btnReset:hover:not(:disabled), :root[data-theme="dark"] #btnReset:hover:not(:disabled){border-color:var(--brand-gold) !important; background:var(--kit-soft) !important}
+#btnReset:disabled{color:var(--muted) !important}
+.undo-bar #btnUndo, .undo-bar #btnRedo{background:transparent !important; box-shadow:none !important; color:var(--ink) !important; border:1px solid var(--rule-strong) !important}
+.undo-bar #btnUndo:hover:not(:disabled), .undo-bar #btnRedo:hover:not(:disabled){border-color:var(--brand-gold) !important; background:var(--kit-soft) !important; transform:none}
+.undo-bar #btnUndo:disabled, .undo-bar #btnRedo:disabled{color:var(--muted) !important; opacity:.55}
+/* «ценность тиража»: красного нет — он только для «не зашло» */
+#tkValWrap .v.bad{color:var(--jm-ch)}
+#tkValWrap .v.good{color:var(--jm-em)}
+:root[data-theme="light"] #tkValWrap .v.bad{color:#8a6a22}
+:root[data-theme="light"] #tkValWrap .v.good{color:#1c8f5a}
+
+/* строки матчей: служебные кнопки тише, заметна только доступная «ИИ» */
+.row .modes .mode:not(.ai-btn):not(.srch){border-color:var(--rule); color:var(--muted); background:transparent}
+.row .modes .mode:not(.ai-btn):not(.srch):hover{color:var(--ink); border-color:var(--rule-strong)}
+.row .modes .mode:not(.ai-btn):not(.srch)[aria-pressed="true"]{background:var(--ink); color:var(--surface); border-color:var(--ink)}
+.row .modes .mode.srch{background:transparent; border-color:var(--rule)}
+.row .modes .mode.srch:hover{border-color:var(--brand-gold); box-shadow:none}
+.mode.ai-btn:not(:disabled):not(.ai-wait){background:var(--kit-soft); border-color:var(--brand-gold); color:var(--gold-ink); font-weight:700}
+.mode.ai-btn:disabled, .mode.ai-btn.ai-wait{background:transparent; border-color:var(--rule); border-style:dashed; color:var(--muted); opacity:.7}
+
+/* «Сыграно N из 15» читается лучше */
+.pp-t{font-size:11.5px; color:rgba(243,234,210,.92)}
+#btnMost .ar, #btnMid .ar, #btnLeast .ar{color:currentColor !important; opacity:.85}
