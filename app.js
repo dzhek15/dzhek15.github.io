@@ -3460,10 +3460,10 @@
       /* свои CSV из просмотра тиража (хранятся только в этом браузере): все свои наборы тиража вместе, без ИИ и Охоты.
          Считаются только наборы, загруженные до окончания тиража и не удалённые до него (удалённые после — хранятся в kept) */
       var mineRows = function(n){
-        var e = pcsvAll()[String(n)], out = [];
+        var e = pcsvAll()[String(n)], out = []; out.w = []; out.cost = 0;
         if(!e) return out;
         var sets = (e.sets || (e.rows ? [{ rows: e.rows, sys: e.sys }] : [])).concat(e.kept || []);
-        sets.forEach(function(st){ if(st.ai || st.virt || st.late) return;   /* загружен после окончания тиража — не считаем */ var r = st.rows && st.rows.length ? st.rows : pcsvExpand(st.sys || []); for(var i = 0; i < r.length; i++) out.push(String(r[i])); });
+        sets.forEach(function(st){ if(st.ai || st.virt || st.late) return;   /* загружен после окончания тиража — не считаем */ var r = st.rows && st.rows.length ? st.rows : pcsvExpand(st.sys || []), wt = st.pr && r.length ? st.pr / (r.length * (Number(state.price) || 1)) : 1; if(wt !== 1) out.cw = true; for(var i = 0; i < r.length; i++){ out.push(String(r[i])); out.w.push(wt); } out.cost += st.pr || r.length * (Number(state.price) || 0); });
         return out;
       };
       if(nums.some(function(n){ return mineRows(n).length; })) cols.push(["mine", "Мои CSV", "Мои", "Мои CSV"]);
@@ -3480,10 +3480,14 @@
         cols.forEach(function(c){
           if(c[0] === "mine"){
             var mr = mineRows(n);
+            var mh = [];
             sc.mine = mr.length && Array.isArray(d.res) ? accDistRows(mr.map(function(rw){
               var h15 = 0; for(var q = 0; q < 15; q++) if(hitRes(rw.charAt(q), d.res[q])) h15++;
+              mh.push(h15);
               return h15;
             })) : null;
+            /* у файла с ценой строки не по умолчанию (например 1 строка на 111 ₽) ставка и выигрыш идут по его цене */
+            if(sc.mine && mr.cw){ sc.mine.cost = mr.cost; sc.mine.wd = sc.mine.dist.map(function(){ return 0; }); mh.forEach(function(h, i){ sc.mine.wd[h] += mr.w[i]; }); }
           } else if(c[0] === "hunt" || c[0] === "hunt2"){
             var vr = (c[0] === "hunt" ? vdata : vai)[String(n)];
             sc[c[0]] = vr && vr.z && Array.isArray(d.res) ? accDistRows(virtRows(vr.z).map(function(rw){
@@ -3500,10 +3504,10 @@
             }));
           } else sc[c[0]] = accScore(d[c[0]], d.res);
           var x = sc[c[0]]; if(!x) return;
-          var it = { hit: x.hit, vars: x.vars, dist: x.dist || [], cost: x.vars * price };
+          var it = { hit: x.hit, vars: x.vars, dist: x.dist || [], cost: x.cost != null ? x.cost : x.vars * price, wd: x.wd || null };
           var t = tot[c[0]]; t.n++; t.lines += x.vars; t.rub += it.cost; sum[c[0]] = (sum[c[0]] || 0) + x.hit; cnt[c[0]] = (cnt[c[0]] || 0) + 1;
           if(x.hit > (t.bestHit || 0)) t.bestHit = x.hit;
-          if(PK){ it.win = payWin(it.dist, PK.k, price); t.win += it.win; t.cost += it.cost; t.pn++; }
+          if(PK){ it.win = payWin(it.wd || it.dist, PK.k, price); t.win += it.win; t.cost += it.cost; t.pn++; }
           row.s[c[0]] = it;
         });
         D[n] = row;
@@ -3568,7 +3572,7 @@
       var calc = function(n, k){
         var r = D[n], it = r.s[k]; if(!it) return "";
         var h = '<div class="st-calc"><div class="st-calc-h"><b>' + name[k] + ' · тираж ' + n + '</b><button type="button" class="st-x" aria-label="Закрыть расчёт">×</button></div>' +
-          '<p><b>Поставил:</b> ' + fmt(it.vars) + ' ' + plural(it.vars, "строка", "строки", "строк") + ' × ' + r.price + ' ₽ = <b>' + rub(it.cost) + '</b>. Лучшая строка угадала ' + it.hit + ' из 15.</p>';
+          '<p><b>Поставил:</b> ' + fmt(it.vars) + ' ' + plural(it.vars, "строка", "строки", "строк") + (it.wd ? '' : ' × ' + r.price + ' ₽') + ' = <b>' + rub(it.cost) + '</b>. Лучшая строка угадала ' + it.hit + ' из 15.</p>';
         if(!r.PK) return h + '<p class="st-mute">Выплаты тиража ' + n + ' не загружены — выигрыш посчитать нельзя. Нажми «Загрузить выигрыши».</p></div>';
         var K = r.PK.k, acc = 0, lines = [], paidL = 0;
         for(var q = 9; q <= 15; q++){
@@ -6945,14 +6949,15 @@
   function parseCsvVariants(text, needN){
     var need = needN || state.matches.length;
     var lines = String(text).split(/\r?\n/);
-    var out = [], pages = [], bad = 0, over = false;
+    var out = [], pages = [], bad = 0, over = false, cost = 0, custom = false, unit = Number(state.price) || 0;
     for(var i=0;i<lines.length;i++){
       var s = lines[i].trim();
       if(!s) continue;
       var parts = s.split(/[;,\t]/);
       var cand = null;
+      var lp = null;
       if(parts.length === need) cand = parts;
-      else if(parts.length === need + 1) cand = parts.slice(1);   /* первое поле — цена строки */
+      else if(parts.length === need + 1){ cand = parts.slice(1); lp = parseFloat(String(parts[0]).replace(/[^\d.]/g, "")); if(!(lp > 0)) lp = null; }   /* первое поле — цена строки */
       if(!cand){ bad++; continue; }
       /* ячейка может нести несколько исходов («12», «1X2») — это строка-система,
          разворачиваем её во все комбинации */
@@ -6971,6 +6976,8 @@
       if(!ok){ bad++; continue; }
       /* страница просмотра — строка файла как есть: «1X» в матче подсвечивает обе кнопки */
       pages.push(cols.map(function(set){ return OUT.filter(function(o){ return set.indexOf(o) >= 0; }).join(""); }));
+      var lcomb = 1; cols.forEach(function(set){ lcomb *= set.length; });
+      if(lp != null && Math.abs(lp - lcomb * unit) > 0.005){ custom = true; cost += lp; } else cost += lcomb * unit;
       var combo = [[]];
       for(var j2=0;j2<cols.length;j2++){
         var nx = [];
@@ -6985,7 +6992,7 @@
         out.push(combo[q2]);
       }
     }
-    return { rows: out, pages: pages, bad: bad, over: over, need: need };
+    return { rows: out, pages: pages, bad: bad, over: over, need: need, cost: custom && !over ? Math.round(cost * 100) / 100 : 0 };
   }
 
   function bookShow(){
@@ -8189,7 +8196,7 @@
   function pcsvEnsure(tir){
     if(pcsv.tir === tir) return;
     var saved = pcsvAll()[tir] || null, sets = [];
-    if(saved && saved.sets) sets = saved.sets.map(function(st){ return { name: st.name, link: st.link || 0, lname: st.lname || 0, sys: st.sys || [], rows: st.rows || pcsvExpand(st.sys || []), at: st.at || 0, late: st.late || 0 }; });
+    if(saved && saved.sets) sets = saved.sets.map(function(st){ return { name: st.name, link: st.link || 0, lname: st.lname || 0, sys: st.sys || [], rows: st.rows || pcsvExpand(st.sys || []), at: st.at || 0, late: st.late || 0, pr: st.pr || 0 }; });
     else if(saved && saved.rows) sets = [{ name: saved.name || "Файл", rows: saved.rows, sys: saved.sys || saved.rows }];
     pcsv = { tir: tir, sets: sets, act: 0, page: 0, sort: pcsv.sort || "hits", view: pcsv.view, msg: pcsv.msg, msgAt: pcsv.msgAt };
     pcsvUse(saved && saved.act < sets.length ? saved.act : 0);
@@ -8331,7 +8338,7 @@
     var sig = (set.sys || []).join("|");
     for(var i = 0; i < e.sets.length; i++) if((e.sets[i].sys || []).join("|") === sig){ e.act = i; all[tir] = e; pcsvPut(tir); return { dup: true, name: e.sets[i].name }; }
     var nm = set.link ? set.lname || "Ссылка " + (e.sets.filter(function(x){ return x.link; }).length + 1) : set.name;
-    e.sets.push({ name: nm, link: set.link || 0, lname: set.lname ? 1 : 0, sys: set.sys, at: Date.now(), late: pcsvTirDone(tir) ? 1 : 0 }); e.act = e.sets.length - 1; e.at = Date.now();
+    e.sets.push({ name: nm, link: set.link || 0, lname: set.lname ? 1 : 0, sys: set.sys, at: Date.now(), late: pcsvTirDone(tir) ? 1 : 0, pr: set.pr || 0 }); e.act = e.sets.length - 1; e.at = Date.now();
     all[tir] = e;
     pcsvPut(tir);
     return { dup: false, name: set.link ? fmt(pcsvExpand(set.sys || []).length * (Number(state.price) || 0)) + " ₽" : nm };
@@ -8547,7 +8554,7 @@
   var RK_VT = '<em class="rk-vt" title="Виртуальный набор: на деньги не ставится, нужен для отслеживания"><span class="f">виртуальный</span><span class="s">вирт.</span></em> ';
   function pcsvLabel(st){
     if(!st) return "";
-    return fmt(st.rows.length * (Number(state.price) || 0)) + " ₽";
+    return fmt(st.pr || st.rows.length * (Number(state.price) || 0)) + " ₽";
   }
   /* заголовок блока: у ссылки — сумма, у файла — имя файла и сумма */
   function pcsvHead(){
@@ -8563,7 +8570,7 @@
     pcsv.sets.forEach(function(st, q){ if(q < pcsv.act && !st.ai) actM++; });
     var kept = (all[pcsv.tir] && all[pcsv.tir].kept) || null;
     if(mine.length) all[pcsv.tir] = { act: Math.min(actM, mine.length - 1), at: Date.now(),
-      sets: mine.map(function(st){ return { name: st.name, link: st.link || 0, lname: st.lname ? 1 : 0, sys: st.sys, at: st.at || 0, late: st.late || 0 }; }) };
+      sets: mine.map(function(st){ return { name: st.name, link: st.link || 0, lname: st.lname ? 1 : 0, sys: st.sys, at: st.at || 0, late: st.late || 0, pr: st.pr || 0 }; }) };
     else if(kept) all[pcsv.tir] = { act: 0, at: Date.now(), sets: [] };
     else delete all[pcsv.tir];
     if(kept) all[pcsv.tir].kept = kept;
@@ -8603,7 +8610,7 @@
             var res = parseCsvVariants(rd.result, state.prev.matches.length);
             if(!res.rows.length){ bad.push("«" + f.name + "»"); next(); return; }
             var a = pcsvAdd({ name: f.name, rows: res.rows.map(function(r){ return r.join(""); }),
-                              sys: res.pages.map(function(pg){ return pg.join(","); }) }, true);
+                              sys: res.pages.map(function(pg){ return pg.join(","); }), pr: res.cost || 0 }, true);
             if(a.twin) twinN++;
             if(a.dup){ dup++; dupN.push("«" + f.name + "» = «" + (a.of || "?") + "»"); } else ok++;
             next();
@@ -9331,11 +9338,11 @@
       h += '</div></div>' + (pcsv.sets.filter(function(x){ return x.rows && x.rows.length; }).length > 1 ? '<div class="pc-cmp"><button type="button" class="pc-btn ghost" id="pcCmp">Сравнить наборы по матчам</button></div>' : '') + '</div>';
     }
     /* общая сумма всех загруженных наборов тиража — в панели просмотра */
-    var allRows = 0; pcsv.sets.forEach(function(x){ if(!x.ai) allRows += x.rows.length; });
+    var allRows = 0; var allRub = 0; pcsv.sets.forEach(function(x){ if(!x.ai){ allRows += x.rows.length; allRub += x.pr || x.rows.length * (Number(state.price) || 0); } });
     var pbS = document.getElementById("pbSum");
     if(pbS){
       pbS.hidden = !allRows;
-      if(allRows) pbS.innerHTML = 'сумма <b>' + fmt(allRows * (Number(state.price) || 0)) + ' ₽</b>';
+      if(allRows) pbS.innerHTML = 'сумма <b>' + fmt(allRub) + ' ₽</b>';
     }
     var pbB = document.getElementById("pbBest");
     if(pbB){
