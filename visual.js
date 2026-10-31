@@ -364,11 +364,16 @@
     });
   }
   function wpLoad(cb){
-    if(wp.list){ cb(); return; }
+    if(wp.list && Date.now() - (wp.at || 0) < 3600000){ cb(); return; }
+    if(wp.list) wp.list = null;
     if(wp.loading) return;
     wp.loading = true;
     fetch("data/wallpapers.json?x=" + Math.floor(Date.now() / 600000), { cache: "no-cache" }).then(function(r){ return r.json(); }).then(function(j){
-      wp.list = ((j && j.items) || []).filter(function(it){ return it && it.src; });
+      var all = ((j && j.items) || []).filter(function(it){ return it && it.src; });
+      /* база копится каждый день: свежие обои (первые четыре) идут первыми, остальные из базы — вперемешку */
+      var fresh = all.slice(0, 4), rest = all.slice(4), q, r, t;
+      for(q = rest.length - 1; q > 0; q--){ r = Math.floor(Math.random() * (q + 1)); t = rest[q]; rest[q] = rest[r]; rest[r] = t; }
+      wp.list = fresh.concat(rest); wp.at = Date.now();
       wp.loading = false; if(wp.list.length) cb();
     }).catch(function(){ wp.loading = false; });
   }
@@ -379,7 +384,7 @@
     if(wp.i < 0) wp.i = 0;
     var it = wp.list[wp.i], im = new Image(), src = wpSrc(it);
     im.onload = function(){
-      wpEnsure();
+      wp.err = 0; wpEnsure();
       var nx = wp.front ^ 1;
       wpPanels().forEach(function(p){
         var f = p.querySelector(":scope > .wpPane"); if(!f) return;
@@ -390,13 +395,14 @@
       });
       wp.front = nx; wp.cur = src;
     };
+    im.onerror = function(){ if(!wp.err || wp.err < 3){ wp.err = (wp.err || 0) + 1; wpShow(); } };
     im.src = src;
   }
   function wpSync(){
     var on = document.body.classList.contains("is-prev");
     if(on){ wpEnsure(); }
     if(on && !wp.timer){
-      wpLoad(function(){ if(!wp.timer){ wpShow(); wp.timer = setInterval(wpShow, 24000); } });
+      wpLoad(function(){ if(!wp.timer){ wpShow(); wp.timer = setInterval(function(){ if(Date.now() - (wp.at || 0) >= 3600000) wpLoad(function(){}); wpShow(); }, 24000); } });
     }
     if(!on && wp.timer){ clearInterval(wp.timer); wp.timer = 0; }
   }
