@@ -2891,12 +2891,31 @@
     return '<li class="ai-lp"><div class="ai-lp-a">' + (p.num ? '<span class="ai-lp-num">' + escHtml(String(p.num).replace(/^№\s*/, "")) + '</span>' : '') + '<b>' + escHtml(p.n) + '</b>' + (p.pos ? '<span class="ai-lp-pos">' + escHtml(p.pos) + '</span>' : '') + rb + '</div>' +
       '<div class="ai-lp-b"><span class="ai-stb ai-stb-' + st + '">' + escHtml(p.st || "статус не указан") + '</span>' + (d.length ? '<span class="ai-lp-d">' + d.join(" · ") + '</span>' : '') + '</div>' + ex + '</li>';
   }
+  /* один и тот же отсутствующий не должен идти дважды: строка Flashscore и строка «пресса» с тем же именем сливаются в одну */
+  function aiLuDedup(pl){
+    var out = [], seen = {};
+    (pl || []).forEach(function(p){
+      if(!p) return;
+      var key = String(p.n || "").toLowerCase().replace(/ё/g, "е").replace(/\s+/g, " ").trim();
+      if(!key){ out.push(p); return; }
+      var q = seen[key];
+      if(!q){ seen[key] = p; out.push(p); return; }
+      if(!q.why && p.why) q.why = p.why;
+      if(!q.pos && p.pos) q.pos = p.pos;
+      if(!q.num && p.num) q.num = p.num;
+      if(!q.since && p.since) q.since = p.since;
+      if(!q.role && p.role) q.role = p.role;
+      if(!q.l10 && p.l10) q.l10 = p.l10;
+    });
+    return out;
+  }
   function aiLuHtml(lu){
     var o = '<div class="ai-sec ai-s-lineup"><span class="ai-lb">Составы и отсутствующие</span>';
     if(lu.meta) o += '<p class="ai-lu-meta">' + aiFmt(escHtml(lu.meta)) + '</p>';
     (lu.teams || []).forEach(function(t){
       o += '<div class="ai-lu-t"><b>' + escHtml(t.n) + '</b>';
-      if(t.pl && t.pl.length) o += '<ul class="ai-lps">' + t.pl.map(aiLuPl).join("") + '</ul>';
+      var pls = aiLuDedup(t.pl);
+      if(pls.length) o += '<ul class="ai-lps">' + pls.map(aiLuPl).join("") + '</ul>';
       else o += '<span class="ai-lu-no">' + escHtml(t.no || "Отсутствующих в источниках нет.") + '</span>';
       if(t.xi) o += '<span class="ai-lu-xi"><i>Вероятный состав</i> ' + escHtml(t.xi) + '</span>';
       o += '</div>';
@@ -7211,6 +7230,49 @@
     bookShow();
     save();
     $("expNote").textContent = "Вариант " + fmt(n) + " перенесён в купон. Отменить — «Назад».";
+  });
+
+  /* все строки файла как есть — в корзину (точно те варианты, что в CSV) */
+  $("bkAllBasket").addEventListener("click", function(){
+    if(!book) return;
+    var lines = book.rows.map(function(r){ return r.map(function(o){ return OUT.indexOf(o); }); });
+    if(lines.some(function(L){ return L.some(function(k){ return k < 0; }); })){ $("expNote").textContent = "В файле есть непонятные исходы — в корзину не кладу."; return; }
+    var price = Number(state.price) || 0, stamp = new Date().toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit"});
+    var seen = {}, add = [], dup = 0, name = book.name;
+    state.played.forEach(function(v){ if(v.sig) seen[v.sig] = true; });
+    lines.forEach(function(L, n){
+      var sig = L.map(function(k){ return OUT[k]; }).join(" ");
+      if(seen[sig]){ dup++; return; }
+      seen[sig] = true;
+      add.push({ at: stamp, label: "csv " + (n + 1) + "/" + lines.length, sig: sig, combos: 1, cost: price });
+    });
+    state.rolls += add.length; state.spent += add.length * price;
+    state.played = add.reverse().concat(state.played);
+    if(state.played.length > BASKET_MAX) state.played.length = BASKET_MAX;
+    book = null; bookShow(); save(); render();
+    $("expNote").textContent = "Из файла «" + name + "» в корзину добавлено " + fmt(add.length) + " строк на " + fmt(add.length * price) + " ₽" + (dup ? ", повторов пропущено " + fmt(dup) : "") + ". Убрать их можно в корзине.";
+  });
+
+  /* весь CSV в купон: в каждом матче — все исходы, которые встречаются в вариантах файла */
+  $("bkAllCoupon").addEventListener("click", function(){
+    if(!book) return;
+    var n = state.matches.length, f = [], j, i, rws = bookPages(), lim = Math.min(rws.length, 200000);
+    for(j = 0; j < n; j++) f.push({ "1": 0, "X": 0, "2": 0 });
+    for(i = 0; i < lim; i++) for(j = 0; j < n; j++) String(rws[i][j] || "").split("").forEach(function(c){ if(f[j][c] != null) f[j][c] = 1; });
+    for(j = 0; j < n; j++) if(!f[j]["1"] && !f[j]["X"] && !f[j]["2"]){ $("expNote").textContent = "В файле нет исхода в матче №" + (j + 1) + " — в купон не ставлю."; return; }
+    pushHistory("до переноса всего CSV");
+    state.matches.forEach(function(m, k){
+      OUT.forEach(function(o){ m.picks[o] = !!f[k][o]; });
+      m.mode = "none";
+      m.pool = OUT.slice();
+    });
+    var name = book.name, cnt = book.rows.length;
+    book = null;
+    bookShow();
+    save(); render();
+    var t0 = tally();
+    $("expNote").textContent = "Весь файл «" + name + "» поставлен в купон: " + fmt(cnt) + " вариантов файла, в купоне " + fmt(t0.combos) + " строк на " + fmt(t0.combos * (Number(state.price) || 0)) + " ₽" +
+      (t0.combos > cnt ? ". Купон — прямоугольная таблица: он считает все сочетания выбранных исходов, поэтому строк в нём больше, чем в файле. Точные строки файла — кнопка «Все строки в корзину»" : "") + ". Отменить — «Назад».";
   });
 
   document.addEventListener("keydown", function(e){
