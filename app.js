@@ -5592,8 +5592,11 @@
       return { rows: rw, cost: rw * price, p: pv, x: f1 / Math.max(full0, 1e-12) };
     };
     var line = function(e){
-      var d = e.cost - rows * price, dd = Math.abs(d) < price * rows * 0.03 ? 'цена та же' : (d > 0 ? '+' : '\u2212') + fmt(Math.abs(Math.round(d))) + ' ₽';
-      return 'Система будет примерно ' + fmt(e.rows) + ' строк на ' + fmt(e.cost) + ' ₽ (' + dd + '). ' + tgt[0].toUpperCase() + tgt.slice(1) + ': ' + stratChance(base.v) + ' → <b>примерно ' + stratChance(e.p) + '</b> (×' + e.x.toFixed(2) + ').';
+      var d = e.cost - rows * price, same = Math.abs(d) < price * rows * 0.03,
+          cost = same ? 'цена та же' : (d > 0 ? '+' : '\u2212') + fmt(Math.abs(Math.round(d))) + ' ₽',
+          gain = e.x >= 2 ? '×' + e.x.toFixed(1) : '+' + Math.max(1, Math.round((e.x - 1) * 100)) + '%';
+      return '<div class="brief-rec-g"><b class="up">' + gain + ' к шансу</b> · ' + cost + '</div>' +
+             '<div class="brief-rec-d2">' + tgt[0].toUpperCase() + tgt.slice(1) + ': ' + stratChance(base.v) + ' → ' + stratChance(e.p) + ' · строк ≈ ' + fmt(e.rows) + ', всего ≈ ' + fmt(e.cost) + ' ₽</div>';
     };
     var moves = [], adds = [], n = sets.length;
     /* перенос: убрать исход r в матче X, добавить исход a в матче Y */
@@ -5638,7 +5641,7 @@
              '<div><b>Заменить</b> «' + OUT[c.r] + '» на «' + OUT[c.o] + '» в матче ' + nm(c.x) + ' (было ' + ss(sets[c.x]) + ', станет ' + ss(c.after[c.x]) + ')</div>' :
              '<div><b>Убрать</b> «' + OUT[c.r] + '» в матче ' + nm(c.x) + ' (было ' + ss(sets[c.x]) + ', станет ' + ss(c.after[c.x]) + ')</div>' +
              '<div><b>Добавить</b> «' + OUT[c.o] + '» в матче ' + nm(c.y) + ' (было ' + ss(sets[c.y]) + ', станет ' + ss(c.after[c.y]) + ')</div>') +
-             '<div class=\"brief-rec-d\">' + line(e) + '</div></div>';
+             line(e) + '</div>';
       });
     }
     if(adds.length){
@@ -5646,7 +5649,7 @@
       adds.slice(0, 3).forEach(function(c){
         var e = est(c.f1, c.U1), st = sets[c.ix], ns3 = st.concat([c.o]);
         h += '<div class=\"brief-rec-card\"><div><b>Добавить</b> «' + OUT[c.o] + '» в матче ' + nm(c.ix) + ' (было ' + ss(st) + ', станет ' + ss(ns3) + ')</div>' +
-             '<div class=\"brief-rec-d\">' + line(e) + '</div></div>';
+             line(e) + '</div>';
       });
     }
     hr = hr.replace('@N@', String((mv.length ? 1 : 0) + (adds.length ? 1 : 0) + 1)); h += hr;
