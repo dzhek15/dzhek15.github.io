@@ -104,7 +104,9 @@
     el.hidden = false;
     var m = x.m, k, cls = "cv-ft m-" + f.mode;
     var key = g.tirazh + "|" + x.i, sc = String(m.score || "");
-    if(fxs.scSeen[key] != null && fxs.scSeen[key] !== sc && f.mode === "live") cls += " ft-goal";
+    /* «ГОЛ!» только когда счёт реально вырос: появление первого счёта 0:0 при начале матча голом не считается */
+    var po = /(\d+)\D+(\d+)/.exec(fxs.scSeen[key] || ""), pn = /(\d+)\D+(\d+)/.exec(sc);
+    if(po && pn && f.mode === "live" && (+pn[1] > +po[1] || +pn[2] > +po[2])) cls += " ft-goal";
     fxs.scSeen[key] = sc;
     if(f.mode === "live") k = '<b class="ft-dot"></b>В эфире' + (x.s.min ? ' · <span class="ft-min">' + esc(x.s.min) + '</span>' : "");
     else if(f.mode === "next") k = 'Ближайший матч · ' + esc([m.date, m.time].filter(Boolean).join(" "));
