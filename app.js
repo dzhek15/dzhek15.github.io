@@ -12361,17 +12361,6 @@
     h.addEventListener("click", flip);
     h.addEventListener("keydown", function(ev){ if(ev.key === "Enter" || ev.key === " "){ ev.preventDefault(); flip(); } });
   })();
-  /* телефон: режимы, рандом и стратегии свёрнуты, чтобы матчи были ближе к началу страницы */
-  (function(){
-    var rl = $("roll"), tg = $("rollTgl"); if(!rl || !tg) return;
-    var K = "dzhek-rl-open";
-    function set(on){ rl.classList.toggle("rl-closed", !on); tg.setAttribute("aria-expanded", on ? "true" : "false"); }
-    try{ set(localStorage.getItem(K) === "1"); }catch(e){ set(false); }
-    tg.addEventListener("click", function(){
-      var on = rl.classList.contains("rl-closed"); set(on);
-      try{ localStorage.setItem(K, on ? "1" : "0"); }catch(e){}
-    });
-  })();
   setTimeout(checkFsVoids, 4000);
   loadAi().then(aiBtnsUpdate);
   setInterval(function(){ loadAi().then(aiBtnsUpdate); }, 30 * 60000);
