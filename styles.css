@@ -3909,3 +3909,9 @@ body:not(.is-prev):not([data-book="1"]) .row .pick.pop::after{content:""; positi
 body:not(.is-prev):not([data-book="1"]) .row .pick.just-off:hover:not([aria-pressed="true"]):not(.won):not(.in-pool):not(.kel-up){
   transform:none; border-color:var(--rule-strong); color:var(--ink); box-shadow:inset 0 1px 0 rgba(255,255,255,.07), 0 1px 0 rgba(0,0,0,.18)}
 :root[data-theme="light"] body:not(.is-prev):not([data-book="1"]) .row .pick.just-off:hover:not([aria-pressed="true"]):not(.won):not(.in-pool){color:var(--ink)}
+
+/* кнопка «ИИ», когда разбора нет или он идёт: тёмная, как раньше (v20261101e) */
+.row .modes .mode.ai-btn:disabled, .row .modes .mode.ai-btn.ai-wait{background:var(--brand-dark); border:1px solid var(--brand-gold); color:var(--brand-gold); opacity:.4; box-shadow:none; cursor:not-allowed; transform:none}
+.row .modes .mode.ai-btn:disabled::before, .row .modes .mode.ai-btn.ai-wait::before{content:none}
+.row .modes .mode.ai-btn:disabled::after, .row .modes .mode.ai-btn.ai-wait::after{content:none}
+:root[data-theme="light"] .row .modes .mode.ai-btn:disabled, :root[data-theme="light"] .row .modes .mode.ai-btn.ai-wait{background:var(--brand-dark); color:var(--brand-gold); border-color:var(--brand-gold)}
