@@ -3850,3 +3850,57 @@ body:not(.is-prev):not([data-book="1"]) .row .pick.pop::after{content:""; positi
     radial-gradient(180px 110px at 100% 55%, rgba(var(--c2,201,162,75),.16), transparent 75%),
     linear-gradient(180deg,#ffffff,#f1f5f4)}
 @media (prefers-reduced-motion: reduce){ .ft-emb{transition:none} }
+
+/* ===== Главная: спидометр ценности, гербы, салют, плашка ожидания ИИ (v20261101c) ===== */
+/* спидометр «Ценность тиража» */
+#tkValWrap .vg{flex:none; display:block; margin:0 -2px; overflow:visible}
+#tkValWrap .vg-s{fill:none; stroke-width:5; stroke-linecap:butt; opacity:.28; transition:opacity .6s ease, stroke .6s ease}
+#tkValWrap .vg-s0{stroke:#b9b2a0} #tkValWrap .vg-s1{stroke:#e8d8a6} #tkValWrap .vg-s2{stroke:#e3b955} #tkValWrap .vg-s3{stroke:#3fbf93}
+#tkValWrap[data-lv="0"] .vg-s0, #tkValWrap[data-lv="1"] .vg-s0, #tkValWrap[data-lv="1"] .vg-s1,
+#tkValWrap[data-lv="2"] .vg-s0, #tkValWrap[data-lv="2"] .vg-s1, #tkValWrap[data-lv="2"] .vg-s2,
+#tkValWrap[data-lv="3"] .vg-s0, #tkValWrap[data-lv="3"] .vg-s1, #tkValWrap[data-lv="3"] .vg-s2, #tkValWrap[data-lv="3"] .vg-s3{opacity:1}
+#tkValWrap .vg-n{transform-origin:30px 31px; transform:rotate(-90deg); transition:transform 1.3s cubic-bezier(.34,1.6,.5,1); color:#f3ead2}
+#tkValWrap .vg-n path{stroke:currentColor; stroke-width:2; stroke-linecap:round; fill:none}
+#tkValWrap .vg-n circle{fill:currentColor}
+#tkValWrap[data-lv="0"] .vg-n{transform:rotate(-67deg)} #tkValWrap[data-lv="1"] .vg-n{transform:rotate(-22deg)}
+#tkValWrap[data-lv="2"] .vg-n{transform:rotate(22deg)} #tkValWrap[data-lv="3"] .vg-n{transform:rotate(67deg)}
+#tkValWrap[data-lv="3"] .vg{filter:drop-shadow(0 0 5px rgba(63,191,147,.55))}
+#tkValWrap:hover .vg-n{animation:jmNeedle .9s ease-in-out 1}
+@keyframes jmNeedle{0%,100%{rotate:0deg} 30%{rotate:7deg} 60%{rotate:-6deg}}
+:root[data-theme="light"] #tkValWrap .vg-n{color:#3d5266}
+:root[data-theme="light"] #tkValWrap .vg-s0{stroke:#9aa5b0} :root[data-theme="light"] #tkValWrap .vg-s1{stroke:#d9b968}
+:root[data-theme="light"] #tkValWrap .vg-s2{stroke:#b8891f} :root[data-theme="light"] #tkValWrap .vg-s3{stroke:#1c8f5a}
+
+/* гербы команд в таблице: крупнее и с подсветкой цветом команды */
+.row .temb{width:26px; height:26px; margin-right:7px; vertical-align:-7px; transition:transform .3s ease, filter .35s ease}
+[data-compact="1"] .row .temb{width:18px; height:18px; vertical-align:-4px}
+.row:hover .temb[style*="--tc"]{transform:scale(1.14); filter:drop-shadow(0 0 7px rgba(var(--tc),.8))}
+@media (max-width:560px){ .row .temb{width:24px; height:24px; vertical-align:-6px} }
+@media (hover:none){ .row .temb[style*="--tc"]{filter:drop-shadow(0 0 4px rgba(var(--tc),.5))} }
+
+/* салют и сообщение */
+.fx-cv{position:fixed; inset:0; width:100vw; height:100vh; pointer-events:none; z-index:9999; display:none}
+.fx-toast{position:fixed; left:50%; top:16px; z-index:10000; translate:-50% -140%; opacity:0; pointer-events:none;
+  width:max-content; max-width:92vw; white-space:nowrap; padding:10px 20px; border-radius:999px; border:1px solid rgba(255,236,180,.7); color:#2b2112; font:800 14px/1 var(--f-display); letter-spacing:.08em; text-transform:uppercase;
+  background:linear-gradient(135deg,#f5dc8e,#e3b955 55%,#c9a14a); box-shadow:0 10px 30px -8px rgba(227,185,85,.7)}
+.fx-toast::before{content:"\2726  "}
+.fx-toast.on{animation:fxToast 4.2s cubic-bezier(.2,.9,.3,1) both}
+@keyframes fxToast{0%{translate:-50% -140%; opacity:0} 10%,85%{translate:-50% 0; opacity:1} 100%{translate:-50% -140%; opacity:0}}
+/* лучший вариант упал: короткая красная вспышка */
+.pc-lvl.pc-hurt{animation:pcHurt 1.3s ease-out 1; border-radius:10px}
+@keyframes pcHurt{0%{box-shadow:0 0 0 0 rgba(224,85,70,.0), inset 0 0 0 1px rgba(224,85,70,.9); background:rgba(224,85,70,.18)} 100%{box-shadow:0 0 0 14px rgba(224,85,70,0), inset 0 0 0 1px rgba(224,85,70,0); background:rgba(224,85,70,0)}}
+
+/* ожидание ИИ и пустое состояние: щит с галочкой */
+.ai-wait-plate{display:flex; align-items:center; gap:14px; margin:0 0 8px; padding:10px 14px; border:1px dashed rgba(227,185,85,.6); border-radius:12px;
+  color:var(--brand-gold); background:linear-gradient(135deg, rgba(227,185,85,.09), rgba(227,185,85,.02))}
+.ai-wait-plate[hidden]{display:none}
+.awp-sh{flex:none; animation:awpGlow 3.2s ease-in-out infinite}
+.awp-t{display:flex; flex-direction:column; gap:3px; min-width:0}
+.awp-t b{font:800 13px/1.2 var(--f-display); letter-spacing:.08em; text-transform:uppercase}
+.awp-t span{font-size:12.5px; line-height:1.4; color:var(--muted)}
+@keyframes awpGlow{0%,100%{filter:drop-shadow(0 0 0 rgba(227,185,85,0)); opacity:.7} 50%{filter:drop-shadow(0 0 7px rgba(227,185,85,.8)); opacity:1}}
+.pc-eshield{color:var(--brand-gold); opacity:.85; animation:awpGlow 3.6s ease-in-out infinite}
+:root[data-theme="light"] .ai-wait-plate{color:#8a6a22; border-color:rgba(138,97,18,.5); background:linear-gradient(135deg,#fbf3dc,#fffdf6)}
+:root[data-theme="light"] .awp-t span{color:#5a5340}
+:root[data-theme="light"] .pc-eshield{color:#8a6a22}
+@media (prefers-reduced-motion: reduce){ #tkValWrap .vg-n{transition:none} .awp-sh,.pc-eshield{animation:none} .fx-toast.on{animation:none; translate:-50% 0; opacity:1} .pc-lvl.pc-hurt{animation:none} }

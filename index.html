@@ -30,7 +30,7 @@ body{margin:0; font:14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; b
 img{max-width:100%}
 [hidden]{display:none !important}
 </style>
-<link rel="stylesheet" href="styles.css?v=20261101b">
+<link rel="stylesheet" href="styles.css?v=20261101c">
 </head>
 <body>
 
@@ -90,7 +90,7 @@ img{max-width:100%}
       <div class="tk tk-dup"><span class="k">Осталось</span><span class="v mono" id="koLeft">—</span></div>
       <div class="tk tk-dup" id="tkJackWrap" hidden><span class="k">Суперприз</span><span class="v mono" id="tkJack">—</span></div>
       <div class="tk" id="tkFundWrap" title="Пул — призовой фонд тиража (90% всех ставок), делится между угадавшими 9 и больше. У БалтБета это «Возможный выигрыш». Пока идёт приём, пул растёт"><span class="k">Пул</span><span class="v mono" id="tkFund">—</span></div>
-      <div class="tk tk-btn" id="tkValWrap" role="button" tabindex="0" title="Нажми — объясню, что это за число и как его читать"><span class="k">Ценность тиража</span><span class="v" id="tkVal">—</span><span class="tk-note" id="tkValNote">&nbsp;</span></div>
+      <div class="tk tk-btn" id="tkValWrap" role="button" tabindex="0" title="Нажми — объясню, что это за число и как его читать"><span class="k">Ценность тиража</span><svg class="vg" viewBox="0 0 60 36" width="52" height="31" aria-hidden="true"><path class="vg-s vg-s0" d="M7.0 29.0A23 23 0 0 1 13.0 14.5"/><path class="vg-s vg-s1" d="M14.5 13.0A23 23 0 0 1 29.0 7.0"/><path class="vg-s vg-s2" d="M31.0 7.0A23 23 0 0 1 45.5 13.0"/><path class="vg-s vg-s3" d="M47.0 14.5A23 23 0 0 1 53.0 29.0"/><g class="vg-n"><path d="M30 31L30 11" /><circle cx="30" cy="31" r="3"/></g></svg><span class="v" id="tkVal">—</span><span class="tk-note" id="tkValNote">&nbsp;</span></div>
     </div>
   </header>
 
@@ -220,6 +220,7 @@ img{max-width:100%}
   <div class="prev-bar" id="prevBar" hidden></div>
   <div class="aitbl-bar" id="aiTblBar"><span class="aitbl-t">ИИ варианты</span><em class="aitbl-v" title="Виртуальный купон: на деньги не ставится, нужен для отслеживания"><span class="f">виртуальный</span><span class="s">вирт.</span></em><span class="aitbl-s">разбор ИИ, не меняется</span><button type="button" id="aiTblBtn" aria-expanded="true" aria-controls="coupon"><span>Свернуть</span><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 7.5 6 3.5l4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
   <div class="ai-run-note" id="aiRunNote" hidden></div>
+  <div class="ai-wait-plate" id="aiWaitPlate" hidden><svg class="awp-sh" viewBox="0 0 40 48" width="30" height="36" aria-hidden="true"><path d="M20 2 4 8v16c0 11 7 18 16 22 9-4 16-11 16-22V8z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 24l6 6 11-12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="awp-t"><b>ИИ ещё не разобрал этот тираж</b><span>Разбор выходит в день закрытия приёма, около 11:07 по Москве. Кнопки «ИИ» включатся сами.</span></span></div>
   <div class="undo-bar" id="undoBar">
     <button id="btnUndo" type="button" disabled><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M7 4.5 3 8.5l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 8.5H12a4.5 4.5 0 0 1 0 9h-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Назад</button>
     <button id="btnRedo" type="button" disabled><svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M13 4.5l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M16.5 8.5H8a4.5 4.5 0 0 0 0 9h2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Вперёд</button>
@@ -309,10 +310,10 @@ img{max-width:100%}
   </footer>
 </div>
 
-<script src="config.js?v=20261101b"></script>
-<script src="brief_lib.js?v=20261101b"></script>
-<script src="app.js?v=20261101b"></script>
-<script src="visual.js?v=20261101b"></script>
+<script src="config.js?v=20261101c"></script>
+<script src="brief_lib.js?v=20261101c"></script>
+<script src="app.js?v=20261101c"></script>
+<script src="visual.js?v=20261101c"></script>
 
 <script data-goatcounter="https://dzhek15.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 </body>

@@ -463,5 +463,66 @@
   [cvJack, cvNum].forEach(function(el){ if(el && window.MutationObserver) new MutationObserver(fitAll).observe(el, { childList: true, characterData: true, subtree: true }); });
   window.addEventListener("resize", fitAll);
   setTimeout(fitAll, 400);
+
+  /* ---------- гербы в таблице: цвет команды для подсветки; салют на 14–15 из 15; вспышка при падении лучшего ---------- */
+  var tintTimer = 0;
+  function tintRows(){
+    tintTimer = 0;
+    var im = document.querySelectorAll("#rows img.temb:not([data-tn])");
+    for(var i = 0; i < im.length; i++) (function(g){
+      g.setAttribute("data-tn", "1");
+      embColor(g, function(col){ g.style.setProperty("--tc", col); });
+    })(im[i]);
+  }
+  document.addEventListener("dz:render", function(){ if(!tintTimer) tintTimer = setTimeout(tintRows, 120); });
+  setTimeout(tintRows, 600);
+
+  var fxToast = null, fxTop = {}, fxCv = null;
+  function toast(txt){
+    if(!fxToast){ fxToast = document.createElement("div"); fxToast.className = "fx-toast"; fxToast.setAttribute("role", "status"); document.body.appendChild(fxToast); }
+    fxToast.textContent = txt; fxToast.classList.remove("on"); void fxToast.offsetWidth; fxToast.classList.add("on");
+    clearTimeout(fxToast._t); fxToast._t = setTimeout(function(){ fxToast.classList.remove("on"); }, 4200);
+  }
+  function confetti(big){
+    if(RM) return;
+    if(!fxCv){ fxCv = document.createElement("canvas"); fxCv.className = "fx-cv"; fxCv.setAttribute("aria-hidden", "true"); document.body.appendChild(fxCv); }
+    var dpr = Math.min(2, window.devicePixelRatio || 1), W = window.innerWidth, H = window.innerHeight;
+    fxCv.width = W * dpr; fxCv.height = H * dpr; fxCv.style.display = "block";
+    var cx = fxCv.getContext("2d"); cx.scale(dpr, dpr);
+    var cols = ["#e3b955", "#f5dc8e", "#c9a14a", "#3fbf93", "#8fe3c2", "#f3ead2"], P = [], N = big ? 190 : 120;
+    for(var i = 0; i < N; i++){
+      var side = i % 2 ? 1 : -1, a = (side > 0 ? 120 : 60) * Math.PI / 180 + (Math.random() - .5) * .9, v = 9 + Math.random() * 11;
+      P.push({ x: side > 0 ? W * .92 : W * .08, y: H * .78, vx: Math.cos(a) * v, vy: -Math.sin(a) * v, w: 5 + Math.random() * 6, h: 3 + Math.random() * 4,
+        r: Math.random() * 6, vr: (Math.random() - .5) * .4, c: cols[i % cols.length], t: Math.random() * 6 });
+    }
+    var t0 = performance.now(), last = t0;
+    (function step(now){
+      var dt = Math.min(2, (now - last) / 16.7); last = now;
+      cx.clearRect(0, 0, W, H);
+      var k = (now - t0) / 4200;
+      for(var j = 0; j < P.length; j++){
+        var q = P[j];
+        q.vy += .32 * dt; q.vx *= Math.pow(.992, dt); q.vy *= Math.pow(.992, dt);
+        q.x += q.vx * dt; q.y += q.vy * dt; q.r += q.vr * dt; q.t += .12 * dt;
+        cx.save(); cx.globalAlpha = Math.max(0, Math.min(1, 1.6 - k * 1.6)); cx.translate(q.x, q.y); cx.rotate(q.r); cx.scale(1, Math.cos(q.t));
+        cx.fillStyle = q.c; cx.fillRect(-q.w / 2, -q.h / 2, q.w, q.h); cx.restore();
+      }
+      if(k < 1) requestAnimationFrame(step); else { cx.clearRect(0, 0, W, H); fxCv.style.display = "none"; }
+    })(t0);
+  }
+  window.DZFX = {
+    embColor: embColor,
+    /* top — лучшее число совпадений среди вариантов по текущему счёту; key — тираж */
+    level: function(top, key){
+      var prev = fxTop[key]; fxTop[key] = top;
+      var seen = 0; try{ seen = Number((JSON.parse(localStorage.getItem("dzhek-cel") || "{}"))[key]) || 0; }catch(e){}
+      if(top >= 14 && top > seen){
+        try{ var o = JSON.parse(localStorage.getItem("dzhek-cel") || "{}"); o[key] = top; localStorage.setItem("dzhek-cel", JSON.stringify(o)); }catch(e){}
+        setTimeout(function(){ toast("Есть вариант на " + top + " из 15"); confetti(top >= 15); }, 400);
+      } else if(prev != null && prev >= 9 && top < prev){
+        requestAnimationFrame(function(){ var el = document.querySelector("#prevCsv .pc-lvl"); if(el){ el.classList.remove("pc-hurt"); void el.offsetWidth; el.classList.add("pc-hurt"); } });
+      }
+    }
+  };
   all();
 })();

@@ -457,10 +457,11 @@
         word = r >= rTyp ? "средняя" : "низкая";
       }
       vEl.textContent = word;
+      vw.setAttribute("data-lv", word === "ТОП" ? "3" : word === "высокая" ? "2" : word === "средняя" ? "1" : word === "низкая" ? "0" : "");
       $("tkValNote").innerHTML = "суперприз " + r.toFixed(2).replace(".", ",") +
         " от фонда" + (rTyp > 0 ? ", обычно " + rTyp.toFixed(2).replace(".", ",") : "");
     } else if(FON){ vw.hidden = true;   /* без пула ценность тиража у Фонбета не посчитать */
-    } else { vw.hidden = false; $("tkVal").textContent = "—"; $("tkVal").classList.remove("good", "bad"); $("tkValNote").innerHTML = "&nbsp;"; }
+    } else { vw.hidden = false; vw.removeAttribute("data-lv"); $("tkVal").textContent = "—"; $("tkVal").classList.remove("good", "bad"); $("tkValNote").innerHTML = "&nbsp;"; }
 
     /* на телефоне плитки лежат сеткой 2×2: нечётную последнюю растягиваем на всю ширину,
        иначе справа от неё просвечивает серый фон контейнера */
@@ -3844,6 +3845,7 @@
     var ok = !aiRun.active && !!aiFor(ai.data, idx);
     b.disabled = !ok;
     b.classList.toggle("ai-wait", aiRun.active);
+    if(idx === 0){ var wp = $("aiWaitPlate"); if(wp) wp.hidden = !(!ok && !aiRun.active && !state.viewPrev && state.matches && state.matches.length); }
     b.title = aiRun.active ? "Идёт разбор ИИ — кнопка включится, когда он закончится и данные будут на сайте" : ok ? "Короткий разбор матча от ИИ" : "Разбор не готов";
   }
   /* Пока идёт разбор ИИ (ai_status.json «run», для владельца — ещё и состояние запуска в GitHub), все кнопки ИИ
@@ -9267,7 +9269,7 @@
     if(!pcsv.rows.length){
       var pbE = document.getElementById("pbBest"); if(pbE) pbE.hidden = true;
       var pbS0 = document.getElementById("pbSum"); if(pbS0) pbS0.hidden = true;
-      box.innerHTML = '<div class="pc-empty"><span>Загрузи CSV своих вариантов на этот тираж или вставь ссылку на них — здесь появится весь купон и все варианты с угаданными по ходу матчей.</span>' +
+      box.innerHTML = '<div class="pc-empty"><svg class="pc-eshield" viewBox="0 0 40 48" width="34" height="41" aria-hidden="true"><path d="M20 2 4 8v16c0 11 7 18 16 22 9-4 16-11 16-22V8z" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 24l6 6 11-12" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Загрузи CSV своих вариантов на этот тираж или вставь ссылку на них — здесь появится весь купон и все варианты с угаданными по ходу матчей.</span>' +
         '<span class="pc-acts">' + PC_BTNS + '</span></div>' + noAi + PC_PASTE + msg;
       $("pcLoad").addEventListener("click", pcsvPick);
       pcPasteBind();
@@ -9460,6 +9462,7 @@
     var fl = { w: 0, c: 0, z: 0, d: 0 };
     var lvl = {}, topE = 0;
     st.forEach(function(x){ if(x.e >= PAY) fl.w++; if(n - x.em >= PAY) fl.c++; else fl.d++; if(!x.em) fl.z++; if(x.e >= PAY){ lvl[x.e] = (lvl[x.e] || 0) + 1; if(x.e > topE) topE = x.e; } });
+    try{ if(window.DZFX) window.DZFX.level(topE, String(p.tirazh)); }catch(e){}
     var order = pred ? st.filter(pred) : st.slice();
     order.sort(function(a, b){ return (b.e - a.e) || (b.h - a.h) || (a.miss - b.miss) || (a.i - b.i); });
     var pages = Math.max(1, Math.ceil(order.length / PCSV_PAGE));
