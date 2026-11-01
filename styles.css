@@ -4050,8 +4050,8 @@ body:not(.is-prev):not([data-book="1"]) .row .pick.just-off:hover:not([aria-pres
 @media (prefers-reduced-motion:reduce){ .row .modes .mode.ai-btn:not(:disabled):not(.ai-wait)::before{animation:none} }
 
 /* Логотип dzhek15: растровый знак с прозрачным фоном (v20261101m) */
-.cover img.logo{height:200px; width:auto; max-width:100%; object-fit:contain; margin:-14px 0; filter:none}
-@media (max-width:560px){ .cover img.logo{height:150px; margin:-10px 0} }
+.cover img.logo{height:216px; width:auto; max-width:100%; object-fit:contain; margin:-14px 0; filter:none}
+@media (max-width:560px){ .cover img.logo{height:162px; margin:-10px 0} }
 
 /* ===== v20261101m: без кругов за логотипом; зелёный в перемешку с золотом (обе темы) ===== */
 :root{
