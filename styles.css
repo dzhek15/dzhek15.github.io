@@ -4119,7 +4119,10 @@ footer{border-top:1px solid transparent; border-image:var(--gem-line) 1}
 :root[data-theme="light"] .spin-speed, :root[data-theme="light"] .spin-group .spin-in{color:#6b4a0c}
 .btn-spin:disabled ~ .spin-speed, .spin-group .btn-spin:disabled + .spin-in{color:var(--muted)}
 
-/* светлая тема: мягкая тёплая подложка за логотипом, без рамки */
-:root[data-theme="light"] .cover img.logo-l{
-  background:radial-gradient(ellipse closest-side at 50% 52%, rgba(184,146,60,.40) 0%, rgba(200,172,110,.30) 45%, rgba(210,185,125,.11) 78%, rgba(214,190,130,0) 100%);
-  filter:saturate(1.1) contrast(1.05) drop-shadow(0 1px 0 rgba(255,255,255,.7)) drop-shadow(0 4px 8px rgba(60,40,0,.22))}
+/* светлая тема: отдельная версия логотипа (насыщенное золото и изумруд), без подложки и рамки */
+:root[data-theme="light"] .cover img.logo-l{background:none; filter:drop-shadow(0 3px 6px rgba(60,45,10,.18))}
+
+/* светлая тема: описание синих исходов Монстра читается (раньше был светло-голубой текст на голубом) */
+:root[data-theme="light"] .kel-up-note{color:#14243d; background:linear-gradient(90deg,rgba(47,111,214,.14),rgba(47,111,214,.07)); border-left-color:#1f5fc6; box-shadow:inset 0 0 0 1px rgba(47,111,214,.25)}
+:root[data-theme="light"] .kel-up-note b{color:#1250b0}
+:root[data-theme="light"] .kel-up-t{color:#1250b0}
