@@ -2949,12 +2949,97 @@
     return out;
   }
   /* расчёты кодом (таблица, xG, судья, карточки, дорога, доли) и метка полноты данных; в старых разборах полей нет */
+  /* ---- расчёты наглядно: из строк, собранных кодом, строим карточки; не разобралось — остаётся обычный текст ---- */
+  function cxN(x){ return parseFloat(String(x).replace(",", ".").replace("\u2212", "-")); }
+  function cxF(v, d){ var t = v.toFixed(d === undefined ? 1 : d).replace(".", ","); return t.replace("-", "\u2212"); }
+  function cxSign(v, d){ return (v > 0 ? "+" : "") + cxF(v, d); }
+  function cxDiff(t){ t = String(t); if(/равны/.test(t)) return "равны"; var m = /([+\u2212-]\d+)\s*оч/.exec(t); return m ? m[1].replace("-", "\u2212") : t; }
+  /* турнирная задача: место на шкале, очки, туры, зона, соседи */
+  function cxTable(line){
+    var m = /^(.+?) — (\d+)-е место из (\d+), (\d+) оч\. в (\d+) матч[а-я]*; до конца сезона (\d+) тур[а-я]*;?\s*(.*?)\s*\(таблица ESPN, расчёт\)$/.exec(line);
+    if(!m) return null;
+    var pl = +m[2], N = +m[3], pos = N > 1 ? (pl - 1) / (N - 1) * 100 : 0, lead = "", zone = "", tone = "mid", up = null, dn = null;
+    m[7].split(/;\s*/).forEach(function(sg){
+      var x;
+      if(!sg) return;
+      if((x = /^до лидера \((.+?)\) (\d+) оч\.(.*)$/.exec(sg))) lead = '<span class="cx-gap">до лидера <em>' + escHtml(x[1]) + '</em> <b>' + (x[3] && /равны/.test(x[3]) ? "равны" : x[2] + " оч.") + '</b></span>';
+      else if((x = /^над ним (.+?) \((.+)\)$/.exec(sg))) up = [x[1], cxDiff(x[2])];
+      else if((x = /^под ним (.+?) \((.+)\)$/.exec(sg))) dn = [x[1], cxDiff(x[2])];
+      else {
+        zone += (zone ? " · " : "") + sg.charAt(0).toUpperCase() + sg.slice(1);
+        if(/в зоне вылета/.test(sg)) tone = "bad"; else if(/^в зоне/.test(sg)) tone = tone === "bad" ? tone : "good";
+      }
+    });
+    var nb = "";
+    if(up) nb += '<span class="cx-nb-i cx-up"><i>\u25B2</i><em>' + escHtml(up[0]) + '</em><b>' + escHtml(up[1]) + '</b></span>';
+    if(dn) nb += '<span class="cx-nb-i cx-dn"><i>\u25BC</i><em>' + escHtml(dn[0]) + '</em><b>' + escHtml(dn[1]) + '</b></span>';
+    return '<div class="cx-card"><div class="cx-h"><b>' + escHtml(m[1]) + '</b><span class="cx-pl"><i>' + pl + '</i><small>из ' + N + '</small></span></div>' +
+      '<div class="cx-track" role="img" aria-label="' + pl + '-е место из ' + N + '"><span class="cx-mk" style="left:' + pos.toFixed(1) + '%"></span></div>' +
+      '<div class="cx-chips"><span><b>' + m[4] + '</b> оч. в ' + m[5] + ' матч.</span><span>до конца <b>' + m[6] + '</b> тур.</span>' + lead + '</div>' +
+      (zone ? '<div class="cx-zone cx-z-' + tone + '">' + escHtml(zone) + '</div>' : '') +
+      (nb ? '<div class="cx-nb">' + nb + '</div>' : '') + '</div>';
+  }
+  /* xG: две шкалы «создаёт / допускает», тренд последних 5 матчей, факт против ожидаемого */
+  function cxXg(line){
+    var m = /^(.+?) — по xG за (\d+) матч[а-я]*: создаёт ([\d,]+) за матч, допускает ([\d,]+); последние (\d+) матч[а-я]* ([\d,]+) и ([\d,]+); забито (\d+) при xG ([\d,]+), пропущено (\d+) при xGA ([\d,]+); очков (\d+) при ожидаемых по xG ([\d,]+) \(Understat\)$/.exec(line);
+    if(!m) return null;
+    var f = cxN(m[3]), a = cxN(m[4]), f5 = cxN(m[6]), a5 = cxN(m[7]), bal = f - a;
+    function bar(lab, v, v5, kind, up){
+      var tr = kind === "f" ? (v5 > v * 1.05 ? "up" : v5 < v * .95 ? "dn" : "eq") : (v5 < v * .95 ? "up" : v5 > v * 1.05 ? "dn" : "eq");   /* up — лучше, dn — хуже */
+      var ar = kind === "f" ? (v5 > v * 1.05 ? "\u25B2" : v5 < v * .95 ? "\u25BC" : "\u2248") : (v5 > v * 1.05 ? "\u25B2" : v5 < v * .95 ? "\u25BC" : "\u2248");
+      return '<div class="cx-bar"><span class="cx-bl">' + lab + '</span><span class="cx-trk"><i class="cx-' + kind + '" style="width:' + Math.min(100, v / 3 * 100).toFixed(1) + '%"></i><u style="left:' + Math.min(99, v5 / 3 * 100).toFixed(1) + '%"></u></span>' +
+        '<b>' + cxF(v, 2) + '</b><em class="cx-tr cx-t-' + tr + '">' + ar + ' посл.' + m[5] + ': ' + cxF(v5, 2) + '</em></div>';
+    }
+    function fx(lab, fact, exp, goodWhenAbove, th){
+      var d = fact - exp, tone = Math.abs(d) < th ? "eq" : ((d > 0) === goodWhenAbove ? "good" : "bad");
+      return '<span class="cx-fx cx-f-' + tone + '"><small>' + lab + '</small><b>' + cxF(fact, fact % 1 ? 1 : 0) + '</b><em>ожид. ' + cxF(exp) + '</em><i>' + cxSign(d) + '</i></span>';
+    }
+    return '<div class="cx-card"><div class="cx-h"><b>' + escHtml(m[1]) + '</b><span class="cx-bal cx-b-' + (bal > .15 ? "good" : bal < -.15 ? "bad" : "eq") + '">' + cxSign(bal, 2) + '<small>xG-разница за матч</small></span></div>' +
+      bar("Создаёт", f, f5, "f") + bar("Допускает", a, a5, "a") +
+      '<div class="cx-fxs">' + fx("Забито", cxN(m[8]), cxN(m[9]), true, .5) + fx("Пропущено", cxN(m[10]), cxN(m[11]), false, .5) + fx("Очков", cxN(m[12]), cxN(m[13]), true, 1) + '</div>' +
+      '<p class="cx-cap">за ' + m[2] + ' матч. · чёрточка на шкале — последние ' + m[5] + ' матчей</p></div>';
+  }
+  /* статистика команд: два столбца, симметричные шкалы */
+  function cxStats(lines){
+    if(lines.length !== 2) return null;
+    var T = [];
+    for(var i = 0; i < 2; i++){
+      var m = /^(.+?) — (\d+) матч[а-я]* лиги, удары за матч ([\d,]+) \(по его воротам ([\d,]+)\), в створ ([\d,]+) \(([\d,]+)\), угловые ([\d,]+) \(([\d,]+)\), фолы ([\d,]+), жёлтые ([\d,]+), красных (\d+) \(football-data\.co\.uk\)$/.exec(lines[i]);
+      if(!m) return null;
+      T.push({ n: m[1], g: m[2], sh: [m[3], m[4]], so: [m[5], m[6]], co: [m[7], m[8]], fo: [m[9]], yc: [m[10]], rc: [m[11]] });
+    }
+    var rows = [["Удары за матч", "sh"], ["В створ", "so"], ["Угловые", "co"], ["Фолы", "fo"], ["Жёлтые", "yc"], ["Красные", "rc"]];
+    function cell(t, k, side){
+      var v = t[k]; return '<div class="cx-' + side + '"><b>' + escHtml(v[0]) + '</b>' + (v[1] ? '<small>пропускает ' + escHtml(v[1]) + '</small>' : '') + '</div>';
+    }
+    return '<div class="cx-card cx-cmp"><div class="cx-cmp-h"><span class="cx-hl"><b>' + escHtml(T[0].n) + '</b><small>' + T[0].g + ' матч. лиги</small></span><span class="cx-hr"><b>' + escHtml(T[1].n) + '</b><small>' + T[1].g + ' матч. лиги</small></span></div>' +
+      rows.map(function(r){
+        var a = cxN(T[0][r[1]][0]), b = cxN(T[1][r[1]][0]), mx = Math.max(a, b, 0.0001);
+        return '<div class="cx-row">' + cell(T[0], r[1], "l") + '<div class="cx-m"><span class="cx-lab">' + r[0] + '</span><span class="cx-duo"><i class="cx-dl' + (a > b ? " lead" : "") + '" style="width:' + (a / mx * 100).toFixed(1) + '%"></i><i class="cx-dr' + (b > a ? " lead" : "") + '" style="width:' + (b / mx * 100).toFixed(1) + '%"></i></span></div>' + cell(T[1], r[1], "r") + '</div>';
+      }).join("") + '</div>';
+  }
+  function cxRoad(line){
+    var m = /^(.+?) едет в гости: от города гостей \((.+?)\) до города хозяев \((.+?)\) около (\d+) км по прямой/.exec(line);
+    if(!m) return null;
+    return '<div class="cx-card cx-road"><b>' + escHtml(m[1]) + '</b><span class="cx-way"><em>' + escHtml(m[2]) + '</em><i></i><strong>' + m[4] + ' км</strong><i></i><em>' + escHtml(m[3]) + '</em></span></div>';
+  }
+  function cxVisual(label, lines){
+    var out = [], fn = label === "Турнирная задача" ? cxTable : label === "xG" ? cxXg : label === "Дорога" ? cxRoad : null, i;
+    if(label === "Статистика команд"){ var h = cxStats(lines); return h ? '<div class="cx-grid cx-one">' + h + '</div>' + '<p class="cx-src">football-data.co.uk</p>' : ""; }
+    if(!fn) return "";
+    for(i = 0; i < lines.length; i++){ var c = fn(lines[i]); if(!c) return ""; out.push(c); }
+    var src = label === "xG" ? "Understat" : label === "Дорога" ? "ESPN, Open-Meteo, расчёт" : "таблица ESPN, расчёт";
+    return '<div class="cx-grid' + (out.length === 1 || label === "Дорога" ? ' cx-one' : '') + '">' + out.join("") + '</div><p class="cx-src">' + src + '</p>';
+  }
   function aiCalcHtml(r){
     if(!r || !Array.isArray(r.calc) || !r.calc.length) return "";
     return '<div class="ai-blk ai-k-calc"><h4 class="ai-blk-h">Расчёты и цифры</h4>' + r.calc.map(function(c){
       if(!c || !c[1]) return "";
+      var lines = String(c[1]).split(/\n+/), vis = "";
+      try{ vis = cxVisual(c[0], lines); }catch(e){ vis = ""; }
+      if(vis) return '<div class="ai-sec ai-s-calc ai-cx"><span class="ai-lb">' + escHtml(c[0]) + '</span>' + vis + '</div>';
       return '<div class="ai-sec ai-s-calc"><span class="ai-lb">' + escHtml(c[0]) + '</span>' +
-        String(c[1]).split(/\n+/).map(function(x){ return '<p>' + aiFmt(escHtml(x)) + '</p>'; }).join("") + '</div>';
+        lines.map(function(x){ return '<p>' + aiFmt(escHtml(x)) + '</p>'; }).join("") + '</div>';
     }).join("") + '</div>';
   }
   function aiCovHtml(r){

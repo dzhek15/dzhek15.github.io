@@ -3912,3 +3912,82 @@ body:not(.is-prev):not([data-book="1"]) .row .pick.just-off:hover:not([aria-pres
 .row .modes .mode.ai-btn:disabled::before, .row .modes .mode.ai-btn.ai-wait::before{content:none}
 .row .modes .mode.ai-btn:disabled::after, .row .modes .mode.ai-btn.ai-wait::after{content:none}
 :root[data-theme="light"] .row .modes .mode.ai-btn:disabled, :root[data-theme="light"] .row .modes .mode.ai-btn.ai-wait{background:var(--brand-dark); color:var(--brand-gold); border-color:var(--brand-gold)}
+
+/* ===== Газета: «Расчёты и цифры» наглядно (v20261101h) ===== */
+.ai-s-calc.ai-cx{padding:8px 8px 8px; background:rgba(47,107,79,.05)}
+.ai-cx .ai-lb{margin-bottom:8px}
+.cx-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+.cx-grid.cx-one{grid-template-columns:1fr}
+@media (max-width:620px){ .cx-grid{grid-template-columns:1fr} }
+.cx-card{--cxg:#2F6B4F; --cxb:#8E2A1E; --cxo:#A67C1F; --cxi:#1D1A15; --cxm:#6A5F4C;
+  min-width:0; padding:9px 10px 10px; border:1px solid #CDBE9C; border-radius:6px; background:rgba(255,251,240,.72); color:var(--cxi); font:400 12.5px/1.35 "PT Serif",Georgia,serif}
+.cx-card b{font-weight:700}
+.cx-h{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px}
+.cx-h > b{font:700 14.5px/1.2 "Old Standard TT",Georgia,serif; min-width:0; overflow-wrap:anywhere}
+.cx-src{margin:6px 2px 0; font:italic 400 11px/1.3 "PT Serif",Georgia,serif; color:#6A5F4C}
+.cx-cap{margin:7px 0 0; font:italic 400 11px/1.3 "PT Serif",Georgia,serif; color:var(--cxm)}
+/* турнирная таблица */
+.cx-pl{display:flex; align-items:baseline; gap:4px; flex:none; white-space:nowrap}
+.cx-pl i{font:700 25px/1 "Old Standard TT",Georgia,serif; font-style:normal; color:var(--cxi)}
+.cx-pl small{font-size:11.5px; color:var(--cxm)}
+.cx-track{position:relative; height:8px; margin:2px 4px 11px; border-radius:99px; background:linear-gradient(90deg,#2F6B4F,#B79A3E 55%,#8E2A1E)}
+.cx-mk{position:absolute; top:50%; width:16px; height:16px; margin:-8px 0 0 -8px; border-radius:50%; background:#F7F0DC; border:3px solid var(--cxi); box-shadow:0 1px 4px rgba(0,0,0,.35)}
+.cx-chips{display:flex; flex-wrap:wrap; gap:5px}
+.cx-chips > span{padding:3px 8px; border-radius:99px; background:rgba(141,127,99,.16); font-size:12px; white-space:nowrap}
+.cx-chips .cx-gap em{font-style:normal; color:var(--cxm)}
+.cx-zone{margin-top:8px; padding:6px 9px; border-left:3px solid var(--cxo); background:rgba(166,124,31,.12); font-weight:700; font-size:12.5px; line-height:1.3}
+.cx-z-bad{border-color:var(--cxb); background:rgba(142,42,30,.10); color:var(--cxb)}
+.cx-z-good{border-color:var(--cxg); background:rgba(47,107,79,.11); color:var(--cxg)}
+.cx-nb{display:grid; gap:3px; margin-top:8px; padding-top:7px; border-top:1px dotted #B9AB8C}
+.cx-nb-i{display:flex; align-items:baseline; gap:6px; min-width:0; font-size:12px}
+.cx-nb-i i{font-style:normal; font-size:9px; width:10px; color:var(--cxm)}
+.cx-nb-i em{font-style:normal; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.cx-nb-i b{flex:none; font-variant-numeric:tabular-nums; color:var(--cxm)}
+/* xG */
+.cx-bal{display:flex; flex-direction:column; align-items:flex-end; flex:none; font:700 21px/1 "Old Standard TT",Georgia,serif}
+.cx-bal small{margin-top:3px; font:400 10.5px/1 "PT Serif",Georgia,serif; color:var(--cxm)}
+.cx-b-good{color:var(--cxg)} .cx-b-bad{color:var(--cxb)} .cx-b-eq{color:var(--cxi)}
+.cx-bar{display:grid; grid-template-columns:62px 1fr 38px; grid-template-areas:"l t v" ". e e"; align-items:center; gap:2px 7px; margin-bottom:5px}
+.cx-bl{grid-area:l; font-size:12px; color:var(--cxm)}
+.cx-trk{grid-area:t; position:relative; height:11px; border-radius:3px; background:rgba(141,127,99,.2)}
+.cx-trk i{display:block; height:100%; border-radius:3px; transition:width .8s cubic-bezier(.3,1,.4,1)}
+.cx-trk i.cx-f{background:linear-gradient(90deg,#2F6B4F,#4C9573)} .cx-trk i.cx-a{background:linear-gradient(90deg,#8E2A1E,#B8503F)}
+.cx-trk u{position:absolute; top:-3px; bottom:-3px; width:2px; margin-left:-1px; background:var(--cxi); border-radius:2px; text-decoration:none}
+.cx-bar > b{grid-area:v; text-align:right; font-size:13.5px; font-variant-numeric:tabular-nums}
+.cx-tr{grid-area:e; font-style:normal; font-size:11px; color:var(--cxm)}
+.cx-t-up{color:var(--cxg)} .cx-t-dn{color:var(--cxb)}
+.cx-fxs{display:grid; grid-template-columns:repeat(3,1fr); gap:5px; margin-top:8px}
+.cx-fx{display:grid; gap:1px; padding:5px 6px 6px; border-radius:5px; background:rgba(141,127,99,.13); text-align:center; min-width:0}
+.cx-fx small{font-size:10.5px; color:var(--cxm)}
+.cx-fx b{font:700 17px/1.1 "Old Standard TT",Georgia,serif}
+.cx-fx em{font-style:normal; font-size:10.5px; color:var(--cxm); white-space:nowrap}
+.cx-fx i{justify-self:center; margin-top:2px; padding:1px 7px; border-radius:99px; font-style:normal; font-weight:700; font-size:11px; background:rgba(141,127,99,.2)}
+.cx-f-good i{background:rgba(47,107,79,.18); color:var(--cxg)} .cx-f-bad i{background:rgba(142,42,30,.15); color:var(--cxb)}
+/* статистика команд: два столбца */
+.cx-cmp-h{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:8px}
+.cx-cmp-h b{display:block; font:700 14px/1.2 "Old Standard TT",Georgia,serif; overflow-wrap:anywhere}
+.cx-cmp-h small{font-size:11px; color:var(--cxm)}
+.cx-hl{text-align:left; border-bottom:3px solid #A67C1F; padding-bottom:4px}
+.cx-hr{text-align:right; border-bottom:3px solid #2F6B4F; padding-bottom:4px}
+.cx-row{display:grid; grid-template-columns:minmax(58px,.7fr) 1.6fr minmax(58px,.7fr); align-items:center; gap:8px; padding:5px 0; border-top:1px dotted #CDBE9C}
+.cx-l{text-align:left} .cx-r{text-align:right}
+.cx-l b, .cx-r b{display:block; font:700 16px/1.1 "Old Standard TT",Georgia,serif; font-variant-numeric:tabular-nums}
+.cx-l small, .cx-r small{display:block; font-size:10.5px; line-height:1.25; color:var(--cxm)}
+.cx-m{display:grid; gap:3px; min-width:0}
+.cx-lab{text-align:center; font-size:11.5px; color:var(--cxm)}
+.cx-duo{display:grid; grid-template-columns:1fr 1fr; gap:3px}
+.cx-duo i{display:block; height:9px; border-radius:2px; opacity:.55}
+.cx-dl{justify-self:end; background:#A67C1F} .cx-dr{justify-self:start; background:#2F6B4F}
+.cx-duo i.lead{opacity:1}
+@media (max-width:400px){ .cx-row{grid-template-columns:minmax(50px,.6fr) 1.4fr minmax(50px,.6fr); gap:5px} .cx-l small,.cx-r small{font-size:10px} }
+/* дорога */
+.cx-road{display:flex; align-items:center; gap:12px; flex-wrap:wrap}
+.cx-road > b{font:700 14px/1.2 "Old Standard TT",Georgia,serif}
+.cx-way{display:flex; align-items:center; gap:6px; flex:1; min-width:220px; font-size:12px}
+.cx-way em{font-style:normal; flex:none}
+.cx-way i{flex:1; height:0; border-top:2px dashed #8D7F63; position:relative; min-width:14px}
+.cx-way i:last-of-type::after{content:""; position:absolute; right:-1px; top:-5px; border-left:7px solid #8D7F63; border-top:4px solid transparent; border-bottom:4px solid transparent}
+.cx-way strong{flex:none; padding:2px 9px; border-radius:99px; background:rgba(166,124,31,.18); font-size:12.5px}
+@media (prefers-reduced-motion: reduce){ .cx-trk i{transition:none} }
+.ai-s-calc .cx-cap, .ai-s-calc .cx-src{margin:7px 0 0; font:italic 400 11px/1.3 "PT Serif",Georgia,serif; color:#6A5F4C}
+.ai-s-calc .cx-src{margin:6px 2px 0}
