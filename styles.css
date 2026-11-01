@@ -3539,7 +3539,7 @@ button{border-radius:8px; border-color:var(--kit-line)}
 }
 
 /* тёмные панели вокруг таблиц на обоях — полупрозрачные: обои просвечивают, строки читаются на своих плитках */
-body.is-prev .pcsv > :not(.wpPane):not([hidden]):not(:empty){background-color:color-mix(in srgb, var(--surface) 42%, transparent); -webkit-backdrop-filter:blur(5px) saturate(1.1); backdrop-filter:blur(5px) saturate(1.1)}
+body.is-prev .pcsv > :not(.wpPane):not([hidden]):not(:empty){background-color:color-mix(in srgb, var(--surface) 42%, transparent); -webkit-backdrop-filter:blur(2px) saturate(1.1); backdrop-filter:blur(2px) saturate(1.1)}
 body.is-prev .pcsv > .pc-sub{background-color:color-mix(in srgb, var(--surface) 55%, transparent)}
 body.is-prev .pcsv .pc-cr{background-color:color-mix(in srgb, var(--surface) 78%, transparent)}
 body.is-prev .pcsv .pc-cr.st-live{background-color:color-mix(in srgb, var(--surface) 82%, transparent)}
@@ -4129,3 +4129,11 @@ footer{border-top:1px solid transparent; border-image:var(--gem-line) 1}
 
 /* светлая тема: белый фон за логотипом, у самого логотипа тёмный контур (нарисован в картинке) */
 :root[data-theme="light"] .cover img.logo-l{background:none; filter:drop-shadow(0 4px 7px rgba(40,28,6,.2))}
+
+/* v20261101w2: обои не растягиваются на всю высоту длинной таблицы (там картинка увеличивалась в 3–4 раза и мылилась):
+   картинка держится размером с экран и остаётся на месте, а рамка таблицы лишь открывает её часть */
+body.is-prev .wpPane{clip-path:inset(0); overflow:visible}
+body.is-prev .wpPane i{position:fixed; inset:0; width:100%; height:100%; background-size:cover; background-position:center; image-rendering:auto}
+body.is-prev .wpPane i.wp-on{animation:wpDriftFx 34s ease-in-out forwards}
+@keyframes wpDriftFx{from{transform:scale(1) translate3d(0,0,0)} to{transform:scale(1.05) translate3d(-.6%,-.5%,0)}}
+@media (prefers-reduced-motion: reduce){ body.is-prev .wpPane i.wp-on{animation:none} }
