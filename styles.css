@@ -4272,3 +4272,24 @@ body:not(.is-prev):not([data-book="1"]) .row .pick.kel-up.ai-dop[aria-pressed="t
 [data-compact="1"] .kb-act-s{display:none}
 :root[data-theme="light"] .kel-up-note.ai-dop-note{border-left-color:#0e9d55; box-shadow:inset 0 0 0 1px rgba(14,157,85,.28)}
 :root[data-theme="dark"] .kel-up-note.ai-dop-note, :root:not([data-theme="light"]) .kel-up-note.ai-dop-note{box-shadow:inset 0 0 0 1px rgba(47,211,154,.25)}
+
+/* v20261101z8: «Сохранить» и «Добрать допы» — две равные колонки, заголовки, кнопки и подписи на одних линиях */
+.kb-acts{grid-template-columns:minmax(0,1fr) minmax(0,1fr); grid-template-rows:auto auto auto auto auto; column-gap:12px; row-gap:0}
+.kb-act{display:grid; grid-row:span 5; grid-template-rows:subgrid; row-gap:0; align-items:start; justify-items:stretch}
+.kb-act > *{min-width:0}
+.kb-act-h{margin-bottom:6px}
+.kb-act-s{margin-bottom:10px}
+.kb-act-keep .btn-keep{grid-row:3; align-self:end; margin-top:0; height:44px; min-height:44px; width:100%}
+.kb-act-keep .keep-note{grid-row:4; margin-top:10px}
+.kb-act-ai .kb-ai-row{grid-row:3}
+.kb-act-ai .kb-presets{grid-row:4; margin-top:10px}
+.kb-act-ai .keep-note{grid-row:5; margin-top:8px}
+.kb-sum input{min-height:44px; height:44px}
+.btn-dop{min-height:44px; height:44px}
+.kb-ai-row{align-items:flex-end}
+@media (max-width:640px){
+  .kb-acts{grid-template-columns:1fr; grid-template-rows:none; row-gap:10px}
+  .kb-act{grid-row:auto; grid-template-rows:none; display:flex; flex-direction:column; align-items:stretch; gap:8px}
+  .kb-act-h, .kb-act-s{margin-bottom:0}
+  .kb-act-keep .btn-keep, .kb-act-keep .keep-note, .kb-act-ai .kb-presets, .kb-act-ai .keep-note{margin-top:0}
+}
