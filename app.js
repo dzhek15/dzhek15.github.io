@@ -7377,13 +7377,17 @@
   }
   function apiFetch0(path){
     /* no-store: браузер (особенно Safari на телефоне) иначе отдаёт счёт из своего кэша */
-    return fetch(API + path, {cache: "no-store"})
+    /* totobrief может молчать (сеть, блокировка): через 6 с сдаёмся и берём зеркало, иначе кнопка зависает */
+    var ac = typeof AbortController === "function" ? new AbortController() : null, tm = ac ? setTimeout(function(){ try{ ac.abort(); }catch(e){} }, 6000) : 0;
+    return fetch(API + path, ac ? {cache: "no-store", signal: ac.signal} : {cache: "no-store"})
       .then(function(r){
+        clearTimeout(tm);
         if(!r.ok) throw new Error("totobrief " + r.status);
         if(feed.src !== "live"){ feed.src = "live"; showFeed(); }
         return r;
       })
       .catch(function(err){
+        clearTimeout(tm);
         var mp = mirrorPath(path);
         if(!mp) throw err;
         /* минутный штамп обходит кэш GitHub Pages (10 минут) */
@@ -9795,11 +9799,13 @@
     return rows[0] || null;
   }
 
+  var pullBusy = false;
   function pullTirazh(silent, wantNumber){
     UJ.silent = !!silent;
     var btn = $("btnFetch");
     var lbl = btn.querySelector(".lbl") || btn;
-    btn.disabled = true;
+    if(!silent) btn.disabled = true;      /* фоновый опрос кнопку не блокирует: иначе при долгом ответе нажатие «молчит» */
+    pullBusy = true;
     var was = lbl.textContent, tp0 = Date.now();
     if(!silent){ btn.classList.add("is-loading"); lbl.textContent = "Загружаю…"; }   /* фоновый опрос кнопку не трогает: без миганий и сдвигов */
     var firstRows = null;
@@ -9872,7 +9878,7 @@
           .then(function(n){ return {n:n, number:d.number}; });
       })
       .then(function(res){
-        btn.disabled = false; btn.classList.remove("is-loading"); lbl.textContent = was;
+        pullBusy = false; if(!silent){ btn.disabled = false; btn.classList.remove("is-loading"); lbl.textContent = was; }
         DBG.api["текущий"] = { ms: Date.now() - tp0, at: Date.now() }; dbgLog("totobrief", "опрос тиража: " + (Date.now() - tp0) + " мс");
         if(res && res.changed){
           say("На totobrief появился тираж №" + res.changed + ", а открыт №" + state.tirazh +
@@ -9891,7 +9897,7 @@
         if(res && !res.soft) tryPending();
       })
       .catch(function(err){
-        btn.disabled = false; btn.classList.remove("is-loading"); lbl.textContent = was;
+        pullBusy = false; if(!silent){ btn.disabled = false; btn.classList.remove("is-loading"); lbl.textContent = was; }
         DBG.api["текущий"] = { ms: Date.now() - tp0, at: Date.now(), err: 1 }; dbgLog("err", "опрос тиража: " + (err && err.message || err));
         tryPending();
         if(!silent) say("Не удалось забрать тираж ни с totobrief, ни из зеркала: " + (err && err.message ? err.message : err) +
@@ -10470,7 +10476,7 @@
       }
       var every = open ? 7 * 60 * 1000 : LIVE_EVERY;
       if(now - lastAuto < every - 2000) return;
-      if($("btnFetch").disabled) return;      /* прошлый запрос ещё идёт */
+      if(pullBusy || $("btnFetch").disabled) return;      /* прошлый запрос ещё идёт */
       lastAuto = now;
       if(open && !book) pullTirazh(true); else pullTirazh(true, state.tirazh);
     }catch(e){}
