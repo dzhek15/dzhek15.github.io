@@ -4105,3 +4105,16 @@ footer{border-top:1px solid transparent; border-image:var(--gem-line) 1}
 .cover img.logo-l{display:none}
 :root[data-theme="light"] .cover img.logo-d{display:none}
 :root[data-theme="light"] .cover img.logo-l{display:block; filter:saturate(1.2) contrast(1.06) drop-shadow(0 1px 0 rgba(255,255,255,.95)) drop-shadow(0 5px 9px rgba(16,70,48,.22))}
+
+/* РАНДОМ: вместо стального синего — изумруд с золотой рамкой (обе темы) */
+.btn-spin:not(.btn-crowd){background:linear-gradient(180deg,#23a97c,#0f6f50); border-color:var(--gd-hi); color:#fff;
+  text-shadow:0 1px 0 rgba(0,0,0,.28); box-shadow:inset 0 1px 0 rgba(255,255,255,.28), 0 4px 12px -5px rgba(15,138,99,.7)}
+.btn-spin:not(.btn-crowd):hover:not(:disabled){filter:brightness(1.1); border-color:var(--gd-hi)}
+.btn-spin:not(.btn-crowd):disabled{background:var(--surface-2); border-color:var(--rule-strong); color:var(--muted); box-shadow:none; text-shadow:none}
+.spin-group .spin-in, .spin-speed{border-color:var(--gd-line)}
+.spin-group .spin-in:focus, .spin-speed:focus{outline-color:var(--em-hi)}
+.spin-group .btn-spin:disabled + .spin-in, .btn-spin:disabled ~ .spin-speed{border-color:var(--rule-strong); color:var(--muted)}
+.coupon.spinning{box-shadow:0 0 0 3px var(--em-hi), 0 0 0 5px var(--bg), 0 0 0 6px var(--gd-hi), var(--shadow)}
+.spin-speed, .spin-group .spin-in{color:var(--gd-hi)}
+:root[data-theme="light"] .spin-speed, :root[data-theme="light"] .spin-group .spin-in{color:#6b4a0c}
+.btn-spin:disabled ~ .spin-speed, .spin-group .btn-spin:disabled + .spin-in{color:var(--muted)}
