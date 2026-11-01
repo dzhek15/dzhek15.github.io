@@ -4170,3 +4170,7 @@ body.is-prev .wpPane{clip-path:inset(0 round 4px); border-radius:4px}
 body.is-prev .pcsv{margin-top:8px; margin-bottom:10px}
 :root[data-theme="light"] body.is-prev .pcsv{border:2px solid var(--frame); box-shadow:0 0 0 4px var(--bg), 0 0 0 5px var(--frame-soft), var(--shadow)}
 :root[data-theme="light"] body.is-prev .pc-rkw{border-color:var(--frame-soft)}
+
+/* v20261101z4: свои наборы в рейтинге отмечены изумрудной полоской (раньше синей) */
+.pc-rk.mine{box-shadow:inset 6px 0 0 var(--em-hi), inset 7px 0 0 rgba(0,0,0,.18)}
+.pc-rk.mine.m1, .pc-rk.mine.m2, .pc-rk.mine.m3{box-shadow:inset 6px 0 0 var(--em-hi), inset 7px 0 0 rgba(0,0,0,.18)}
