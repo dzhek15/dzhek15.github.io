@@ -3927,16 +3927,19 @@
   }
   /* нет разбора на этот тираж — кнопка серая и не нажимается, место под неё остаётся */
   function aiBtnState(b, idx){
-    var ok = !aiRun.active && !!aiFor(ai.data, idx);
+    var lk = aiLock(), ok = !lk && !!aiFor(ai.data, idx);
     b.disabled = !ok;
-    b.classList.toggle("ai-wait", aiRun.active);
-    if(idx === 0){ var wp = $("aiWaitPlate"); if(wp) wp.hidden = !(!ok && !aiRun.active && !state.viewPrev && state.matches && state.matches.length); }
-    b.title = aiRun.active ? "Идёт разбор ИИ — кнопка включится, когда он закончится и данные будут на сайте" : ok ? "Короткий разбор матча от ИИ" : "Разбор не готов";
+    b.classList.toggle("ai-wait", lk);
+    if(idx === 0) aiNoteUpdate();
+    if(idx === 0){ var wp = $("aiWaitPlate"); if(wp) wp.hidden = !(!ok && !lk && !state.viewPrev && state.matches && state.matches.length); }
+    b.title = lk ? "Идёт разбор ИИ — кнопка включится, когда он закончится и данные будут на сайте" : ok ? (aiRun.active ? "Короткий разбор матча от ИИ (идёт обновление разбора, пока доступен прежний)" : "Короткий разбор матча от ИИ") : "Разбор не готов";
   }
   /* Пока идёт разбор ИИ (ai_status.json «run», для владельца — ещё и состояние запуска в GitHub), все кнопки ИИ
      выключены: на сайте может лежать прошлый разбор, который сейчас заменится. Раз в минуту проверяем состояние;
      когда разбор закончился, заново загружаем разбор, бриф, историю, Охоту и «Охоту · с ИИ» и включаем кнопки. */
   var aiRun = { active: false, since: "", timer: 0 }, AI_BUST = 0;
+  /* кнопки ИИ блокируются на время разбора, только если на сайте нет разбора этого тиража; если прежний разбор уже лежит — он остаётся доступным, пока не заменится новым */
+  function aiLock(){ return aiRun.active && !aiFor(ai.data, 0); }
   function aiRunPoll(){
     clearTimeout(aiRun.timer);
     var t = Date.now();
@@ -3954,10 +3957,13 @@
       aiRun.timer = setTimeout(aiRunPoll, act ? 60000 : 5 * 60000);
     });
   }
+  function aiNoteUpdate(){
+    var nt = $("aiRunNote");
+    if(nt){ nt.hidden = !aiRun.active; nt.textContent = aiRun.active ? "Идёт " + (aiLock() ? "разбор" : "обновление разбора") + " ИИ" + (aiRun.since ? ", начат в " + fmtStamp(aiRun.since, true) : "") + (aiLock() ? ". Кнопки ИИ и «Собрать с ИИ» включатся, когда он закончится и данные будут на сайте." : ". Пока доступен прежний разбор, он заменится новым, когда тот будет готов.") : ""; }
+  }
   function aiRunChanged(finished){
     document.body.classList.toggle("ai-running", aiRun.active);
-    var nt = $("aiRunNote");
-    if(nt){ nt.hidden = !aiRun.active; nt.textContent = aiRun.active ? "Идёт разбор ИИ" + (aiRun.since ? ", начат в " + fmtStamp(aiRun.since, true) : "") + ". Кнопки ИИ и «Собрать с ИИ» включатся, когда он закончится и данные будут на сайте." : ""; }
+    aiNoteUpdate();
     if(!finished){ aiBtnsUpdate(); try { render(); } catch(e){} return; }
     AI_BUST = Date.now();
     ai.at = 0; aiHist.at = 0; aiArch.at = 0; virtAi.at = 0; virt.at = 0;
@@ -3967,6 +3973,7 @@
     }, function(){ AI_BUST = 0; aiBtnsUpdate(); });
   }
   function aiBtnsUpdate(){
+    aiNoteUpdate();
     [].slice.call(document.querySelectorAll(".ai-btn")).forEach(function(b){ aiBtnState(b, Number(b.getAttribute("data-idx"))); });
   }
   function mkAiBtn(m, idx){
@@ -4100,7 +4107,7 @@
     return b;
   }
   function showAi(m, idx){
-    if(aiRun.active) return;
+    if(aiLock()) return;
     $("evTitle").textContent = "Разбор ИИ · " + m.home + " — " + m.away;
     $("evBody").innerHTML = '<div id="aiBox"><p class="ev-note">Загружаю…</p></div>' +
       '';
@@ -6054,14 +6061,14 @@
     var form = (sh.d ? sh.d + " дв" : "") + (sh.d && sh.t ? " + " : "") + (sh.t ? sh.t + " тр" : "");
     return '<div class="bf-v' + (cur ? ' cur' : '') + '"><div class="bf-i"><div class="bf-h"><span class="bf-o">' + sh.s + ' ' + (sh.s === 1 ? 'ординар' : 'ординара') + '</span><b>' + form + '</b></div>' +
       '<div class="bf-m"><span>' + cov + ' из 45</span><span>' + fmt(sh.rows) + ' ' + plural(sh.rows, 'строка', 'строки', 'строк') + '</span><span>' + fmt(sh.rows * price) + ' ₽</span><span class="bf-p">' + sh.ch + '</span>' + (best ? '<span class="bf-best">лучший шанс ' + g + '+</span>' : '') + '</div></div>' +
-      '<button type="button" class="gap-set bf-ai" data-g="' + g + '" data-s="' + sh.s + '" data-d="' + sh.d + '" data-t="' + sh.t + '"' + (aiOk ? '' : ' disabled title="' + (aiRun.active ? 'Идёт разбор ИИ — включится после публикации' : 'Разбор ИИ на этот тираж ещё не готов') + '"') + '>Собрать с ИИ</button></div>';
+      '<button type="button" class="gap-set bf-ai" data-g="' + g + '" data-s="' + sh.s + '" data-d="' + sh.d + '" data-t="' + sh.t + '"' + (aiOk ? '' : ' disabled title="' + (aiLock() ? 'Идёт разбор ИИ — включится после публикации' : 'Разбор ИИ на этот тираж ещё не готов') + '"') + '>Собрать с ИИ</button></div>';
   }
   document.addEventListener("toggle", function(e){
     var t = e.target; if(t && t.classList && t.classList.contains("brief-expl")) window.__briefExplOpen = t.open;
   }, true);
   function briefRuleBox(one, cs){
     var F = BRIEF_FORMS[briefTab] || BRIEF_FORMS[13], g = briefTab;
-    var aiOk = !aiRun.active && !!aiPlan(ai.data) && state.matches.length === 15;
+    var aiOk = !aiLock() && !!aiPlan(ai.data) && state.matches.length === 15;
     var anyExact = false, bestP = 0;
     F.groups.forEach(function(gr){ gr.shapes.forEach(function(sh){ if(sh.p > bestP) bestP = sh.p; }); });
     F.groups.forEach(function(gr){ gr.shapes.forEach(function(sh){ if(cs && sh.s === cs.s && sh.d === cs.d && sh.t === cs.t) anyExact = true; }); });
