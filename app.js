@@ -2739,6 +2739,7 @@
     return (h.indexOf("решает") >= 0 || h === "Факты") ? "main" : h.indexOf("Цена") >= 0 ? "risk" : h.indexOf("Человеческий") >= 0 ? "human" : "other";
   }
   function aiFmt(s){
+    s = s.replace(/(\([^()]+\))(?:\s*\1)+/g, "$1");   /* команда в скобках дважды подряд — оставляем одну */
     s = s.replace(/«[^»]*»/g, function(m){ return '<span class="ai-q">' + m + '</span>'; });
     s = s.replace(/\((?!\d)[^():]*\)/g, function(m){ return '<span class="ai-par">' + m + '</span>'; });
     s = s.replace(/(^|[^\d:+])(\d{1,2}:\d{1,2})(?![\d:])(\s?МСК)?/g, function(m, pre, sc, msk){
@@ -2748,6 +2749,22 @@
     s = s.replace(/(\d{1,2}(?:[–-]\d{1,2})?\s(?:января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря))/g, '<span class="ai-dt">$1</span>');
     s = s.replace(/(\d+\s(?:очк[а-я]*))/g, '<span class="ai-nm">$1</span>');
     return s;
+  }
+  /* текст разбора по смыслу: каждая мысль отдельной строкой, источник — меткой справа; предложения в данных склеены через «(источник) Следующая…» */
+  var AI_SRCW = "(?:Betzona|Flashscore|ESPN|Understat|football-data|Расчётн|тотализатор|пресса|[a-z0-9-]+\\.[a-z]{2,})";
+  var AI_SRC_SPLIT = new RegExp("(\\((?:[^()]*?" + AI_SRCW + ")[^()]*\\))\\s+(?=[А-ЯЁA-Z«])", "g");
+  var AI_SRC_TAIL = new RegExp("^([\\s\\S]*?)\\s*\\(([^()]*" + AI_SRCW + "[^()]*)\\)\\s*$");
+  function aiSplit(txt){
+    return String(txt).replace(AI_SRC_SPLIT, "$1\u0001").split(/\u0001|\n+/).map(function(x){ return x.replace(/^\s*[-•]\s*/, "").trim(); }).filter(Boolean);
+  }
+  function aiPt(x){
+    var m = AI_SRC_TAIL.exec(x), body = m ? m[1] : x, src = m ? m[2] : "";
+    body = body.charAt(0).toUpperCase() + body.slice(1);
+    return '<li><span class="ai-pt-t">' + aiFmt(escHtml(body)) + '</span>' + (src ? '<span class="ai-pt-s">' + escHtml(src) + '</span>' : '') + '</li>';
+  }
+  function aiPts(txt, cls){
+    var it = aiSplit(txt);
+    return '<ul class="ai-pts' + (cls ? ' ' + cls : '') + '">' + it.map(aiPt).join("") + '</ul>';
   }
   /* «Следующие игры»: заголовок раздела, ниже по каждой команде отдельной строкой «Следующий матч (турнир)»
      и отдельной выделенной по центру строкой «Хозяева — Гости, дата (через N дней)» */
@@ -2848,9 +2865,9 @@
     }
     if(m && AI_SEC[m[1]]){
       var emo = m[1] === "Тренеры и настроение" && r ? aiEmoHtml(r) : "";
-      return '<div class="ai-sec ai-s-' + AI_SEC[m[1]] + '"><span class="ai-lb">' + escHtml(m[1]) + '</span><p>' + aiFmt(escHtml(m[2].charAt(0).toUpperCase() + m[2].slice(1))) + '</p>' + emo + '</div>';
+      return '<div class="ai-sec ai-s-' + AI_SEC[m[1]] + '"><span class="ai-lb">' + escHtml(m[1]) + '</span>' + aiPts(m[2], "ai-pts-" + AI_SEC[m[1]]) + emo + '</div>';
     }
-    return '<p>' + aiFmt(escHtml(x)) + '</p>';
+    return aiSplit(x).length > 1 ? aiPts(x) : '<p>' + aiFmt(escHtml(x)) + '</p>';
   }
   /* шапка матча: турнир и тур, команды с местом и очками, время, стадион, чьё поле */
   function aiTeamHd(t){
@@ -2889,7 +2906,7 @@
     var ex = (p.l10 ? '<div class="ai-lp-l10">' + escHtml(p.l10) + '</div>' : '') +
       (p.flag ? '<div class="ai-lp-fl">Расхождение: ' + escHtml(p.flag) + '</div>' : '') +
       (p.src ? '<div class="ai-lp-src">' + escHtml(p.src) + '</div>' : '');
-    return '<li class="ai-lp"><div class="ai-lp-a">' + (p.num ? '<span class="ai-lp-num">' + escHtml(String(p.num).replace(/^№\s*/, "")) + '</span>' : '') + '<b>' + escHtml(p.n) + '</b>' + (p.pos ? '<span class="ai-lp-pos">' + escHtml(p.pos) + '</span>' : '') + rb + '</div>' +
+    return '<li class="ai-lp"><div class="ai-lp-a">' + (p.num ? '<span class="ai-lp-num">' + escHtml(String(p.num).replace(/^№\s*/, "")) + '</span>' : '') + '<b>' + escHtml(String(p.n || "").replace(/(\([^()]+\))(?:\s*\1)+/g, "$1")) + '</b>' + (p.pos ? '<span class="ai-lp-pos">' + escHtml(p.pos) + '</span>' : '') + rb + '</div>' +
       '<div class="ai-lp-b"><span class="ai-stb ai-stb-' + st + '">' + escHtml(p.st || "статус не указан") + '</span>' + (d.length ? '<span class="ai-lp-d">' + d.join(" · ") + '</span>' : '') + '</div>' + ex + '</li>';
   }
   /* один и тот же отсутствующий не должен идти дважды: строка Flashscore и строка «пресса» с тем же именем сливаются в одну */
@@ -3023,13 +3040,53 @@
     if(!m) return null;
     return '<div class="cx-card cx-road"><b>' + escHtml(m[1]) + '</b><span class="cx-way"><em>' + escHtml(m[2]) + '</em><i></i><strong>' + m[4] + ' км</strong><i></i><em>' + escHtml(m[3]) + '</em></span></div>';
   }
+  /* доли игроков тотализатора: две составные шкалы (с открытия и сейчас), сдвиг по каждому исходу */
+  function cxShare(line){
+    var m = /^Доли игроков тотализатора \(1 \/ X \/ 2\): с открытия приёма \(([^)]*)\) (\d+)% \/ (\d+)% \/ (\d+)%, сейчас (\d+)% \/ (\d+)% \/ (\d+)%(?:; сильнее всего изменилась доля исхода «([^»]+)» — ([+\u2212-]?\d+) п\. ?п\.)?\s*\(тотализатор\)$/.exec(line);
+    if(!m) return null;
+    var A = [+m[2], +m[3], +m[4]], B = [+m[5], +m[6], +m[7]], K = [["1", "Хозяева", "h"], ["X", "Ничья", "d"], ["2", "Гости", "a"]];
+    function bar(lab, v, sub){
+      return '<div class="cx-sh-r"><span class="cx-sh-l">' + lab + (sub ? '<small>' + escHtml(sub) + '</small>' : '') + '</span><span class="cx-sh-b">' + v.map(function(x, i){
+        return '<i class="cx-s-' + K[i][2] + '" style="flex:' + Math.max(x, 4) + '"><b>' + x + '%</b></i>'; }).join("") + '</span></div>';
+    }
+    var dl = K.map(function(k, i){
+      var d = B[i] - A[i], tone = d === 0 ? "eq" : d > 0 ? "up" : "dn";
+      return '<span class="cx-sd cx-sd-' + tone + '"><small>' + k[1] + '</small><b>' + (d > 0 ? "+" : d < 0 ? "\u2212" : "") + Math.abs(d) + ' п. п.</b><em>' + A[i] + ' \u2192 ' + B[i] + '%</em></span>';
+    }).join("");
+    return '<div class="cx-card cx-share">' + bar("С открытия", A, m[1]) + bar("Сейчас", B, "") +
+      '<div class="cx-sds">' + dl + '</div>' +
+      (m[8] ? '<p class="cx-cap">Сильнее всего сдвинулся исход «' + escHtml(m[8]) + '»: ' + escHtml(m[9].replace("-", "\u2212")) + ' п. п.</p>' : '') + '</div>';
+  }
+  /* жёлтые карточки: по командам, на грани пропуска и много жёлтых; жёлтые прямоугольники по числу карточек */
+  function cxCards(lines){
+    var out = [], i, j;
+    for(i = 0; i < lines.length; i++){
+      var ln = lines[i].replace(/\s*\(ESPN\)\s*$/, ""), c = ln.indexOf(": ");
+      if(c < 0) return null;
+      var team = ln.slice(0, c), rest = ln.slice(c + 2), parts = rest.split(/(?:^|;\s*)(на грани пропуска матча \([^)]*\)|много жёлтых):\s*/), groups = "";
+      for(j = 1; j < parts.length; j += 2){
+        var risk = parts[j].indexOf("на грани") === 0, pl = parts[j + 1].split(/;\s*/), rows = "";
+        pl.forEach(function(p){
+          var x = /^(.+?) — (\d+) жёлт\. в (\d+) матч[а-я]*$/.exec(p.trim());
+          if(!x) rows = null;
+          else if(rows !== null) rows += '<div class="cx-yc-p"><span class="cx-yc-n">' + escHtml(x[1]) + '</span><span class="cx-yc-k">' + new Array(Math.min(+x[2], 6) + 1).join("<u></u>") + '</span><em>' + x[2] + ' жёлт. в ' + x[3] + ' матч.</em></div>';
+        });
+        if(rows === null) return null;
+        groups += '<div class="cx-yc-g ' + (risk ? "cx-yc-risk" : "cx-yc-many") + '"><div class="cx-yc-t">' + (risk ? "На грани пропуска матча" : "Много жёлтых") + (risk ? '<small>следующая жёлтая ведёт к дисквалификации</small>' : '') + '</div>' + rows + '</div>';
+      }
+      if(!groups) return null;
+      out.push('<div class="cx-card cx-yc"><div class="cx-h"><b>' + escHtml(team) + '</b></div>' + groups + '</div>');
+    }
+    return '<div class="cx-grid' + (out.length === 1 ? ' cx-one' : '') + '">' + out.join("") + '</div><p class="cx-src">ESPN</p>';
+  }
   function cxVisual(label, lines){
-    var out = [], fn = label === "Турнирная задача" ? cxTable : label === "xG" ? cxXg : label === "Дорога" ? cxRoad : null, i;
+    var out = [], fn = label === "Турнирная задача" ? cxTable : label === "xG" ? cxXg : label === "Дорога" ? cxRoad : label === "Доли игроков" ? cxShare : null, i;
+    if(label === "Жёлтые карточки") return cxCards(lines);
     if(label === "Статистика команд"){ var h = cxStats(lines); return h ? '<div class="cx-grid cx-one">' + h + '</div>' + '<p class="cx-src">football-data.co.uk</p>' : ""; }
     if(!fn) return "";
     for(i = 0; i < lines.length; i++){ var c = fn(lines[i]); if(!c) return ""; out.push(c); }
-    var src = label === "xG" ? "Understat" : label === "Дорога" ? "ESPN, Open-Meteo, расчёт" : "таблица ESPN, расчёт";
-    return '<div class="cx-grid' + (out.length === 1 || label === "Дорога" ? ' cx-one' : '') + '">' + out.join("") + '</div><p class="cx-src">' + src + '</p>';
+    var src = label === "xG" ? "Understat" : label === "Дорога" ? "ESPN, Open-Meteo, расчёт" : label === "Доли игроков" ? "тотализатор" : "таблица ESPN, расчёт";
+    return '<div class="cx-grid' + (out.length === 1 || label === "Дорога" || label === "Доли игроков" ? ' cx-one' : '') + '">' + out.join("") + '</div><p class="cx-src">' + src + '</p>';
   }
   function aiCalcHtml(r){
     if(!r || !Array.isArray(r.calc) || !r.calc.length) return "";
@@ -3056,14 +3113,16 @@
     var fin = "";
     var blk = (full && Array.isArray(r.b)) ? r.b.filter(function(b){ return b && b.t; }).map(function(b){
       var kind = aiBlkKind(b.h);
-      var ps = aiOrder(String(b.t).split(/\n+/));
+      var ps0 = [];
+      String(b.t).split(/\n+/).forEach(function(l){ if(/^\s*-\s/.test(l) && ps0.length) ps0[ps0.length - 1] += "\n" + l; else ps0.push(l); });
+      var ps = aiOrder(ps0);
       ps = ps.filter(function(x){
         var f = /^Главное:\s*([\s\S]*)$/.exec(x);
         if(f){ fin += '<div class="ai-fin"><span class="ai-lb">Главное</span><p>' + aiFmt(escHtml(f[1].charAt(0).toUpperCase() + f[1].slice(1))) + '</p></div>'; return false; }
         return true;
       });
       return '<div class="ai-blk ai-k-' + kind + '">' + (b.h ? '<h4 class="ai-blk-h">' + escHtml(kind === "main" ? "Факты" : b.h) + '</h4>' : '') +
-        ps.map(function(x){ return aiPara(x, r); }).join("") + '</div>';
+        (kind === "main" ? '<ol class="ai-facts">' + ps.map(function(x){ return aiPt(x.replace(/^\s*[-•]\s*/, "")); }).join("") + '</ol>' : ps.map(function(x){ return aiPara(x, r); }).join("")) + '</div>';
     }).join("") : "";
     return (full ? '<div class="ai-paper">' : '') + ((full && r.hd) ? aiHead(r.hd) : '<p class="ai-txt' + (full ? ' ai-lead' : '') + '">' + (full ? aiFmt(escHtml(r.t)) : escHtml(r.t)) + '</p>') + (full ? aiCovHtml(r) : '') + (blk ? '<div class="ai-blks">' + blk + (full ? aiCalcHtml(r) : '') + '</div>' : '') + fin +
       (src ? '<p class="ai-src">Источники: ' + src + '</p>' : '') + (full ? '</div>' : '') +
