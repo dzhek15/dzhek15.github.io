@@ -9044,7 +9044,7 @@
       say("«" + r.name + "» добавлен в сравнение: " + fmt(t.combos) + " строк на " + fmt(t.combos * briefPrice()) + " ₽.");
     });
     if($("cmpvGo")) $("cmpvGo").addEventListener("click", showCouponCompare);
-    if($("cmpvClr")) $("cmpvClr").addEventListener("click", function(){ var o3 = cmpvLoad(); o3.items = []; o3.n = 0; cmpvSave(o3); cmpvRender(); });
+    if($("cmpvClr")) $("cmpvClr").addEventListener("click", function(){ var o3 = cmpvLoad(); o3.items = []; o3.hide = []; o3.n = 0; cmpvSave(o3); cmpvRender(); });
   }
   var CMPV_MAX = 12, cmpvNewName = "", cmpvMsg = "";
   /* добавляет вариант в список сравнения; имя пустое — «Вариант N» */
@@ -9058,14 +9058,18 @@
     cmpvSave(o);
     return { name: name };
   }
+  function cmpvKey(it){ return it.core.join("|") + "#" + it.cnt; }
   function cmpvRemove(i){
-    var o = cmpvLoad(); o.items.splice(i, 1); cmpvSave(o); cmpvRender();
+    var o = cmpvLoad(); if(o.items[i]) o.hide = (o.hide || []).filter(function(k){ return k !== cmpvKey(o.items[i]); });
+    o.items.splice(i, 1); cmpvSave(o); cmpvRender();
     cmpHide = {}; cmpvRefresh();
   }
   function cmpvRefresh(){
     var o = cmpvLoad();
     window.__cmpMain = true; window.__cmpShared = false; window.__cmpMs = null;
     window.__cmpSets = o.items.map(function(it){ return { core: it.core, cnt: it.cnt, vlabel: it.name, vnm: it.name + " · " + fmt(it.cnt) + " стр. · " + fmt(it.cost) + " ₽" }; });
+    /* вычеркнутые варианты помним между заходами (по составу исходов, не по номеру) */
+    cmpHide = {}; o.items.forEach(function(it, i){ if((o.hide || []).indexOf(cmpvKey(it)) >= 0) cmpHide[i] = true; });
     cmpRender();
     $("evBack").hidden = false;
   }
@@ -9405,7 +9409,9 @@
     [].slice.call($("evBody").querySelectorAll(".cmp-chip")).forEach(function(b){ b.addEventListener("click", function(e){
       var x = e.target.closest ? e.target.closest(".cmp-x") : null;
       if(x){ cmpvRemove(Number(x.getAttribute("data-d"))); return; }
-      var i = Number(b.getAttribute("data-i")); cmpHide[i] = !cmpHide[i]; cmpRender();
+      var i = Number(b.getAttribute("data-i")); cmpHide[i] = !cmpHide[i];
+      if(window.__cmpMain && !window.__cmpShared){ var oh = cmpvLoad(); oh.hide = oh.items.filter(function(it, k){ return cmpHide[k]; }).map(cmpvKey); cmpvSave(oh); }
+      cmpRender();
     }); });
   }
   function renderPrevCsv(){
