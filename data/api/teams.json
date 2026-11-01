@@ -55,6 +55,9 @@
 "алавес": {
 "f": "4rBxR4R0-EXAuP9cb.png"
 },
+"аланьяспор": {
+"f": "nNYL4FQq-p2zyVPdn.png"
+},
 "аль вакра": {
 "f": "SnuouIkC-Kpjn53r9.png"
 },
@@ -450,6 +453,9 @@
 "волендам": {
 "f": "8tDUPO86-WYtEUtB2.png"
 },
+"волунтари": {
+"f": "fq436niC-nJvEYWTe.png"
+},
 "вольфсбург": {
 "f": "0Mr1oIkC-SSSLeFGl.png"
 },
@@ -489,8 +495,14 @@
 "гент": {
 "f": "hr2efhUH-ETUaLGDL.png"
 },
+"генчлербирлиги": {
+"f": "MyPx2g86-jwnC0KLI.png"
+},
 "герта": {
 "f": "j1FIuRAN-M145xF2s.png"
+},
+"гимарайнш": {
+"f": "jsn3jm96-rDfht7Ta.png"
 },
 "гимназия мендоса": {
 "f": "0t8y58VH-Uyu9KPIO.png"
@@ -623,6 +635,9 @@
 },
 "жирона": {
 "f": "6mZj79BN-vPm0hQMN.png"
+},
+"заглембе любин": {
+"f": "U52DqEVH-Ykwr8Dur.png"
 },
 "зенит": {
 "f": "EyVBaZlC-fwTrvtzQ.png"
@@ -764,6 +779,9 @@
 "#f2212c"
 ],
 "id": 653
+},
+"корона кельце": {
+"f": "fq8mZthT-QwHphoES.png"
 },
 "кортрейк": {
 "f": "8batulQq-nB6CAUfs.png"
@@ -1175,6 +1193,9 @@
 "плимут аргайл": {
 "f": "Q1DeL996-K69GRxHq.png"
 },
+"погонь щецин": {
+"f": "4llzD25k-vLZ2ZgBC.png"
+},
 "порт вейл": {
 "f": "OvhRMHme-hE2XjgkL.png"
 },
@@ -1207,6 +1228,9 @@
 },
 "райо вальекано": {
 "f": "QyKcNfhT-EPWyZtpb.png"
+},
+"ракув": {
+"f": "judml86k-KpIcOmKL.png"
 },
 "раннерс": {
 "f": "jo4PkjlC-6aHynWQH.png"
@@ -1565,6 +1589,9 @@
 "фалкенберг": {
 "f": "tAcXpMQq-8CTmUesg.png"
 },
+"фарул констанца": {
+"f": "0znjlYhT-8r67AZON.png"
+},
 "фатих карагюмрюк": {
 "f": "236tUEA6-dhK4x4oH.png"
 },
@@ -1586,6 +1613,9 @@
 },
 "фиорентина": {
 "f": "fZhEFLjT-6XKdgOM6.png"
+},
+"фксб": {
+"f": "tSilVMne-SCh1iPaa.png"
 },
 "фламенго рж": {
 "f": "8URbBane-2R2JjDQC.png"
@@ -1636,6 +1666,9 @@
 "#e31820"
 ],
 "id": 973
+},
+"хельсингборг": {
+"f": "G0ygoh8k-2TRrus0k.png"
 },
 "хераклес": {
 "f": "MqiB1mme-vuxu3x67.png"
@@ -1740,6 +1773,9 @@
 "шинник": {
 "f": "x8Vr5LAN-rB3ucgaU.png"
 },
+"шленск вроцлав": {
+"f": "O0emI6A6-CrPl0Jrc.png"
+},
 "шрусбери таун": {
 "f": "hbRQ86WH-MeJKaU2T.png"
 },
@@ -1826,6 +1862,9 @@
 },
 "эстеглаль": {
 "f": "fyhmHABN-CCbRtrUN.png"
+},
+"эстер": {
+"f": "x8wJjCS0-OhPYORgk.png"
 },
 "эстудиантес лп": {
 "f": "MgrzhmgT-2aA5n1nK.png"
