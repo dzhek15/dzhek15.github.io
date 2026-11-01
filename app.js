@@ -9517,7 +9517,7 @@
           '<span class="rk-v' + (q.w ? " ok" : "") + '"><i class="cn" data-k="' + q.i + 'w">' + fmt(q.w) + '</i></span><span class="rk-v"><i class="cn" data-k="' + q.i + 'a">' + fmt(q.a) + '</i></span>' +
           '<span class="rk-bar" data-w="' + (n ? Math.round(q.b / n * 100) : 0) + '" data-pay="' + (n ? Math.round(PAY / n * 100) : 60) + '"><i></i><u></u></span></button>';
       });
-      h += '</div></div>' + (pcsv.sets.filter(function(x){ return x.rows && x.rows.length; }).length > 1 ? '<div class="pc-cmp"><button type="button" class="pc-btn ghost" id="pcCmp">Сравнить наборы по матчам</button></div>' : '') + '</div>';
+      h += '</div></div>' + '</div>';
     }
     /* общая сумма всех загруженных наборов тиража — в панели просмотра */
     var allRows = 0; var allRub = 0; pcsv.sets.forEach(function(x){ if(!x.ai){ allRows += x.rows.length; allRub += x.pr || x.rows.length * (Number(state.price) || 0); } });
