@@ -407,9 +407,13 @@
     fetch("data/wallpapers.json?x=" + Math.floor(Date.now() / 600000), { cache: "no-cache" }).then(function(r){ return r.json(); }).then(function(j){
       var all = ((j && j.items) || []).filter(function(it){ return it && it.src; });
       /* база копится каждый день: свежие обои (первые четыре) идут первыми, остальные из базы — вперемешку */
-      var fresh = all.slice(0, 4), rest = all.slice(4), q, r, t;
-      for(q = rest.length - 1; q > 0; q--){ r = Math.floor(Math.random() * (q + 1)); t = rest[q]; rest[q] = rest[r]; rest[r] = t; }
-      wp.list = fresh.concat(rest); wp.at = Date.now();
+      /* раньше первыми шли одни и те же свежие четыре, и после каждой загрузки показывались те же обои: теперь перемешиваем всю базу
+         и начинаем с обоев, которых не было в прошлый раз */
+      var lst = all.slice(), q, r, t, last = "";
+      for(q = lst.length - 1; q > 0; q--){ r = Math.floor(Math.random() * (q + 1)); t = lst[q]; lst[q] = lst[r]; lst[r] = t; }
+      try{ last = localStorage.getItem("dz_wplast") || ""; }catch(e){}
+      if(lst.length > 1 && lst[0].src === last){ t = lst[0]; lst[0] = lst[lst.length - 1]; lst[lst.length - 1] = t; }
+      wp.list = lst; wp.at = Date.now();
       wp.loading = false; if(wp.list.length) cb();
     }).catch(function(){ wp.loading = false; });
   }
@@ -430,6 +434,7 @@
         b.classList.remove("wp-on");
       });
       wp.front = nx; wp.cur = src;
+      try{ localStorage.setItem("dz_wplast", it.src); }catch(e){}
     };
     im.onerror = function(){ if(!wp.err || wp.err < 3){ wp.err = (wp.err || 0) + 1; wpShow(); } };
     im.src = src;
