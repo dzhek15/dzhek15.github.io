@@ -3904,3 +3904,8 @@ body:not(.is-prev):not([data-book="1"]) .row .pick.pop::after{content:""; positi
 :root[data-theme="light"] .awp-t span{color:#5a5340}
 :root[data-theme="light"] .pc-eshield{color:#8a6a22}
 @media (prefers-reduced-motion: reduce){ #tkValWrap .vg-n{transition:none} .awp-sh,.pc-eshield{animation:none} .fx-toast.on{animation:none; translate:-50% 0; opacity:1} .pc-lvl.pc-hurt{animation:none} }
+
+/* снятый исход: пока курсор остаётся над кнопкой, никакого золотого контура и подъёма от наведения (v20261101d) */
+body:not(.is-prev):not([data-book="1"]) .row .pick.just-off:hover:not([aria-pressed="true"]):not(.won):not(.in-pool):not(.kel-up){
+  transform:none; border-color:var(--rule-strong); color:var(--ink); box-shadow:inset 0 1px 0 rgba(255,255,255,.07), 0 1px 0 rgba(0,0,0,.18)}
+:root[data-theme="light"] body:not(.is-prev):not([data-book="1"]) .row .pick.just-off:hover:not([aria-pressed="true"]):not(.won):not(.in-pool){color:var(--ink)}
