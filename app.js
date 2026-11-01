@@ -3984,6 +3984,126 @@
     say("Вариант ИИ: проставлено " + set + " матч(ей)" + (locked ? ", зафиксированных не трогал: " + locked : "") +
         ". В купоне " + fmt(t0.combos) + " вариант(ов) на " + fmt(t0.combos * (Number(state.price) || 0)) + " ₽. «Назад» откатит.");
   }
+
+  /* ===== «Добрать допы с ИИ»: человек расставил свои исходы и назвал сумму купона — ИИ добавляет исходы
+     (допы) по всей аналитике сайта: шанс по линии конторы и толпе, разбор ИИ, факты, Betzona, расчёты.
+     Свои исходы человека не трогаются; в матчах без выбора ИИ ставит один основной исход; закреплённые не меняются. */
+  var dopMsg = null;
+  function dopPicks(m){ var s = []; OUT.forEach(function(o, k){ if(m.picks && m.picks[o]) s.push(k); }); return s; }
+  function dopCombos(){ var c = 1; state.matches.forEach(function(m){ c *= Math.max(1, dopPicks(m).length); }); return c; }
+  function dopSync(t){
+    if(!$("btnDop")) return;
+    if(state.dopSum == null) state.dopSum = 1000;
+    var N = state.matches.length, price = linePrice(), picked = N - t.empty, sum = Number(state.dopSum) || 0;
+    var base = dopCombos() * price, ok = !!aiFor(ai.data, 0), lk = aiLock();
+    $("kbPicked").textContent = picked + " из " + N;
+    $("kbCombos").textContent = t.empty > 0 ? "—" : fmt(t.combos);
+    $("kbSum").textContent = t.empty > 0 ? "—" : fmt(t.combos * price) + " ₽";
+    $("kbSub").textContent = t.empty > 0 ? (picked ? "осталось выбрать: " + t.empty : "расставьте исходы") : "купон собран";
+    var box = $("kbDots");
+    if(box.children.length !== N){ box.innerHTML = ""; for(var q = 0; q < N; q++) box.appendChild(document.createElement("i")); }
+    state.matches.forEach(function(m, i){
+      var n = dopPicks(m).length, d = box.children[i];
+      d.className = n === 0 ? "" : n === 1 ? "d1" : "d2";
+      if(m.kupSrc && m.kup && Object.keys(m.kup).some(function(o){ return m.picks[o]; })) d.className += " dai";
+      d.title = (i + 1) + ". " + (m.home || "") + " — " + (m.away || "") + ": " + (n ? dopPicks(m).map(function(k){ return OUT[k]; }).join(" ") : "нет выбора");
+    });
+    var inp = $("dopSum");
+    if(document.activeElement !== inp) inp.value = sum || "";
+    [].slice.call($("dopPresets").children).forEach(function(b){ b.classList.toggle("on", Number(b.getAttribute("data-v")) === sum); });
+    var why = "";
+    if(!picked) why = "Расставьте хотя бы один исход — кнопка включится.";
+    else if(lk) why = "Идёт разбор ИИ — кнопка включится, когда он закончится.";
+    else if(!ok) why = "ИИ ещё не разобрал этот тираж — кнопка включится после разбора.";
+    else if(!(sum > 0)) why = "Укажите сумму, до которой добрать.";
+    else if(sum < base) why = "Ваши исходы уже стоят " + fmt(base) + " ₽ — укажите сумму больше.";
+    $("btnDop").disabled = !!why || spinning;
+    $("btnDop").title = why || "ИИ добавит допы до суммы " + fmt(sum) + " ₽. «Назад» вернёт прежний купон.";
+    $("keepBar").classList.toggle("kb-ai-off", !!why);
+    var note = $("dopNote"), sg = signature(state.matches);
+    if(dopMsg && dopMsg.sig && dopMsg.sig !== sg) dopMsg = null;
+    if(dopMsg){ note.textContent = dopMsg.text; note.className = "keep-note dop-done"; }
+    else {
+      note.className = "keep-note";
+      note.textContent = why || ("ИИ добавит допы к вашим исходам, пока купон не дойдёт до " + fmt(sum) + " ₽ (сейчас " + fmt(base) + " ₽)" + (t.empty ? "; в матчах без выбора поставит основной исход сам" : "") + ". «Назад» откатит.");
+    }
+  }
+  function dopRun(){
+    var price = linePrice(), target = Number(state.dopSum) || 0, N = state.matches.length;
+    if(!N || spinning) return;
+    var S = monsterHuntStrength();
+    var res = withEdges(true, function(){
+      var W = [], SRC = [], i, k;
+      for(i = 0; i < N; i++){
+        var m = state.matches[i], p0 = evProbs(m);
+        if(!p0) return { err: "По матчу «" + (m.home || i + 1) + "» нет линии конторы — нажмите «Обновить тираж»." };
+        var pr = edgeAdj(i, p0);
+        W.push(S && S.W1[i] ? S.W1[i] : pr); SRC.push(monsterSrc(i));
+      }
+      var sets = [], own = [], lock = [], auto = [];
+      state.matches.forEach(function(m, i){
+        var s = dopPicks(m); lock[i] = m.mode === "lock" && s.length > 0; own[i] = s.slice(); auto[i] = false;
+        if(!s.length){ var b = 0; for(k = 1; k < 3; k++) if(W[i][k] > W[i][b]) b = k; s = [b]; auto[i] = true; }
+        sets.push(s);
+      });
+      var combos = sets.reduce(function(c, s){ return c * s.length; }, 1);
+      if(combos * price > target) return { err: "Даже с основными исходами купон стоит " + fmt(combos * price) + " ₽ — укажите сумму больше." };
+      var tw = function(i, k){ var b = 99; SRC[i].forEach(function(s){ if(s.o === OUT[k] && Number(s.t) < b) b = Number(s.t); }); return b; };
+      for(;;){
+        var best = null;
+        for(i = 0; i < N; i++){
+          if(lock[i] || sets[i].length >= 3) continue;
+          var n = sets[i].length, nc = combos / n * (n + 1);
+          if(nc * price > target) continue;
+          var pc = sets[i].reduce(function(x, kk){ return x + W[i][kk]; }, 0);
+          for(k = 0; k < 3; k++){
+            if(sets[i].indexOf(k) >= 0) continue;
+            var t0 = tw(i, k), wt = t0 <= 3 ? 1.5 : t0 <= 7 ? 1.25 : t0 < 99 ? 1.1 : 1;
+            var sc = Math.log((pc + W[i][k]) / pc) / Math.log((n + 1) / n) * wt;
+            if(!best || sc > best.sc) best = { i: i, k: k, sc: sc, nc: nc };
+          }
+        }
+        if(!best) break;
+        sets[best.i].push(best.k); sets[best.i].sort(); combos = best.nc;
+      }
+      /* доводы к каждому исходу, который поставил ИИ */
+      var kup = {}, added = 0;
+      sets.forEach(function(s, i){
+        s.forEach(function(k){
+          if(own[i].indexOf(k) >= 0) return;
+          added++;
+          var o = OUT[k], ss = SRC[i].filter(function(x){ return x.o === o; }).sort(function(a, b){ return a.t - b.t; }), seen = {}, parts = [];
+          ss.forEach(function(x){ if(seen[x.src] || parts.length >= 2) return; seen[x.src] = 1; var w = String(x.why || ""); if(w.length > 200){ w = w.slice(0, 200); w = w.slice(0, Math.max(w.lastIndexOf(" "), 120)).replace(/[\s,;:.\-—]+$/, "") + "…"; } parts.push(x.src + ": " + w); });
+          var head = kupHead(i, k, W[i]);
+          kup[i] = kup[i] || {};
+          kup[i][o] = (auto[i] ? "основной исход, который выбрал ИИ (матч был без выбора): " : "") + head + (parts.length ? "; " + parts.join("; ") : (auto[i] ? "" : "; добавлен ради охвата: лучший прирост шанса на каждый рубль"));
+        });
+      });
+      return { sets: sets, kup: kup, combos: combos, added: added, autoN: auto.filter(Boolean).length };
+    });
+    if(!res || res.err){ say(res ? res.err : "Не удалось собрать допы."); return; }
+    var was = tally().combos;
+    state.matches.forEach(function(m){ delete m.kup; delete m.kdel; delete m.kupAll; delete m.kdelAll; delete m.kupSrc; });
+    state.matches.forEach(function(m, i){
+      var s = res.sets[i];
+      if(m.mode === "lock" && dopPicks(m).length) return;
+      m.picks = { "1": false, "X": false, "2": false }; s.forEach(function(k){ m.picks[OUT[k]] = true; });
+      m.mode = "free";
+      if(res.kup[i]){ m.kup = res.kup[i]; m.kupAll = JSON.parse(JSON.stringify(res.kup[i])); m.kupSrc = "ИИ-допы"; }
+    });
+    var cost = res.combos * price;
+    dopMsg = { sig: "", text: "Готово: ИИ поставил " + res.added + " исход(ов): " + (res.autoN ? res.autoN + " основных в матчах без выбора и " : "") + (res.added - res.autoN) + " доп(ов). В купоне " + fmt(res.combos) + " вар. на " + fmt(cost) + " ₽ из " + fmt(target) + " ₽. Исходы ИИ — изумрудные, причина под матчем и в подсказке." };
+    save(); render();
+    dopMsg.sig = signature(state.matches); dopSync(tally());
+    say("«Допы с ИИ»: добавлено " + res.added + " исход(ов), в купоне " + fmt(res.combos) + " вар. на " + fmt(cost) + " ₽ (было " + fmt(was) + (was ? "" : " — не хватало исходов") + "). «Назад» откатит.");
+  }
+  $("btnDop").addEventListener("click", function(){ pushHistoryDop(); dopRun(); });
+  function pushHistoryDop(){ try { pushHistory("до «Допы с ИИ»"); } catch(e){} }
+  $("dopSum").addEventListener("input", function(e){ state.dopSum = Math.max(0, Math.floor(Number(e.target.value) || 0)); save(); dopSync(tally()); });
+  $("dopPresets").addEventListener("click", function(e){
+    var b = e.target.closest && e.target.closest("button[data-v]"); if(!b) return;
+    state.dopSum = Number(b.getAttribute("data-v")); save(); dopSync(tally());
+  });
   /* нет разбора на этот тираж — кнопка серая и не нажимается, место под неё остаётся */
   function aiBtnState(b, idx){
     var lk = aiLock(), ok = !lk && !!aiFor(ai.data, idx);
@@ -4033,6 +4153,7 @@
   }
   function aiBtnsUpdate(){
     aiNoteUpdate();
+    try { dopSync(tally()); } catch(e){}
     [].slice.call(document.querySelectorAll(".ai-btn")).forEach(function(b){ aiBtnState(b, Number(b.getAttribute("data-idx"))); });
   }
   function mkAiBtn(m, idx){
@@ -4437,7 +4558,7 @@
         if(pickOffKey === idx + ":" + o){ b.classList.add("just-off"); pickOffKey = ""; var offB = b; b.addEventListener("pointerleave", function(){ offB.classList.remove("just-off"); }, { once: true }); }    /* только что выбранный исход вспыхивает */
         if(m.res === o) b.classList.add("won");
         b.setAttribute("aria-pressed", m.picks[o] ? "true" : "false");
-        if(m.picks[o] && m.kup && m.kup[o]){ b.classList.add("kel-up"); b.title = "Монстр Келли: " + m.kup[o]; }
+        if(m.picks[o] && m.kup && m.kup[o]){ b.classList.add("kel-up"); b.title = (m.kupSrc || "Монстр Келли") + ": " + m.kup[o]; if(m.kupSrc) b.classList.add("ai-dop"); }
         if(book && bookPages()[book.idx] && bookPages()[book.idx].length === state.matches.length
            && String(bookPages()[book.idx][idx]).indexOf(o) >= 0) b.classList.add("bk-on");
         /* просмотр после игры: угаданный исход — зелёный, мимо — красный */
@@ -4570,8 +4691,8 @@
         var kn = Object.keys(m.kup || {}).filter(function(o){ return m.picks[o]; });
         var kx = Object.keys(m.kdel || {}).filter(function(o){ return !m.picks[o]; });
         if(kn.length || kx.length){
-          var kd = document.createElement("div"); kd.className = "kel-up-note";
-          kd.innerHTML = kn.map(function(o){ return '<b>+' + o + '</b> — Монстр Келли: ' + escHtml(m.kup[o]); })
+          var kd = document.createElement("div"); kd.className = "kel-up-note" + (m.kupSrc ? " ai-dop-note" : "");
+          kd.innerHTML = kn.map(function(o){ return '<b>+' + o + '</b> — ' + (m.kupSrc || 'Монстр Келли') + ': ' + escHtml(m.kup[o]); })
             .concat(kx.map(function(o){ return '<b>−' + o + '</b> — убрано улучшениями (в Монстре Келли без улучшений было): ' + escHtml(m.kdel[o]); })).join("<br>");
           row.appendChild(kd);
         }
@@ -4615,6 +4736,7 @@
     $("sbSum").textContent = t.empty > 0
       ? t.empty + " матч(ей) без исхода"
       : fmt(t.combos) + " комб. · " + fmt(t.combos * (Number(state.price)||0)) + " ₽";
+    dopSync(t);
     $("keepNote").textContent = t.empty > 0
       ? "Сначала выбери исход в каждом из " + t.empty + " пустых матч(ей)."
       : "Купон, собранный руками, попадёт в корзину и в CSV: " +
@@ -9325,7 +9447,7 @@
     var n = state.matches.length, outs = setOutcomesOf(st, n), j;
     for(j = 0; j < n; j++) if(!outs[j]){ say("В этом варианте нет исхода в матче №" + (j + 1) + " — в купон не ставлю."); return; }
     state.matches.forEach(function(m, k){
-      delete m.kup; delete m.kdel; delete m.kupAll; delete m.kdelAll;
+      delete m.kup; delete m.kdel; delete m.kupAll; delete m.kdelAll; delete m.kupSrc;
       m.picks = { "1": false, "X": false, "2": false };
       outs[k].split("").forEach(function(o){ if(m.picks[o] != null) m.picks[o] = true; });
       m.mode = "free";
@@ -11752,7 +11874,7 @@
   function stratApply(plan, name){
     pushHistory("до стратегии «" + name + "»");
     var set = 0;
-    state.matches.forEach(function(m){ delete m.kup; delete m.kdel; delete m.kupAll; delete m.kdelAll; });
+    state.matches.forEach(function(m){ delete m.kup; delete m.kdel; delete m.kupAll; delete m.kdelAll; delete m.kupSrc; });
     plan.rows.forEach(function(r){
       var ix = state.matches.indexOf(r.m);
       if(plan.kup && plan.kup[ix] && !r.locked){ r.m.kup = plan.kup[ix]; r.m.kupAll = JSON.parse(JSON.stringify(plan.kup[ix])); }
@@ -12025,7 +12147,7 @@
         m.picks = pk; m.mode = "free"; delete m.kdel;
         var ku = {}; String(bl[i] || "").split("").forEach(function(ch){ if(pk[ch]) ku[ch] = wy[i + ch] || "доводы источников"; });
         delete m.kdelAll;
-        if(Object.keys(ku).length){ m.kup = ku; m.kupAll = JSON.parse(JSON.stringify(ku)); } else { delete m.kup; delete m.kupAll; }
+        if(Object.keys(ku).length){ delete m.kupSrc; m.kup = ku; m.kupAll = JSON.parse(JSON.stringify(ku)); } else { delete m.kup; delete m.kupAll; }
       });
       save(); render(); $("evBack").hidden = true;
       var t0 = tally();

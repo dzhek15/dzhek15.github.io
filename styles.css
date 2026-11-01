@@ -4188,3 +4188,87 @@ body.is-prev .pcsv{margin-top:8px; margin-bottom:10px}
 .ft-go::after{content:"GO!"; color:#eafff4; background:radial-gradient(circle, rgba(34,220,124,.5), rgba(34,220,124,0) 70%); text-shadow:0 0 28px rgba(34,220,124,.95)}
 :root[data-theme="light"] .row.gl-go::before, :root[data-theme="light"] .pc-cr.pc-go .pc-sc::before{background:linear-gradient(180deg,#1fc872,#07803f); color:#fff; box-shadow:0 0 12px rgba(11,154,82,.45)}
 :root[data-theme="light"] .ft-go::after{color:#064a28; text-shadow:0 0 22px rgba(255,255,255,.9)}
+
+/* v20261101z7: блок «Мой купон» — сводка, ряд из 15 точек и два понятных действия:
+   «Сохранить как есть» и «Добрать допы с ИИ» (до суммы). Золото и изумруд как на логотипе, обе темы. */
+.keep-bar{display:flex; flex-direction:column; gap:12px; text-align:left; align-items:stretch; padding:15px 18px 17px}
+.kb-head{display:flex; align-items:center; gap:14px 18px; flex-wrap:wrap}
+.kb-ttl{display:flex; flex-direction:column; gap:2px; min-width:0}
+.kb-ttl b{font:800 15px/1 "Chivo",sans-serif; letter-spacing:.16em; text-transform:uppercase; color:var(--gd-hi)}
+.kb-ttl span{font-size:12px; color:var(--muted)}
+.kb-chips{display:flex; gap:8px; flex:1 1 auto; justify-content:center; flex-wrap:wrap}
+.kb-chip{display:flex; flex-direction:column; align-items:center; gap:3px; min-width:84px; padding:6px 13px 7px;
+  border:1px solid var(--rule-strong); border-radius:10px; background:color-mix(in srgb, var(--surface-2) 70%, transparent)}
+.kb-chip i{font-style:normal; font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
+.kb-chip b{font:800 16px/1 "Chivo",sans-serif; font-variant-numeric:tabular-nums; color:var(--ink)}
+.kb-chip-sum{border-color:var(--gd-line)}
+.kb-chip-sum b{color:var(--gd-hi)}
+.keep-bar .knob-edge{grid-column:auto; justify-self:auto; padding-left:16px; border-left:1px solid var(--rule); margin-left:auto}
+.kb-dots{display:grid; grid-template-columns:repeat(auto-fit, minmax(12px, 1fr)); gap:5px}
+.kb-dots i{height:7px; border-radius:4px; border:1px solid var(--rule-strong); background:transparent; transition:background .25s, border-color .25s}
+.kb-dots i.d1{background:var(--em); border-color:var(--em-hi)}
+.kb-dots i.d2{background:linear-gradient(90deg, var(--gd-line), var(--gd-hi)); border-color:var(--gd-hi)}
+.kb-dots i.dai{box-shadow:0 0 0 2px var(--bg), 0 0 0 3px var(--em-hi)}
+.kb-acts{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.45fr); gap:12px}
+.kb-act{display:flex; flex-direction:column; align-items:flex-start; gap:8px; padding:13px 15px 14px; border:1px solid var(--rule); border-radius:12px;
+  background:color-mix(in srgb, var(--surface-2) 60%, transparent); min-width:0}
+.kb-act-h{display:flex; align-items:center; gap:9px}
+.kb-act-h b{font:800 14px/1.1 "Chivo",sans-serif; color:var(--ink)}
+.kb-step{display:inline-grid; place-items:center; width:22px; height:22px; border-radius:50%; font:800 12px/1 "Chivo",sans-serif; color:var(--gd-hi); border:1px solid var(--gd-line)}
+.kb-act-s{margin:0; font-size:12.5px; line-height:1.35; color:var(--muted)}
+.kb-act-keep .btn-keep{margin-top:auto; width:100%; justify-content:center}
+.kb-act-ai{border-color:var(--em-line); background:linear-gradient(135deg, var(--em-soft), transparent 75%)}
+.kb-act-ai .kb-step{color:var(--em-hi); border-color:var(--em-hi)}
+.kb-ai-row{display:flex; gap:10px; align-items:stretch; width:100%}
+.kb-sum{display:flex; flex-direction:column; gap:3px; flex:0 0 auto}
+.kb-sum i{font-style:normal; font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
+.kb-sum input{width:11ch; height:100%; min-height:40px; box-sizing:border-box; font:800 17px/1 "Chivo",sans-serif; text-align:center; font-variant-numeric:tabular-nums;
+  border:1px solid var(--em-line); border-radius:8px; padding:4px 8px}
+.btn-dop{flex:1 1 auto; align-self:flex-end; min-height:40px; padding:0 16px; border-radius:8px; cursor:pointer; white-space:nowrap;
+  font:800 14.5px/1 "Chivo",sans-serif; letter-spacing:.01em; color:#04281a; border:1px solid var(--em-hi);
+  background:linear-gradient(180deg,#3fe596,#12b862 55%,#0a9a52); box-shadow:inset 0 1px 0 rgba(255,255,255,.45), 0 4px 14px -4px rgba(34,220,124,.55);
+  transition:transform .15s, box-shadow .2s, filter .2s}
+.btn-dop:hover:not(:disabled){transform:translateY(-1px); filter:brightness(1.07); box-shadow:inset 0 1px 0 rgba(255,255,255,.5), 0 7px 18px -4px rgba(34,220,124,.7)}
+.btn-dop:active:not(:disabled){transform:translateY(0)}
+.btn-dop:disabled{cursor:not-allowed; color:var(--muted); background:transparent; border:1px dashed var(--rule-strong); box-shadow:none; filter:none}
+.kb-presets{display:flex; gap:6px; flex-wrap:wrap}
+.kb-presets button{padding:4px 10px; border-radius:999px; font:700 12px/1.2 "Chivo",sans-serif; font-variant-numeric:tabular-nums; color:var(--muted);
+  border:1px solid var(--rule-strong); background:transparent; cursor:pointer}
+.kb-presets button:hover{color:var(--ink); border-color:var(--em-hi)}
+.kb-presets button.on{color:var(--em-hi); border-color:var(--em-hi); background:var(--em-soft)}
+.keep-bar .keep-note{grid-column:auto; text-align:left; font-size:12px; line-height:1.4; color:var(--muted)}
+.keep-bar .keep-note.dop-done{color:var(--em-hi); font-weight:600}
+.kb-ai-off .kb-act-ai{border-color:var(--rule); background:color-mix(in srgb, var(--surface-2) 45%, transparent)}
+.kb-ai-off .kb-act-ai .kb-step{color:var(--muted); border-color:var(--rule-strong)}
+/* исходы, добавленные ИИ: изумрудные (синие остаются у Монстра Келли) */
+body:not(.is-prev):not([data-book="1"]) .row .pick.kel-up.ai-dop[aria-pressed="true"], .pick.kel-up.ai-dop[aria-pressed="true"]{
+  background:linear-gradient(135deg,#3fe596,#12b862 55%,#0a8f4d) !important; border-color:#7bf0b8 !important; color:#04281a !important; box-shadow:0 0 0 2px rgba(63,229,150,.35) !important}
+.kel-up-note.ai-dop-note{border-left-color:var(--em-hi); background:var(--em-soft); color:var(--ink)}
+.kel-up-note.ai-dop-note b{color:var(--em-hi)}
+:root[data-theme="light"] .kb-chip{background:#fff}
+:root[data-theme="light"] .btn-dop{color:#fff; border-color:#07803f; background:linear-gradient(180deg,#22c878,#0e9d55 55%,#08793f); box-shadow:inset 0 1px 0 rgba(255,255,255,.35), 0 4px 12px -4px rgba(11,154,82,.5)}
+:root[data-theme="light"] .btn-dop:disabled{color:var(--muted); background:transparent; border:1px dashed var(--rule-strong); box-shadow:none}
+:root[data-theme="light"] body:not(.is-prev):not([data-book="1"]) .row .pick.kel-up.ai-dop[aria-pressed="true"], :root[data-theme="light"] .pick.kel-up.ai-dop[aria-pressed="true"]{
+  background:linear-gradient(135deg,#22c878,#0e9d55 55%,#08793f) !important; border-color:#07803f !important; color:#fff !important; box-shadow:0 0 0 2px rgba(11,154,82,.3) !important}
+:root[data-theme="light"] .kel-up-note.ai-dop-note{color:#0a3a24; background:linear-gradient(90deg,rgba(15,138,99,.14),rgba(15,138,99,.06))}
+:root[data-theme="light"] .kel-up-note.ai-dop-note b{color:#087a4b}
+:root[data-theme="light"] .kb-act-ai{background:linear-gradient(135deg, rgba(15,138,99,.10), #fff 75%)}
+:root[data-theme="light"] .kb-act{background:#fff}
+:root[data-theme="light"] .kb-ai-off .kb-act-ai{background:#fff}
+@media (max-width:640px){
+  .keep-bar{padding:12px 12px 14px; gap:10px}
+  .kb-head{gap:10px}
+  .kb-chips{flex:1 1 100%; order:3; display:grid; grid-template-columns:repeat(3,1fr); gap:6px}
+  .kb-chip{min-width:0; padding:5px 6px 6px}
+  .kb-chip b{font-size:14px}
+  .keep-bar .knob-edge{margin-left:auto; padding-left:12px}
+  .kb-acts{grid-template-columns:1fr}
+  .kb-ai-row{flex-wrap:nowrap}
+  .btn-dop{padding:0 10px; font-size:13.5px}
+  .kb-sum input{width:9ch}
+  .keep-bar .keep-note{text-align:left}
+}
+[data-compact="1"] .keep-bar{padding:10px 12px 12px; gap:8px}
+[data-compact="1"] .kb-act-s{display:none}
+:root[data-theme="light"] .kel-up-note.ai-dop-note{border-left-color:#0e9d55; box-shadow:inset 0 0 0 1px rgba(14,157,85,.28)}
+:root[data-theme="dark"] .kel-up-note.ai-dop-note, :root:not([data-theme="light"]) .kel-up-note.ai-dop-note{box-shadow:inset 0 0 0 1px rgba(47,211,154,.25)}
