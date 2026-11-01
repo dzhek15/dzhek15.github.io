@@ -4137,3 +4137,29 @@ body.is-prev .wpPane i{position:fixed; inset:0; width:100%; height:100%; backgro
 body.is-prev .wpPane i.wp-on{animation:wpDriftFx 34s ease-in-out forwards}
 @keyframes wpDriftFx{from{transform:scale(1) translate3d(0,0,0)} to{transform:scale(1.05) translate3d(-.6%,-.5%,0)}}
 @media (prefers-reduced-motion: reduce){ body.is-prev .wpPane i.wp-on{animation:none} }
+
+/* ===== v20261101z: единый цвет рамок (золото) вместо чередования золота и изумруда; тонкая двойная линия ===== */
+:root{ --frame:#d9b24e; --frame-soft:rgba(217,178,78,.42); --frame-fade:rgba(217,178,78,0);
+  --gem-line:linear-gradient(90deg, var(--frame-fade), var(--frame) 22%, var(--frame) 78%, var(--frame-fade));
+  --gem-diag:linear-gradient(135deg, var(--frame), #f0d58a 50%, var(--frame)) }
+:root[data-theme="light"]{ --frame:#b8862a; --frame-soft:rgba(184,134,42,.45); --frame-fade:rgba(184,134,42,0) }
+@media (prefers-color-scheme: light){ :root:not([data-theme="dark"]){ --frame:#b8862a; --frame-soft:rgba(184,134,42,.45); --frame-fade:rgba(184,134,42,0) } }
+:root[data-theme="light"], :root[data-theme="dark"]{ --gem-line:linear-gradient(90deg, var(--frame-fade), var(--frame) 22%, var(--frame) 78%, var(--frame-fade));
+  --gem-diag:linear-gradient(135deg, var(--frame), color-mix(in srgb, var(--frame) 60%, #fff) 50%, var(--frame)) }
+.console, .coupon, .keep-bar, .grid2 > .panel,
+:root[data-theme="light"] .console, :root[data-theme="light"] .coupon{
+  border-color:var(--frame); box-shadow:0 0 0 4px var(--bg), 0 0 0 5px var(--frame-soft), var(--shadow)}
+.coupon.spinning{border-color:var(--frame); box-shadow:0 0 0 4px var(--bg), 0 0 0 5px var(--frame-soft), 0 0 22px -2px var(--frame), var(--shadow)}
+.cover .cv-frame{border-image:var(--gem-diag) 1;
+  background:
+    linear-gradient(var(--frame),var(--frame)) top left/14px 1px no-repeat, linear-gradient(var(--frame),var(--frame)) top left/1px 14px no-repeat,
+    linear-gradient(var(--frame),var(--frame)) top right/14px 1px no-repeat, linear-gradient(var(--frame),var(--frame)) top right/1px 14px no-repeat,
+    linear-gradient(var(--frame),var(--frame)) bottom left/14px 1px no-repeat, linear-gradient(var(--frame),var(--frame)) bottom left/1px 14px no-repeat,
+    linear-gradient(var(--frame),var(--frame)) bottom right/14px 1px no-repeat, linear-gradient(var(--frame),var(--frame)) bottom right/1px 14px no-repeat}
+.chead{border-image:linear-gradient(90deg, var(--frame-fade), var(--frame) 18%, var(--frame) 82%, var(--frame-fade)) 1}
+.cv-pool.is-on, .cv-ft.m-next{border-color:var(--frame-soft)}
+.cd-d b{box-shadow:0 0 0 1px var(--frame-soft)}
+.tir-pages{border-color:var(--frame-soft); box-shadow:0 0 0 1px var(--frame), 0 0 14px -6px var(--frame)}
+.row:hover{box-shadow:inset 3px 0 0 var(--frame)}
+.btn-ev:hover, .btn-stat:hover, .btn-spin:hover{border-color:var(--frame)}
+.roll-group, .roll-group.roll-tools{border-color:var(--frame-soft)}
