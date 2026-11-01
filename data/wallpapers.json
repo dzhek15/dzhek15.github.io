@@ -1,47 +1,12 @@
 {
  "updated": "2026-11-01",
- "count": 36,
+ "count": 27,
  "note": "база обоев: каждый день после разбора ИИ добавляются новые по свежим новостям, рисуют бесплатные нейросети",
  "items": [
-  {
-   "src": "img/wp/auto/20261101-1.webp",
-   "light": "img/wp/auto/20261101-1l.webp",
-   "theme": "Ночной стадион",
-   "by": "pollinations:sana",
-   "d": "2026-11-01"
-  },
-  {
-   "src": "img/wp/auto/20261101-2.webp",
-   "light": "img/wp/auto/20261101-2l.webp",
-   "theme": "Дождь на газоне",
-   "by": "pollinations:sana",
-   "d": "2026-11-01"
-  },
-  {
-   "src": "img/wp/auto/20261101-3.webp",
-   "light": "img/wp/auto/20261101-3l.webp",
-   "theme": "Тактическая доска",
-   "by": "pollinations:sana",
-   "d": "2026-11-01"
-  },
-  {
-   "src": "img/wp/auto/20261101-4.webp",
-   "light": "img/wp/auto/20261101-4l.webp",
-   "theme": "Пустые трибуны",
-   "by": "pollinations:sana",
-   "d": "2026-11-01"
-  },
   {
    "src": "img/wp/auto/20261031-1.webp",
    "light": "img/wp/auto/20261031-1l.webp",
    "theme": "Среда под прожекторами",
-   "by": "pollinations:sana",
-   "d": "2026-10-31"
-  },
-  {
-   "src": "img/wp/auto/20261031-2.webp",
-   "light": "img/wp/auto/20261031-2l.webp",
-   "theme": "Ожидание дебюта",
    "by": "pollinations:sana",
    "d": "2026-10-31"
   },
@@ -53,34 +18,9 @@
    "d": "2026-10-31"
   },
   {
-   "src": "img/wp/auto/20261031-4.webp",
-   "light": "img/wp/auto/20261031-4l.webp",
-   "theme": "Тактика в дожде",
-   "by": "pollinations:sana",
-   "d": "2026-10-31"
-  },
-  {
-   "src": "img/wp/auto/20261030-1.webp",
-   "light": "img/wp/auto/20261030-1l.webp",
-   "theme": "Пустые трибуны Райо",
-   "by": "pollinations:sana"
-  },
-  {
-   "src": "img/wp/auto/20261030-2.webp",
-   "light": "img/wp/auto/20261030-2l.webp",
-   "theme": "Дождь над Чемпионшипом",
-   "by": "pollinations:sana"
-  },
-  {
    "src": "img/wp/auto/20261030-3.webp",
    "light": "img/wp/auto/20261030-3l.webp",
    "theme": "Дебют у костра Бернли",
-   "by": "pollinations:sana"
-  },
-  {
-   "src": "img/wp/auto/20261030-4.webp",
-   "light": "img/wp/auto/20261030-4l.webp",
-   "theme": "Тактика под прожекторами",
    "by": "pollinations:sana"
   },
   {
