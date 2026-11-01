@@ -4126,3 +4126,6 @@ footer{border-top:1px solid transparent; border-image:var(--gem-line) 1}
 :root[data-theme="light"] .kel-up-note{color:#14243d; background:linear-gradient(90deg,rgba(47,111,214,.14),rgba(47,111,214,.07)); border-left-color:#1f5fc6; box-shadow:inset 0 0 0 1px rgba(47,111,214,.25)}
 :root[data-theme="light"] .kel-up-note b{color:#1250b0}
 :root[data-theme="light"] .kel-up-t{color:#1250b0}
+
+/* светлая тема: белый фон за логотипом, у самого логотипа тёмный контур (нарисован в картинке) */
+:root[data-theme="light"] .cover img.logo-l{background:none; filter:drop-shadow(0 4px 7px rgba(40,28,6,.2))}
