@@ -4050,3 +4050,8 @@ body:not(.is-prev):not([data-book="1"]) .row .pick.just-off:hover:not([aria-pres
 :root[data-theme="light"] .row .modes .mode.ai-btn:not(:disabled):not(.ai-wait):hover{color:#1a1208}
 @keyframes aiDot{0%,100%{box-shadow:0 0 0 2px rgba(47,174,124,.18), 0 0 7px 1px rgba(63,201,146,.5)} 50%{box-shadow:0 0 0 4px rgba(47,174,124,.10), 0 0 12px 3px rgba(63,201,146,.8)}}
 @media (prefers-reduced-motion:reduce){ .row .modes .mode.ai-btn:not(:disabled):not(.ai-wait)::before{animation:none} }
+
+/* Логотип dzhek15: растровый знак с прозрачным фоном (v20261101m) */
+.cover img.logo{height:200px; width:auto; max-width:100%; object-fit:contain; margin:-14px 0; filter:none}
+:root[data-theme="light"] .cover img.logo{filter:none; background:radial-gradient(ellipse at 50% 52%, #17110b 62%, rgba(23,17,11,.0) 100%); border-radius:26px}
+@media (max-width:560px){ .cover img.logo{height:150px; margin:-10px 0} }
