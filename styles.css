@@ -4118,3 +4118,8 @@ footer{border-top:1px solid transparent; border-image:var(--gem-line) 1}
 .spin-speed, .spin-group .spin-in{color:var(--gd-hi)}
 :root[data-theme="light"] .spin-speed, :root[data-theme="light"] .spin-group .spin-in{color:#6b4a0c}
 .btn-spin:disabled ~ .spin-speed, .spin-group .btn-spin:disabled + .spin-in{color:var(--muted)}
+
+/* светлая тема: мягкая тёплая подложка за логотипом, без рамки */
+:root[data-theme="light"] .cover img.logo-l{
+  background:radial-gradient(ellipse closest-side at 50% 52%, rgba(184,146,60,.40) 0%, rgba(200,172,110,.30) 45%, rgba(210,185,125,.11) 78%, rgba(214,190,130,0) 100%);
+  filter:saturate(1.1) contrast(1.05) drop-shadow(0 1px 0 rgba(255,255,255,.7)) drop-shadow(0 4px 8px rgba(60,40,0,.22))}
