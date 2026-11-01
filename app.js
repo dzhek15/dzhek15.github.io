@@ -9823,7 +9823,11 @@
       [].slice.call(ovb.querySelectorAll(".pc-vr[data-vk]")).forEach(function(r){ oldV[r.getAttribute("data-vk")] = r.getBoundingClientRect().top - ovt; });
     }
     pcsv.vfl = { key: vkeyNow };
+    /* ничего не изменилось — не пересобираем весь блок заново (на телефоне это и давало подлагивание) */
+    var keepEl = box.querySelector(":scope > :not(.wpPane)");
+    if(pcsv.lastH === h && keepEl && keepEl === pcsv.lastEl && !box.querySelector(".pc-burst,.vgo-up,.vgo-dn,.go-up,.go-dn")) return;
     box.innerHTML = h;
+    pcsv.lastH = h; pcsv.lastEl = box.querySelector(":scope > :not(.wpPane)");
     $("pcLoad").addEventListener("click", pcsvPick);
     pcPasteBind();
     /* варианты плавно меняются местами, когда меняется счёт: поднявшиеся вспыхивают золотом */
@@ -9926,8 +9930,8 @@
           var wv = Number(bar.getAttribute("data-w")) || 0, pw = rk2.w && rk2.w[id] != null ? rk2.w[id] : 0;
           bar.lastChild.style.left = bar.getAttribute("data-pay") + "%";
           bar.className = "rk-bar" + (wv >= Number(bar.getAttribute("data-pay")) ? " pay" : "");
-          fi.style.width = pw + "%";
-          (function(f, to){ requestAnimationFrame(function(){ requestAnimationFrame(function(){ f.style.width = to + "%"; }); }); })(fi, wv);
+          fi.style.width = "100%"; fi.style.transform = "scaleX(" + (pw / 100) + ")";
+          (function(f, to){ requestAnimationFrame(function(){ requestAnimationFrame(function(){ f.style.transform = "scaleX(" + (to / 100) + ")"; }); }); })(fi, wv);
           (rk2.w = rk2.w || {})[id] = wv;
         }
         /* цифры докручиваются и вспыхивают при изменении */

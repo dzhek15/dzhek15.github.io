@@ -4293,3 +4293,38 @@ body:not(.is-prev):not([data-book="1"]) .row .pick.kel-up.ai-dop[aria-pressed="t
   .kb-act-h, .kb-act-s{margin-bottom:0}
   .kb-act-keep .btn-keep, .kb-act-keep .keep-note, .kb-act-ai .kb-presets, .kb-act-ai .keep-note{margin-top:0}
 }
+
+/* v20261101z9: полоска «угадано» в рейтинге двигается через transform (без перерасчёта вёрстки) — на телефоне больше не подлагивает;
+   выделение выбранного набора и отслеживаемых вариантов стало заметнее (обе темы) */
+.rk-bar i{width:100%; transform-origin:left center; transform:scaleX(0); transition:transform .9s cubic-bezier(.22,.8,.25,1); will-change:transform}
+@media (max-width:700px){
+  .pc-rkw .pc-rk.m1 .rk-p b{animation:none}
+  .pc-rkw .pc-rk.m1::after{animation:none; display:none}
+  body.is-prev .pcsv > :not(.wpPane):not([hidden]):not(:empty){-webkit-backdrop-filter:none; backdrop-filter:none; background-color:color-mix(in srgb, var(--surface) 64%, transparent)}
+  body.is-prev #rows > .row{-webkit-backdrop-filter:none; backdrop-filter:none; background-color:color-mix(in srgb, var(--surface) 90%, transparent)}
+}
+/* выбранный (открытый) набор в рейтинге */
+.pc-rkw .pc-rk.on{background:linear-gradient(90deg, rgba(227,185,85,.26), rgba(227,185,85,.10)); box-shadow:inset 0 0 0 1.5px var(--gd-hi), 0 0 14px -4px rgba(227,185,85,.55)}
+.pc-rkw .pc-rk.on .rk-n{color:var(--ink)}
+:root[data-theme="light"] .pc-rkw .pc-rk.on{background:linear-gradient(90deg, rgba(184,134,42,.22), rgba(184,134,42,.08)); box-shadow:inset 0 0 0 1.5px #a87a1c, 0 0 12px -5px rgba(168,122,28,.5); border-left-color:#a87a1c}
+/* варианты: открытый и отслеживаемые онлайн */
+.pc-vr.open{background:rgba(227,185,85,.24); border-radius:8px; box-shadow:0 0 0 2px var(--gd-hi), 0 0 16px -4px rgba(227,185,85,.6); position:relative; z-index:1}
+.pc-vars .pc-vr.lvr:not(.win):not(.dead){background:linear-gradient(90deg, rgba(227,185,85,.16), rgba(227,185,85,.05)); border-radius:8px; box-shadow:inset 3px 0 0 var(--gd-hi)}
+.pc-vr span.hit.lv, .pc-vr span.miss.lv{box-shadow:inset 0 0 0 1.5px rgba(227,185,85,.9)}
+.pc-vr .pc-h.lv{box-shadow:0 0 0 2px rgba(227,185,85,.95)}
+:root[data-theme="light"] .pc-vr.open{background:#FBEFCB; box-shadow:0 0 0 2px #a87a1c, 0 0 12px -5px rgba(168,122,28,.5)}
+:root[data-theme="light"] .pc-vars .pc-vr.lvr:not(.win):not(.dead){background:linear-gradient(90deg, rgba(184,134,42,.18), rgba(184,134,42,.04)); box-shadow:inset 3px 0 0 #a87a1c}
+:root[data-theme="light"] .pc-vr span.hit.lv, :root[data-theme="light"] .pc-vr span.miss.lv{box-shadow:inset 0 0 0 1.5px rgba(160,112,24,.95)}
+:root[data-theme="light"] .pc-vr .pc-h.lv{box-shadow:0 0 0 2px rgba(160,112,24,.95)}
+body.is-prev .pc-vars .pc-vr.open, body.is-prev .pc-vars .pc-vr.open.win{background:rgba(227,185,85,.24); border-radius:8px; box-shadow:0 0 0 2px var(--gd-hi), 0 0 16px -4px rgba(227,185,85,.6)}
+:root[data-theme="light"] body.is-prev .pc-vars .pc-vr.open, :root[data-theme="light"] body.is-prev .pc-vars .pc-vr.open.win{background:#FBEFCB; box-shadow:0 0 0 2px #a87a1c, 0 0 12px -5px rgba(168,122,28,.5)}
+
+/* v20261101z9: на телефоне «ГОЛ!» и «GO!» стоят слева от кнопки FS (в свободном месте строки), а не поверх счёта */
+@media (max-width:560px){
+  .pc-cr.pc-burst .pc-sc::before{display:none !important}
+  .pc-cr.pc-burst .pc-fs{position:relative; overflow:visible}
+  .pc-cr.pc-burst .pc-fs::before{content:"ГОЛ!"; position:absolute; right:calc(100% + 4px); top:50%; margin-top:-8px; z-index:3; pointer-events:none; padding:3px 5px; border-radius:5px;
+    font:800 10px/1 "Chivo",sans-serif; letter-spacing:.04em; white-space:nowrap; color:#1a1410; background:linear-gradient(180deg,#f6dd95,#c9963c); box-shadow:0 0 12px rgba(246,221,149,.8); animation:glTag 6s ease-out forwards}
+  .pc-cr.pc-go .pc-fs::before{content:"GO!"; color:#04281a; background:linear-gradient(180deg,#2fe38a,#0a9a52); box-shadow:0 0 12px rgba(34,220,124,.7)}
+  :root[data-theme="light"] .pc-cr.pc-go .pc-fs::before{color:#fff; background:linear-gradient(180deg,#1fc872,#07803f); box-shadow:0 0 10px rgba(11,154,82,.45)}
+}
