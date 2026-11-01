@@ -4163,3 +4163,10 @@ body.is-prev .wpPane i.wp-on{animation:wpDriftFx 34s ease-in-out forwards}
 .row:hover{box-shadow:inset 3px 0 0 var(--frame)}
 .btn-ev:hover, .btn-stat:hover, .btn-spin:hover{border-color:var(--frame)}
 .roll-group, .roll-group.roll-tools{border-color:var(--frame-soft)}
+
+/* v20261101z2: блок с обоями в просмотре получает ту же золотую рамку, что и остальные блоки (раньше обои обрывались без контура) */
+body.is-prev .pcsv{border:2px solid var(--frame); border-radius:6px; box-shadow:0 0 0 4px var(--bg), 0 0 0 5px var(--frame-soft), var(--shadow)}
+body.is-prev .wpPane{clip-path:inset(0 round 4px); border-radius:4px}
+body.is-prev .pcsv{margin-top:8px; margin-bottom:10px}
+:root[data-theme="light"] body.is-prev .pcsv{border:2px solid var(--frame); box-shadow:0 0 0 4px var(--bg), 0 0 0 5px var(--frame-soft), var(--shadow)}
+:root[data-theme="light"] body.is-prev .pc-rkw{border-color:var(--frame-soft)}
