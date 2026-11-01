@@ -1,6 +1,6 @@
 {
  "updated": "2026-11-01",
- "count": 24,
+ "count": 36,
  "note": "база обоев: каждый день после разбора ИИ добавляются новые по свежим новостям, рисуют бесплатные нейросети",
  "items": [
   {
@@ -164,6 +164,90 @@
    "src": "img/wp/auto/20261101-g12.webp",
    "light": "img/wp/auto/20261101-g12l.webp",
    "theme": "Свисток судьи",
+   "by": "generated",
+   "d": "2026-11-01"
+  },
+  {
+   "src": "img/wp/auto/20261101-g13.webp",
+   "light": "img/wp/auto/20261101-g13l.webp",
+   "theme": "Мяч в дожде под фонарём",
+   "by": "generated",
+   "d": "2026-11-01"
+  },
+  {
+   "src": "img/wp/auto/20261101-g14.webp",
+   "light": "img/wp/auto/20261101-g14l.webp",
+   "theme": "Тренерская зона",
+   "by": "generated",
+   "d": "2026-11-01"
+  },
+  {
+   "src": "img/wp/auto/20261101-g15.webp",
+   "light": "img/wp/auto/20261101-g15l.webp",
+   "theme": "Кубок на траве",
+   "by": "generated",
+   "d": "2026-11-01"
+  },
+  {
+   "src": "img/wp/auto/20261101-g16.webp",
+   "light": "img/wp/auto/20261101-g16l.webp",
+   "theme": "Табло в тумане",
+   "by": "generated",
+   "d": "2026-11-01"
+  },
+  {
+   "src": "img/wp/auto/20261101-g17.webp",
+   "light": "img/wp/auto/20261101-g17l.webp",
+   "theme": "Штрафная площадка",
+   "by": "generated",
+   "d": "2026-11-01"
+  },
+  {
+   "src": "img/wp/auto/20261101-g18.webp",
+   "light": "img/wp/auto/20261101-g18l.webp",
+   "theme": "Перчатки вратаря",
+   "by": "generated",
+   "d": "2026-11-01"
+  },
+  {
+   "src": "img/wp/auto/20261101-g19.webp",
+   "light": "img/wp/auto/20261101-g19l.webp",
+   "theme": "Лестница трибуны",
+   "by": "generated",
+   "d": "2026-11-01"
+  },
+  {
+   "src": "img/wp/auto/20261101-g20.webp",
+   "light": "img/wp/auto/20261101-g20l.webp",
+   "theme": "Мячи в сетке",
+   "by": "generated",
+   "d": "2026-11-01"
+  },
+  {
+   "src": "img/wp/auto/20261101-g21.webp",
+   "light": "img/wp/auto/20261101-g21l.webp",
+   "theme": "Поле после дождя",
+   "by": "generated",
+   "d": "2026-11-01"
+  },
+  {
+   "src": "img/wp/auto/20261101-g22.webp",
+   "light": "img/wp/auto/20261101-g22l.webp",
+   "theme": "Раздевалка",
+   "by": "generated",
+   "d": "2026-11-01"
+  },
+  {
+   "src": "img/wp/auto/20261101-g23.webp",
+   "light": "img/wp/auto/20261101-g23l.webp",
+   "theme": "Капитанская повязка",
+   "by": "generated",
+   "d": "2026-11-01"
+  },
+  {
+   "src": "img/wp/auto/20261101-g24.webp",
+   "light": "img/wp/auto/20261101-g24l.webp",
+   "theme": "Арена с высоты",
    "by": "generated",
    "d": "2026-11-01"
   }
