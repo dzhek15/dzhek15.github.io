@@ -3130,7 +3130,7 @@ html[data-bk="fonbet"] .fon-only{display:flex}
 .ft-l{font:500 11px/1.2 "IBM Plex Sans",sans-serif; letter-spacing:.06em; color:rgba(243,234,210,.62); text-align:center}
 .ft-goal .ft-sc{animation:ftGoal 1.4s cubic-bezier(.2,1.6,.4,1)}
 .ft-goal::after{content:"ГОЛ!"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font:800 50px/1 "Oxanium",var(--f-num); letter-spacing:.12em; color:#fff3d0;
-  background:radial-gradient(circle, rgba(246,221,149,.55), rgba(246,221,149,0) 70%); text-shadow:0 0 28px rgba(246,221,149,.95); animation:ftGoalTxt 2.4s ease-out forwards; pointer-events:none}
+  background:radial-gradient(circle, rgba(246,221,149,.55), rgba(246,221,149,0) 70%); text-shadow:0 0 28px rgba(246,221,149,.95); animation:ftGoalTxt 5s ease-out forwards; pointer-events:none}
 @keyframes ftGoal{0%{transform:scale(.6)} 45%{transform:scale(1.28)} 100%{transform:scale(1)}}
 @keyframes ftGoalTxt{0%{opacity:0; transform:scale(.4)} 18%{opacity:1; transform:scale(1.05)} 70%{opacity:1} 100%{opacity:0; transform:scale(1.15)}}
 .cv-feat .cv-ft{transition:opacity .65s ease, transform .65s ease, filter .65s ease}
@@ -3188,13 +3188,13 @@ body.is-prev .row.is-live{box-shadow:inset 3px 0 0 #e0483e, 0 0 22px -10px rgba(
   :root:not([data-compact="1"]) body.is-prev .row .teams .mscore.live .sa.tr{color:rgba(255,228,223,.6); box-shadow:none}
 }
 /* гол: строка вспыхивает золотом, плитки подпрыгивают, сбоку выезжает «ГОЛ!» */
-.row.gl-burst{animation:glRow 2.6s ease-out}
+.row.gl-burst{animation:glRow 4s ease-out}
 @keyframes glRow{0%{background-color:rgba(246,221,149,.55)} 40%{background-color:rgba(246,221,149,.22)} 100%{background-color:transparent}}
 .row.gl-burst .mscore .sh, .row.gl-burst .mscore .sa{animation:glTile 1.2s cubic-bezier(.2,1.6,.4,1) !important}
 @keyframes glTile{0%{transform:scale(.5)} 55%{transform:scale(1.35)} 100%{transform:scale(1)}}
 .row.gl-burst::before{content:"ГОЛ!"; position:absolute; right:56px; top:4px; z-index:3; padding:3px 9px; border-radius:6px; pointer-events:none;
   font:800 12px/1 "Chivo",sans-serif; letter-spacing:.16em; color:#1a1410; background:linear-gradient(180deg,#f6dd95,#c9963c); box-shadow:0 0 18px rgba(246,221,149,.8);
-  animation:glTag 6.5s ease-out forwards}
+  animation:glTag 11s ease-out forwards}
 @keyframes glTag{0%{opacity:0; transform:translateX(30px) scale(.7)} 6%{opacity:1; transform:none} 85%{opacity:1} 100%{opacity:0}}
 @media (prefers-reduced-motion: reduce){ .row.is-live::after, .row.gl-burst, .row.gl-burst .mscore .sh, .row.gl-burst .mscore .sa, .tc-live{animation:none !important} }
 
@@ -3275,7 +3275,7 @@ body.is-prev .row.is-live{box-shadow:inset 3px 0 0 #e0483e, 0 0 22px -10px rgba(
 @keyframes leadPulse{50%{box-shadow:0 0 0 2px rgba(255,122,110,.5), 0 0 6px -2px rgba(255,90,77,.4)}}
 .pc-cov .pc-o.lead:not(.on){opacity:1; color:#ffd9d3; border-color:rgba(255,122,110,.9)}
 /* гол */
-.pc-cr.pc-burst{animation:glRow 2.6s ease-out}
+.pc-cr.pc-burst{animation:glRow 4s ease-out}
 .pc-cr.pc-burst .pc-sc{animation:glTile 1.2s cubic-bezier(.2,1.6,.4,1)}
 .pc-cr.pc-burst::before{content:"ГОЛ!"; position:absolute; right:10px; top:8px; z-index:3; pointer-events:none; padding:3px 8px; border-radius:5px; font:800 11px/1 "Chivo",sans-serif; letter-spacing:.14em; color:#1a1410; background:linear-gradient(180deg,#f6dd95,#c9963c); box-shadow:0 0 14px rgba(246,221,149,.8)}
 @media (prefers-reduced-motion: reduce){ .pc-cr.st-live::after, .pc-cr.pc-burst, .pc-cr.pc-burst .pc-sc, .pc-cov .pc-o.lead, .pc-sub, .pc-cvst .lv i{animation:none} }
@@ -3308,7 +3308,7 @@ body.is-prev .row.is-live{box-shadow:inset 3px 0 0 #e0483e, 0 0 22px -10px rgba(
 .pc-cr.pc-burst::before{content:none}
 .pc-cr.pc-burst .pc-sc{position:relative; overflow:visible}
 .pc-cr.pc-burst .pc-sc::before{content:"ГОЛ!"; position:absolute; right:calc(100% + 4px); top:50%; transform:translateY(-50%); z-index:3; pointer-events:none; padding:3px 4px; border-radius:5px;
-  font:800 10px/1 "Chivo",sans-serif; letter-spacing:.05em; white-space:nowrap; color:#1a1410; background:linear-gradient(180deg,#f6dd95,#c9963c); box-shadow:0 0 12px rgba(246,221,149,.8); animation:glTag 2.6s ease-out forwards}
+  font:800 10px/1 "Chivo",sans-serif; letter-spacing:.05em; white-space:nowrap; color:#1a1410; background:linear-gradient(180deg,#f6dd95,#c9963c); box-shadow:0 0 12px rgba(246,221,149,.8); animation:glTag 6s ease-out forwards}
 @media (max-width:560px){ .pc-cr.pc-burst .pc-sc::before{right:calc(100% + 2px); padding:3px; font-size:9px; letter-spacing:.02em} }
 
 /* таблица в просмотре: живые матчи — спокойное золото, без красного и резкой пульсации */
@@ -4179,3 +4179,12 @@ body.is-prev .pcsv{margin-top:8px; margin-bottom:10px}
 :root[data-theme="light"] .pc-rkw .pc-rk.mine::before{
   background:linear-gradient(180deg,#067a42 0%,#14b865 38%,#0b9a52 62%,#056a39 100%);
   box-shadow:4px 0 0 -1px rgba(184,134,42,.8), 0 0 6px rgba(11,154,82,.22)}
+
+/* v20261101z6: начало матча — «GO!» (изумрудная плашка, как логотип), «ГОЛ!» только при росте счёта */
+.row.gl-go::before{content:"GO!"; background:linear-gradient(180deg,#2fe38a,#0a9a52); color:#04281a; box-shadow:0 0 18px rgba(34,220,124,.7)}
+.row.gl-go{animation-name:glRowGo}
+@keyframes glRowGo{0%{background-color:rgba(34,220,124,.35)} 40%{background-color:rgba(34,220,124,.14)} 100%{background-color:transparent}}
+.pc-cr.pc-go .pc-sc::before{content:"GO!"; background:linear-gradient(180deg,#2fe38a,#0a9a52); color:#04281a; box-shadow:0 0 12px rgba(34,220,124,.7)}
+.ft-go::after{content:"GO!"; color:#eafff4; background:radial-gradient(circle, rgba(34,220,124,.5), rgba(34,220,124,0) 70%); text-shadow:0 0 28px rgba(34,220,124,.95)}
+:root[data-theme="light"] .row.gl-go::before, :root[data-theme="light"] .pc-cr.pc-go .pc-sc::before{background:linear-gradient(180deg,#1fc872,#07803f); color:#fff; box-shadow:0 0 12px rgba(11,154,82,.45)}
+:root[data-theme="light"] .ft-go::after{color:#064a28; text-shadow:0 0 22px rgba(255,255,255,.9)}

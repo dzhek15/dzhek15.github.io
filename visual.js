@@ -141,6 +141,7 @@
     /* «ГОЛ!» только когда счёт реально вырос: появление первого счёта 0:0 при начале матча голом не считается */
     var po = /(\d+)\D+(\d+)/.exec(fxs.scSeen[key] || ""), pn = /(\d+)\D+(\d+)/.exec(sc);
     if(po && pn && f.mode === "live" && (+pn[1] > +po[1] || +pn[2] > +po[2])) cls += " ft-goal";
+    else if(!po && pn && key in fxs.scSeen && f.mode === "live" && +pn[1] === 0 && +pn[2] === 0) cls += " ft-goal ft-go";   /* начало матча: «GO!» вместо «ГОЛ!» */
     fxs.scSeen[key] = sc;
     if(f.mode === "live") k = '<b class="ft-dot"></b>В эфире' + (x.s.min ? ' · <span class="ft-min">' + esc(x.s.min) + '</span>' : "");
     else if(f.mode === "next") k = 'Ближайший матч · ' + esc([m.date, m.time].filter(Boolean).join(" "));

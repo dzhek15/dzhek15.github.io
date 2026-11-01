@@ -2309,8 +2309,8 @@
       (mn && mn.t !== "" && mn.tick ? '<span class="gt-min">' + escHtml(String(mn.t)) + '\u2019</span>' : "");
     el.classList.remove("on", "vt", "vt-bad"); void el.offsetWidth; el.classList.add("on");
     try{ if(navigator.vibrate) navigator.vibrate([70, 40, 70]); }catch(e){}
-    toastUntil = Date.now() + 7000;
-    clearTimeout(toastTimer); toastTimer = setTimeout(function(){ el.classList.remove("on"); }, 7000);
+    toastUntil = Date.now() + 10000;
+    clearTimeout(toastTimer); toastTimer = setTimeout(function(){ el.classList.remove("on"); }, 10000);
   }
   /* уведомление о вариантах: вышли в 9+ / выбыли — ждёт, пока уйдёт уведомление о голе */
   function varToast(tag, bad, text){
@@ -8141,13 +8141,21 @@
     pvSave();
   }
   /* гол: счёт изменился с прошлой отрисовки — строка вспыхивает, плитки подпрыгивают (≈7 с) */
-  var pvScSeen = null, pvBurst = null;
+  var pvScSeen = null, pvBurst = null, pvBurstK = {};
+  /* «ГОЛ!» — только когда счёт реально вырос; «GO!» — когда у матча впервые появился счёт 0:0 (начало игры) */
+  function pvKind(sPrev, sNow, m){
+    if(sPrev == null || sPrev === sNow || m.res || !sNow) return "";
+    var p = /(\d+)\D+(\d+)/.exec(sPrev), n = /(\d+)\D+(\d+)/.exec(sNow);
+    if(!n) return "";
+    if(!p) return (+n[1] === 0 && +n[2] === 0) ? "go" : "";
+    return (+n[1] > +p[1] || +n[2] > +p[2]) ? "goal" : "";
+  }
   function glBurst(row, m, key){
     if(!pvScSeen){ pvScSeen = {}; pvBurst = {}; }
-    var sNow = String(m.score || ""), sPrev = pvScSeen[key];
-    if(sPrev != null && sPrev !== sNow && !m.res && sNow) pvBurst[key] = Date.now();
+    var sNow = String(m.score || ""), sPrev = pvScSeen[key], k = pvKind(sPrev, sNow, m);
+    if(k){ pvBurst[key] = Date.now(); pvBurstK[key] = k; }
     pvScSeen[key] = sNow;
-    if(pvBurst[key] && Date.now() - pvBurst[key] < 7000) row.classList.add("gl-burst");
+    if(pvBurst[key] && Date.now() - pvBurst[key] < 12000) row.classList.add("gl-burst", pvBurstK[key] === "go" ? "gl-go" : "gl-goal");
   }
   function renderPrevView(){
     var p = state.prev;
@@ -9744,9 +9752,10 @@
       if(!mj) return;
       if(!pvScSeen){ pvScSeen = {}; pvBurst = {}; }
       var kk = "cv" + r.getAttribute("data-cj"), sn = String(mj.score || ""), sp = pvScSeen[kk];
-      if(sp != null && sp !== sn && !mj.res && sn) pvBurst[kk] = Date.now();
+      var kd = pvKind(sp, sn, mj);
+      if(kd){ pvBurst[kk] = Date.now(); pvBurstK[kk] = kd; }
       pvScSeen[kk] = sn;
-      if(pvBurst[kk] && Date.now() - pvBurst[kk] < 2600) r.classList.add("pc-burst");
+      if(pvBurst[kk] && Date.now() - pvBurst[kk] < 6500) r.classList.add("pc-burst", pvBurstK[kk] === "go" ? "pc-go" : "pc-goal");
     });
     [].slice.call(box.querySelectorAll(".pc-cr.wi-able")).forEach(function(r){
       r.addEventListener("click", function(){ var j = Number(r.getAttribute("data-w")); pcsv.what = pcsv.what === j ? null : j; renderPrevCsv(); });
