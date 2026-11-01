@@ -1,6 +1,6 @@
 {
  "updated": "2026-11-01",
- "count": 12,
+ "count": 24,
  "note": "база обоев: каждый день после разбора ИИ добавляются новые по свежим новостям, рисуют бесплатные нейросети",
  "items": [
   {
@@ -82,6 +82,90 @@
    "light": "img/wp/auto/20261030-4l.webp",
    "theme": "Тактика под прожекторами",
    "by": "pollinations:sana"
+  },
+  {
+   "src": "img/wp/auto/20261101-g01.webp",
+   "light": "img/wp/auto/20261101-g01l.webp",
+   "theme": "Мяч в центре круга",
+   "by": "generated",
+   "d": "2026-11-01"
+  },
+  {
+   "src": "img/wp/auto/20261101-g02.webp",
+   "light": "img/wp/auto/20261101-g02l.webp",
+   "theme": "Туннель к полю",
+   "by": "generated",
+   "d": "2026-11-01"
+  },
+  {
+   "src": "img/wp/auto/20261101-g03.webp",
+   "light": "img/wp/auto/20261101-g03l.webp",
+   "theme": "Ворота и сетка",
+   "by": "generated",
+   "d": "2026-11-01"
+  },
+  {
+   "src": "img/wp/auto/20261101-g04.webp",
+   "light": "img/wp/auto/20261101-g04l.webp",
+   "theme": "Угловой флажок",
+   "by": "generated",
+   "d": "2026-11-01"
+  },
+  {
+   "src": "img/wp/auto/20261101-g05.webp",
+   "light": "img/wp/auto/20261101-g05l.webp",
+   "theme": "Сапоги на скамье",
+   "by": "generated",
+   "d": "2026-11-01"
+  },
+  {
+   "src": "img/wp/auto/20261101-g06.webp",
+   "light": "img/wp/auto/20261101-g06l.webp",
+   "theme": "Прожекторы сквозь дым",
+   "by": "generated",
+   "d": "2026-11-01"
+  },
+  {
+   "src": "img/wp/auto/20261101-g07.webp",
+   "light": "img/wp/auto/20261101-g07l.webp",
+   "theme": "Разметка поля сверху",
+   "by": "generated",
+   "d": "2026-11-01"
+  },
+  {
+   "src": "img/wp/auto/20261101-g08.webp",
+   "light": "img/wp/auto/20261101-g08l.webp",
+   "theme": "Мяч у штанги",
+   "by": "generated",
+   "d": "2026-11-01"
+  },
+  {
+   "src": "img/wp/auto/20261101-g09.webp",
+   "light": "img/wp/auto/20261101-g09l.webp",
+   "theme": "Скамейка запасных",
+   "by": "generated",
+   "d": "2026-11-01"
+  },
+  {
+   "src": "img/wp/auto/20261101-g10.webp",
+   "light": "img/wp/auto/20261101-g10l.webp",
+   "theme": "Трофей в свете",
+   "by": "generated",
+   "d": "2026-11-01"
+  },
+  {
+   "src": "img/wp/auto/20261101-g11.webp",
+   "light": "img/wp/auto/20261101-g11l.webp",
+   "theme": "Стадион на рассвете",
+   "by": "generated",
+   "d": "2026-11-01"
+  },
+  {
+   "src": "img/wp/auto/20261101-g12.webp",
+   "light": "img/wp/auto/20261101-g12l.webp",
+   "theme": "Свисток судьи",
+   "by": "generated",
+   "d": "2026-11-01"
   }
  ]
 }
