@@ -4171,6 +4171,11 @@ body.is-prev .pcsv{margin-top:8px; margin-bottom:10px}
 :root[data-theme="light"] body.is-prev .pcsv{border:2px solid var(--frame); box-shadow:0 0 0 4px var(--bg), 0 0 0 5px var(--frame-soft), var(--shadow)}
 :root[data-theme="light"] body.is-prev .pc-rkw{border-color:var(--frame-soft)}
 
-/* v20261101z4: свои наборы в рейтинге отмечены изумрудной полоской (раньше синей) */
-.pc-rk.mine{box-shadow:inset 6px 0 0 var(--em-hi), inset 7px 0 0 rgba(0,0,0,.18)}
-.pc-rk.mine.m1, .pc-rk.mine.m2, .pc-rk.mine.m3{box-shadow:inset 6px 0 0 var(--em-hi), inset 7px 0 0 rgba(0,0,0,.18)}
+/* v20261101z5: свои наборы — тонкая изумрудная полоска как на логотипе, с золотой нитью */
+.pc-rk.mine, .pc-rk.mine.m1, .pc-rk.mine.m2, .pc-rk.mine.m3{box-shadow:none}
+.pc-rkw .pc-rk.mine::before{content:""; position:absolute; top:7px; bottom:7px; left:0; width:3px; border-radius:3px; pointer-events:none;
+  background:linear-gradient(180deg,#0a9a52 0%,#22dc7c 38%,#12b862 62%,#078a47 100%);
+  box-shadow:4px 0 0 -1px rgba(227,185,85,.75), 0 0 8px rgba(34,220,124,.35)}
+:root[data-theme="light"] .pc-rkw .pc-rk.mine::before{
+  background:linear-gradient(180deg,#067a42 0%,#14b865 38%,#0b9a52 62%,#056a39 100%);
+  box-shadow:4px 0 0 -1px rgba(184,134,42,.8), 0 0 6px rgba(11,154,82,.22)}
