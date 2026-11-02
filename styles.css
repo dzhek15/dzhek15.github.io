@@ -4392,3 +4392,6 @@ body.is-prev .pc-vars .pc-vr.open, body.is-prev .pc-vars .pc-vr.open.win{backgro
 /* полоса «Матчи»: заголовок слева, кнопка справа, по центру по высоте */
 body.is-prev .aitbl-bar{justify-content:space-between}
 .aitbl-t{font-size:15px; letter-spacing:.14em}
+/* «Матчи» строго по центру полосы, кнопка справа */
+body.is-prev .aitbl-bar{position:relative; justify-content:flex-end}
+body.is-prev .aitbl-bar .aitbl-t{position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); padding-left:.14em; pointer-events:none}
