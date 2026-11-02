@@ -1666,7 +1666,14 @@ body.is-prev .row .pick.ai-pk{opacity:1; border-color:var(--ai-pk-bd); color:var
 .pc-wc b{font:700 16px/1 var(--f-num)}
 .pc-wc b small{display:block; margin-top:2px; font:600 9px/1 "IBM Plex Sans",sans-serif; color:var(--warn); text-transform:uppercase; letter-spacing:.04em}
 .pc-wc.cur{border-color:var(--warn)}
-.pc-wc span{color:var(--muted); line-height:1.25}
+.pc-wc span{display:flex; justify-content:space-between; align-items:baseline; gap:4px; width:100%; padding:0 6px; color:var(--muted); line-height:1.25; font-size:11px}
+.pc-wc span i{font-style:normal; text-align:left; flex:1 1 auto; min-width:0; white-space:nowrap}
+.pc-wc span strong{flex:0 0 auto}
+.pc-wc span em{margin-left:0}
+.pc-wc.best{border-color:#58c883; box-shadow:inset 0 0 0 1px rgba(88,200,131,.35)}
+.pc-wm{grid-column:1 / -1; margin:2px 4px 0; text-align:center; font-size:12.5px; line-height:1.35; color:var(--ink)}
+.pc-wn{grid-column:1 / -1; margin:0 4px; text-align:center; font-size:10.5px; line-height:1.35; color:var(--muted)}
+.pc-wn b{color:var(--ink); font-weight:600}
 .pc-wc strong{color:var(--ink); font-family:var(--f-num)}
 .pc-wc em{font-style:normal; font:600 11px var(--f-num); margin-left:4px}
 .pc-wc em.up{color:#58c883}
@@ -4337,3 +4344,7 @@ body.is-prev .pc-vars .pc-vr.open, body.is-prev .pc-vars .pc-vr.open.win{backgro
 .cmp-chip.drop-b::before,.cmp-chip.drop-a::after{content:""; position:absolute; top:-3px; bottom:-3px; width:3px; border-radius:2px; background:var(--frame,var(--brand-gold)); box-shadow:0 0 8px var(--frame-soft,rgba(201,162,75,.6))}
 .cmp-chip.drop-b::before{left:-5px} .cmp-chip.drop-a::after{right:-5px}
 .cmp-ghost{position:fixed; z-index:10000; pointer-events:none; margin:0; background:var(--surface-2); color:var(--ink); border-color:var(--frame,var(--brand-gold)); box-shadow:0 10px 24px -8px rgba(0,0,0,.55), 0 0 0 1px var(--frame-soft,rgba(201,162,75,.5)); transform:scale(1.06); opacity:.97}
+
+/* шапка столбца: матч перекрыт полностью (в наборе есть 1, X и 2) */
+.pc-vh span.cov{color:var(--cold); font-weight:700; text-decoration:underline; text-decoration-color:currentColor; text-underline-offset:3px; text-decoration-thickness:2px}
+:root[data-theme="light"] .pc-vh span.cov{color:#1F8A4C}

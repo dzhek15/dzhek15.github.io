@@ -9794,21 +9794,42 @@
       });
       h += '</div>';
       if(wiOk && pcsv.what === j){
-        var lw = liveOutcome(m), wi = { "1": [0, 0], "X": [0, 0], "2": [0, 0] };
+        var lw = liveOutcome(m), wi = { "1": [0, 0, 0], "X": [0, 0, 0], "2": [0, 0, 0] }, now14 = 0;
         vst.forEach(function(x){
+          if(n - x.miss >= 14) now14++;
           OUT.forEach(function(o){
             var add = rows[x.i].charAt(j) === o ? 1 : 0;
             if(n - x.miss - (1 - add) >= PAY) wi[o][1]++;
             if(x.h + add >= PAY) wi[o][0]++;
+            if(n - x.miss - (1 - add) >= 14) wi[o][2]++;
           });
         });
+        var wdl = function(d){ return d ? '<em class="' + (d > 0 ? "up" : "dn") + '">' + (d > 0 ? "+" : "−") + fmt(Math.abs(d)) + '</em>' : ''; };
+        var wk = function(o){ return [wi[o][2], wi[o][0], wi[o][1], c[o] || 0]; };
+        var wcmp = function(a1, b1){ var x1 = wk(a1), y1 = wk(b1); for(var q = 0; q < 4; q++){ if(x1[q] !== y1[q]) return y1[q] - x1[q]; } return 0; };
+        var wo = OUT.slice().sort(wcmp), same3 = wk(wo[0]).slice(0, 3).join() === wk(wo[2]).slice(0, 3).join();
+        var wmsg;
+        if(same3){
+          wmsg = 'Исход этого матча пока ничего не меняет: выплаты и шансы у всех вариантов одинаковы при любом результате.' +
+            (c[wo[0]] !== c[wo[2]] ? ' Разница только в том, сколько вариантов угадают матч: больше всего при <b>' + wo[0] + '</b> (' + fmt(c[wo[0]] || 0) + ' из ' + fmt(total) + ').' : '');
+        } else {
+          var bd = [], w0 = wi[wo[0]];
+          if(w0[0] - now9) bd.push('в выплатах ' + (w0[0] - now9 > 0 ? '+' : '−') + fmt(Math.abs(w0[0] - now9)));
+          if(w0[2] - now14) bd.push('могут 14+ ' + (w0[2] - now14 > 0 ? '+' : '−') + fmt(Math.abs(w0[2] - now14)));
+          if(w0[1] - can9) bd.push('в игре ' + (w0[1] - can9 > 0 ? '+' : '−') + fmt(Math.abs(w0[1] - can9)));
+          wmsg = 'Для этого набора лучше всего <b>' + wo[0] + '</b>' + (bd.length ? ' (' + bd.join(', ') + ')' : '') + ', хуже всего <b>' + wo[2] + '</b>.';
+        }
         h += '<div class="pc-wi"><div class="pc-wt">Если в матче № ' + (j + 1) + ' выйдет…</div>';
         OUT.forEach(function(o){
-          var d0 = wi[o][0] - now9, d1 = wi[o][1] - can9;
-          h += '<div class="pc-wc' + (lw && lw.o === o ? " cur" : "") + '"><b>' + o + (lw && lw.o === o ? '<small>сейчас</small>' : '') + '</b>' +
-            '<span>9+ <strong>' + fmt(wi[o][0]) + '</strong>' + (d0 ? '<em class="' + (d0 > 0 ? "up" : "dn") + '">' + (d0 > 0 ? "+" : "−") + fmt(Math.abs(d0)) + '</em>' : '') + '</span>' +
-            '<span>живых <strong>' + fmt(wi[o][1]) + '</strong>' + (d1 ? '<em class="' + (d1 > 0 ? "up" : "dn") + '">' + (d1 > 0 ? "+" : "−") + fmt(Math.abs(d1)) + '</em>' : '') + '</span></div>';
+          var isB = !same3 && o === wo[0];
+          h += '<div class="pc-wc' + (lw && lw.o === o ? " cur" : "") + (isB ? " best" : "") + '"><b>' + o + (lw && lw.o === o ? '<small>сейчас</small>' : '') + '</b>' +
+            '<span title="Сколько вариантов набора угадали бы этот матч"><i>угадают</i><strong>' + fmt(c[o] || 0) + '</strong></span>' +
+            '<span title="Сколько вариантов уже имели бы ' + PAY + ' и больше угаданных матчей"><i>выплата ' + PAY + '+</i><strong>' + fmt(wi[o][0]) + '</strong>' + wdl(wi[o][0] - now9) + '</span>' +
+            '<span title="Сколько вариантов ещё смогут набрать 14 и больше"><i>шанс 14+</i><strong>' + fmt(wi[o][2]) + '</strong>' + wdl(wi[o][2] - now14) + '</span>' +
+            '<span title="Сколько вариантов ещё смогут набрать ' + PAY + ' и больше"><i>в игре</i><strong>' + fmt(wi[o][1]) + '</strong>' + wdl(wi[o][1] - can9) + '</span></div>';
         });
+        h += '<p class="pc-wm">' + wmsg + '</p>' +
+          '<p class="pc-wn"><b>угадают</b> — варианты с этим исходом. <b>выплата ' + PAY + '+</b> — уже угадано ' + PAY + ' и больше. <b>шанс 14+</b> и <b>в игре</b> — кто ещё может дойти до 14 или до ' + PAY + '. Цифры с +/− — изменение к текущему положению.';
         h += '</div>';
       }
     });
@@ -9867,7 +9888,12 @@
     }
     var cols = n % 5 === 0 ? 5 : n % 4 === 0 ? 4 : n % 6 === 0 ? 6 : 8;
     h += '<div class="pc-vars" style="--n:' + n + ';--cols:' + cols + '"><div class="pc-vr pc-vh"><span>№</span>';
-    for(var j = 0; j < n; j++) h += '<span>' + (j + 1) + '</span>';
+    for(var j = 0; j < n; j++){
+      var cvs = { "1": 0, "X": 0, "2": 0 };
+      rows.forEach(function(r0){ var o0 = r0.charAt(j); if(cvs[o0] != null) cvs[o0] = 1; });
+      var cvAll = cvs["1"] && cvs["X"] && cvs["2"];
+      h += '<span' + (cvAll ? ' class="cov" title="Матч перекрыт полностью: в наборе есть все три исхода"' : '') + '>' + (j + 1) + '</span>';
+    }
     h += '<span>угад.</span></div>';
     part.forEach(function(x){
       var r = src[x.i], vkey = view + ":" + x.i, vop = pcsv.vopen === vkey;
