@@ -7744,7 +7744,7 @@
       (function(){
         var curN = String(state.tirazh || ""), done = aj && String(aj.number) === curN && curN !== "";
         var stT = as && as.start ? fmtStamp(as.start, true) : "", sameDraw = as && (!as.number || String(as.number) === curN);
-        var msk = new Date(Date.now() + 3 * 3600000), beforeSched = msk.getUTCHours() * 60 + msk.getUTCMinutes() < 11 * 60 + 7;
+        var msk = new Date(Date.now() + 3 * 3600000), beforeSched = msk.getUTCHours() * 60 + msk.getUTCMinutes() < 11 * 60 + 1;
         var lv, sTxt, at;
         var grAct = gr && gr.status !== "completed", grHow = gr && (gr.event === "schedule" ? "по расписанию" : "запущен вами");
         if(grAct){ lv = 1; at = gr.run_started_at || gr.created_at;
@@ -7755,9 +7755,9 @@
         else if(done){ lv = 0; at = aj.at || (as && as.end); sTxt = "проведён для тиража №" + curN + (as && as.start && sameDraw ? " (" + (as.event === "schedule" ? "по расписанию" : "вручную") + "), начало " + stT + (as.end ? ", опубликован " + fmtStamp(as.end, true) : "") : ", опубликован " + fmtStamp(aj.at, true)) + "; автозапуск сегодня больше не нужен"; }
         else if(as && as.state === "run"){ lv = 2; at = as.start; sTxt = "начался в " + stT + ", но больше часа без итога — похоже, прервался"; }
         else if(as && as.state === "fail" && ageMin(as.start) <= 20 * 60){ lv = 2; at = as.end || as.start; sTxt = "прервался с ошибкой, начало " + stT; }
-        else { lv = 2; at = null; sTxt = "не начался" + (beforeSched ? " — запуск в 11:07 МСК" : " — GitHub ещё не запустил задание (по расписанию 11:07, запасные запуски в 11:17, 11:27 и 11:37 МСК)") +
+        else { lv = 2; at = null; sTxt = "не начался" + (beforeSched ? " — запуск в 11:01 МСК" : " — GitHub ещё не запустил задание (по расписанию 11:01, запасные запуски в 11:17, 11:27 и 11:37 МСК)") +
           (aj && aj.number ? "; последний разбор — тираж №" + aj.number : ""); }
-        rows.push({ n: "Разбор ИИ", d: "каждый день в 11:07 МСК, запасные запуски 11:17, 11:27, 11:37", at: at, lv: lv, s: sTxt, quiet: !done && beforeSched && !(as && as.state === "run") });
+        rows.push({ n: "Разбор ИИ", d: "каждый день в 11:01 МСК, запасные запуски 11:17, 11:27, 11:37", at: at, lv: lv, s: sTxt, quiet: !done && beforeSched && !(as && as.state === "run") });
       })();
       dstat = { at: Date.now(), res: rows };
       /* до 11:00 МСК «не начался» — это норма, точку на кнопке он не красит */
@@ -7784,7 +7784,7 @@
       '<p class="ev-note">Время — московское. Основной источник — totobrief, запасной — stavka.tv: если один молчит, сайт берёт данные из другого и из зеркала на GitHub.</p>' +
       (ownTok() ? '<div class="ai-run-own"><b>Разбор ИИ — только для владельца</b><p class="ev-note" id="aiRunSt">Узнаю у GitHub…</p>' +
         '<button type="button" class="btn" id="aiRunGo" disabled>Запустить разбор сейчас</button>' +
-        '<p class="ev-note">Пока идёт разбор, новый запустить нельзя. Если текущий тираж уже разобран — вашим запуском или по расписанию, — автозапуск с 11:07 до 11:37 его пропускает.</p></div>' : '');
+        '<p class="ev-note">Пока идёт разбор, новый запустить нельзя. Если текущий тираж уже разобран — вашим запуском или по расписанию, — автозапуск с 11:01 до 11:37 его пропускает.</p></div>' : '');
       if(ownTok()){ aiRunStatus(); $("aiRunGo").onclick = aiRunStart; }
     });
   }
