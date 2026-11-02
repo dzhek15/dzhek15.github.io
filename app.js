@@ -9465,6 +9465,89 @@
         '<button type="button" class="cmp-put-b" data-i="' + i + '" title="Поставить исходы этого варианта в таблицу купона">В купон</button></div>';
     }).join("") + '<p class="ev-note">Исходы ставятся в таблицу купона на главной; «Назад» вернёт прежний купон.</p></div>';
   }
+  /* перестановка вариантов: тянем плашку в строке вариантов (мышь, палец с задержкой, Alt+стрелки); цвет и номер идут по месту */
+  var cmpDragAt = 0;
+  function cmpMove(from, to){
+    var all = window.__cmpSets || [];
+    if(from === to || !all[from] || to < 0 || to >= all.length) return;
+    var perm = all.map(function(x, i){ return i; }), mv = perm.splice(from, 1)[0]; perm.splice(to, 0, mv);
+    var nh = {}; perm.forEach(function(old, k){ if(cmpHide[old]) nh[k] = true; });
+    if(window.__cmpMain && !window.__cmpShared){
+      var o = cmpvLoad(); if(o.items.length !== all.length) return;
+      o.items = perm.map(function(old){ return o.items[old]; }); cmpvSave(o); cmpvRender(); cmpvRefresh();
+      return;
+    }
+    window.__cmpSets = perm.map(function(old){ return all[old]; });
+    if(window.__cmpShItems && window.__cmpShItems.length === all.length) window.__cmpShItems = perm.map(function(old){ return window.__cmpShItems[old]; });
+    cmpHide = nh; cmpRender();
+  }
+  function cmpDragBind(){
+    var leg = $("evBody").querySelector(".cmp-leg"); if(!leg) return;
+    var chips = [].slice.call(leg.querySelectorAll(".cmp-chip")); if(chips.length < 2) return;
+    chips.forEach(function(ch){
+      ch.addEventListener("keydown", function(e){
+        if(!e.altKey || (e.key !== "ArrowLeft" && e.key !== "ArrowRight")) return;
+        e.preventDefault(); var i = Number(ch.getAttribute("data-i")), to = i + (e.key === "ArrowLeft" ? -1 : 1);
+        cmpMove(i, to);
+        var nb = $("evBody").querySelector('.cmp-chip[data-i="' + Math.max(0, Math.min(chips.length - 1, to)) + '"]'); if(nb) nb.focus();
+      });
+      ch.addEventListener("pointerdown", function(e){
+        if(e.button || (e.target.closest && e.target.closest(".cmp-x"))) return;
+        var touch = e.pointerType === "touch", sx = e.clientX, sy = e.clientY, on = false, timer = 0, ghost = null, from = Number(ch.getAttribute("data-i")), tgt = -1, after = false;
+        var stopTouch = function(ev){ if(on && ev.cancelable) ev.preventDefault(); };
+        function mark(){
+          chips.forEach(function(c){ c.classList.remove("drop-b", "drop-a"); });
+          if(tgt >= 0 && tgt !== from) chips[tgt].classList.add(after ? "drop-a" : "drop-b");
+        }
+        function find(x, y){
+          var best = -1, bd = 1e9;
+          chips.forEach(function(c, k){
+            var r = c.getBoundingClientRect(), cx = (r.left + r.right) / 2, cy = (r.top + r.bottom) / 2;
+            var d = (Math.abs(y - cy) > r.height / 2 + 6 ? 1000 : 0) + Math.abs(x - cx);
+            if(d < bd){ bd = d; best = k; after = x > cx; }
+          });
+          tgt = best; mark();
+        }
+        function begin(){
+          on = true; ch.classList.add("drag-src"); leg.classList.add("dragging");
+          ghost = ch.cloneNode(true); ghost.className = "cmp-chip cmp-ghost"; ghost.removeAttribute("data-i");
+          var r = ch.getBoundingClientRect(); ghost.style.width = r.width + "px"; document.body.appendChild(ghost);
+          move(sx, sy);
+          try{ ch.setPointerCapture(e.pointerId); }catch(er){}
+          try{ if(navigator.vibrate) navigator.vibrate(15); }catch(er){}
+        }
+        function move(x, y){ ghost.style.left = (x - ghost.offsetWidth / 2) + "px"; ghost.style.top = (y - ghost.offsetHeight - 6) + "px"; find(x, y); }
+        function end(commit){
+          clearTimeout(timer);
+          document.removeEventListener("pointermove", mv); document.removeEventListener("pointerup", up); document.removeEventListener("pointercancel", cn);
+          document.removeEventListener("touchmove", stopTouch);
+          if(!on) return;
+          on = false; if(ghost && ghost.parentNode) ghost.parentNode.removeChild(ghost);
+          ch.classList.remove("drag-src"); leg.classList.remove("dragging"); chips.forEach(function(c){ c.classList.remove("drop-b", "drop-a"); });
+          cmpDragAt = Date.now();
+          if(commit && tgt >= 0){
+            var to = tgt + (after ? 1 : 0); if(to > from) to--;
+            cmpMove(from, to);
+          }
+        }
+        function mv(ev){
+          if(ev.pointerId !== e.pointerId) return;
+          if(!on){
+            var dx = ev.clientX - sx, dy = ev.clientY - sy;
+            if(Math.abs(dx) + Math.abs(dy) < 7) return;
+            if(touch){ clearTimeout(timer); end(false); return; }   /* палец поехал раньше выдержки — это прокрутка страницы */
+            begin(); return;
+          }
+          ev.preventDefault(); move(ev.clientX, ev.clientY);
+        }
+        function up(ev){ if(ev.pointerId === e.pointerId) end(true); }
+        function cn(ev){ if(ev.pointerId === e.pointerId) end(false); }
+        document.addEventListener("pointermove", mv); document.addEventListener("pointerup", up); document.addEventListener("pointercancel", cn);
+        document.addEventListener("touchmove", stopTouch, { passive: false });
+        if(touch) timer = setTimeout(begin, 320);
+      });
+    });
+  }
   function cmpRender(){
     var ms = window.__cmpMs || (window.__cmpMain ? state.matches : (state.prev ? state.prev.matches : null)); if(!ms) return;
     var n = ms.length, all = window.__cmpSets || [];
@@ -9475,7 +9558,7 @@
       return '<button type="button" role="tab" data-m="' + t[0] + '" aria-selected="' + (cmpMode === t[0]) + '">' + t[1] + '</button>'; }).join("") + '</div>';
     var leg = '<div class="cmp-leg">' + all.map(function(st, i){
       return '<button type="button" class="cmp-chip' + (cmpHide[i] ? ' off' : '') + '" data-i="' + i + '" title="' + escHtml(cmpNmT(st)) + ' — нажмите, чтобы скрыть или показать"><i style="background:' + CMP_COL[i % CMP_COL.length] + '">' + (i + 1) + '</i><span class="cmp-cl">' + escHtml(cmpLab(st)) + '</span>' + (window.__cmpMain && !window.__cmpShared ? '<u class="cmp-x" data-d="' + i + '" title="Убрать из сравнения">\u00d7</u>' : '') + '</button>';
-    }).join("") + '</div>';
+    }).join("") + '</div>' + (all.length > 1 ? '<p class="cmp-dh">Перетащите плашку, чтобы поменять варианты местами (на телефоне — нажмите и подержите)</p>' : '');
     var h = all.length ? tabs + leg : '', uni = 0;
     if(!all.length) h += '<p class="ev-note">В сравнении пока ничего нет. Загрузите CSV кнопкой ниже или вернитесь к таблице и нажмите «+ В сравнение».</p>';
     else if(!sets.length) h += '<p class="ev-note">Все наборы скрыты: нажмите на название набора выше.</p>';
@@ -9537,12 +9620,14 @@
     }); });
     [].slice.call($("evBody").querySelectorAll(".cmp-tabs button")).forEach(function(b){ b.addEventListener("click", function(){ cmpMode = b.getAttribute("data-m"); cmpRender(); }); });
     [].slice.call($("evBody").querySelectorAll(".cmp-chip")).forEach(function(b){ b.addEventListener("click", function(e){
+      if(Date.now() - cmpDragAt < 350) return;
       var x = e.target.closest ? e.target.closest(".cmp-x") : null;
       if(x){ cmpvRemove(Number(x.getAttribute("data-d"))); return; }
       var i = Number(b.getAttribute("data-i")); cmpHide[i] = !cmpHide[i];
       if(window.__cmpMain && !window.__cmpShared){ var oh = cmpvLoad(); oh.hide = oh.items.filter(function(it, k){ return cmpHide[k]; }).map(cmpvKey); cmpvSave(oh); }
       cmpRender();
     }); });
+    cmpDragBind();
   }
   function renderPrevCsv(){
 
