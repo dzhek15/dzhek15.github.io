@@ -4388,3 +4388,7 @@ body.is-prev .pc-vars .pc-vr.open, body.is-prev .pc-vars .pc-vr.open.win{backgro
 .pc-lvrow{display:flex; justify-content:center; margin:9px 0 0}
 .pc-lvrow + .pc-lnote{margin-top:6px}
 .pc-lvt{margin-left:0; vertical-align:baseline}
+
+/* полоса «Матчи»: заголовок слева, кнопка справа, по центру по высоте */
+body.is-prev .aitbl-bar{justify-content:space-between}
+.aitbl-t{font-size:15px; letter-spacing:.14em}

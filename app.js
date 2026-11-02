@@ -2265,6 +2265,20 @@
       return false;
     }
     var down = !!a && (b[0] < a[0] || b[1] < a[1]);
+    /* перекрёстный счёт (1:2 против 2:1): отставанием источника это не объяснить — один из источников ошибся
+       (бывает, totobrief выдаёт счёт с перепутанными хозяевами и гостями). Верим Flashscore (лента и свежий снимок),
+       а totobrief по этому матчу дальше не слушаем, пока он спорит с лентой */
+    var cross = !!a && !m.res && ((b[0] < a[0] && b[1] > a[1]) || (b[0] > a[0] && b[1] < a[1]));
+    if(cross && src >= SRC_MIR){
+      m.tbX = 1; delete m.dn; m.gmax = b.slice();
+      dbgLog("score", tag + ": " + old + " → " + sc + " от " + SRC_NAME[src] + " — перекрёстный счёт, верим Flashscore, totobrief по матчу игнорируем");
+      m.score = sc; m.scAt = now; m.scT = t; m.scSrc = src; m.scHi = now;
+      return true;
+    }
+    if(cross && src === SRC_TB && m.tbX){
+      dbgLog("rej", tag + ": " + old + " → " + sc + " от totobrief отклонено: спорит с Flashscore");
+      return false;
+    }
     if(!down && m.dn) delete m.dn;                           /* любой источник снова не ниже принятого — ожидание отката сбрасываем */
     if(down && !m.res){
       var why = "";
