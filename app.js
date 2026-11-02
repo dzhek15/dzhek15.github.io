@@ -9751,12 +9751,12 @@
       if(liveN) st.forEach(function(x){ lcnt[x.e] = (lcnt[x.e] || 0) + 1; }); else lcnt = lad;
       for(var k = n; k >= PAY; k--){ lv.push({ k: k, c: lcnt[k] || 0, f: liveN ? (lad[k] || 0) : 0 }); }
       lv.forEach(function(x){ if(x.c > mx) mx = x.c; });
-      h += '<div class="pc-sub">Сколько угадали' + (liveN ? ' <span class="pc-lvt"><i></i>в лайве</span>' : '') + '</div><div class="pc-lad' + (liveN ? ' is-lv' : '') + '" style="--cols:' + lv.length + '">';
+      h += '<div class="pc-sub">Сколько угадали</div><div class="pc-lad' + (liveN ? ' is-lv' : '') + '" style="--cols:' + lv.length + '">';
       lv.forEach(function(x){
         h += '<button type="button" class="pc-lb' + (x.k >= PAY ? " pay" : "") + (x.c ? "" : " zero") + '" data-h="' + x.k + '" data-p="' + lk + '" aria-pressed="' + (flt === lk + x.k) + '"' + (x.c ? '' : ' disabled') +
           ' title="' + x.k + ' из ' + lbase + (liveN ? ' (с учётом идущих матчей)' : '') + ': ' + fmt(x.c) + ' вар.' + (liveN ? '; по итогам сыгранных: ' + fmt(x.f) : '') + '"><b>' + (x.c ? fmt(x.c) : "·") + '</b><i><u style="height:' + (x.c ? Math.max(4, Math.round(x.c / mx * 100)) : 0) + '%"></u></i><span>' + x.k + '</span></button>';
       });
-      h += '</div><p class="pc-lnote">' + (liveN ? 'Варианты, угадывающие ' + PAY + ' и больше матчей сейчас, с учётом идущих' : 'Варианты, угадавшие ' + PAY + ' и больше матчей') + '</p>';
+      h += '</div>' + (liveN ? '<div class="pc-lvrow"><span class="pc-lvt"><i></i>в лайве</span></div>' : '') + '<p class="pc-lnote">' + (liveN ? 'Варианты, угадывающие ' + PAY + ' и больше матчей сейчас, с учётом идущих' : 'Варианты, угадавшие ' + PAY + ' и больше матчей') + '</p>';
     }
     /* весь купон: сколько вариантов стоит на каждый исход */
     var unc = [];

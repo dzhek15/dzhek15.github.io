@@ -4385,3 +4385,6 @@ body.is-prev .pc-vars .pc-vr.open, body.is-prev .pc-vars .pc-vr.open.win{backgro
 :root[data-theme="light"] .pc-lvt i{background:#B3261E}
 :root[data-theme="light"] .pc-lad.is-lv .pc-lb{border-color:rgba(179,38,30,.35)}
 @media (prefers-reduced-motion:reduce){ .pc-lvt i{animation:none} }
+.pc-lvrow{display:flex; justify-content:center; margin:9px 0 0}
+.pc-lvrow + .pc-lnote{margin-top:6px}
+.pc-lvt{margin-left:0; vertical-align:baseline}
