@@ -9750,7 +9750,7 @@
       (hasSys ? '<div><span>Строк</span><b>' + fmt(sysL.length) + '</b></div>' : '') +
       '<div><span>Вариантов</span><b>' + fmt(total) + '</b></div>' +
       '<div><span>Сумма</span><b>' + fmt((function(){ var a0 = pcsv.sets[pcsv.act]; return a0 && a0.pr && a0.rows && a0.rows.length === total ? a0.pr : total * (Number(state.price) || 0); })()) + ' ₽</b></div>' +
-      '<div data-k="best"><span>Лучший</span><b>' + (played ? best + ' из ' + played : '—') + '</b>' + (liveN ? '<small class="pc-lv">live ' + lvB + ' из ' + pe + '</small>' : '') + '</div>' +
+      '<div data-k="best"' + (liveN ? ' class="is-lv"' : '') + '><span>Лучший' + (liveN ? ' · сейчас' : '') + '</span><b>' + (liveN ? lvB + ' из ' + pe : played ? best + ' из ' + played : '—') + '</b>' + (liveN ? '<small class="pc-lv">по итогам ' + (played ? best + ' из ' + played : '—') + '</small>' : '') + '</div>' +
       '<div data-k="now9"><span>9+ сейчас</span><b>' + fmt(now9) + '</b>' + (liveN ? '<small class="pc-lv">live ' + fmt(lvW) + '</small>' : '') + '</div>' +
       '<div data-k="can9"><span>Могут 9+</span><b>' + fmt(can9) + '</b></div>' +
       '<div data-k="can15"><span>Без ошибок</span><b>' + fmt(can15) + '</b></div></div>';
