@@ -2662,9 +2662,25 @@
     return b;
   }
 
-  /* таблица «ИИ варианты» в просмотре всегда развёрнута (старый выбор «свернуть» сбрасываем) */
-  document.body.classList.remove("aitbl-off");
-  try{ localStorage.removeItem("dz_aitbl_off"); }catch(e){}
+  /* таблица «ИИ варианты» в просмотре: сворачивается кнопкой, выбор помнится */
+  (function(){
+    var bar = document.getElementById("aiTblBar"), btn = document.getElementById("aiTblBtn");
+    if(!bar || !btn) return;
+    var KEY = "dz_aitbl_off";
+    function apply(off){
+      document.body.classList.toggle("aitbl-off", off);
+      btn.setAttribute("aria-expanded", off ? "false" : "true");
+      btn.querySelector("span").textContent = off ? "Развернуть" : "Свернуть";
+    }
+    var off0 = false;
+    try{ off0 = localStorage.getItem(KEY) === "1"; }catch(e){}
+    apply(off0);
+    btn.addEventListener("click", function(){
+      var off = !document.body.classList.contains("aitbl-off");
+      apply(off);
+      try{ localStorage.setItem(KEY, off ? "1" : "0"); }catch(e){}
+    });
+  })();
 
   /* ---------- Составы и новости по матчу ----------
      Заголовки собирает GitHub Actions из Google News раз в 2 часа (data/api/news.json),
