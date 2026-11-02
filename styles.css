@@ -4376,3 +4376,12 @@ body.is-prev .pc-vars .pc-vr.open, body.is-prev .pc-vars .pc-vr.open.win{backgro
 :root[data-theme="light"] .prev-bar .pb-c b{color:#0A0F10}
 :root[data-theme="light"] .prev-bar #pbBest b, :root[data-theme="light"] .prev-bar #pbSum b, :root[data-theme="light"] .prev-bar .pb-ai b{color:#7A5A12}
 :root[data-theme="light"] .prev-bar .pb-c[data-k="live"] b{color:#B3261E}
+
+/* лесенка «Сколько угадали» в лайве */
+.pc-lvt{display:inline-flex; align-items:center; gap:5px; margin-left:8px; padding:2px 7px; border:1px solid #e0483e; border-radius:999px; color:#ff8c82; font:700 10px/1 "IBM Plex Sans",sans-serif; letter-spacing:.06em; text-transform:uppercase; vertical-align:2px}
+.pc-lvt i{width:6px; height:6px; border-radius:50%; background:#e0483e; animation:lvDot 1.4s ease-in-out infinite}
+.pc-lad.is-lv .pc-lb{border-color:rgba(224,72,62,.35)}
+:root[data-theme="light"] .pc-lvt{color:#B3261E; border-color:#B3261E}
+:root[data-theme="light"] .pc-lvt i{background:#B3261E}
+:root[data-theme="light"] .pc-lad.is-lv .pc-lb{border-color:rgba(179,38,30,.35)}
+@media (prefers-reduced-motion:reduce){ .pc-lvt i{animation:none} }
