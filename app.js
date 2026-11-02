@@ -7758,7 +7758,12 @@
       (function(){
         var curN = String(state.tirazh || ""), done = aj && String(aj.number) === curN && curN !== "";
         var stT = as && as.start ? fmtStamp(as.start, true) : "", sameDraw = as && (!as.number || String(as.number) === curN);
-        var msk = new Date(Date.now() + 3 * 3600000), beforeSched = msk.getUTCHours() * 60 + msk.getUTCMinutes() < 11 * 60 + 1;
+        /* два прохода на тираж: вечерний (накануне закрытия с 22:01 МСК) и контрольный (в день закрытия с 11:01 МСК) */
+        var msk = new Date(Date.now() + 3 * 3600000), mm = msk.getUTCHours() * 60 + msk.getUTCMinutes();
+        var dayS = function(off){ return new Date(Date.now() + 3 * 3600000 + off * 86400000).toISOString().slice(0, 10); };
+        var dl = String(state.deadline || "").slice(0, 10), eveOpen = (dl === dayS(1) && mm >= 22 * 60 + 1) || (dl === dayS(0) && mm < 11 * 60 + 1),
+          morOpen = dl === dayS(0) && mm >= 11 * 60 + 1, ctrlDone = !!(aj && aj.stage === "morning"),
+          beforeSched = !eveOpen && !morOpen;   /* сейчас ни один проход ещё не должен идти */
         var lv, sTxt, at;
         var grAct = gr && gr.status !== "completed", grHow = gr && (gr.event === "schedule" ? "по расписанию" : "запущен вами");
         if(grAct){ lv = 1; at = gr.run_started_at || gr.created_at;
@@ -7766,15 +7771,18 @@
             (done ? "; сейчас на сайте разбор, опубликованный в " + fmtStamp(aj.at, true) + ", он будет заменён" : ""); }
         else if(as && as.state === "run" && ageMin(as.start) <= 60){ lv = 1; at = as.start; sTxt = "идёт (" + (as.event === "schedule" ? "по расписанию" : "запущен вручную") + "), начало " + stT +
             (done ? "; сейчас на сайте разбор, опубликованный в " + fmtStamp(aj.at, true) + ", он будет заменён" : ""); }
-        else if(done){ lv = 0; at = aj.at || (as && as.end); sTxt = "проведён для тиража №" + curN + (as && as.start && sameDraw ? " (" + (as.event === "schedule" ? "по расписанию" : "вручную") + "), начало " + stT + (as.end ? ", опубликован " + fmtStamp(as.end, true) : "") : ", опубликован " + fmtStamp(aj.at, true)) + "; автозапуск сегодня больше не нужен"; }
+        else if(done){ lv = morOpen && !ctrlDone && mm >= 11 * 60 + 40 ? 1 : 0; at = aj.at || (as && as.end); sTxt = (aj.stage === "morning" ? "контрольный проход" : aj.stage === "evening" ? "вечерний проход" : "разбор") + " проведён для тиража №" + curN + (as && as.start && sameDraw ? " (" + (as.event === "schedule" ? "по расписанию" : "вручную") + "), начало " + stT + (as.end ? ", опубликован " + fmtStamp(as.end, true) : "") : ", опубликован " + fmtStamp(aj.at, true)) + (ctrlDone ? "; автозапуск по этому тиражу больше не нужен" : morOpen ? (lv ? "; контрольный проход запаздывает: GitHub должен был запустить его в 11:01 МСК" : "; контрольный проход обновит всё в 11:01 МСК") : "; контрольный проход обновит всё в 11:01 МСК в день закрытия"); }
         else if(as && as.state === "run"){ lv = 2; at = as.start; sTxt = "начался в " + stT + ", но больше часа без итога — похоже, прервался"; }
         else if(as && as.state === "fail" && ageMin(as.start) <= 20 * 60){ lv = 2; at = as.end || as.start; sTxt = "прервался с ошибкой, начало " + stT; }
-        else { lv = 2; at = null; sTxt = "не начался" + (beforeSched ? " — запуск в 11:01 МСК" : " — GitHub ещё не запустил задание (по расписанию 11:01, запасные запуски в 11:17, 11:27 и 11:37 МСК)") +
-          (aj && aj.number ? "; последний разбор — тираж №" + aj.number : ""); }
-        rows.push({ n: "Разбор ИИ", d: "каждый день в 11:01 МСК, запасные запуски 11:17, 11:27, 11:37", at: at, lv: lv, s: sTxt, quiet: !done && beforeSched && !(as && as.state === "run") });
+        else { lv = 2; at = null;
+          sTxt = beforeSched ? "не начался — вечерний проход в 22:01 МСК накануне закрытия, контрольный в 11:01 МСК в день закрытия" :
+            eveOpen ? "вечерний проход не начался — GitHub ещё не запустил задание (по расписанию 22:01, запасные запуски 22:17, 22:27 и 22:37 МСК)" :
+            "контрольный проход не начался — GitHub ещё не запустил задание (по расписанию 11:01, запасные запуски 11:17, 11:27 и 11:37 МСК)";
+          sTxt += (aj && aj.number ? "; последний разбор — тираж №" + aj.number : ""); }
+        rows.push({ n: "Разбор ИИ", d: "вечером накануне закрытия в 22:01 МСК и контрольный в 11:01 МСК в день закрытия, запасные запуски через 16, 26 и 36 минут", at: at, lv: lv, s: sTxt, quiet: !done && beforeSched && !(as && as.state === "run") });
       })();
       dstat = { at: Date.now(), res: rows };
-      /* до 11:00 МСК «не начался» — это норма, точку на кнопке он не красит */
+      /* пока ни один проход разбора ещё не должен идти, «не начался» — это норма, точку на кнопке он не красит */
       var worst = rows.reduce(function(x, y){ return y.quiet ? x : Math.max(x, y.lv); }, 0);
       var dot = $("dataDot");
       if(dot) dot.className = "data-dot lv" + worst;

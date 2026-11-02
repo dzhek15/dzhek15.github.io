@@ -2,14 +2,15 @@
 """Надёжный автозапуск разбора ИИ. Расписание GitHub в закрытом репозитории опаздывает на часы,
 поэтому цикл keepalive раз в 5 минут вызывает этот скрипт. Он запускает задание разбора
 (workflow_dispatch в dzhek15/dzhek15-ai), если одновременно:
-  - сегодня день закрытия приёма, сейчас 11:07 МСК или позже и осталось не менее 75 минут;
-  - текущий открытый тираж ещё не разобран (data/api/ai.json);
+  - вечерний проход: накануне закрытия приёма, с 22:07 МСК (и после полуночи до 11:01, если запуск опоздал);
+    контрольный проход: в день закрытия, с 11:07 МСК и при остатке не менее 75 минут;
+  - нужный проход для текущего открытого тиража ещё не сделан (data/api/ai.json: номер и поле stage);
   - разбор сейчас не идёт и не стоит в очереди (ai_status.json и API GitHub);
   - после прошлого запуска этим скриптом прошло больше 40 минут (не больше 3 попыток в день).
 Нужен секрет AI_RUN_TOKEN (ключ владельца с правом Actions: Read and write на dzhek15-ai).
 Нет секрета — скрипт молча ничего не делает. Повторный разбор задание само отсекает проверкой в начале."""
 import json, os, sys, urllib.request, datetime as dt
-from ai_window import auto_window_reason
+from ai_window import auto_plan
 
 TOK = os.environ.get("AI_RUN_TOKEN", "").strip()
 if not TOK:
@@ -40,19 +41,19 @@ def say(m):
     print("ai_kick: " + m, flush=True)
 
 
-if msk.hour * 60 + msk.minute < 11 * 60 + 7:
-    sys.exit(0)
+minute = msk.hour * 60 + msk.minute
+if 11 * 60 + 1 <= minute < 11 * 60 + 7 or 22 * 60 + 1 <= minute < 22 * 60 + 7:
+    sys.exit(0)   # первые минуты оставляем расписанию GitHub
 lst = jl(API + "drawings-1.json", {}); lst = lst.get("data", lst) if isinstance(lst, dict) else lst
 act = [d for d in (lst or []) if d.get("status") == "active"]
 if not act:
     sys.exit(0)
 cur = act[0]; no = int(cur["number"])
-why = auto_window_reason(cur, now)
-if why:
-    say("пропуск: " + why)
-    sys.exit(0)
 ai = jl(API + "ai.json", {}) or {}
-if str(ai.get("number")) == str(no):
+why, stage = auto_plan(cur, ai, now)
+if why:
+    if not why.startswith(("вечерний разбор накануне", "авторазбор только", "тираж %d уже разобран" % no, "контрольный")):
+        say("пропуск: " + why)
     sys.exit(0)
 st = jl(API + "ai_status.json", {}) or {}
 try:
@@ -75,7 +76,7 @@ try:
     mem["n"] += 1; mem["last"] = now.timestamp()
     with open(MEM, "w") as f:
         json.dump(mem, f)
-    say("тираж %d не разобран — запустил разбор (попытка %d из 3 за день)" % (no, mem["n"]))
+    say("тираж %d, %s проход не сделан — запустил разбор (попытка %d из 3 за день)" % (no, "вечерний" if stage == "evening" else "контрольный", mem["n"]))
 except urllib.error.HTTPError as e:
     say("GitHub ответил %d — проверьте секрет AI_RUN_TOKEN (доступ к dzhek15-ai, Actions: Read and write)" % e.code)
     mem["n"] += 1; mem["last"] = now.timestamp()
