@@ -4348,3 +4348,31 @@ body.is-prev .pc-vars .pc-vr.open, body.is-prev .pc-vars .pc-vr.open.win{backgro
 /* шапка столбца: матч перекрыт полностью (в наборе есть 1, X и 2) */
 .pc-vh span.cov{color:var(--cold); font-weight:700; text-decoration:underline; text-decoration-color:currentColor; text-underline-offset:3px; text-decoration-thickness:2px}
 :root[data-theme="light"] .pc-vh span.cov{color:#1F8A4C}
+
+/* просмотр тиража: сводка плитками (без кнопки «свернуть все») */
+.prev-bar{gap:10px}
+.prev-bar .pb-st{flex:0 0 100%; display:grid; grid-template-columns:repeat(auto-fit,minmax(104px,1fr)); gap:8px}
+.prev-bar .pb-c{display:flex; flex-direction:column; justify-content:center; gap:5px; min-width:0; padding:8px 11px; border:1px solid var(--rule-strong); border-radius:var(--r); background:var(--surface-2)}
+.prev-bar .pb-c[hidden]{display:none}
+.prev-bar .pb-c small{font:600 10px/1 "IBM Plex Sans",sans-serif; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); white-space:nowrap}
+.prev-bar .pb-c b{font:700 19px/1.05 var(--f-num); color:var(--ink); white-space:nowrap}
+.prev-bar .pb-c b i{font-style:normal; font-weight:500; font-size:12px; color:var(--muted); margin-left:2px}
+.prev-bar #pbBest b, .prev-bar #pbSum b, .prev-bar .pb-ai b{color:var(--gold-ink)}
+.prev-bar .pb-c[data-k="live"] b{color:var(--hot)}
+.prev-bar .pb-c[data-k="live"] small::before{content:""; display:inline-block; width:6px; height:6px; margin-right:5px; border-radius:50%; background:var(--hot); vertical-align:1px}
+.prev-bar .pb-ai{flex-direction:row; align-items:center; gap:9px}
+.prev-bar .pb-ai > span{display:flex; flex-direction:column; gap:5px; min-width:0}
+.prev-bar .pb-ai b em{font-style:normal; font:500 11px var(--f-num); color:var(--muted); margin-left:6px}
+.prev-bar .pb-bt{flex:0 0 100%; display:flex; align-items:center; flex-wrap:wrap; gap:8px 10px; padding-top:10px; border-top:1px solid var(--rule)}
+.prev-bar .pb-bt .pb-flt{flex:1 1 auto; padding-top:0; margin-top:0; border-top:0}
+.prev-bar .pb-bt .pb-back{margin-left:auto}
+@media (max-width:420px){
+  .prev-bar .pb-st{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .prev-bar .pb-st .pb-c:last-child:nth-child(odd){grid-column:1/-1}
+  .prev-bar .pb-bt .pb-flt{flex:0 0 100%}
+  .prev-bar .pb-bt .pb-back{flex:0 0 100%; margin-left:0; padding:8px 11px}
+}
+:root[data-theme="light"] .prev-bar .pb-c{background:#fff; border-color:var(--rule-strong)}
+:root[data-theme="light"] .prev-bar .pb-c b{color:#0A0F10}
+:root[data-theme="light"] .prev-bar #pbBest b, :root[data-theme="light"] .prev-bar #pbSum b, :root[data-theme="light"] .prev-bar .pb-ai b{color:#7A5A12}
+:root[data-theme="light"] .prev-bar .pb-c[data-k="live"] b{color:#B3261E}
