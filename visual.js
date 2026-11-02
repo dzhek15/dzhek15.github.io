@@ -173,7 +173,7 @@
     var tick = function(){
       var r = Math.max(0, Math.floor((fxs.kick - Date.now()) / 1000));
       if(r <= 0){ clearInterval(fxs.cd); fxs.cd = 0; try{ renderCover(); }catch(e){} return; }
-      var d = Math.floor(r / 86400), h = Math.floor(r % 86400 / 3600), mi = Math.floor(r % 3600 / 60), se = r % 60;
+      var d = 0, h = Math.floor(r / 3600), mi = Math.floor(r % 3600 / 60), se = r % 60;
       var z = function(n){ return (n < 10 ? "0" : "") + n; };
       var b = el.querySelector(".cd-d");
       if(!b){
