@@ -8592,15 +8592,18 @@
     });
   }
   /* виртуальный набор стратегии «Охота на 15 · бриф 14 из 15»: строки готовы заранее (virt.json), в хранилище не пишутся */
+  /* отпечаток строк набора: если строки пересчитали при том же времени и числе, просмотр всё равно обновится */
+  function virtHash(z){ var h = 0, t = String(z || ""); for(var q = 0; q < t.length; q++) h = (h * 31 + t.charCodeAt(q)) | 0; return h.toString(36); }
   function pcsvSyncVirt(){
     var p = state.prev; if(!p || pcsv.tir !== String(p.tirazh)) return;
     var rec = virt.data && virt.data[String(p.tirazh)]; if(!rec || !rec.z) return;
     var k = -1, i;
     for(i = 0; i < pcsv.sets.length; i++) if(pcsv.sets[i].virt && !pcsv.sets[i].strat){ k = i; break; }
-    if(k >= 0 && pcsv.sets[k].sig === rec.at + "|" + rec.n) return;
+    var vsig = rec.at + "|" + rec.n + "|" + virtHash(rec.z);
+    if(k >= 0 && pcsv.sets[k].sig === vsig) return;
     var rows = virtRows(rec.z);
     if(!rows.length) return;
-    var set = { name: (rec.name || "Охота на 15") + " · виртуальный", ai: 1, virt: 1, link: 0, sig: rec.at + "|" + rec.n, pin: rec.pin,
+    var set = { name: (rec.name || "Охота на 15") + " · виртуальный", ai: 1, virt: 1, link: 0, sig: vsig, pin: rec.pin,
                 sys: rows.map(function(x){ return x.split("").join(","); }), rows: rows,
                 core: rec.sys || null, bl: rec.bl || [], wy: rec.wy || {}, nsys: rec.n_sys || 0 };
     if(k >= 0) pcsv.sets[k] = set; else pcsv.sets.push(set);
