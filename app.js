@@ -13225,7 +13225,7 @@
       var d = document.createElement("div"); d.className = "ver-banner"; d.setAttribute("role", "status");
       d.innerHTML = '<span>Вышла новая версия сайта</span><button type="button" class="ver-go">Обновить</button><button type="button" class="ver-x" aria-label="Скрыть">\u00d7</button>';
       document.body.appendChild(d);
-      d.querySelector(".ver-go").addEventListener("click", function(){ location.href = location.pathname + "?v=" + nv + location.hash; });
+      d.querySelector(".ver-go").addEventListener("click", function(){ location.href = location.pathname + "?bk=" + BKID + "&v=" + nv + location.hash; });
       d.querySelector(".ver-x").addEventListener("click", function(){ d.remove(); });
     }
     function check(){
