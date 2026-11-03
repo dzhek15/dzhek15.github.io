@@ -3510,6 +3510,7 @@
     }
     return { res: list.map(function(m){ return m.res; }), gap: v.gap, sim: v.sim, kel: v.kel, mkel: v.mkel, mkelR: v.mkelR, mkelK: v.mkelK, gap2: v.gap2, sim2: v.sim2, m: list.map(function(m){ return m.home + " — " + m.away; }), key: accSetKey(), price: linePrice() };
   }
+  window.dzStratForInfo = stratForInfo;              /* конвейер Охоты берёт исходы Монстра Келли тем же кодом, что и карточка на сайте */
   /* системный купон: сколько полных строк угадали ровно k матчей (свёртка по матчам, без перебора строк) */
   function accScore(line, res){
     if(!Array.isArray(line) || !Array.isArray(res) || line.length !== res.length) return null;
