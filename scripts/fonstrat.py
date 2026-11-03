@@ -13,7 +13,10 @@
 Результат: data/api/fon/strat_journal.json. Только стандартная библиотека.
 
   «Защита»  — вес исхода p (вероятность по линии конторы): максимум шанса накрыть матч.
-  «Монстр + толпа» — вес p·(p/c)^0,6 (c — доля игроков): добор исходов, которые толпа недогружает.
+  «Монстр + толпа» — как «добор Монстра»: ядро — линия конторы со сдвигом по фактам ИИ и p·(p/c)^0,6 (c — доля игроков);
+                   допы — по доводам источников из data/api/fon/ai.json: сначала исход с самым доверенным доводом
+                   (факты ИИ, усталость, разбор ИИ, критик, Betzona, история, xG, мотивация), внутри ранга — по приросту шанса.
+                   Те же формулы в app.js (tiltStrengthAi).
 """
 import json, math, os, re, sys, time
 from datetime import datetime, timezone
@@ -53,11 +56,103 @@ def probs(q):
     return [x / sb for x in b], [max(x / sc, CMIN) for x in c]
 
 
-def plan_tilt(P, C, n_max, gamma):
+def edge_list(d):
+    """Сдвиги по фактам ИИ и усталости (kelEdges на сайте; доверие источников не учится, множитель 1)."""
+    L = d.get("adj")
+    if not L:
+        e = d.get("edge")
+        L = [{"o": e.get("o"), "d": 0.06 if int(e.get("f") or 0) == 2 else 0.03, "why": e.get("why")}] if isinstance(e, dict) and e.get("why") else []
+    out = []
+    for a in L or []:
+        try:
+            if a and a.get("o") in ("1", "X", "2") and float(a.get("d")) > 0 and a.get("why"):
+                out.append((a["o"], float(a["d"]), 2 if a.get("src") == "Усталость" else 1))
+        except (TypeError, ValueError):
+            pass
+    return out
+
+
+def edge_adj(p, L):
+    """edgeAdj на сайте: суммарный сдвиг не больше 8 п.п., берётся у остальных исходов пропорционально."""
+    if not L:
+        return list(p)
+    q = list(p)
+    add = [0.0, 0.0, 0.0]
+    for o, dd, _ in L:
+        add["1X2".index(o)] += dd
+    tot = sum(add)
+    if tot > 0.08:
+        add = [x * 0.08 / tot for x in add]
+    for k in range(3):
+        if not add[k] > 0:
+            continue
+        d = min(add[k], 0.9 - q[k])
+        rest = 1 - q[k]
+        if not d > 0 or not rest > d:
+            continue
+        qk = q[k]
+        for j in range(3):
+            q[j] = qk + d if j == k else q[j] * (rest - d) / rest
+    return q
+
+
+def src_tiers(d):
+    """Ранг самого доверенного довода по каждому исходу (как min t в monsterSrc без обучения); нет довода — 9."""
+    tier = [9, 9, 9]
+    seen = [False, False, False]
+
+    def put(o, t):
+        k = "1X2".index(o)
+        if not seen[k] or t < tier[k]:
+            tier[k] = t
+        seen[k] = True
+    for o, _, t in edge_list(d):
+        put(o, t)                                                        # факты ИИ (1) / усталость (2)
+    for o in str(d.get("p") or ""):
+        if o in "1X2":
+            put(o, 3)                                                    # Разбор ИИ
+    tr = d.get("trap")
+    if isinstance(tr, dict) and tr.get("o") in ("1", "X", "2"):
+        put(tr["o"], 4)                                                  # ИИ-критик
+    for o in "1X2":
+        if any(x.get("s") == o for x in d.get("bza") or []): put(o, 5)   # Betzona: факты
+        if any(x.get("s") == o for x in d.get("bth") or []): put(o, 8)   # Балтсистема: история
+        if any(x.get("s") == o and x.get("k") == "xG" for x in d.get("cx") or []): put(o, 9)
+        if any(x.get("s") == o and x.get("k") == "мотивация" for x in d.get("cx") or []): put(o, 10)
+        if any(x.get("s") == o and (x.get("w") or 0) >= 2 for x in d.get("bze") or []): put(o, 7)   # Betzona: события
+    bzw, bz = d.get("bzw"), d.get("bz")
+    if bzw:
+        v = {o: bzw.get(o) or 0 for o in "1X2"}
+        mw = max(v.values())
+        for o in "1X2":
+            if mw >= 1 and v[o] >= mw: put(o, 6)                         # Betzona: голоса
+    elif bz and bz.get("n"):
+        v = {o: (bz.get("v") or {}).get(o) or 0 for o in "1X2"}
+        mx = max(v.values())
+        for o in "1X2":
+            if mx > 0 and v[o] >= mx: put(o, 6)
+    return tier
+
+
+def strength_ai(p, c, d, gamma):
+    """Ядро «Монстр + толпа» для одного матча: сила исходов и ранги доводов (d — разбор ИИ по матчу или None)."""
+    pr = edge_adj(p, edge_list(d)) if d else list(p)
+    w = [pr[j] * (pr[j] / c[j]) ** gamma for j in range(3)]
+    z = sum(w)
+    return [x / z for x in w], (src_tiers(d) if d else [9, 9, 9])
+
+
+def plan_tilt(P, C, n_max, gamma, AI=None):
     """Прямоугольный купон: по каждому матчу набор исходов, произведение размеров не больше n_max.
-    Шаг жадного добора — исход с лучшей прибавкой log(доля набора) на log(рост числа строк)."""
+    Шаг жадного добора — прирост log(вес набора) на log(рост числа строк); с AI сначала идут исходы с лучшим рангом довода."""
     m = len(P)
-    w = [[P[i][j] * (P[i][j] / C[i][j]) ** gamma for j in range(3)] for i in range(m)]
+    tiers = None
+    if AI is not None:
+        pairs = [strength_ai(P[i], C[i], AI[i], gamma) for i in range(m)]
+        w = [x[0] for x in pairs]
+        tiers = [x[1] for x in pairs]
+    else:
+        w = [[P[i][j] * (P[i][j] / C[i][j]) ** gamma for j in range(3)] for i in range(m)]
     sets = [[max(range(3), key=lambda j: (w[i][j], -j))] for i in range(m)]
     lines = 1
     while True:
@@ -71,11 +166,12 @@ def plan_tilt(P, C, n_max, gamma):
                 if j in sets[i]:
                     continue
                 g = math.log((s + w[i][j]) / s) / math.log((n + 1) / n)
-                if best is None or g > best[0] + 1e-12:
-                    best = (g, i, j)
+                tr = tiers[i][j] if tiers else 0
+                if best is None or tr < best[0] or (tr == best[0] and g > best[1] + 1e-12):
+                    best = (tr, g, i, j)
         if best is None:
             break
-        _, i, j = best
+        _, _, i, j = best
         lines = lines // len(sets[i]) * (len(sets[i]) + 1)
         sets[i].append(j)
     return ["".join("1X2"[j] for j in sorted(s)) for s in sets]
@@ -188,8 +284,11 @@ def main():
                "ev": [{"id": e.get("id"), "name": e.get("name"), "start": e.get("start_at"),
                        "p": [round(x, 4) for x in P[i]], "c": [round(x, 4) for x in C[i]]} for i, e in enumerate(evs)],
                "sets": {}}
+        ai = rd(os.path.join(FON, "ai.json"), {})
+        AI = ai.get("m") if str(ai.get("number")) == num and isinstance(ai.get("m"), list) and len(ai["m"]) == 15 else None
+        rec["ai"] = bool(AI)
         for k, g in GAMMA.items():
-            rec["sets"][k] = {str(n): plan_tilt(P, C, n, g) for n in BUDGETS}
+            rec["sets"][k] = {str(n): plan_tilt(P, C, n, g, AI if k == "cen" else None) for n in BUDGETS}
         jr["draws"][num] = rec
         print("прогноз тиража", num, "обновлён")
 

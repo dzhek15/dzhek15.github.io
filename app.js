@@ -11390,10 +11390,10 @@
      «ИИ» — перекос против толпы по фактам (кадры, ротация, мотивация, кризис): +3 п.п. (один факт) или +6 п.п. (несколько);
      «Усталость» — календарь Flashscore по всем турнирам: +2 п.п. отдохнувшей стороне или сопернику команды,
      у которой через ≤3 дня еврокубок или кубок. Сдвиги — стартовые допущения, журнал проверяет каждый источник. */
-  var KEL_EDGE = null, KEL_AI_KEY = "dz_kel_ai", SRC_W_KEY = "dz_src_w", SRC_W_BASE = [0, 0.35, 0.60];   /* доля доводов в итоговой «силе» исхода; остальное — Келли (вероятность модели против толпы) */
+  var FON_EDGES = false, KEL_EDGE = null, KEL_AI_KEY = "dz_kel_ai", SRC_W_KEY = "dz_src_w", SRC_W_BASE = [0, 0.35, 0.60];   /* доля доводов в итоговой «силе» исхода; остальное — Келли (вероятность модели против толпы) */
   function srcWLevel(){ return 2; }   /* вариант один для окна, рейтинга и статистики: доводы 60% · Келли 40% */
   function kelEdges(){
-    if(FON || !ai.data || String(ai.data.number) !== String(state.tirazh) || !ai.data.m) return null;
+    if((FON && !FON_EDGES) || !ai.data || String(ai.data.number) !== String(state.tirazh) || !ai.data.m) return null;   /* у Фонбета улучшения включает только «Монстр + толпа» */
     var out = {}, n = 0;
     ai.data.m.forEach(function(x, i){
       var L = (x && x.adj) || (x && x.edge && x.edge.why ? [{ src: "ИИ", o: x.edge.o, d: Number(x.edge.f) === 2 ? 0.06 : 0.03, why: x.edge.why }] : []);
@@ -12966,30 +12966,55 @@
     return '<div class="ev-data-bar"><label for="lim_' + key + '">Сумма не больше</label><select id="lim_' + key + '" class="lim-sel" data-key="' + key + '">' +
       tiltList().map(function(n){ return '<option value="' + (n * price) + '"' + (n === lines ? ' selected' : '') + '>' + fmt(n * price) + ' ₽ · ' + fmt(n) + ' стр.</option>'; }).join("") + '</select></div>';
   }
-  function planTilt(maxLines, kind){
-    var cfg = TILT[kind], rows = [], combos = 1, i;
-    for(i = 0; i < state.matches.length; i++){
-      var m = state.matches[i], t = tiltInput(m);
-      var r = { idx: i, m: m, locked: m.mode === "lock", p: t ? t.p : null, q: t ? t.c : null, set: [], add: [] };
-      if(r.locked) r.set = OUT.filter(function(o){ return m.picks[o]; }).map(function(o){ return OUT.indexOf(o); });
-      else if(t){
-        var q = t.c || t.p, w = [0, 1, 2].map(function(j){ return t.p[j] * Math.pow(t.p[j] / q[j], cfg.g); });
-        r.w = w; r.set = [w[0] >= w[1] && w[0] >= w[2] ? 0 : (w[1] >= w[2] ? 1 : 2)];
+  /* «Монстр + толпа»: ядро — как у Монстра Келли: линия конторы со сдвигом по фактам ИИ и усталости, затем наклон против толпы
+     p·(p/c)^0,6. Добор (допы) — по доводам источников, как «добор Монстра»: сначала исходы с самым доверенным доводом
+     (факты ИИ, усталость, разбор ИИ, ИИ-критик, Betzona, история, xG, мотивация), внутри ранга — по приросту шанса.
+     Те же формулы считает scripts/fonstrat.py. */
+  var TILT_G = 0.6;
+  function tiltStrengthAi(i, t){
+    var pr = edgeAdj(i, t.p), q = t.c || pr, w = [0, 1, 2].map(function(j){ return pr[j] * Math.pow(pr[j] / q[j], TILT_G); }), z = w[0] + w[1] + w[2];
+    w = w.map(function(x){ return x / z; });
+    var src = monsterSrc(i), tier = [9, 9, 9], seen = [false, false, false];
+    src.forEach(function(x){
+      var k = OUT.indexOf(x.o); if(k < 0) return;
+      var tt = Number(x.t) || 9;
+      if(!seen[k] || tt < tier[k]) tier[k] = tt;
+      seen[k] = true;
+    });
+    return { w: w, p: pr, src: src, tier: tier, has: seen[0] || seen[1] || seen[2] };
+  }
+  function planTilt(maxLines, kind, noAi){
+    var cfg = TILT[kind], rows = [], combos = 1, useAi = kind === "cen" && FON && !noAi, nAi = 0;
+    var build = function(){
+      for(var i = 0; i < state.matches.length; i++){
+        var m = state.matches[i], t = tiltInput(m);
+        var r = { idx: i, m: m, locked: m.mode === "lock", p: t ? t.p : null, q: t ? t.c : null, set: [], add: [] };
+        if(r.locked) r.set = OUT.filter(function(o){ return m.picks[o]; }).map(function(o){ return OUT.indexOf(o); });
+        else if(t){
+          var w, sa0 = null;
+          if(useAi){ var sa = tiltStrengthAi(i, t); sa0 = sa; w = sa.w; r.src = sa.src; if(sa.has) nAi++; }
+          else { var q = t.c || t.p; w = [0, 1, 2].map(function(j){ return t.p[j] * Math.pow(t.p[j] / q[j], cfg.g); }); }
+          r.w = w; r.tier = useAi ? sa0.tier : null; r.set = [w[0] >= w[1] && w[0] >= w[2] ? 0 : (w[1] >= w[2] ? 1 : 2)];
+        }
+        rows.push(r);
+        combos *= Math.max(1, r.set.length);
       }
-      rows.push(r);
-      combos *= Math.max(1, r.set.length);
-    }
+    };
+    if(useAi){
+      FON_EDGES = true;
+      try { withEdges(true, build); } finally { FON_EDGES = false; }
+    } else build();
     if(!rows.length || rows.every(function(r){ return !r.p; })) return { error: "нет линии конторы хотя бы в одном матче" };
     for(;;){
-      var bR = null, bK = -1, bG = 0;
+      var bR = null, bK = -1, bG = 0, bT = 0;
       rows.forEach(function(r){
         var n = r.set.length;
         if(r.locked || !r.w || n >= 3 || Math.floor(combos / n) * (n + 1) > maxLines) return;
         var S = 0; r.set.forEach(function(x){ S += r.w[x]; });
         for(var j = 0; j < 3; j++){
           if(r.set.indexOf(j) >= 0) continue;
-          var gg = Math.log((S + r.w[j]) / S) / Math.log((n + 1) / n);
-          if(!bR || gg > bG + 1e-12){ bG = gg; bR = r; bK = j; }
+          var gg = Math.log((S + r.w[j]) / S) / Math.log((n + 1) / n), tr = r.tier ? r.tier[j] : 0;
+          if(!bR || tr < bT || (tr === bT && gg > bG + 1e-12)){ bG = gg; bT = tr; bR = r; bK = j; }
         }
       });
       if(!bR) break;
@@ -13006,7 +13031,29 @@
       if(r.p){ var S = 0; r.set.forEach(function(x){ S += r.p[x]; }); pAll *= Math.min(1, S); }
       r.why = r.locked ? "фикс, не трогаю" : (!r.p ? "" : "основа " + OUT[r.set[0]] + (r.add.length ? " · доп " + r.add.map(function(x){ return OUT[x] + " (контора " + Math.round(r.p[x] * 100) + "%, толпа " + (r.q ? Math.round(r.q[x] * 100) + "%" : "—") + ")"; }).join(", ") : ""));
     });
-    return { rows: rows, combos: combos, p9: evTail(dist, 9), p12: evTail(dist, 12), p13: evTail(dist, 13), p15: pAll };
+    var res = { rows: rows, combos: combos, p9: evTail(dist, 9), p12: evTail(dist, 12), p13: evTail(dist, 13), p15: pAll, nAi: nAi, useAi: useAi };
+    if(useAi && nAi){
+      /* синие исходы: те, что есть в купоне с ИИ и нет в таком же купоне без ИИ; причина — доводы источников по этому исходу */
+      var base = planTilt(maxLines, kind, true), kup = {}, kdel = {}, add = [], del = [];
+      if(base && base.rows) rows.forEach(function(r, k){
+        var b = base.rows[k]; if(!b || r.locked) return;
+        var why = function(o){
+          var L = (r.src || []).filter(function(z){ return z.o === OUT[o]; }).sort(function(a, b2){ return a.t - b2.t; });
+          return L.length ? L.map(function(z){ return z.src + " — " + z.why; }).join("; ") : "";
+        };
+        r.set.filter(function(o){ return b.set.indexOf(o) < 0; }).forEach(function(o){
+          var w2 = why(o) || "сдвиг вероятностей по фактам ИИ поменял расстановку в этом матче";
+          (kup[r.idx] = kup[r.idx] || {})[OUT[o]] = kupHead(r.idx, o, r.p) + ". Доводы: " + w2;
+          (r.kup = r.kup || {})[OUT[o]] = kup[r.idx][OUT[o]]; add.push((r.idx + 1) + ". " + OUT[o]);
+        });
+        b.set.filter(function(o){ return r.set.indexOf(o) < 0; }).forEach(function(o){
+          var w2 = r.set.map(function(x){ return why(x); }).filter(Boolean)[0] || "доводы источников подняли другой исход этого матча";
+          (kdel[r.idx] = kdel[r.idx] || {})[OUT[o]] = w2; del.push((r.idx + 1) + ". " + OUT[o]);
+        });
+      });
+      res.kup = Object.keys(kup).length ? kup : null; res.kdel = Object.keys(kdel).length ? kdel : null; res.add = add; res.del = del;
+    }
+    return res;
   }
   var tiltJ = null, tiltJat = 0;
   function tiltJournal(){
@@ -13037,19 +13084,23 @@
     var cfg = TILT[kind], box = stratGuard("Стратегия «" + cfg.name + "»"); if(!box) return;
     var L = tiltLines(cfg.key, 1024), plan = planTilt(L, kind);
     var how = kind === "zash"
-      ? 'Цель — как можно чаще накрывать матчи. Купон прямоугольный: по каждому матчу набор из одного, двух или трёх исходов, а общее число строк не выше выбранной суммы. Допы идут туда, где вторая-третья вероятность линии конторы вносит больше всего в шанс накрыть матч. Толпа не учитывается: стратегия защищается от осечек, а не охотится за ценой. Подходит и для Фонбета, который не принимает брифы.'
-      : 'Цель — не делить приз с толпой. Основа и допы выбираются по весу p·(p/c)<sup>0,6</sup>: вероятность по линии конторы, умноженная на недогруз толпы. Исход, который контора ценит выше, чем игроки, получает прибавку; фаворит, которого толпа перегружает, — штраф. Эффект умеренный: на 541 тираже Фонбета линия конторы точна, а доли игроков сжаты к равным, поэтому наклон ослаблен до 0,6, чтобы не терять попадания 13+.';
+      ? 'Цель — как можно чаще накрывать матчи. Купон прямоугольный: по каждому матчу набор из одного, двух или трёх исходов, а общее число строк не выше выбранной суммы. Допы идут туда, где вторая-третья вероятность линии конторы вносит больше всего в шанс накрыть матч. Толпа и ИИ не учитываются: стратегия защищается от осечек, а не охотится за ценой. Подходит и для Фонбета, который не принимает брифы.'
+      : 'Устроена как «добор Монстра», но купон прямоугольный, без брифа. Ядро — линия конторы со сдвигом по фактам ИИ и усталости и наклоном против толпы: вероятность × (вероятность / доля игроков)<sup>0,6</sup>. Допы выбираются по доводам источников: сначала исходы с самым доверенным доводом (факты ИИ, усталость, разбор ИИ, ИИ-критик, Betzona, история, xG, мотивация), внутри ранга — где допом больше растёт шанс накрыть матч. <b class="kel-up-t">Синие</b> исходы — те, которых нет в таком же купоне без ИИ; у каждого указана причина.';
     var h = stratHow(how) + tiltSelect(cfg.key, L);
     if(plan.error){ box.innerHTML = h + '<p class="ev-warn">' + escHtml(plan.error) + '.</p>'; $("evBack").hidden = false; limitBind(box, function(){ showTilt(kind); }); return; }
     h += stratCards([["Строк", fmt(plan.combos) + " · " + fmt(plan.combos * linePrice()) + " ₽"], ["Шанс 12+", stratChance(plan.p12)], ["Шанс 15 из 15", stratChance(plan.p15)]]);
     h += planSummary(plan.rows, L);
+    if(kind === "cen"){
+      if(!plan.nAi) h += '<p class="ev-note dt-center">Доводов ИИ по этому тиражу пока нет' + (ai.data && String(ai.data.number) === String(state.tirazh) ? ' (разбор не нашёл опоры ни в одном матче)' : ': разбор ИИ ещё не опубликован') + ' — купон считается по линии конторы и толпе.</p>';
+      else h += '<p class="ev-kai-d">Доводы ИИ учтены в ' + plan.nAi + ' ' + plural(plan.nAi, "матче", "матчах", "матчах") + '. По сравнению с купоном без ИИ: <b class="kel-up-t">добавлено ' + ((plan.add || []).join(", ") || "ничего") + '</b>' + ((plan.del || []).length ? '; убрано ' + plan.del.join(", ") : '') + '.</p>';
+    }
     h += stratTable(plan.rows);
     h += '<div class="ev-data-go ev-data-go2"><button type="button" id="dataApply" class="btn-ev">Подставить в купон</button><button type="button" id="planCsv" class="btn-ev">Скачать CSV</button></div>' + STRAT_NOTE;
     h += '<div id="tiltStat">' + (FON ? tiltStatHtml(kind, tiltJ) : '<p class="ev-note">Проверка вперёд для Балтбета пока не ведётся: накопление идёт по Фонбету.</p>') + '</div>';
     stratFinish(box, h, plan, cfg.name, function(){ showTilt(kind); });
     if(FON) tiltJournal().then(function(J){ var el = $("tiltStat"); if(el) el.innerHTML = tiltStatHtml(kind, J); });
   }
-  window.dzPlanTilt = planTilt;
+  window.dzPlanTilt = planTilt; window.dzAiData = function(){ return ai.data; };
   if(!FON){ ["btnZash", "btnCen"].forEach(function(id){ var b = $(id); if(b && b.parentNode) b.parentNode.removeChild(b); }); }   /* «Защита» и «Ценность» — только Фонбет */
   if($("btnZash")) $("btnZash").addEventListener("click", function(){ showTilt("zash"); });
   if($("btnCen")) $("btnCen").addEventListener("click", function(){ showTilt("cen"); });
