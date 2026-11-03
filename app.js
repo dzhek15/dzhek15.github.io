@@ -12015,7 +12015,7 @@
   function showStratGuide(){
     $("evTitle").textContent = "Как работают стратегии";
     var h = '<dl class="ev-guide">';
-    STRAT_GUIDE.forEach(function(g){ if(!FON && (g[0] === "Защита" || g[0] === "Монстр + толпа")) return; h += '<dt>' + g[0] + '</dt><dd>' + g[1] + '</dd>'; });
+    STRAT_GUIDE.forEach(function(g){ if(!FON && (g[0] === "Защита" || g[0] === "Монстр + толпа")) return; if(FON && g[0] === "Отобрать строки") return; h += '<dt>' + g[0] + '</dt><dd>' + g[1] + '</dd>'; });
     h += '</dl><p class="ev-note">Каждая кнопка ставит исходы в купон; «Назад» откатывает последнюю расстановку. Проверка — по тиражам 4142–5024, вероятности поправлялись только по прошлым тиражам. Ни одна стратегия за это время не угадала 14 или 15. Реальных выплат в истории нет, поэтому сравниваются частоты призов, а не деньги. Модель выплат оптимистична: даже простая линия фаворитов получает в ней отдачу 1,36 (интервал 1,04–1,72), а стратегии отличаются от неё в пределах шума: у всех интервал разницы с фаворитами включает ноль. В деньги эти числа переводить нельзя. Это модели, а не гарантия выигрыша.</p>';
     $("evBody").innerHTML = h;
     $("evBack").hidden = false;
@@ -13147,6 +13147,7 @@
   }
   if(FON) tiltJournal();
   window.dzPlanTilt = planTilt; window.dzAiData = function(){ return ai.data; };
+  if(FON && $("btnPF") && $("btnPF").parentNode) $("btnPF").parentNode.removeChild($("btnPF"));   /* у Фонбета нет пула — «Отобрать строки» там не нужна */
   if(!FON){ ["btnZash", "btnCen"].forEach(function(id){ var b = $(id); if(b && b.parentNode) b.parentNode.removeChild(b); }); }   /* «Защита» и «Ценность» — только Фонбет */
   if($("btnZash")) $("btnZash").addEventListener("click", function(){ showTilt("zash"); });
   if($("btnCen")) $("btnCen").addEventListener("click", function(){ showTilt("cen"); });
