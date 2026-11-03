@@ -42,6 +42,20 @@
         location.replace(location.pathname + "?bk=" + to);
       });
     });
+    /* боковой ярлык с названием конторы: нажатие переключает на другую контору */
+    if(!document.getElementById("bkTab")){
+      var other = BKID === "fonbet" ? "baltbet" : "fonbet";
+      var tab = document.createElement("button");
+      tab.type = "button"; tab.id = "bkTab"; tab.className = "bk-tab";
+      tab.textContent = BKID === "fonbet" ? "ФОНБЕТ" : "БАЛТБЕТ";
+      tab.title = "Переключить на " + (other === "fonbet" ? "Фонбет" : "Балтбет");
+      tab.setAttribute("aria-label", tab.title);
+      tab.addEventListener("click", function(){
+        try{ localStorage.setItem(C.BOOK_KEY, other); }catch(e){}
+        location.replace(location.pathname + "?bk=" + other);
+      });
+      document.body.appendChild(tab);
+    }
     var bf = document.getElementById("btnFetch");
     if(bf) bf.title = "Забрать актуальный тираж " + BK.title + "а с totobrief";
   }
