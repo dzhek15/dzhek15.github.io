@@ -64,6 +64,7 @@ jobs:
                 python3 scripts/feed.py || true
                 python3 scripts/emblems.py || true
                 python3 scripts/journal.py || true
+                python3 scripts/fonstrat.py || true
               fi
             else
               # остальные минуты: только живые матчи, коммит лишь если что-то изменилось (гол, фаза, новый матч)

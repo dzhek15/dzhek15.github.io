@@ -7912,7 +7912,8 @@
     var pool = (q.pool_win_1 != null) ? [q.pool_win_1, q.pool_draw, q.pool_win_2].map(function(x){ var v = Number(x); return isFinite(v) ? Math.round(v) : x; }) : null;
     var bk   = (q.bk_win_1   != null) ? [q.bk_win_1,   q.bk_draw,   q.bk_win_2]   : null;
     if(!pool && !bk) return null;
-    return { pool: pool, bk: bk };
+    var raw = (q.pool_win_1 != null) ? [q.pool_win_1, q.pool_draw, q.pool_win_2].map(Number) : null;   /* без округления: на них считает «Ценность» */
+    return { pool: pool, bk: bk, poolRaw: raw };
   }
 
   /* Фонбет: названия команд и турниров приходят по-английски — переводим словарём data/api/fon/ru.json
@@ -11987,6 +11988,8 @@
     ["Симуляция", "Цель — чаще попадать в призы (9 и больше). Двойники и тройники ставятся там, где сильнее всего растёт шанс 9+, в пределах выбранного лимита суммы; итог проверяется розыгрышем 10 000 тиражей.<span class=\"ev-bt\">На истории (733 тиража, купон до 32 вариантов, в среднем 809 ₽): приз в 40,1% тиражей, 12+ — в 2,46%, 13+ — в 0,55%.</span>"],
     ["Келли", "Цель — быстрее всего растить банк. Сравнивает системы по вероятностям и купоны «Симуляции» всех допустимых размеров в пределах лимита суммы (до 17 280 ₽) и собирает один системный купон на выбранную сумму, из равных по размеру — с большим ожидаемым ростом расчётного банка 30 000 ₽. Если купон по модели невыгоден, честно предупреждает и показывает купон с наибольшим ростом.<span class=\"ev-bt\">На истории (733 тиража, прежняя версия: купоны до 512 вариантов, банк 10 000 ₽): в среднем купон за 3 113 ₽, приз в 55,7% тиражей, 12+ — в 4,91%, 13+ — в 1,64%. Модель выплат считала выгодным каждый тираж из-за крупных суперпризов — к этому стоит относиться осторожно.</span>"],
     ["Монстр Келли", "Цель — не отставать по результату и улучшать Келли, а не копировать его. Собирает бриф 14 из 15 на сумму не больше 35 000 ₽: готовая система из библиотеки, которая гарантирует 14 угаданных, если все 15 исходов окажутся в основе купона. Форма выбирается по шансу накрыть все 15 исходов, исходы в матчах — по вероятности с поправкой на то, что толпа недоигрывает. Строки можно положить в корзину или скачать CSV. У Фонбета остаётся прежний способ: ядро по росту банка и добор."],
+    ["Защита", "Цель — как можно чаще накрывать матчи. Прямоугольный купон на выбранную сумму до 300 000 ₽: допы идут туда, где они сильнее всего поднимают шанс накрыть матч по линии конторы. Толпа не учитывается. Прогнозы записываются в журнал и проверяются по итогам тиражей."],
+    ["Ценность", "Цель — не делить приз с толпой. Тот же прямоугольный купон, но вес исхода — вероятность по линии конторы с поправкой на недогруз толпы (степень 0,6, мягко: на истории Фонбета доли игроков сжаты к равным). Проверка вперёд — в самой карточке."],
 
 
 
@@ -12928,6 +12931,127 @@
     var sw = $("kelAi");
     if(sw) sw.addEventListener("change", function(){ try { localStorage.setItem(KEL_AI_KEY, sw.checked ? "1" : "0"); } catch(e){} showMonsterStrat(); });
   }
+  /* ---------- «Защита» и «Ценность»: прямоугольный купон без брифа ----------
+     Набор исходов по каждому матчу, произведение размеров не больше лимита. Шаг добора — исход с наибольшим
+     ростом log(вес набора) на log(рост числа строк); вес исхода p·(p/c)^γ, p — линия конторы, c — доля игроков.
+     «Защита»: γ = 0 (шанс накрыть матч). «Ценность»: γ = 0,6 (добираем то, что толпа недогружает).
+     Те же правила считает scripts/fonstrat.py, он и ведёт журнал проверки вперёд.
+     Проверка на 541 тираже Фонбета: линия конторы точна, доли игроков сжаты к равным; при 4 096 строках «Защита» накрывала
+     12+ матчей в 25% тиражей, чистая «ценность» — в 7%, γ = 0,6 — около 20% при лучшей ожидаемой отдаче 15 из 15. */
+  var TILT = { zash: { g: 0, key: "ztLimit", name: "Защита" }, cen: { g: 0.6, key: "cnLimit", name: "Ценность" } };
+  function tiltInput(m){
+    var b = m.pct && m.pct.bk, c = m.pct && (m.pct.poolRaw || m.pct.pool);
+    if(!b) return null;
+    var pb = [Number(b[0]), Number(b[1]), Number(b[2])];
+    if(!pb.every(function(x){ return isFinite(x) && x > 0; })) return null;
+    var sb = pb[0] + pb[1] + pb[2], P = pb.map(function(x){ return x / sb; }), C = null;
+    if(c){
+      var pc = [Number(c[0]), Number(c[1]), Number(c[2])], sc = pc[0] + pc[1] + pc[2];
+      if(pc.every(function(x){ return isFinite(x) && x >= 0; }) && sc > 0) C = pc.map(function(x){ return Math.max(x / sc, 0.02); });
+    }
+    return { p: P, c: C };
+  }
+  /* суммы «Защиты» и «Ценности»: до потолка 300 000 ₽ (у Фонбета 6 000 строк по 50 ₽), а не до лимита систем */
+  function tiltList(){
+    var price = linePrice(), top = Math.floor(300000 / price + 1e-9), out = [1, 2, 4, 8, 16, 32, 64, 128, 256, 324, 512, 1024, 2048, 4096];
+    return out.filter(function(n){ return n < top; }).concat([top]);
+  }
+  function tiltLines(key, def){
+    var price = linePrice(), list = tiltList(), rub = Number(state[key]), want = rub > 0 ? Math.floor(rub / price + 1e-9) : def, n = list[0];
+    list.forEach(function(x){ if(x <= want) n = x; });
+    return n;
+  }
+  function tiltSelect(key, lines){
+    var price = linePrice();
+    return '<div class="ev-data-bar"><label for="lim_' + key + '">Сумма не больше</label><select id="lim_' + key + '" class="lim-sel" data-key="' + key + '">' +
+      tiltList().map(function(n){ return '<option value="' + (n * price) + '"' + (n === lines ? ' selected' : '') + '>' + fmt(n * price) + ' ₽ · ' + fmt(n) + ' стр.</option>'; }).join("") + '</select></div>';
+  }
+  function planTilt(maxLines, kind){
+    var cfg = TILT[kind], rows = [], combos = 1, i;
+    for(i = 0; i < state.matches.length; i++){
+      var m = state.matches[i], t = tiltInput(m);
+      var r = { idx: i, m: m, locked: m.mode === "lock", p: t ? t.p : null, q: t ? t.c : null, set: [], add: [] };
+      if(r.locked) r.set = OUT.filter(function(o){ return m.picks[o]; }).map(function(o){ return OUT.indexOf(o); });
+      else if(t){
+        var q = t.c || t.p, w = [0, 1, 2].map(function(j){ return t.p[j] * Math.pow(t.p[j] / q[j], cfg.g); });
+        r.w = w; r.set = [w[0] >= w[1] && w[0] >= w[2] ? 0 : (w[1] >= w[2] ? 1 : 2)];
+      }
+      rows.push(r);
+      combos *= Math.max(1, r.set.length);
+    }
+    if(!rows.length || rows.every(function(r){ return !r.p; })) return { error: "нет линии конторы хотя бы в одном матче" };
+    for(;;){
+      var bR = null, bK = -1, bG = 0;
+      rows.forEach(function(r){
+        var n = r.set.length;
+        if(r.locked || !r.w || n >= 3 || Math.floor(combos / n) * (n + 1) > maxLines) return;
+        var S = 0; r.set.forEach(function(x){ S += r.w[x]; });
+        for(var j = 0; j < 3; j++){
+          if(r.set.indexOf(j) >= 0) continue;
+          var gg = Math.log((S + r.w[j]) / S) / Math.log((n + 1) / n);
+          if(!bR || gg > bG + 1e-12){ bG = gg; bR = r; bK = j; }
+        }
+      });
+      if(!bR) break;
+      combos = Math.floor(combos / bR.set.length) * (bR.set.length + 1);
+      bR.set.push(bK); bR.add.push(bK);
+    }
+    var dist = poissonBinomial(rows.map(function(r){
+      if(!r.p) return 1;
+      var S = 0; r.set.forEach(function(x){ S += r.p[x]; }); return Math.min(1, S);
+    }));
+    var pAll = 1;
+    rows.forEach(function(r){
+      r.set.sort();
+      if(r.p){ var S = 0; r.set.forEach(function(x){ S += r.p[x]; }); pAll *= Math.min(1, S); }
+      r.why = r.locked ? "фикс, не трогаю" : (!r.p ? "" : "основа " + OUT[r.set[0]] + (r.add.length ? " · доп " + r.add.map(function(x){ return OUT[x] + " (контора " + Math.round(r.p[x] * 100) + "%, толпа " + (r.q ? Math.round(r.q[x] * 100) + "%" : "—") + ")"; }).join(", ") : ""));
+    });
+    return { rows: rows, combos: combos, p9: evTail(dist, 9), p12: evTail(dist, 12), p13: evTail(dist, 13), p15: pAll };
+  }
+  var tiltJ = null, tiltJat = 0;
+  function tiltJournal(){
+    if(tiltJ && Date.now() - tiltJat < 120000) return Promise.resolve(tiltJ);
+    tiltJat = Date.now();
+    return fetch(MIRROR + "fon/strat_journal.json?t=" + Math.floor(Date.now() / 120000), { cache: "no-store" })
+      .then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; })
+      .then(function(j){ tiltJ = j || tiltJ || null; return tiltJ; });
+  }
+  /* накопленная проверка вперёд: что показал купон на каждой сумме по закрытым тиражам */
+  function tiltStatHtml(kind, J){
+    var h = '<h3>Проверка вперёд</h3>';
+    if(!J){ return h + '<p class="ev-note">Журнал пока не загрузился.</p>'; }
+    var S = J.summary || {}, price = J.price || 50, rows = "", frozen = Object.keys(J.draws || {}).length, done = 0;
+    Object.keys(J.draws || {}).forEach(function(n){ if(J.draws[n].done) done++; });
+    (J.budgets || []).forEach(function(n){
+      var s = S[kind + "|" + n];
+      rows += '<tr><td class="nw">' + fmt(n * price) + ' ₽ · ' + fmt(n) + ' стр.</td>' + (s
+        ? '<td>' + s.n + '</td><td>' + String(s.cov).replace(".", ",") + '</td><td>' + s.c12 + '</td><td>' + s.c13 + '</td><td>' + s.c14 + '</td><td>' + s.c15 + '</td>'
+        : '<td colspan="6" class="st-mute" style="text-align:center">ждём итоги</td>') + '</tr>';
+    });
+    h += '<table class="ev-tab ev-data-cands"><thead><tr><th>Сумма</th><th>Тиражей</th><th>Накрыто в среднем</th><th>12+</th><th>13+</th><th>14+</th><th>15</th></tr></thead><tbody>' + rows + '</tbody></table>';
+    h += '<p class="ev-note">Прогнозы записываются за тиражи до закрытия и потом не меняются: сейчас в журнале ' + frozen + ' ' + plural(frozen, "тираж", "тиража", "тиражей") + ', итоги известны по ' + done + '. «Накрыто» — сколько матчей из 15 есть в купоне; в столбцах 12+…15 — число тиражей. Итоги матчей берутся из ленты Flashscore, выплат Фонбета в данных нет, поэтому считаются попадания, а не рубли.'
+      + (J.updated ? ' Обновлено ' + escHtml(J.updated) + ' UTC.' : '') + '</p>';
+    return h;
+  }
+  function showTilt(kind){
+    var cfg = TILT[kind], box = stratGuard("Стратегия «" + cfg.name + "»"); if(!box) return;
+    var L = tiltLines(cfg.key, 1024), plan = planTilt(L, kind);
+    var how = kind === "zash"
+      ? 'Цель — как можно чаще накрывать матчи. Купон прямоугольный: по каждому матчу набор из одного, двух или трёх исходов, а общее число строк не выше выбранной суммы. Допы идут туда, где вторая-третья вероятность линии конторы вносит больше всего в шанс накрыть матч. Толпа не учитывается: стратегия защищается от осечек, а не охотится за ценой. Подходит и для Фонбета, который не принимает брифы.'
+      : 'Цель — не делить приз с толпой. Основа и допы выбираются по весу p·(p/c)<sup>0,6</sup>: вероятность по линии конторы, умноженная на недогруз толпы. Исход, который контора ценит выше, чем игроки, получает прибавку; фаворит, которого толпа перегружает, — штраф. Эффект умеренный: на 541 тираже Фонбета линия конторы точна, а доли игроков сжаты к равным, поэтому наклон ослаблен до 0,6, чтобы не терять попадания 13+.';
+    var h = stratHow(how) + tiltSelect(cfg.key, L);
+    if(plan.error){ box.innerHTML = h + '<p class="ev-warn">' + escHtml(plan.error) + '.</p>'; $("evBack").hidden = false; limitBind(box, function(){ showTilt(kind); }); return; }
+    h += stratCards([["Строк", fmt(plan.combos) + " · " + fmt(plan.combos * linePrice()) + " ₽"], ["Шанс 12+", stratChance(plan.p12)], ["Шанс 15 из 15", stratChance(plan.p15)]]);
+    h += planSummary(plan.rows, L);
+    h += stratTable(plan.rows);
+    h += '<div class="ev-data-go ev-data-go2"><button type="button" id="dataApply" class="btn-ev">Подставить в купон</button><button type="button" id="planCsv" class="btn-ev">Скачать CSV</button></div>' + STRAT_NOTE;
+    h += '<div id="tiltStat">' + (FON ? tiltStatHtml(kind, tiltJ) : '<p class="ev-note">Проверка вперёд для Балтбета пока не ведётся: накопление идёт по Фонбету.</p>') + '</div>';
+    stratFinish(box, h, plan, cfg.name, function(){ showTilt(kind); });
+    if(FON) tiltJournal().then(function(J){ var el = $("tiltStat"); if(el) el.innerHTML = tiltStatHtml(kind, J); });
+  }
+  window.dzPlanTilt = planTilt;
+  if($("btnZash")) $("btnZash").addEventListener("click", function(){ showTilt("zash"); });
+  if($("btnCen")) $("btnCen").addEventListener("click", function(){ showTilt("cen"); });
   $("btnData").addEventListener("click", showHunt);
   $("stratHelp").addEventListener("click", function(e){ e.preventDefault(); showStratGuide(); });
   $("btnSim").addEventListener("click", showSim);
