@@ -4406,3 +4406,8 @@ body.is-prev .aitbl-bar .aitbl-t{position:absolute; left:50%; top:50%; transform
 .pc-tc .pc-tm.pc-dd small{font:700 9.5px/1 var(--f-num); letter-spacing:.06em; color:#e3b955}
 :root[data-theme="light"] .pc-tc .pc-tm.pc-dd small{color:#8a6a1c}
 @media (max-width:420px){ .pc-tc .pc-tm.pc-dd{font-size:15px} }
+/* «Очистить исходы» — чуть заметнее: золотая рамка, тёплая подложка, золотистый текст (обе темы) */
+#btnReset, :root[data-theme="dark"] #btnReset{border-color:color-mix(in srgb, var(--brand-gold) 70%, transparent) !important; background:color-mix(in srgb, var(--brand-gold) 9%, transparent) !important; color:var(--gold-ink) !important}
+:root[data-theme="light"] #btnReset{color:#7a5410 !important; background:color-mix(in srgb, var(--brand-gold) 13%, transparent) !important}
+#btnReset:hover:not(:disabled), :root[data-theme="dark"] #btnReset:hover:not(:disabled){border-color:var(--brand-gold) !important; background:color-mix(in srgb, var(--brand-gold) 20%, transparent) !important}
+#btnReset:disabled, :root[data-theme="dark"] #btnReset:disabled, :root[data-theme="light"] #btnReset:disabled{border-color:var(--rule-strong) !important; background:transparent !important; color:var(--muted) !important}
