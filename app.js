@@ -4067,29 +4067,44 @@
       var sets = [], own = [], lock = [], auto = [];
       state.matches.forEach(function(m, i){
         var s = dopPicks(m); lock[i] = m.mode === "lock" && s.length > 0; own[i] = s.slice(); auto[i] = false;
-        if(!s.length){ var b = 0; for(k = 1; k < 3; k++) if(W[i][k] > W[i][b]) b = k; s = [b]; auto[i] = true; }
+        if(!s.length){
+          var b = 0; for(k = 1; k < 3; k++) if(W[i][k] > W[i][b]) b = k;
+          var amA = ai.data && String(ai.data.number) === String(state.tirazh) && ai.data.m ? ai.data.m[i] : null;
+          if(amA && amA.rank && amA.rank.length === 3 && OUT.indexOf(amA.rank[0]) >= 0) b = OUT.indexOf(amA.rank[0]);      /* основной исход — первый по разбору ИИ */
+          s = [b]; auto[i] = true;
+        }
         sets.push(s);
       });
       var combos = sets.reduce(function(c, s){ return c * s.length; }, 1);
       if(combos * price > target) return { err: "Даже с основными исходами купон стоит " + fmt(combos * price) + " ₽ — укажите сумму больше." };
       var tw = function(i, k){ var b = 99; SRC[i].forEach(function(s){ if(s.o === OUT[k] && Number(s.t) < b) b = Number(s.t); }); return b; };
-      for(;;){
-        var best = null;
-        for(i = 0; i < N; i++){
-          if(lock[i] || sets[i].length >= 3) continue;
-          var n = sets[i].length, nc = combos / n * (n + 1);
-          if(nc * price > target) continue;
-          var pc = sets[i].reduce(function(x, kk){ return x + W[i][kk]; }, 0);
-          for(k = 0; k < 3; k++){
-            if(sets[i].indexOf(k) >= 0) continue;
-            var t0 = tw(i, k), wt = t0 <= 3 ? 1.5 : t0 <= 7 ? 1.25 : t0 < 99 ? 1.1 : 1;
-            var sc = Math.log((pc + W[i][k]) / pc) / Math.log((n + 1) / n) * wt;
-            if(!best || sc > best.sc) best = { i: i, k: k, sc: sc, nc: nc };
-          }
+      /* допы идут по разбору ИИ, а не по жадному выигрышу вероятности: 1) исходы, которые ИИ рекомендует в матче («ИИ ставит X2»);
+         2) вторые по рангу ИИ исходы, за которые есть доводы источников; 3) вторые без доводов; 4) третьи по рангу.
+         Внутри ступени первыми страхуются самые открытые матчи (ИИ: «ровность»), затем те, где исход дешевле для купона.
+         Исход, который не помещается в сумму, пропускается, и берутся следующие: купон добирается до суммы, не превышая её. */
+      var AIM = ai.data && String(ai.data.number) === String(state.tirazh) && ai.data.m ? ai.data.m : null;
+      var cands = [];
+      for(i = 0; i < N; i++){
+        if(lock[i]) continue;
+        var am = AIM && AIM[i] ? AIM[i] : null;
+        var rk = am && am.rank && am.rank.length === 3 ? am.rank.map(function(o){ return OUT.indexOf(o); }) : [0, 1, 2].sort(function(x, y){ return W[i][y] - W[i][x] || x - y; });
+        var recSet = am && am.p ? String(am.p).split("") : [];
+        var even = am && isFinite(Number(am.even)) ? Number(am.even) : 10 * (1 - (Math.max.apply(null, W[i]) - Math.min.apply(null, W[i])));
+        for(k = 0; k < 3; k++){
+          if(sets[i].indexOf(k) >= 0) continue;
+          var pos = rk.indexOf(k), ev = tw(i, k) < 99;
+          var tier = recSet.indexOf(OUT[k]) >= 0 ? 0 : pos === 1 ? (ev ? 1 : 2) : 3;
+          cands.push({ i: i, k: k, tier: tier, pos: pos, even: even });
         }
-        if(!best) break;
-        sets[best.i].push(best.k); sets[best.i].sort(); combos = best.nc;
       }
+      cands.sort(function(x, y){ return x.tier - y.tier || y.even - x.even || x.pos - y.pos || x.i - y.i; });
+      cands.forEach(function(c){
+        var n = sets[c.i].length;
+        if(n >= 3) return;
+        var nc = combos / n * (n + 1);
+        if(nc * price > target) return;
+        sets[c.i].push(c.k); sets[c.i].sort(); combos = nc;
+      });
       /* доводы к каждому исходу, который поставил ИИ */
       var kup = {}, added = 0;
       sets.forEach(function(s, i){
