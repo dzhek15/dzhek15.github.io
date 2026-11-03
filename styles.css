@@ -4399,3 +4399,10 @@ body.is-prev .aitbl-bar .aitbl-t{position:absolute; left:50%; top:50%; transform
 /* ВРЕМЕННО: розыгрыш «Баклажанная аналитика» — крупнее обычного логотипа (удалить вместе с img/logo-prank.webp) */
 .cover img.logo.logo-prank{height:330px; margin:-20px 0 -10px}
 @media (max-width:560px){ .cover img.logo.logo-prank{height:auto; width:100%; max-width:360px; margin:-6px auto -14px} }
+
+/* время матча другого дня: дата мелко над временем — ячейка одной ширины с остальными */
+.pc-tc .pc-tm.pc-dd{flex-direction:column; gap:3px; font-size:16px; line-height:1}
+.pc-tc .pc-tm.pc-dd b{font:inherit; font-weight:800}
+.pc-tc .pc-tm.pc-dd small{font:700 9.5px/1 var(--f-num); letter-spacing:.06em; color:#e3b955}
+:root[data-theme="light"] .pc-tc .pc-tm.pc-dd small{color:#8a6a1c}
+@media (max-width:420px){ .pc-tc .pc-tm.pc-dd{font-size:15px} }

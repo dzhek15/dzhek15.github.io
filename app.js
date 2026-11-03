@@ -8569,7 +8569,7 @@
     var picks = [], i, sys, nm = "ИИ-разбор · виртуальный", br = aiPrevBrief(p.tirazh);
     if(br){
       /* строки брифа идут как есть: каждая — один вариант, поэтому в набор попадают именно они, а не весь купон */
-      sys = br.map(function(x){ return x.replace(/,/g, "").split("").join(","); }); nm = "ИИ-бриф · виртуальный";
+      sys = br.map(function(x){ return x.replace(/,/g, "").split("").join(","); }); nm = FON ? "ИИ-купон · виртуальный" : "ИИ-бриф · виртуальный";
     } else {
       for(i = 0; i < p.matches.length; i++){ var r = aiPrevRec(p.tirazh, i); if(!r) return; picks.push(r.p); }
       sys = [picks.join(",")];
@@ -9123,7 +9123,8 @@
       var at = mn && mn.tick && li.ph ? ' data-ac="' + li.ph.ac + '" data-ao="' + escHtml(li.ph.ao || "") + '" data-bx="' + escHtml(li.ph.bx || "") + '" data-at="' + li.ph.at + '" data-h="' + (li.hockey ? 1 : 0) + '" data-s="1"' : "";
       return '<span class="pc-tm lv' + (txt === "LIVE" ? ' pc-tx' : '') + '"><i class="lv-dot"></i><b class="lv-min"' + at + '>' + escHtml(txt) + '</b></span>';
     }
-    return '<span class="pc-tm">' + escHtml((pcDay(m) ? pcDay(m) + " " : "") + (m.time || "—")) + '</span>';
+    if(pcDay(m)) return '<span class="pc-tm pc-dd"><small>' + escHtml(pcDay(m)) + '</small><b>' + escHtml(m.time || "—") + '</b></span>';      /* другой день: дата мелко над временем, ячейка не растёт */
+    return '<span class="pc-tm">' + escHtml(m.time || "—") + '</span>';
   }
   /* текущий приём в просмотре: ИИ-бриф и «Охота на 15» должны быть всегда; пока разбор не проведён и бриф не подгружен — сноска */
   var curAiPoll = 0;
@@ -9131,14 +9132,14 @@
     if(!p || !p.cur) return null;
     var tir = String(p.tirazh), rec = virt.data && virt.data[tir];
     var miss = [];
-    if(!aiPrevBrief(tir)) miss.push("ИИ-бриф");
+    if(!aiPrevBrief(tir)) miss.push(FON ? "ИИ-купон" : "ИИ-бриф");
     if(!(rec && rec.z)) miss.push("Охота на 15");
     return miss.length ? miss : null;
   }
   function pcNoAiNote(p){
     var miss = curAiMissing(p);
     if(!miss) return "";
-    var tx = miss.length > 1 ? "ИИ-разбор на этот тираж не проведён: купоны «ИИ-бриф» и «Охота на 15» появятся здесь сразу после разбора."
+    var tx = miss.length > 1 ? "ИИ-разбор на этот тираж не проведён: купоны «" + (FON ? "ИИ-купон" : "ИИ-бриф") + "» и «Охота на 15» появятся здесь сразу после разбора."
                             : "Купон «" + miss[0] + "» ещё не подгружен: он появится здесь сразу после расчёта.";
     return '<p class="pc-noai" id="pcNoAi">' + tx + '</p>';
   }
