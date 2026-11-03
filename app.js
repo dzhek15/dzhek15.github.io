@@ -3634,17 +3634,27 @@
         }));
       }).catch(function(){});
     var vp = loadVirt().catch(function(){ return null; }), vap = loadVirtAi().catch(function(){ return null; });
-    Promise.all([aiH, draws, vp, payLoadShared(), vap]).then(function(r){
-      var aih = r[0] || {}, vdata = r[2] || {}, vai = r[4] || {}, el = $("accBox"); if(!el) return;
+    Promise.all([aiH, draws, vp, payLoadShared(), vap, FON ? tiltJournal() : null]).then(function(r){
+      var aih = r[0] || {}, vdata = r[2] || {}, vai = r[4] || {}, tjn = r[5], el = $("accBox"); if(!el) return;
       var nums = Object.keys(store).map(Number).sort(function(a, b){ return accOrd(store[b].at, b) - accOrd(store[a].at, a); });
       var keep = {}; nums.forEach(function(n, i){ if(i < 40 || payFor(n)) keep[n] = store[n]; }); accWrite(keep);
+      if(FON && tjn && tjn.draws) nums.forEach(function(n){
+        var jd = tjn.draws[String(n)], at = Date.parse(store[n].at || ""); if(!jd || !jd.sets) return;
+        if(isFinite(at) && Math.abs(at / 1000 - jd.end) > 2 * 86400) return;      /* номера Фонбета повторялись: сверяем по дате закрытия */
+        ["zash", "cen"].forEach(function(k){ var a = jd.sets[k] && jd.sets[k]["1024"]; if(Array.isArray(a) && a.length === 15) store[n][k] = a; });
+      });
       if(FON) nums = nums.filter(function(n){ var rs = store[n].res; return Array.isArray(rs) && rs.length >= 15 && rs.every(function(x){ return !!x; }); });
       nums = nums.filter(function(n, i){ return i < ACC_N || payFor(n); });
       if(!nums.length){ el.innerHTML = FON ? '<p class="ev-note">У Фонбета пока нет тиражей с известными итогами матчей: статистика появится, когда закроется первый тираж, записанный журналом. Итоги Балтбета здесь не смешиваются.</p>' : '<p class="ev-warn">Пока не удалось получить итоги прошлых тиражей. Попробуй позже.</p>'; return; }
       var cols = [["ai", "ИИ", "ИИ", "ИИ"], ["hunt", "Охота", "Охота", "Охота на 15"], ["gap", "Расхожд.", "Расх.", "Расхождения"], ["sim", "Симул.", "Сим.", "Симуляция"], ["kel", "Келли", "Келли", "Келли"], ["mkel", "Монстр К.", "М.К.", "Монстр Келли"],
         ["gap2", "Расх. О", "Р·О", "Расхождения · обучение"], ["sim2", "Сим. О", "С·О", "Симуляция · обучение"], ["hunt2", "Охота ИИ", "О·ИИ", "Охота · с ИИ"]], sum = {}, cnt = {};
       /* у Фонбета нет пула и выплат: Келли и Монстр Келли там лишь повторяют расстановку Балтбета — в его статистику не входят */
-      if(FON) cols = cols.filter(function(c){ return c[0] !== "kel" && c[0] !== "mkel"; });
+      if(FON){
+        cols = cols.filter(function(c){ return c[0] !== "kel" && c[0] !== "mkel"; });
+        /* «Защита» и «Монстр + толпа»: купон на 1 024 строки (51 200 ₽), записанный журналом до закрытия приёма — не пересчитывается задним числом */
+        var si = 0; cols.forEach(function(c, i){ if(c[0] === "sim") si = i + 1; });
+        cols.splice(si, 0, ["zash", "Защита", "Защ.", "Защита"], ["cen", "Монстр + толпа", "М+Т", "Монстр + толпа"]);
+      }
       /* свои CSV из просмотра тиража (хранятся только в этом браузере): все свои наборы тиража вместе, без ИИ и Охоты.
          Считаются только наборы, загруженные до окончания тиража и не удалённые до него (удалённые после — хранятся в kept) */
       var mineRows = function(n){
@@ -3815,6 +3825,7 @@
         '<li><b>Итог</b> = выиграл − поставил. <span class="st-miss">мимо</span> — ни одна строка не угадала 9.</li>' +
         '</ol>' + ex +
         '<p class="st-note">Угадано — лучшая строка купона. ИИ — строки брифа 13 из 15; Охота — её готовые строки' + (nums.some(function(n){ return D[n].unpub; }) ? ' (* — составлена до матчей, на сайте до тиража не публиковалась)' : '') + '; Расхождения, Симуляция и Келли — купон при максимальном лимите ' + rub(LIM_MAX_RUB) + ', собран по линии и долям на закрытие приёма. ' +
+        (FON ? '«Защита» и «Монстр + толпа» — купон на 1 024 строки (' + rub(1024 * BK.price) + '), записанный журналом до закрытия приёма; для тиражей до начала журнала их нет. ' : '') +
         (name.mine ? '«Мои CSV» — ваши наборы из этого браузера, загруженные до окончания тиража и не удалённые до конца. ' : '') + 'Это расчёт по коэффициентам, а не фактический платёж оператора.</p></details>';
 
       /* ---------- обучение: своя таблица (основная рядом с обучением) и счёт ---------- */
