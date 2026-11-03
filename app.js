@@ -10,6 +10,8 @@
     var bkQ = /[?&]bk=(baltbet|fonbet)\b/.exec(location.search);
     if(bkQ){ BKID = bkQ[1]; if(!/[?&]embed=1\b/.test(location.search)) localStorage.setItem(C.BOOK_KEY, BKID); }
     else if(localStorage.getItem(C.BOOK_KEY) === "fonbet") BKID = "fonbet";
+    /* контора всегда видна в адресной строке: иначе после переключения адреса Балтбета и Фонбета одинаковые, и скопированная ссылка открывается не в той конторе */
+    if(!bkQ && !/[?&]embed=1\b/.test(location.search) && history.replaceState) history.replaceState(null, "", location.pathname + (location.search ? location.search + "&" : "?") + "bk=" + BKID + location.hash);
   }catch(e){}
   /* ?embed=1 — скрытая копия страницы для расчёта (Фонбет берёт расстановку у Балтбета): купон и настройки пользователя
      не читаются и ничего не записывается, чтобы расчёт не затронул ни выбранную контору, ни сохранённые купоны */
@@ -36,8 +38,8 @@
         var to = b.getAttribute("data-bk");
         if(to === BKID) return;
         try{ localStorage.setItem(C.BOOK_KEY, to); }catch(e){}
-        var u = location.pathname + location.search.replace(/([?&])bk=\w+&?/, "$1").replace(/[?&]$/, "") + location.hash;
-        location.replace(u);
+        /* адрес новой конторы чистый: купон, набор и ссылка предыдущей конторы с другими номерами тиражей не переносятся */
+        location.replace(location.pathname + "?bk=" + to);
       });
     });
     var bf = document.getElementById("btnFetch");
