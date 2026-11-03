@@ -4415,3 +4415,31 @@ body.is-prev .aitbl-bar .aitbl-t{position:absolute; left:50%; top:50%; transform
 .tilt-learn{margin:6px 0 4px; padding:0; list-style:none; text-align:left}
 .tilt-learn li{margin:0 0 8px; padding:9px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--kit-soft); font-size:12.5px; line-height:1.5; color:var(--muted)}
 .tilt-learn li b{color:var(--ink)}
+
+/* ---------- оттенок конторы: Балтбет — синий, Фонбет — сливово-пурпурный ----------
+   Тонкий слой поверх обоев, под всем содержимым: свечение по верхнему краю и углам, мягкие боковые кромки
+   и волосяная линия сверху окна. Виден на любой прокрутке, но ничего не перекрашивает (корзина, карточки и текст не тронуты). */
+:root{ --bk-a:56,112,196; --bk-b:30,78,160 }
+:root[data-bk="fonbet"]{ --bk-a:176,44,116; --bk-b:120,28,96 }
+:root[data-theme="light"]{ --bk-a:48,104,190; --bk-b:36,86,168 }
+:root[data-theme="light"][data-bk="fonbet"]{ --bk-a:170,48,112; --bk-b:128,34,104 }
+body::after{content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background:
+    linear-gradient(90deg, rgba(var(--bk-a),0), rgba(var(--bk-a),.85) 30%, rgba(var(--bk-a),.85) 70%, rgba(var(--bk-a),0)) 0 0 / 100% 2px no-repeat,
+    radial-gradient(1000px 360px at 50% -80px, rgba(var(--bk-a),.26), transparent 70%),
+    radial-gradient(520px 640px at 0% 100%, rgba(var(--bk-b),.20), transparent 70%),
+    radial-gradient(520px 640px at 100% 100%, rgba(var(--bk-b),.20), transparent 70%),
+    linear-gradient(90deg, rgba(var(--bk-a),.22), transparent 13%, transparent 87%, rgba(var(--bk-a),.22)),
+    linear-gradient(rgba(var(--bk-a),.10), rgba(var(--bk-a),.10))}
+:root[data-theme="light"] body::after{
+  background:
+    linear-gradient(90deg, rgba(var(--bk-a),0), rgba(var(--bk-a),.75) 30%, rgba(var(--bk-a),.75) 70%, rgba(var(--bk-a),0)) 0 0 / 100% 2px no-repeat,
+    radial-gradient(1000px 360px at 50% -80px, rgba(var(--bk-a),.20), transparent 70%),
+    radial-gradient(520px 640px at 0% 100%, rgba(var(--bk-b),.14), transparent 70%),
+    radial-gradient(520px 640px at 100% 100%, rgba(var(--bk-b),.14), transparent 70%),
+    linear-gradient(90deg, rgba(var(--bk-a),.20), transparent 13%, transparent 87%, rgba(var(--bk-a),.20)),
+    linear-gradient(rgba(var(--bk-a),.09), rgba(var(--bk-a),.09))}
+@media (max-width:700px){
+  body::after{background-size:100% 3px, auto, auto, auto, auto, auto}
+  :root[data-theme="light"] body::after{background-size:100% 3px, auto, auto, auto, auto, auto}
+}
