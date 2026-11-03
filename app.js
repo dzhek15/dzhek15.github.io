@@ -11970,7 +11970,8 @@
   /* ---------- общее окно стратегии ---------- */
   /* описание стратегии — свёрнуто, раскрывается по клику и не занимает место */
   /* единая легенда цветов исходов: окно Охоты, просмотр наборов, купон */
-  function colorLegend(){
+  function colorLegend(rect){
+    if(rect) return '<p class="col-leg"><span class="pc-o on"><b>1</b></span> исход в купоне (все сочетания играются) <span class="pc-o on blu"><b>X</b></span> выбран по доводам источников</p>';
     return '<p class="col-leg"><span class="pc-o on"><b>1</b></span> исход системы (выбран) <span class="pc-o on blu"><b>X</b></span> выбран по доводам источников <span class="pc-o tail"><b>2</b></span> только в добавочных строках, в систему не входит</p>';
   }
   function stratHow(html){
@@ -12267,8 +12268,9 @@
     var rows = virtRows(rec.z), price = briefPrice(), sets = rec.sets || [], core = rec.sys || rec.sets || [], bl = rec.bl || [], wy = rec.wy || {};
     var lines = rows.map(function(r){ return r.split("").map(function(ch){ return OUT.indexOf(ch); }); });
     var h = stratHow('Охота на 15 тратит весь бюджет ' + fmt(lines.length * price) + ' ₽: сначала система «14 из 15» на ' + fmt(rec.n_sys || lines.length) + ' строк, ' + ((rec.add || []).some(function(x){ return x; }) ? 'на остаток бюджета добираются строки, которые накрывают наибольшую ещё не накрытую вероятность «не меньше 14 из 15»: каждая строка проверяется вместе со всеми комбинациями, отличающимися от неё в одном матче, а уже накрытое системой не повторяется. Так остаток уходит на исходы вне системы, где риск выше всего, а не на повтор уже выбранных. Такие исходы показаны серым с пунктиром, в таблицу купона они не ставятся. Исходы' : 'на остаток бюджета добираются самые вероятные строки из полной таблицы выбранных исходов (система берёт из неё только часть комбинаций, остальные остаются в запасе), исходов вне таблицы в строках нет. Исходы') + ' выбираются алгоритмами Монстра Келли: линия, улучшения ИИ и усталость, Келли против толпы, доводы источников (психология, новости, события, история команд в Балтсистеме) — доводы 60% · Келли 40%. Синим отмечены исходы, которые выбраны по доводам источников, а не по чистой линии конторы. Набор считается один раз после разбора ИИ и дальше не меняется — по нему ведётся статистика.');
+    if(rec.rect) h = stratHow('Охота на 15 для Фонбета — обычный купон: Фонбет не принимает бриф-систему, поэтому играются все сочетания выбранных исходов, ' + fmt(lines.length) + ' вариантов на ' + fmt(lines.length * price) + ' ₽ (потолок 300 000 ₽). Основа — самый сильный исход в каждом матче по алгоритмам Монстра Келли: линия, улучшения ИИ и усталость, Келли против толпы, доводы источников — доводы 60% · Келли 40%. Допы добираются по разбору ИИ, а не по жадному выигрышу вероятности: сначала исходы, которые ИИ рекомендует в матче, затем вторые по рангу ИИ с доводами источников, затем остальные; самые открытые матчи страхуются первыми, исход, который не влезает в сумму, пропускается. Синим отмечены исходы, выбранные по доводам источников, а не по чистой линии конторы. Набор считается один раз после разбора ИИ и дальше не меняется — по нему ведётся статистика.');
     h += stratCards([["Цена купона", fmt(lines.length * price) + " ₽"], ["Строк", fmt(lines.length)], ["Шанс 15 из 15", rec.p15 ? stratChance(rec.p15) : "—"]].concat(rec.p14 ? [["Шанс 14+ из 15", stratChance(rec.p14)]] : []));
-    h += colorLegend();
+    h += colorLegend(rec.rect);
     h += '<table class="ev-tab ev-data-tab"><thead><tr><th>№</th><th>Матч</th><th>В наборе</th></tr></thead><tbody>';
     state.matches.forEach(function(m, i){
       var ad0 = String((rec.add || [])[i] || ""), st = String(core[i] || sets[i] || "") + ad0.split("").filter(function(c){ return String(core[i] || sets[i] || "").indexOf(c) < 0; }).join(""), why = [], ad = String((rec.add || [])[i] || ""), an = rec.an || {};
@@ -12289,7 +12291,7 @@
       + '<button type="button" id="huntBasket" class="btn-ev"' + (canBasket ? '' : ' disabled title="В корзину помещается до ' + fmt(BASKET_MAX) + ' строк — используй CSV"') + '>В корзину</button>'
       + '<button type="button" id="huntCsv" class="btn-ev">Скачать CSV</button></div>';
     if(!canBasket) h += '<p class="ev-note dt-center">Больше ' + fmt(BASKET_MAX) + ' строк корзина не вмещает — такой купон выгружается сразу в CSV.</p>';
-    h += '<p class="ev-note">Серые исходы с пунктиром встречаются только в строках добора; синие входят в систему и выбраны по доводам, а не по чистой линии. Выигрыш не гарантирован: система даёт не меньше 14 из 15 при попадании всех исходов в набор, остальные строки повышают шанс на 15. «Подставить в купон» ставит в таблицу исходы системы.</p>';
+    if(!rec.rect) h += '<p class="ev-note">Серые исходы с пунктиром встречаются только в строках добора; синие входят в систему и выбраны по доводам, а не по чистой линии. Выигрыш не гарантирован: система даёт не меньше 14 из 15 при попадании всех исходов в набор, остальные строки повышают шанс на 15. «Подставить в купон» ставит в таблицу исходы системы.</p>';
     if(!FON && rec.algo === "monster") h += learnHtml();
     box.innerHTML = h;
     $("evBack").hidden = false;
@@ -12409,6 +12411,41 @@
     }).join("");
     return { sys: sys, nSys: nSys, n: lines.length, pin: pin, p15: p15, z: z };
   }
+  function huntRectBuild(PS, PT){
+    var n = 15, i, k, sets = [], cands = [], AIM = ai.data && String(ai.data.number) === String(state.tirazh) && ai.data.m ? ai.data.m : null;
+    for(i = 0; i < n; i++){
+      var b0 = 0; for(k = 1; k < 3; k++) if(PS[i][k] > PS[i][b0]) b0 = k;
+      sets.push([b0]);
+      var am = AIM && AIM[i] ? AIM[i] : null;
+      var rk = am && am.rank && am.rank.length === 3 ? am.rank.map(function(o){ return OUT.indexOf(o); }) : [0, 1, 2].sort(function(x, y){ return PS[i][y] - PS[i][x] || x - y; });
+      var rec = am && am.p ? String(am.p).split("") : [];
+      var even = am && isFinite(Number(am.even)) ? Number(am.even) : 10 * (1 - (Math.max.apply(null, PS[i]) - Math.min.apply(null, PS[i])));
+      for(k = 0; k < 3; k++){
+        if(k === b0) continue;
+        var pos = rk.indexOf(k);
+        cands.push({ i: i, k: k, tier: rec.indexOf(OUT[k]) >= 0 ? 0 : pos === 1 ? 2 : 3, even: even, pos: pos });
+      }
+    }
+    cands.sort(function(x, y){ return x.tier - y.tier || y.even - x.even || x.pos - y.pos || x.i - y.i; });
+    cands.forEach(function(c){
+      var c0 = sets[c.i].length; if(c0 >= 3) return;
+      var nr = sets.reduce(function(a, s){ return a * s.length; }, 1) / c0 * (c0 + 1);
+      if(nr > HUNT_ROWS) return;
+      sets[c.i].push(c.k);
+    });
+    sets = sets.map(function(s){ return s.slice().sort(function(a, b){ return a - b; }); });
+    var combos = [[]];
+    sets.forEach(function(s){ var nx = []; combos.forEach(function(l){ s.forEach(function(q){ nx.push(l.concat([q])); }); }); combos = nx; });
+    var sc = function(l){ var v = 0; l.forEach(function(q, a){ v += Math.log(Math.max(PS[a][q], 1e-9)); }); return v; };
+    combos.sort(function(x, y){ return sc(y) - sc(x); });
+    var pin = 1, p15 = 0, z = "";
+    for(i = 0; i < n; i++){ var sp = 0; sets[i].forEach(function(q){ sp += PT[i][q]; }); pin *= Math.min(1, sp); }
+    combos.forEach(function(l){
+      var pr = 1, v = 0, a, o = ""; for(a = 0; a < n; a++){ pr *= PT[a][l[a]]; v = v * 3 + l[a]; }
+      p15 += pr; for(a = 0; a < 5; a++){ o = "0123456789abcdefghijklmnopqrstuvwxyz".charAt(v % 36) + o; v = Math.floor(v / 36); } z += o;
+    });
+    return { txt: sets.map(function(s){ return s.map(function(q){ return OUT[q]; }).join(""); }), n: combos.length, pin: pin, p15: p15, z: z };
+  }
   function huntRunGen(gen, onDone){
     function step(){
       var t0 = Date.now(), x;
@@ -12431,6 +12468,12 @@
     if(bad){ onDone({ error: bad }); return; }
     PS = P;
     if(MS){ PS = MS.W1; P = MS.probs; }
+    if(FON){      /* Фонбет не принимает бриф-систему: купон-прямоугольник, допы по разбору ИИ (тот же расчёт, что pipeline/mkhunt_rect.py) */
+      var RC = huntRectBuild(PS, P);
+      onDone({ at: new Date().toISOString().slice(0, 16) + "Z", name: "Охота на 15 · купон с допами по ИИ", price: briefPrice(), rect: true,
+        sets: RC.txt, sys: RC.txt, n_sys: RC.n, n: RC.n, pin: RC.pin, p15: RC.p15, bl: new Array(15).fill(""), wy: {}, add: new Array(15).fill(""), an: {}, algo: "line", z: RC.z, local: true });
+      return;
+    }
     huntRunGen(huntBriefGen(PS, P), function(r){
       if(r.error){ onDone(r); return; }
       var txt = r.sys.map(function(s){ return s.map(function(q){ return OUT[q]; }).join(""); });
