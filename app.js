@@ -8,9 +8,18 @@
   var BKID = "baltbet";
   try{
     var bkQ = /[?&]bk=(baltbet|fonbet)\b/.exec(location.search);
-    if(bkQ){ BKID = bkQ[1]; localStorage.setItem(C.BOOK_KEY, BKID); }
+    if(bkQ){ BKID = bkQ[1]; if(!/[?&]embed=1\b/.test(location.search)) localStorage.setItem(C.BOOK_KEY, BKID); }
     else if(localStorage.getItem(C.BOOK_KEY) === "fonbet") BKID = "fonbet";
   }catch(e){}
+  /* ?embed=1 — скрытая копия страницы для расчёта (Фонбет берёт расстановку у Балтбета): купон и настройки пользователя
+     не читаются и ничего не записывается, чтобы расчёт не затронул ни выбранную контору, ни сохранённые купоны */
+  if(/[?&]embed=1\b/.test(location.search)){
+    try{
+      var gi0 = Storage.prototype.getItem;
+      Storage.prototype.setItem = function(){}; Storage.prototype.removeItem = function(){};
+      Storage.prototype.getItem = function(k){ return /^(baltsystem-kupon|dzhek-undo1|dzhek-prevcsv|dzhek-acc|dzhek-pvui)/.test(String(k)) ? null : gi0.call(this, k); };
+    }catch(e){}
+  }
   var BK = C.BOOKS[BKID], FON = BKID === "fonbet";
   var BKL = BK.slug + "/drawings?page=";
   if(BK.share) C.EV_SHARE = BK.share;
@@ -11523,14 +11532,14 @@
      Внутри источника первым идёт исход, с которым рост банка больше. Каждый шаг сохраняет возможность дойти ровно до бюджета. */
   /* ---------- самообучение Монстра: data/api/learn.json пишет журнал после каждого тиража ----------
      поправки выплат по реальным выплатам, доверие к источникам добора (порядок, выключение, сила сдвигов), способ добора */
-  var LEARN = null;
+  var LEARN = null, LEARN_DONE = false;
   function learnLoad(){
     if(FON) return;
     fetch(MIRROR + "learn.json?t=" + Math.floor(Date.now() / 600000), { cache: "no-store" }).then(function(r){ return r.ok ? r.json() : null; }).then(function(L){
       if(!L) return;
       LEARN = L;
       if(L.fix){ var f = {}; Object.keys(L.fix).forEach(function(k){ f[k] = Number(L.fix[k]); }); FIX_BASE = f; }
-    }).catch(function(){});
+    }).catch(function(){}).then(function(){ LEARN_DONE = true; });
   }
   learnLoad();
   function learnRank(name, t0, md){
@@ -12650,14 +12659,100 @@
       : '<p class="ev-kai-d">Улучшения посчитаны, но купон на эту сумму совпал с Монстром Келли без улучшений — сдвиги слишком малы, чтобы поменять расстановку.</p>';
     return { kup: kup, kdel: kdel, html: html };
   }
+  /* ---------- Фонбет берёт расстановку у Балтбета ----------
+     В скрытой копии страницы Балтбета (?bk=baltbet&embed=1) считаются те же «Келли» и «Монстр Келли», что видит игрок в Балтбете;
+     Фонбет пул не публикует, поэтому на общие матчи переносит исходы оттуда. Копия не трогает выбранную контору в браузере. */
+  window.dzBaltReady = function(){
+    return !FON && state.matches.length === 15 && state.matches.every(function(m){ return m.pct && m.pct.bk && evPool(m); }) && hist.ev.length > 0 && !!LEARN_DONE;
+  };
+  window.dzBaltPicks = function(){
+    return Promise.resolve(loadAi(false)).catch(function(){}).then(function(){
+      var rows = function(P){ return P && P.plan && P.plan.rows ? state.matches.map(function(m){
+        var r = P.plan.rows.filter(function(x){ return x.m === m; })[0]; return r && r.set && r.set.length ? r.set.slice() : null; }) : null; };
+      var out = { no: state.tirazh, ms: state.matches.map(function(m){ return { home: m.home, away: m.away, p: evProbs(m) }; }), kel: null, mkel: null, err: {} };
+      try { var K = planByKelly(limitLines("kelLimit", limitMaxLines())); if(K && !K.error && K.pick) out.kel = rows(K.pick); else out.err.kel = K && K.error || "нет купона"; } catch(e){ out.err.kel = String(e && e.message || e); }
+      try { var E = kelEdges(), M = planMonster(limitLines("mkelLimit", limitMaxLines()), !!E); if(M && !M.error && M.pick) out.mkel = rows(M.pick); else out.err.mkel = M && M.error || "нет купона"; } catch(e){ out.err.mkel = String(e && e.message || e); }
+      return out;
+    });
+  };
+  var BAL = { at: 0, data: null, busy: null };
+  function balPicks(){
+    if(BAL.data && Date.now() - BAL.at < 5 * 60000) return Promise.resolve(BAL.data);
+    if(BAL.busy) return BAL.busy;
+    BAL.busy = new Promise(function(res, rej){
+      var fr = document.createElement("iframe"), t0 = Date.now(), done = false, iv = 0;
+      fr.setAttribute("aria-hidden", "true"); fr.tabIndex = -1; fr.title = "Балтбет (расчёт)";
+      fr.style.cssText = "position:fixed;left:-3000px;top:0;width:1100px;height:900px;border:0;opacity:0;pointer-events:none";
+      fr.src = location.pathname + "?bk=baltbet&embed=1";
+      var fin = function(err, d){
+        if(done) return; done = true; clearInterval(iv); try { fr.remove(); } catch(e){}
+        BAL.busy = null;
+        if(err) rej(err); else { BAL.data = d; BAL.at = Date.now(); res(d); }
+      };
+      iv = setInterval(function(){
+        if(Date.now() - t0 > 70000) return fin(new Error("Балтбет не ответил за 70 секунд"));
+        var w; try { w = fr.contentWindow; } catch(e){ return; }
+        if(!w || typeof w.dzBaltReady !== "function") return;
+        var ok = false; try { ok = w.dzBaltReady(); } catch(e){}
+        if(!ok) return;
+        clearInterval(iv);
+        w.dzBaltPicks().then(function(d){ fin(null, d); }, function(e){ fin(e); });
+      }, 700);
+      document.body.appendChild(fr);
+    });
+    return BAL.busy;
+  }
+  function balPanelHtml(which){
+    var nm = which === "mkel" ? "Монстр Келли" : "Келли";
+    return '<div class="ev-arb ev-bal"><div class="ev-arb-h">Расстановка по Балтбету</div>' +
+      '<p class="ev-note" style="text-align:left">Фонбет не публикует пул, поэтому «' + nm + '» здесь не посчитать. Матчи, которые есть и в Балтбете, можно проставить так, как «' + nm +
+      '» расставляет их там по пулу Балтбета. Остальные матчи не трогаются.</p>' +
+      '<div class="bal-go" style="text-align:center;margin:10px 0 8px"><button type="button" id="balFill" class="btn-ev" data-w="' + which + '">Проставить схожие матчи Балтбета</button></div><div id="balOut" class="ev-note" style="text-align:left"></div></div>';
+  }
+  function balBind(box){
+    var b = box.querySelector("#balFill"); if(!b) return;
+    b.addEventListener("click", function(){
+      var which = b.getAttribute("data-w"), out = box.querySelector("#balOut");
+      b.disabled = true; out.textContent = "Считаю расстановку в Балтбете, это до минуты…";
+      balPicks().then(function(D){
+        b.disabled = false;
+        var sets = D[which];
+        if(!sets){ out.textContent = "Балтбет не смог собрать эту стратегию: " + (D.err && D.err[which] || "нет данных") + "."; return; }
+        var done = [], skipLine = [], locked = 0, same = 0;
+        state.matches.forEach(function(m, i){
+          for(var j = 0; j < D.ms.length; j++){
+            var bm = D.ms[j];
+            if(!(arbSame(m.home, bm.home) && arbSame(m.away, bm.away))) continue;
+            var pr = evProbs(m), far = pr && bm.p && [0, 1, 2].some(function(k){ return Math.abs(pr[k] - bm.p[k]) > 0.12; });
+            if(far){ skipLine.push((i + 1) + ". " + m.home + " — " + m.away); return; }
+            if(!sets[j]){ return; }
+            if(m.mode === "lock"){ locked++; return; }
+            m.picks = { "1": false, "X": false, "2": false };
+            sets[j].forEach(function(k){ m.picks[OUT[k]] = true; });
+            m.mode = "free"; done.push({ i: i, s: sets[j].map(function(k){ return OUT[k]; }).join(""), j: j }); return;
+          }
+        });
+        if(!done.length){
+          out.textContent = "Общих матчей с тиражом Балтбета №" + D.no + " нет" + (skipLine.length ? " (по линии не совпали: " + skipLine.join("; ") + ")" : "") + ".";
+          return;
+        }
+        save(); render();
+        say("Расстановка по Балтбету («" + (which === "mkel" ? "Монстр Келли" : "Келли") + "»): проставлено " + done.length + " матч(ей) из 15. «Назад» откатит изменения.");
+        out.innerHTML = 'Проставлено <b>' + done.length + ' из 15</b> по тиражу Балтбета №' + escHtml(String(D.no)) + ': ' +
+          done.map(function(d){ var m = state.matches[d.i]; return (d.i + 1) + '. ' + escHtml(m.home + " — " + m.away) + ' <b>' + d.s + '</b>'; }).join(" · ") +
+          (locked ? '. Фиксированных матчей не тронуто: ' + locked : '') + (skipLine.length ? '. Не совпали по линии, пропущены: ' + escHtml(skipLine.join("; ")) : '') +
+          '. Остальные ' + (15 - done.length) + ' матч(ей) в Балтбете этого тиража не играются — их нужно проставить самому.';
+      }).catch(function(e){ b.disabled = false; out.textContent = "Не получилось взять Балтбет: " + String(e && e.message || e) + "."; });
+    });
+  }
   function showKellyStrat(){
     var box = stratGuard("Стратегия «Келли»"); if(!box) return;
     var L = limitLines("kelLimit", limitMaxLines()), K = planByKelly(L), price = linePrice();
     var h = stratHow('Цель — быстрее всего растить банк. Сравниваются системы по вероятностям и купоны «Симуляции» на все допустимые размеры в пределах лимита суммы; купон собирается на выбранную сумму (самый крупный допустимый в её пределах), а из равных по размеру берётся тот, у которого ожидаемый рост банка больше. Рядом показан купон с наибольшим ростом. Банк модели — расчётные 30 000 ₽, а не реальный баланс. Если рост отрицательный — модель предупреждает, что ставить невыгодно.');
     h += limitSelect("kelLimit", L);
     if(K.error){
-      box.innerHTML = h + '<p class="ev-warn">Посчитать не получилось: ' + K.error + '.</p>';
-      $("evBack").hidden = false; limitBind(box, showKellyStrat); return;
+      box.innerHTML = h + '<p class="ev-warn">Посчитать не получилось: ' + K.error + '.</p>' + (FON ? balPanelHtml("kel") : "");
+      $("evBack").hidden = false; limitBind(box, showKellyStrat); if(FON) balBind(box); return;
     }
     var pick = K.pick, b = K.best;
     if(pick){
@@ -12695,8 +12790,8 @@
       h += '<p class="ev-note dt-center">Улучшений по этому тиражу нет: ни перекосов ИИ, ни заметной разницы в усталости' + (ai.data && String(ai.data.number) === String(state.tirazh) ? '' : ' (разбора ИИ по этому тиражу ещё нет)') + ' — считается Монстр Келли без улучшений.</p>';
     }
     if(K.error){
-      box.innerHTML = h + '<p class="ev-warn">Посчитать не получилось: ' + K.error + '.</p>';
-      $("evBack").hidden = false; limitBind(box, showMonsterStrat);
+      box.innerHTML = h + '<p class="ev-warn">Посчитать не получилось: ' + K.error + '.</p>' + (FON ? balPanelHtml("mkel") : "");
+      $("evBack").hidden = false; limitBind(box, showMonsterStrat); if(FON) balBind(box);
       var sw0 = $("kelAi"); if(sw0) sw0.addEventListener("change", function(){ try { localStorage.setItem(KEL_AI_KEY, sw0.checked ? "1" : "0"); } catch(e){} showMonsterStrat(); });
       return;
     }
