@@ -12728,9 +12728,13 @@
     return Promise.resolve(loadAi(false)).catch(function(){}).then(function(){
       var rows = function(P){ return P && P.plan && P.plan.rows ? state.matches.map(function(m){
         var r = P.plan.rows.filter(function(x){ return x.m === m; })[0]; return r && r.set && r.set.length ? r.set.slice() : null; }) : null; };
-      var out = { no: state.tirazh, ms: state.matches.map(function(m){ return { home: m.home, away: m.away, p: evProbs(m) }; }), kel: null, mkel: null, err: {} };
-      try { var K = planByKelly(limitLines("kelLimit", limitMaxLines())); if(K && !K.error && K.pick) out.kel = rows(K.pick); else out.err.kel = K && K.error || "нет купона"; } catch(e){ out.err.kel = String(e && e.message || e); }
-      try { var E = kelEdges(), M = planMonster(limitLines("mkelLimit", limitMaxLines()), !!E); if(M && !M.error && M.pick) out.mkel = rows(M.pick); else out.err.mkel = M && M.error || "нет купона"; } catch(e){ out.err.mkel = String(e && e.message || e); }
+      /* подробности для Фонбета: вероятности, толпа, причина выбора и синие исходы с описанием (kup) по каждому матчу */
+      var det = function(P){ if(!(P && P.plan && P.plan.rows)) return null; var fl = P.plan.kup || P.plan.fill || {}, kd = P.plan.kdel || {};
+        return state.matches.map(function(m, ix){ var r = P.plan.rows.filter(function(x){ return x.m === m; })[0];
+          return r ? { p: r.p || null, q: r.q || null, why: r.why || "", kup: fl[ix] || null, kdel: kd[ix] || null } : null; }); };
+      var out = { no: state.tirazh, ms: state.matches.map(function(m){ return { home: m.home, away: m.away, p: evProbs(m) }; }), kel: null, mkel: null, det: { kel: null, mkel: null }, err: {} };
+      try { var K = planByKelly(limitLines("kelLimit", limitMaxLines())); if(K && !K.error && K.pick){ out.kel = rows(K.pick); out.det.kel = det(K.pick); } else out.err.kel = K && K.error || "нет купона"; } catch(e){ out.err.kel = String(e && e.message || e); }
+      try { var E = kelEdges(), M = planMonster(limitLines("mkelLimit", limitMaxLines()), !!E); if(M && !M.error && M.pick){ out.mkel = rows(M.pick); out.det.mkel = det(M.pick); } else out.err.mkel = M && M.error || "нет купона"; } catch(e){ out.err.mkel = String(e && e.message || e); }
       return out;
     });
   };
@@ -12788,7 +12792,11 @@
             if(m.mode === "lock"){ locked++; return; }
             m.picks = { "1": false, "X": false, "2": false };
             sets[j].forEach(function(k){ m.picks[OUT[k]] = true; });
-            m.mode = "free"; done.push({ i: i, s: sets[j].map(function(k){ return OUT[k]; }).join(""), j: j }); return;
+            var dt = D.det && D.det[which] && D.det[which][j];
+            delete m.kup; delete m.kdel; delete m.kupAll; delete m.kdelAll; delete m.kupSrc;
+            if(dt && dt.kup){ m.kup = JSON.parse(JSON.stringify(dt.kup)); m.kupAll = JSON.parse(JSON.stringify(dt.kup)); }      /* синие исходы с описанием — как в Балтбете */
+            if(dt && dt.kdel){ m.kdel = JSON.parse(JSON.stringify(dt.kdel)); m.kdelAll = JSON.parse(JSON.stringify(dt.kdel)); }
+            m.mode = "free"; done.push({ i: i, s: sets[j].map(function(k){ return OUT[k]; }).join(""), j: j, dt: dt || null, set: sets[j].slice() }); return;
           }
         });
         if(!done.length){
@@ -12801,6 +12809,9 @@
           done.map(function(d){ var m = state.matches[d.i]; return (d.i + 1) + '. ' + escHtml(m.home + " — " + m.away) + ' <b>' + d.s + '</b>'; }).join(" · ") +
           (locked ? '. Фиксированных матчей не тронуто: ' + locked : '') + (skipLine.length ? '. Не совпали по линии, пропущены: ' + escHtml(skipLine.join("; ")) : '') +
           '. Остальные ' + (15 - done.length) + ' матч(ей) в Балтбете этого тиража не играются — их нужно проставить самому.';
+        var tr = done.map(function(d){ var m = state.matches[d.i], dt = d.dt || {}; return { idx: d.i, m: m, p: dt.p || null, q: dt.q || null, set: d.set, why: dt.why || "", kup: dt.kup || null, locked: false }; }),
+            nb = done.filter(function(d){ return d.dt && d.dt.kup; }).length;
+        out.innerHTML += stratTable(tr) + (nb ? '<p class="ev-note"><b class="kel-up-t">Синие</b> исходы попали в расстановку не по линии конторы: по перекосу против толпы Балтбета, улучшениям ИИ, усталости и доводам источников. Наведи на исход или открой матч в купоне — там описание причины, как в Балтбете. Вероятности и толпа в таблице — по Балтбету.</p>' : '');
       }).catch(function(e){ b.disabled = false; out.textContent = "Не получилось взять Балтбет: " + String(e && e.message || e) + "."; });
     });
   }
