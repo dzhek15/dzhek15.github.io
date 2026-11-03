@@ -1303,6 +1303,9 @@
     var projected = (typical && poolNow < typical * 0.6);
     var fund = projected ? typical : poolNow;
     var jack = Number(state.jackpot) || 0;
+    /* Фонбет не публикует пул: считаем на условном фонде, а выплаты — только за 12+ (ниже он не платит). Деньги в таблице не показываем: отбор идёт по шансу и по тому, как мало игроков берут ту же строку */
+    var KMIN = FON ? 12 : 9;
+    if(FON){ fund = 30000000; jack = 0; projected = false; }
     if(!fund){
       box.innerHTML = '<p class="ev-warn">Не знаю размер призового фонда — нажми «Обновить тираж».</p>';
       $("evBack").hidden = false;
@@ -1320,8 +1323,9 @@
 
     var all = gen.lines.map(function(line){
       var r = evOfLine(line, c.probs, c.pools, lines, fund, jack);
-      return { line: line, ev: r.ev, any: evTail(r.qDist, 9), q: r.qDist,
-               comp: r.tbl.n[9], rows: r.rows };
+      var rw = r.rows.filter(function(row){ return row.k >= KMIN; }), ev = rw.reduce(function(a, row){ return a + row.part; }, 0);
+      return { line: line, ev: FON ? ev : r.ev, any: evTail(r.qDist, KMIN), q: r.qDist,
+               comp: r.tbl.n[KMIN], rows: rw };
     });
 
     var best = 0;
@@ -1330,7 +1334,7 @@
     if(!pool.length) pool = all;
 
     var limit = Math.min(30, pool.length);
-    var occ = {}; for(var k=9;k<=15;k++) occ[k] = 0;
+    var occ = {}; for(var k=KMIN;k<=15;k++) occ[k] = 0;
     var picked = [], rest = pool.slice();
     for(var step=0; step<limit; step++){
       var bi = -1, bv = -Infinity;
@@ -1350,32 +1354,32 @@
     }
 
     var h = '';
+    var evMax = 0; picked.forEach(function(x){ if(x.ev > evMax) evMax = x.ev; });
     h += '<p class="ev-sub">В системе ' + fmt(gen.combos) + ' строк(и), ' +
          (gen.full ? 'перебрал все' : 'перебрал случайные ' + fmt(gen.lines.length)) + '. ' +
          'Отсеяно по шансу: осталось ' + fmt(pool.length) + ', из них отобрано ' + fmt(picked.length) + '. ' +
-         'Фонд ' + evMoney(fund) + (projected ? ' (типичный итоговый, приём ещё идёт)' : '') +
-         ', суперприз ' + evMoney(jack) + '.</p>';
+         (FON ? 'У Фонбета нет данных о пуле, поэтому рубли не считаются: строки сравниваются по шансу угадать 12 и больше и по тому, сколько игроков, судя по долям толпы, возьмут ту же строку.' : 'Фонд ' + evMoney(fund) + (projected ? ' (типичный итоговый, приём ещё идёт)' : '') + ', суперприз ' + evMoney(jack) + '.') + '</p>';
 
     pfLast = picked;
     h += '<table class="ev-tab pf-tab"><thead><tr><th><input type="checkbox" id="pfAll" checked ' +
-         'aria-label="Отметить все строки"></th><th>#</th><th>Строка</th><th>Шанс 9+</th>' +
-         '<th>Соперников в 9+</th><th>EV</th></tr></thead><tbody>';
+         'aria-label="Отметить все строки"></th><th>#</th><th>Строка</th><th>Шанс ' + KMIN + '+</th>' +
+         '<th>Соперников в ' + KMIN + '+' + (FON ? ' (усл.)' : '') + '</th><th>' + (FON ? 'Ценность' : 'EV') + '</th></tr></thead><tbody>';
     picked.forEach(function(x, i){
       var txt = x.line.map(function(o){ return OUT[o]; }).join(" ");
       h += '<tr><td><input type="checkbox" class="pf-cb" data-i="' + i + '" checked ' +
            'aria-label="Строка ' + (i+1) + '"></td><td>' + (i+1) + '</td><td class="pf-line">' + txt +
            '</td><td>' + evPct(x.any) + '</td><td>' + fmt(Math.round(x.comp)) + '</td><td>' +
-           evMoney(x.ev) + '</td></tr>';
+           (FON ? Math.round(x.ev / (evMax || 1) * 100) + '%' : evMoney(x.ev)) + '</td></tr>';
     });
     h += '</tbody></table>';
     h += '<div class="pf-foot"><button class="btn-keep" id="pfSave" type="button">Положить отмеченные в корзину</button>' +
          '<span class="pf-note" id="pfNote"></span></div>';
 
     h += '<h3>Как отобрано</h3><ul class="ev-ass">' +
-         '<li>Сначала отсев по жизнеспособности: строка проходит дальше, только если её шанс угадать 9 и больше не меньше ' +
+         '<li>Сначала отсев по жизнеспособности: строка проходит дальше, только если её шанс угадать ' + KMIN + ' и больше не меньше ' +
          Math.round(PF_VIABLE*100) + '% от лучшего в системе. Без этого наверх списка лезут самые редкие комбинации — у них EV по модели огромный, но выиграть они не могут почти никогда.</li>' +
          '<li>Среди прошедших идёт жадный отбор: на каждом шаге берётся строка с наибольшим приростом, причём вклад в каждую категорию делится на то, сколько уже набрано этой категории отобранными строками. Так набор не сходится в один угол — строки получаются разные.</li>' +
-         '<li>Колонка «соперников в 9+» — сколько игроков тиража, по оценке долей пула, попадут в ту же категорию. Чем меньше, тем меньше делить приз. Это та же оценка независимости, что и в матожидании, со всеми её оговорками.</li>' +
+         '<li>Колонка «соперников в ' + KMIN + '+» — сколько игроков тиража, по оценке долей пула, попадут в ту же категорию. Чем меньше, тем меньше делить приз. Это та же оценка независимости, что и в матожидании, со всеми её оговорками.</li>' +
          '<li>Список — не рекомендация покупать именно эти строки, а способ увидеть, какие места системы меньше всего заняты толпой.</li>' +
          '</ul>';
 
