@@ -5488,7 +5488,7 @@
   });
   $("btnReset").addEventListener("click", function(){
     pushHistory("очистка");
-    state.matches.forEach(function(m){ if(m.mode!=="lock") m.picks={"1":false,"X":false,"2":false}; });
+    state.matches.forEach(function(m){ if(m.mode!=="lock"){ m.picks={"1":false,"X":false,"2":false}; delete m.kup; delete m.kdel; delete m.kupAll; delete m.kdelAll; delete m.kupSrc; } });   /* вместе с исходами уходят и синие отметки с комментариями */
     save(); render();
   });
 
