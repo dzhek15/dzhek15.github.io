@@ -3627,7 +3627,7 @@
               if(!info) return;
               if(FON) fonFillRes(info, fh);
               var allRes = (info.events || []).length >= 15 && (info.events || []).every(function(e){ return !!normOut(e && e.result) || (FON && e && e.result === VOID); });
-              if(info.status !== "finished" && !allRes) return;
+              if((FON || info.status !== "finished") && !allRes) return;   /* у Фонбета «finished» без итогов матчей бывает — такой тираж не считаем, иначе пустые итоги дают «15 из 15» */
               info.number = info.number || d.number;
               store[d.number] = stratForInfo(info); store[d.number].at = d.ended_at || ""; store[d.number].fin = info.status === "finished";
             }).catch(function(e){ if(window.console) console.warn("Статистика: тираж " + d.number, e); });
@@ -3638,8 +3638,9 @@
       var aih = r[0] || {}, vdata = r[2] || {}, vai = r[4] || {}, el = $("accBox"); if(!el) return;
       var nums = Object.keys(store).map(Number).sort(function(a, b){ return accOrd(store[b].at, b) - accOrd(store[a].at, a); });
       var keep = {}; nums.forEach(function(n, i){ if(i < 40 || payFor(n)) keep[n] = store[n]; }); accWrite(keep);
+      if(FON) nums = nums.filter(function(n){ var rs = store[n].res; return Array.isArray(rs) && rs.length >= 15 && rs.every(function(x){ return !!x; }); });
       nums = nums.filter(function(n, i){ return i < ACC_N || payFor(n); });
-      if(!nums.length){ el.innerHTML = '<p class="ev-warn">Пока не удалось получить итоги прошлых тиражей. Попробуй позже.</p>'; return; }
+      if(!nums.length){ el.innerHTML = FON ? '<p class="ev-note">У Фонбета пока нет тиражей с известными итогами матчей: статистика появится, когда закроется первый тираж, записанный журналом. Итоги Балтбета здесь не смешиваются.</p>' : '<p class="ev-warn">Пока не удалось получить итоги прошлых тиражей. Попробуй позже.</p>'; return; }
       var cols = [["ai", "ИИ", "ИИ", "ИИ"], ["hunt", "Охота", "Охота", "Охота на 15"], ["gap", "Расхожд.", "Расх.", "Расхождения"], ["sim", "Симул.", "Сим.", "Симуляция"], ["kel", "Келли", "Келли", "Келли"], ["mkel", "Монстр К.", "М.К.", "Монстр Келли"],
         ["gap2", "Расх. О", "Р·О", "Расхождения · обучение"], ["sim2", "Сим. О", "С·О", "Симуляция · обучение"], ["hunt2", "Охота ИИ", "О·ИИ", "Охота · с ИИ"]], sum = {}, cnt = {};
       /* у Фонбета нет пула и выплат: Келли и Монстр Келли там лишь повторяют расстановку Балтбета — в его статистику не входят */
@@ -12809,7 +12810,8 @@
           return;
         }
         save(); render();
-        say("Расстановка по Балтбету («" + (which === "mkel" ? "Монстр Келли" : "Келли") + "»): проставлено " + done.length + " матч(ей) из 15. «Назад» откатит изменения.");
+        say("Расстановка по Балтбету («" + (which === "mkel" ? "Монстр Келли" : "Келли") + "»): проставлено " + done.length + " из 15 матчей (" + done.map(function(d){ return d.i + 1; }).join(", ") + "), общих с тиражом Балтбета №" + D.no + (locked ? "; фиксированных не тронуто: " + locked : "") + ". Остальные матчи проставь сам. «Назад» откатит изменения.");
+        $("evBack").hidden = true;   /* окно закрываем: результат виден в купоне и в подсказке */
         out.innerHTML = 'Проставлено <b>' + done.length + ' из 15</b> по тиражу Балтбета №' + escHtml(String(D.no)) + ': ' +
           done.map(function(d){ var m = state.matches[d.i]; return (d.i + 1) + '. ' + escHtml(m.home + " — " + m.away) + ' <b>' + d.s + '</b>'; }).join(" · ") +
           (locked ? '. Фиксированных матчей не тронуто: ' + locked : '') + (skipLine.length ? '. Не совпали по линии, пропущены: ' + escHtml(skipLine.join("; ")) : '') +
