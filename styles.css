@@ -4423,9 +4423,10 @@ html[data-bk="fonbet"]{--bkc:232,0,36}
 :root[data-theme="light"]{--bkc:48,104,190}
 :root[data-theme="light"][data-bk="fonbet"]{--bkc:222,0,34}
 html::before{content:"";position:fixed;left:0;right:0;top:0;height:3px;z-index:60;pointer-events:none;background:linear-gradient(90deg,transparent,rgba(var(--bkc),.95) 20%,rgba(var(--bkc),.95) 80%,transparent)}
-.bk-tab{position:fixed;left:0;top:34%;z-index:60;writing-mode:vertical-rl;transform:rotate(180deg);font:800 11px/1 "IBM Plex Sans",sans-serif;letter-spacing:.32em;color:#fff;padding:16px 7px;border:0;border-radius:0 8px 8px 0;cursor:pointer;background:linear-gradient(180deg,rgba(var(--bkc),.95),rgba(var(--bkc),.72));box-shadow:0 0 18px rgba(var(--bkc),.45),inset 0 0 0 1px rgba(255,255,255,.18);transition:padding .18s ease,box-shadow .18s ease,filter .18s ease;-webkit-tap-highlight-color:transparent}
-.bk-tab:hover,.bk-tab:focus-visible{padding-right:11px;filter:brightness(1.12);box-shadow:0 0 24px rgba(var(--bkc),.65),inset 0 0 0 1px rgba(255,255,255,.28)}
+.bk-tab{position:fixed;left:0;top:34%;z-index:60;display:flex;align-items:center;justify-content:center;width:26px;min-height:88px;padding:0;border-radius:0 8px 8px 0;cursor:pointer;text-decoration:none;touch-action:manipulation;background:linear-gradient(180deg,rgba(var(--bkc),.95),rgba(var(--bkc),.72));box-shadow:0 0 18px rgba(var(--bkc),.45),inset 0 0 0 1px rgba(255,255,255,.18);transition:width .18s ease,box-shadow .18s ease,filter .18s ease;-webkit-tap-highlight-color:transparent}
+.bk-tab span{display:block;writing-mode:vertical-rl;transform:rotate(180deg);font:800 11px/1 "IBM Plex Sans",sans-serif;letter-spacing:.32em;color:#fff;padding:16px 0;white-space:nowrap}
+.bk-tab:hover,.bk-tab:focus-visible{width:30px;filter:brightness(1.12);box-shadow:0 0 24px rgba(var(--bkc),.65),inset 0 0 0 1px rgba(255,255,255,.28)}
 .bk-tab:active{filter:brightness(.95)}
 .bk-tab:focus-visible{outline:2px solid #fff;outline-offset:2px}
-@media (max-width:560px){.bk-tab{font-size:9.5px;padding:12px 5px;letter-spacing:.26em;top:30%}.bk-tab:hover,.bk-tab:focus-visible{padding-right:5px}}
+@media (max-width:560px){.bk-tab{width:22px;top:30%}.bk-tab span{font-size:9.5px;letter-spacing:.26em;padding:12px 0}.bk-tab:hover,.bk-tab:focus-visible{width:22px}}
 @media print{html::before,.bk-tab{display:none}}

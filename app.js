@@ -45,14 +45,18 @@
     /* боковой ярлык с названием конторы: нажатие переключает на другую контору */
     if(!document.getElementById("bkTab")){
       var other = BKID === "fonbet" ? "baltbet" : "fonbet";
-      var tab = document.createElement("button");
-      tab.type = "button"; tab.id = "bkTab"; tab.className = "bk-tab";
-      tab.textContent = BKID === "fonbet" ? "ФОНБЕТ" : "БАЛТБЕТ";
+      var tab = document.createElement("a");
+      tab.id = "bkTab"; tab.className = "bk-tab"; tab.href = "?bk=" + other;
+      tab.setAttribute("role", "button");
+      var tsp = document.createElement("span");
+      tsp.textContent = BKID === "fonbet" ? "ФОНБЕТ" : "БАЛТБЕТ";
+      tab.appendChild(tsp);
       tab.title = "Переключить на " + (other === "fonbet" ? "Фонбет" : "Балтбет");
       tab.setAttribute("aria-label", tab.title);
-      tab.addEventListener("click", function(){
+      tab.addEventListener("click", function(ev){
+        ev.preventDefault();
         try{ localStorage.setItem(C.BOOK_KEY, other); }catch(e){}
-        location.replace(location.pathname + "?bk=" + other);
+        location.href = location.pathname + "?bk=" + other;
       });
       document.body.appendChild(tab);
     }
