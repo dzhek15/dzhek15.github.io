@@ -12964,9 +12964,16 @@
       var pc = [Number(c[0]), Number(c[1]), Number(c[2])], sc = pc[0] + pc[1] + pc[2];
       if(pc.every(function(x){ return isFinite(x) && x >= 0; }) && sc > 0) C = pc.map(function(x){ return Math.max(x / sc, 0.02); });
     }
-    return { p: P, c: C };
+    var ml = tiltLearn().mult, vv = P.map(function(x, j){ return x * ml[j]; }), zz = vv[0] + vv[1] + vv[2];   /* выученная калибровка линии: множители 1/X/2 */
+    return { p: vv.map(function(x){ return x / zz; }), c: C };
   }
-  /* суммы «Защиты» и «Монстра + толпы»: до потолка 300 000 ₽ (у Фонбета 6 000 строк по 50 ₽), а не до лимита систем */
+  /* выученное журналом (scripts/fonstrat.py): γ наклона против толпы, множители калибровки линии, ранги источников доводов */
+  function tiltLearn(){
+    var L = tiltJ && tiltJ.learn || {}, ml = Array.isArray(L.mult) && L.mult.length === 3 && L.mult.every(function(x){ return isFinite(x) && x > 0; }) ? L.mult : [1, 1, 1];
+    return { gamma: isFinite(L.gamma) ? Number(L.gamma) : 0.6, mult: ml, tmap: L.tmap || {}, L: L };
+  }
+  function tiltGamma(kind){ return kind === "cen" ? tiltLearn().gamma : 0; }
+  /* суммы «Защиты" и «Монстра + толпы»: до потолка 300 000 ₽ (у Фонбета 6 000 строк по 50 ₽), а не до лимита систем */
   function tiltList(){
     var price = linePrice(), top = Math.floor(300000 / price + 1e-9), out = [1, 2, 4, 8, 16, 32, 64, 128, 256, 324, 512, 1024, 2048, 4096];
     return out.filter(function(n){ return n < top; }).concat([top]);
@@ -12985,9 +12992,8 @@
      p·(p/c)^0,6. Добор (допы) — по доводам источников, как «добор Монстра»: сначала исходы с самым доверенным доводом
      (факты ИИ, усталость, разбор ИИ, ИИ-критик, Betzona, история, xG, мотивация), внутри ранга — по приросту шанса.
      Те же формулы считает scripts/fonstrat.py. */
-  var TILT_G = 0.6;
   function tiltStrengthAi(i, t){
-    var pr = edgeAdj(i, t.p), q = t.c || pr, w = [0, 1, 2].map(function(j){ return pr[j] * Math.pow(pr[j] / q[j], TILT_G); }), z = w[0] + w[1] + w[2];
+    var G = tiltLearn(), pr = edgeAdj(i, t.p), q = t.c || pr, w = [0, 1, 2].map(function(j){ return pr[j] * Math.pow(pr[j] / q[j], G.gamma); }), z = w[0] + w[1] + w[2];
     w = w.map(function(x){ return x / z; });
     var src = monsterSrc(i), tier = [9, 9, 9], seen = [false, false, false];
     src.forEach(function(x){
@@ -12996,6 +13002,7 @@
       if(!seen[k] || tt < tier[k]) tier[k] = tt;
       seen[k] = true;
     });
+    var tm = G.tmap; tier = tier.map(function(x){ return tm[String(x)] !== undefined ? Number(tm[String(x)]) : x; });
     return { w: w, p: pr, src: src, tier: tier, has: seen[0] || seen[1] || seen[2] };
   }
   function planTilt(maxLines, kind, noAi){
@@ -13008,7 +13015,7 @@
         else if(t){
           var w, sa0 = null;
           if(useAi){ var sa = tiltStrengthAi(i, t); sa0 = sa; w = sa.w; r.src = sa.src; if(sa.has) nAi++; }
-          else { var q = t.c || t.p; w = [0, 1, 2].map(function(j){ return t.p[j] * Math.pow(t.p[j] / q[j], cfg.g); }); }
+          else { var q = t.c || t.p, gm = tiltGamma(kind); w = [0, 1, 2].map(function(j){ return t.p[j] * Math.pow(t.p[j] / q[j], gm); }); }
           r.w = w; r.tier = useAi ? sa0.tier : null; r.set = [w[0] >= w[1] && w[0] >= w[2] ? 0 : (w[1] >= w[2] ? 1 : 2)];
         }
         rows.push(r);
@@ -13093,9 +13100,28 @@
     h += '<table class="ev-tab ev-data-cands"><thead><tr><th>Сумма</th><th>Тиражей</th><th>Накрыто в среднем</th><th>12+</th><th>13+</th><th>14+</th><th>15</th></tr></thead><tbody>' + rows + '</tbody></table>';
     h += '<p class="ev-note">Прогнозы записываются за тиражи до закрытия и потом не меняются: сейчас в журнале ' + frozen + ' ' + plural(frozen, "тираж", "тиража", "тиражей") + ', итоги известны по ' + done + '. «Накрыто» — сколько матчей из 15 есть в купоне; в столбцах 12+…15 — число тиражей. Итоги матчей берутся из ленты Flashscore, выплат Фонбета в данных нет, поэтому считаются попадания, а не рубли.'
       + (J.updated ? ' Обновлено ' + escHtml(J.updated) + ' UTC.' : '') + '</p>';
-    return h;
+    return h + tiltLearnHtml(kind, J);
   }
+  /* что стратегия уже выучила и сколько данных не хватает до следующего шага обучения */
+  var TIER_NM = { 1: "факты ИИ", 2: "усталость", 3: "разбор ИИ", 4: "ИИ-критик", 5: "Betzona: факты", 6: "Betzona: голоса", 7: "Betzona: события", 8: "история", 9: "xG", 10: "мотивация" };
+  function tiltLearnHtml(kind, J){
+    var L = J && J.learn; if(!L) return "";
+    var nd = L.need || { obs: 60, draws: 10, switch: 0.15 }, f3 = function(x){ return String(Math.round(x * 1000) / 1000).replace(".", ","); };
+    var h = '<h3>Обучение</h3><ul class="tilt-learn">';
+    h += '<li><b>Калибровка линии.</b> Множители исходов 1 / X / 2: ' + (L.mult || [1, 1, 1]).map(f3).join(" / ") + '. Считаются по итогам закрытых тиражей (' + (L.n || 0) + ') и применяются к обеим стратегиям; пока данных мало, они близки к единице, а вес стартового предположения равен 45 матчам.</li>';
+    if(kind === "zash"){
+      h += '<li><b>Защита</b> — контрольная стратегия: наклона против толпы у неё нет по определению, поэтому она учится только калибровкой линии. С ней сравниваются все остальные.</li>';
+    } else {
+      var g = L.gam || {}, keys = Object.keys(g).sort(), nmin = keys.length ? Math.min.apply(null, keys.map(function(k){ return g[k].n; })) : 0;
+      h += '<li><b>Наклон против толпы (γ).</b> Сейчас ' + f3(L.gamma) + '. Три теневых купона (γ 0,3 / 0,6 / 0,9) записываются на каждом тираже; ' + (keys.length ? keys.map(function(k){ return 'γ ' + f3(g[k].g) + ': накрыто в среднем ' + f3(g[k].cov) + ' (' + g[k].n + ' тир.)'; }).join("; ") : 'итогов пока нет') + '. Рабочее γ меняется, когда набралось ' + nd.draws + ' закрытых тиражей (сейчас ' + nmin + ') и другой вариант накрывает в среднем больше на ' + f3(nd.switch) + ' матча.' + ((L.log || []).length ? ' Смены: ' + L.log.map(function(x){ return escHtml(x.at) + ' ' + f3(x.gamma[0]) + ' → ' + f3(x.gamma[1]); }).join("; ") + '.' : '') + '</li>';
+      var ob = L.obs || {}, ks = Object.keys(ob);
+      h += '<li><b>Ранги источников доводов.</b> ' + (ks.length ? ks.map(function(t){ var o = ob[t]; return (TIER_NM[t] || ('источник ' + t)) + ': ' + o.hit + ' из ' + o.n + ' (линия ждала ' + f3(o.exp) + ')'; }).join("; ") + '. ' : 'Итогов пока нет. ') + 'Источник меняет место в очереди добора, когда по нему набралось ' + nd.obs + ' исходов: те, чьи исходы выпадают чаще, чем ждёт линия, идут раньше.' + (Object.keys(L.tmap || {}).length ? ' Выученный порядок: ' + Object.keys(L.tmap).map(function(t){ return (TIER_NM[t] || t) + ' → место ' + L.tmap[t]; }).join(", ") + '.' : '') + '</li>';
+    }
+    return h + '</ul>';
+  }
+  var tiltTried = false;
   function showTilt(kind){
+    if(FON && !tiltJ && !tiltTried){ tiltTried = true; tiltJournal().then(function(){ showTilt(kind); }); return; }   /* сначала выученные параметры из журнала */
     var cfg = TILT[kind], box = stratGuard("Стратегия «" + cfg.name + "»"); if(!box) return;
     var L = tiltLines(cfg.key, 1024), plan = planTilt(L, kind);
     var how = kind === "zash"
@@ -13115,6 +13141,7 @@
     stratFinish(box, h, plan, cfg.name, function(){ showTilt(kind); });
     if(FON) tiltJournal().then(function(J){ var el = $("tiltStat"); if(el) el.innerHTML = tiltStatHtml(kind, J); });
   }
+  if(FON) tiltJournal();
   window.dzPlanTilt = planTilt; window.dzAiData = function(){ return ai.data; };
   if(!FON){ ["btnZash", "btnCen"].forEach(function(id){ var b = $(id); if(b && b.parentNode) b.parentNode.removeChild(b); }); }   /* «Защита» и «Ценность» — только Фонбет */
   if($("btnZash")) $("btnZash").addEventListener("click", function(){ showTilt("zash"); });

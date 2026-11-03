@@ -27,7 +27,13 @@ FON = os.path.join(API, "fon")
 OUT = os.path.join(FON, "strat_journal.json")
 PRICE = 50
 BUDGETS = [1, 64, 324, 1024, 6000]       # строк (6000 × 50 ₽ = 300 000 ₽ — потолок)
-GAMMA = {"zash": 0.0, "cen": 0.6}
+GAMMA = {"zash": 0.0, "cen": 0.6}       # γ «Монстра + толпы» меняет обучение (learn.gamma)
+GRID = {"g3": 0.3, "g6": 0.6, "g9": 0.9}  # теневые варианты наклона против толпы: сравниваются на итогах, победитель становится рабочим
+GRID_BUDGETS = [324, 1024]
+MIN_OBS = 60                              # наблюдений по источнику, прежде чем его ранг меняется
+MIN_DRAWS = 10                            # закрытых тиражей, прежде чем γ может смениться
+K_CAL = 45                                # вес «приора» калибровки линии (матчей)
+SWITCH = 0.15                             # на сколько в среднем должен быть лучше вариант, чтобы сменить γ
 NAMES = {"zash": "Защита", "cen": "Монстр + толпа"}
 CMIN = 0.02                              # доля игроков не ниже 2%, чтобы не делить на ноль
 KEEP = 60                                # тиражей в журнале
@@ -134,21 +140,22 @@ def src_tiers(d):
     return tier
 
 
-def strength_ai(p, c, d, gamma):
+def strength_ai(p, c, d, gamma, tmap=None):
     """Ядро «Монстр + толпа» для одного матча: сила исходов и ранги доводов (d — разбор ИИ по матчу или None)."""
     pr = edge_adj(p, edge_list(d)) if d else list(p)
     w = [pr[j] * (pr[j] / c[j]) ** gamma for j in range(3)]
     z = sum(w)
-    return [x / z for x in w], (src_tiers(d) if d else [9, 9, 9])
+    raw = src_tiers(d) if d else [9, 9, 9]
+    return [x / z for x in w], [(tmap or {}).get(str(t), t) for t in raw], raw
 
 
-def plan_tilt(P, C, n_max, gamma, AI=None):
+def plan_tilt(P, C, n_max, gamma, AI=None, tmap=None):
     """Прямоугольный купон: по каждому матчу набор исходов, произведение размеров не больше n_max.
     Шаг жадного добора — прирост log(вес набора) на log(рост числа строк); с AI сначала идут исходы с лучшим рангом довода."""
     m = len(P)
     tiers = None
     if AI is not None:
-        pairs = [strength_ai(P[i], C[i], AI[i], gamma) for i in range(m)]
+        pairs = [strength_ai(P[i], C[i], AI[i], gamma, tmap) for i in range(m)]
         w = [x[0] for x in pairs]
         tiers = [x[1] for x in pairs]
     else:
@@ -243,12 +250,85 @@ def utc(s):
         return 0
 
 
+def mult_apply(P, mult):
+    """Поправка линии: p·m (m — выученные множители исходов) и нормировка."""
+    out = []
+    for p in P:
+        v = [p[j] * mult[j] for j in range(3)]
+        z = sum(v)
+        out.append([x / z for x in v])
+    return out
+
+
+def learn_update(jr, now):
+    """Обучение по закрытым тиражам журнала: 1) калибровка линии (множители 1/X/2),
+    2) ранги источников доводов (по тому, насколько их исходы выпадали чаще линии),
+    3) γ «Монстра + толпы» — по теневым вариантам 0,3/0,6/0,9. Всё пересчитывается с нуля при каждом запуске."""
+    L = jr.get("learn") or {}
+    done = [r for r in jr["draws"].values() if r.get("done") and r.get("res")]
+    hits = [0, 0, 0]
+    exp = [0.0, 0.0, 0.0]
+    obs = {}
+    for r in done:
+        for i, e in enumerate(r["ev"]):
+            o = "1X2".index(r["res"][i])
+            hits[o] += 1
+            for j in range(3):
+                exp[j] += e.get("p0", e["p"])[j]
+        for i, tr in enumerate(r.get("tr") or []):
+            for j in range(3):
+                t = tr[j]
+                if t >= 9:
+                    continue
+                x = obs.setdefault(str(t), [0, 0, 0.0])
+                x[0] += 1
+                x[1] += 1 if "1X2"[j] == r["res"][i] else 0
+                x[2] += r["ev"][i].get("p0", r["ev"][i]["p"])[j]
+    mult = [round(min(1.25, max(0.8, (hits[j] + K_CAL) / (exp[j] + K_CAL))), 4) for j in range(3)]
+    # ранги источников: изученные (>= MIN_OBS) меняются местами между своими же местами по приросту над линией
+    lift = {t: x[1] / x[2] for t, x in obs.items() if x[0] >= MIN_OBS and x[2] > 0}
+    slots = sorted(int(t) for t in lift)
+    order = sorted(lift, key=lambda t: -lift[t])
+    tier = {str(slots[i]): None for i in range(len(slots))}
+    tmap = {}
+    for i, t in enumerate(order):
+        tmap[t] = float(slots[i])
+    # γ: теневые варианты
+    gam = {}
+    for k, g in GRID.items():
+        xs = []
+        for r in done:
+            sc = r.get("score", {}).get(k)
+            if sc and all(str(b) in sc for b in GRID_BUDGETS):
+                xs.append(sum(sc[str(b)]["cov"] for b in GRID_BUDGETS) / len(GRID_BUDGETS))
+        if xs:
+            gam[k] = {"g": g, "n": len(xs), "cov": round(sum(xs) / len(xs), 3)}
+    live = L.get("gamma", GAMMA["cen"])
+    nmin = min([v["n"] for v in gam.values()] or [0])
+    if len(gam) == len(GRID) and nmin >= MIN_DRAWS:
+        cur = min(gam.values(), key=lambda v: abs(v["g"] - live))
+        best = max(gam.values(), key=lambda v: v["cov"])
+        if best["g"] != cur["g"] and best["cov"] >= cur["cov"] + SWITCH:
+            L.setdefault("log", []).append({"at": datetime.fromtimestamp(now, timezone.utc).strftime("%Y-%m-%d"), "gamma": [live, best["g"]], "cov": [cur["cov"], best["cov"]], "draws": nmin})
+            live = best["g"]
+    L.update({"gamma": live, "mult": mult if done else [1.0, 1.0, 1.0], "tmap": tmap, "n": len(done),
+              "obs": {t: {"n": x[0], "hit": x[1], "exp": round(x[2], 2)} for t, x in sorted(obs.items(), key=lambda kv: int(kv[0]))},
+              "gam": gam, "need": {"obs": MIN_OBS, "draws": MIN_DRAWS, "switch": SWITCH}})
+    L["log"] = (L.get("log") or [])[-20:]
+    jr["learn"] = L
+    return L
+
+
 def main():
     now = time.time()
     jr = rd(OUT, {})
     jr.setdefault("draws", {})
     jr.setdefault("results", {})
-    jr["strategies"] = {k: {"name": NAMES[k], "gamma": GAMMA[k]} for k in GAMMA}
+    L0 = jr.get("learn") or {}
+    gam_live = L0.get("gamma", GAMMA["cen"])
+    mult = L0.get("mult") or [1.0, 1.0, 1.0]
+    tmap = L0.get("tmap") or {}
+    jr["strategies"] = {k: {"name": NAMES[k], "gamma": (gam_live if k == "cen" else GAMMA[k])} for k in GAMMA}
     jr["budgets"] = BUDGETS
     jr["price"] = PRICE
     ru = rd(os.path.join(FON, "ru.json"), {}).get("t", {})
@@ -287,8 +367,16 @@ def main():
         ai = rd(os.path.join(FON, "ai.json"), {})
         AI = ai.get("m") if str(ai.get("number")) == num and isinstance(ai.get("m"), list) and len(ai["m"]) == 15 else None
         rec["ai"] = bool(AI)
+        P = mult_apply(P, mult)            # линия с выученной калибровкой (без неё множители равны 1)
+        rec["ev"] = [dict(x, p=[round(v, 4) for v in P[i]], p0=x["p"]) for i, x in enumerate(rec["ev"])]
+        rec["learn"] = {"gamma": gam_live, "mult": mult, "tmap": tmap}
+        rec["tr"] = [src_tiers(AI[i]) for i in range(15)] if AI else None
         for k, g in GAMMA.items():
-            rec["sets"][k] = {str(n): plan_tilt(P, C, n, g, AI if k == "cen" else None) for n in BUDGETS}
+            gg = gam_live if k == "cen" else g
+            rec["sets"][k] = {str(n): plan_tilt(P, C, n, gg, AI if k == "cen" else None, tmap) for n in BUDGETS}
+        if AI:
+            for k, g in GRID.items():
+                rec["sets"][k] = {str(n): plan_tilt(P, C, n, g, AI, tmap) for n in GRID_BUDGETS}
         jr["draws"][num] = rec
         print("прогноз тиража", num, "обновлён")
 
@@ -343,8 +431,8 @@ def main():
 
     # 4. сводка
     summ = {}
-    for k in GAMMA:
-        for n in BUDGETS:
+    for k in list(GAMMA) + list(GRID):
+        for n in (BUDGETS if k in GAMMA else GRID_BUDGETS):
             xs = [r["score"][k][str(n)] for r in jr["draws"].values() if r.get("done") and r.get("score", {}).get(k, {}).get(str(n))]
             if not xs:
                 continue
@@ -355,6 +443,7 @@ def main():
                 "c14": sum(x["cov"] >= 14 for x in xs), "c15": sum(x["cov"] >= 15 for x in xs),
                 "l13": sum(x["l13"] for x in xs), "l14": sum(x["l14"] for x in xs), "l15": sum(x["l15"] for x in xs)}
     jr["summary"] = summ
+    learn_update(jr, now)
 
     # хвост: свежие тиражи и итоги только по ним
     keep = sorted(jr["draws"], key=lambda x: int(x))[-KEEP:]

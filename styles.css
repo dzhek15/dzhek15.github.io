@@ -4411,3 +4411,7 @@ body.is-prev .aitbl-bar .aitbl-t{position:absolute; left:50%; top:50%; transform
 :root[data-theme="light"] #btnReset{color:#7a5410 !important; background:color-mix(in srgb, var(--brand-gold) 13%, transparent) !important}
 #btnReset:hover:not(:disabled), :root[data-theme="dark"] #btnReset:hover:not(:disabled){border-color:var(--brand-gold) !important; background:color-mix(in srgb, var(--brand-gold) 20%, transparent) !important}
 #btnReset:disabled, :root[data-theme="dark"] #btnReset:disabled, :root[data-theme="light"] #btnReset:disabled{border-color:var(--rule-strong) !important; background:transparent !important; color:var(--muted) !important}
+/* «Обучение» под купоном Защиты и Монстра + толпы */
+.tilt-learn{margin:6px 0 4px; padding:0; list-style:none; text-align:left}
+.tilt-learn li{margin:0 0 8px; padding:9px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--kit-soft); font-size:12.5px; line-height:1.5; color:var(--muted)}
+.tilt-learn li b{color:var(--ink)}
