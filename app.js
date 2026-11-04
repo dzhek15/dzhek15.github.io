@@ -3762,9 +3762,22 @@
     if(x.pool_sum != null && !(Number(x.jackpot) > 0)) x.jackpot = x.pool_sum;
     x.pool_sum = null;
   }
+  /* итоги Фонбета: totobrief их не отдаёт; берём из старого архива (до №14) и из журнала сайта (с №27: итоги матчей из ленты) */
+  function fonFillJ(info, tj){
+    if(!tj || !tj.results) return;
+    var jd = tj.draws && tj.draws[String(info.number)], at = Date.parse(info.ended_at || "");
+    if(!jd || (isFinite(at) && Math.abs(at / 1000 - jd.end) > 2 * 86400)) return;
+    (info.events || []).forEach(function(e){
+      var r = tj.results[String(e.id)]; if(!r || normOut(e.result)) return;
+      e.result = r.r; if(r.s && !e.score) e.score = r.s;
+    });
+  }
   function fonFillRes(info, fh){
     var d = fh && fh[String(info.number)];
     if(!d || !Array.isArray(d.ev)) return;
+    /* номера Фонбета повторялись (№2, №3 были и в 2022): итоги из архива берём, только если дата закрытия совпала */
+    var ia = Date.parse(info.ended_at || ""), da = Date.parse(d.ended_at || "");
+    if(isFinite(ia) && isFinite(da) && Math.abs(ia - da) > 2 * 86400000) return;
     var evs = (info.events || []).slice().sort(function(a, b){ return (a.order || 0) - (b.order || 0); });
     evs.forEach(function(e, i){
       var h = d.ev[i]; if(!h || normOut(e.result)) return;
@@ -3781,12 +3794,14 @@
     var aiH = fetch(MIRROR + BK.mir + "ai_hist.json?t=" + Date.now(), {cache: "no-store"})
       .then(function(r){ return r.ok ? r.json() : {}; }).catch(function(){ return {}; });
     /* итоги — по всем тиражам с загруженными выплатами; без выплат — только последние ACC_N */
-    var draws = Promise.all([apiFetch(BKL + "1").then(function(r){ return r.ok ? r.json() : null; }), payLoadShared(), fonHistDraws()])
-      .then(function(rr){ var j = rr[0], fh = rr[2];
+    var fonRows = [];
+    var draws = Promise.all([apiFetch(BKL + "1").then(function(r){ return r.ok ? r.json() : null; }), payLoadShared(), fonHistDraws(), FON ? tiltJournal() : null])
+      .then(function(rr){ var j = rr[0], fh = rr[2], tj0 = rr[3];
         /* «expected» — матчи сыграны, оператор ещё не закрыл тираж: берём, если известны все итоги */
         var rows = ((j && j.data) || []).filter(function(d){ return d.status === "finished" || d.status === "expected"; })
           .sort(function(a, b){ return accOrd(b.ended_at, b.number) - accOrd(a.ended_at, a.number); })
           .filter(function(d, i){ return i < ACC_N || payFor(d.number); });
+        fonRows = rows;
         return Promise.all(rows.map(function(d, di){
           var have = store[d.number];
           /* расчёт, сделанный до закрытия тиража (fin:false), и свежие старые записи без метки пересчитываем: иначе статистика расходится с просмотром */
@@ -3795,7 +3810,7 @@
             .then(function(j2){
               var info = j2 && (j2.data || j2);
               if(!info) return;
-              if(FON) fonFillRes(info, fh);
+              if(FON){ fonFillRes(info, fh); fonFillJ(info, tj0); }
               var allRes = (info.events || []).length >= 15 && (info.events || []).every(function(e){ return !!normOut(e && e.result) || (FON && e && e.result === VOID); });
               if((FON || info.status !== "finished") && !allRes) return;   /* у Фонбета «finished» без итогов матчей бывает — такой тираж не считаем, иначе пустые итоги дают «15 из 15» */
               info.number = info.number || d.number;
@@ -3815,12 +3830,44 @@
       });
       if(FON) nums = nums.filter(function(n){ var rs = store[n].res; return Array.isArray(rs) && rs.length >= 15 && rs.every(function(x){ return !!x; }); });
       nums = nums.filter(function(n, i){ return i < ACC_N || payFor(n); });
-      if(!nums.length){ el.innerHTML = FON ? '<p class="ev-note">У Фонбета пока нет тиражей с известными итогами матчей: статистика появится, когда закроется первый тираж, записанный журналом. Итоги Балтбета здесь не смешиваются.</p>' : '<p class="ev-warn">Пока не удалось получить итоги прошлых тиражей. Попробуй позже.</p>'; return; }
+      /* Фонбет: что ждёт итогов и каких итогов нет совсем (нужно и когда итогов ещё нет вовсе) */
+      var p2 = function(x){ return (x < 10 ? "0" : "") + x; };
+      var dmy = function(t){ if(!isFinite(t)) return ""; var q = new Date(t + 3 * 3600000); return p2(q.getUTCDate()) + "." + p2(q.getUTCMonth() + 1); };
+      var dmh = function(t){ if(!isFinite(t)) return ""; var q = new Date(t + 3 * 3600000); return dmy(t) + " " + p2(q.getUTCHours()) + ":" + p2(q.getUTCMinutes()); };
+      var fonWait = function(){
+        var waitHtml = "";
+        var mineN = function(n){
+          var e = pcsvAll()[String(n)], c = 0; if(!e) return 0;
+          (e.sets || (e.rows ? [{ rows: e.rows, sys: e.sys }] : [])).concat(e.kept || []).forEach(function(st){ if(st.ai || st.virt || st.late) return; c += st.rows && st.rows.length ? st.rows.length : (st.sys ? pcsvExpand(st.sys).length : 0); });
+          return c;
+        };
+        var jdr = (tjn && tjn.draws) || {}, wl = [], seenW = {};
+        Object.keys(jdr).sort(function(a, b){ return Number(b) - Number(a); }).forEach(function(n){
+          if(nums.indexOf(Number(n)) >= 0) return;
+          var d = jdr[n], endMs = (d.end || 0) * 1000, mn = mineN(n);
+          seenW[n] = 1;
+          wl.push('<li><b>№' + n + '</b> — ' + (endMs > Date.now() ? 'приём ставок до ' + dmh(endMs) + ' МСК' : 'приём закрыт ' + dmh(endMs) + ', итоги матчей: ' + (d.res_n || 0) + ' из 15') +
+            (mn ? ' · <span class="st-wmine">Мои CSV: ' + fmt(mn) + ' ' + plural(mn, "строка", "строки", "строк") + '</span>' : '') + '</li>');
+        });
+        Object.keys(pcsvAll()).filter(function(n){ return !seenW[n] && nums.indexOf(Number(n)) < 0 && mineN(n); }).sort(function(a, b){ return Number(b) - Number(a); }).slice(0, 5).forEach(function(n){
+          var mn = mineN(n);
+          wl.push('<li><b>№' + n + '</b> — итогов матчей пока нет · <span class="st-wmine">Мои CSV: ' + fmt(mn) + ' ' + plural(mn, "строка", "строки", "строк") + '</span></li>');
+        });
+        var miss = (fonRows || []).filter(function(d){ return d.status === "finished" && nums.indexOf(d.number) < 0; }).map(function(d){ return d.number; }).sort(function(a, b){ return a - b; });
+        var rg = [], z0 = null, z1 = null;
+        miss.forEach(function(v){ if(z0 === null){ z0 = z1 = v; } else if(v === z1 + 1){ z1 = v; } else { rg.push(z0 === z1 ? "№" + z0 : "№" + z0 + "–" + z1); z0 = z1 = v; } });
+        if(z0 !== null) rg.push(z0 === z1 ? "№" + z0 : "№" + z0 + "–" + z1);
+        waitHtml = '<div class="st-wait"><p class="st-wait-h">В статистике ' + nums.length + ' ' + plural(nums.length, "тираж", "тиража", "тиражей") + ' с итогами' + (nums.length ? ': №' + nums[0] + (nums.length > 1 ? ' … №' + nums[nums.length - 1] : '') : '') + '</p>' +
+          (wl.length ? '<p class="st-wait-t">Ждут итогов</p><ul>' + wl.join("") + '</ul>' : '') +
+          (rg.length ? '<p class="st-mute st-wait-n">Без итогов: ' + rg.join(", ") + '. totobrief итоги Фонбета не отдаёт, журнал сайта ведётся с тиража №27 — новые тиражи попадают сюда сами, когда сыграны все 15 матчей.</p>' : '') + '</div>';
+        return waitHtml;
+      };
+      if(!nums.length){ el.innerHTML = FON ? fonWait() + '<p class="ev-note">Тиражей с известными итогами матчей пока нет: статистика появится, когда будут сыграны все 15 матчей первого тиража, записанного журналом. Итоги Балтбета здесь не смешиваются.</p>' : '<p class="ev-warn">Пока не удалось получить итоги прошлых тиражей. Попробуй позже.</p>'; return; }
       var cols = [["ai", "ИИ", "ИИ", "ИИ"], ["hunt", "Охота", "Охота", "Охота на 15"], ["gap", "Расхожд.", "Расх.", "Расхождения"], ["sim", "Симул.", "Сим.", "Симуляция"], ["kel", "Келли", "Келли", "Келли"], ["mkel", "Монстр К.", "М.К.", "Монстр Келли"],
         ["gap2", "Расх. О", "Р·О", "Расхождения · обучение"], ["sim2", "Сим. О", "С·О", "Симуляция · обучение"], ["hunt2", "Охота ИИ", "О·ИИ", "Охота · с ИИ"]], sum = {}, cnt = {};
       /* у Фонбета нет пула и выплат: Келли и Монстр Келли там лишь повторяют расстановку Балтбета — в его статистику не входят */
       if(FON){
-        cols = cols.filter(function(c){ return c[0] !== "kel" && c[0] !== "mkel"; });
+        cols = cols.filter(function(c){ return c[0] !== "kel" && c[0] !== "mkel" && c[0] !== "gap2" && c[0] !== "sim2" && c[0] !== "hunt2"; });
         /* «Защита» и «Монстр + толпа»: купон на 1 024 строки (51 200 ₽), записанный журналом до закрытия приёма — не пересчитывается задним числом */
         var si = 0; cols.forEach(function(c, i){ if(c[0] === "sim") si = i + 1; });
         cols.splice(si, 0, ["zash", "Защита", "Защ.", "Защита"], ["cen", "Монстр + толпа", "М+Т", "Монстр + толпа"]);
@@ -3834,7 +3881,7 @@
         sets.forEach(function(st){ if(st.ai || st.virt || st.late) return;   /* загружен после окончания тиража — не считаем */ var r = st.rows && st.rows.length ? st.rows : pcsvExpand(st.sys || []), wt = st.pr && r.length ? st.pr / (r.length * (Number(state.price) || 1)) : 1; if(wt !== 1) out.cw = true; for(var i = 0; i < r.length; i++){ out.push(String(r[i])); out.w.push(wt); } out.cost += st.pr || r.length * (Number(state.price) || 0); });
         return out;
       };
-      if(nums.some(function(n){ return mineRows(n).length; })) cols.push(["mine", "Мои CSV", "Мои", "Мои CSV"]);
+      if(FON || nums.some(function(n){ return mineRows(n).length; })) cols.push(["mine", "Мои CSV", "Мои", "Мои CSV"]);   /* у Фонбета вкладка видна всегда */
       var tot = {}; cols.forEach(function(c){ tot[c[0]] = { lines: 0, rub: 0, n: 0, dist: [], win: 0, cost: 0, pn: 0, best: 0 }; for(var k = 0; k <= 15; k++) tot[c[0]].dist.push(0); });
       var paidN = 0;
       var rub = function(v){ return fmt(Math.round(v)) + " ₽"; };
@@ -3899,15 +3946,17 @@
         if(a.pn) return (b.win - b.cost) - (a.win - a.cost);
         return (sum[y] || 0) / (cnt[y] || 1) - (sum[x] || 0) / (cnt[x] || 1);
       });
-      var sumHtml = '<div class="st-sum">' + order.map(function(k, i){
+      var noneN = FON ? order.filter(function(k){ return !tot[k].n; }) : [];
+      var sumHtml = '<div class="st-sum">' + order.filter(function(k){ return !FON || tot[k].n; }).map(function(k, i){
         var t = tot[k], nt = t.win - t.cost;
         return '<div class="st-srow' + (i === 0 && t.pn && nt > 0 ? ' st-lead' : '') + '">' +
           '<div class="st-sname"><b>' + name[k] + (isCh(k) ? ' <em class="st-chtag">без денег</em>' : '') + '</b><span>' + (t.n ? 'тиражей: ' + t.n + ' · в среднем угадано ' + f1((sum[k] || 0) / (cnt[k] || 1)) + ' · лучший ' + (t.bestHit || 0) + ' из 15' : 'купонов не было') + '</span></div>' +
           (t.pn ? '<div class="st-snum"><i>Поставил</i><b>' + rub(t.cost) + '</b></div><div class="st-snum"><i>Выиграл</i><b>' + rub(t.win) + '</b></div>' +
             '<div class="st-snum st-snet"><i>Итог</i><b class="' + (nt >= 0 ? 'st-plus' : 'st-minus') + '">' + sgn(nt) + '</b><small>возврат ' + Math.round(t.cost ? t.win / t.cost * 100 : 0) + '%</small></div>'
-            : '<div class="st-snum st-snone">' + (t.n ? 'выплаты по его тиражам не загружены' : '') + '</div>') +
+            : '<div class="st-snum st-snone">' + (t.n && !FON ? 'выплаты по его тиражам не загружены' : '') + '</div>') +
           '</div>';
       }).join("") + '</div>' +
+        (noneN.length ? '<p class="st-note">Купонов ещё не было: ' + noneN.map(function(k){ return name[k]; }).join(", ") + '.</p>' : '') +
         '<p class="st-note">Деньги — только по тиражам с загруженными выплатами (' + paidN + ' ' + plural(paidN, "тираж", "тиража", "тиражей") + '). Сверху — стратегия с лучшим итогом.</p>';
       /* ---------- претенденты против основных: одни и те же тиражи с выплатами ---------- */
       var NEED = 10;
@@ -3964,6 +4013,8 @@
           (it.win === undefined ? '' : '<span class="st-v st-win' + (it.win > 0 ? ' on' : '') + '">' + rub(it.win) + '</span><span class="st-v st-net">' + net(it) + '</span>') + '</td>';
       };
       var fixed = cols.map(function(c){ return c[0]; }).filter(function(k){ return !isCh(k); });   /* обучение — отдельным блоком внизу */
+      /* Фонбет: только стратегии, по которым есть данные, плюс «Защита», «Монстр + толпа» и «Мои CSV» (они видны всегда) */
+      if(FON) fixed = fixed.filter(function(k){ return k === "zash" || k === "cen" || k === "mine" || (tot[k] && tot[k].n > 0); });
       var head = '<tr><th>Тираж</th>' + fixed.map(function(k){ return '<th>' + name[k] + '</th>'; }).join("") + '</tr>';
       var body = nums.map(function(n){
         return '<tr><th scope="row" class="st-dn" data-dn="' + n + '" tabindex="0" title="Нажми — покажу выбранные исходы">' + n + (D[n].PK ? '<i class="acc-paid" title="выплаты загружены">₽</i>' : '') + '<small class="st-dn-h">исходы</small></th>' + fixed.map(function(k){ return cell(n, k); }).join("") + '</tr>';
@@ -3976,7 +4027,30 @@
       }).join("") + '</tr>' : '');
       var legend = '<div class="st-leg"><span class="st-leg-t">В ячейке сверху вниз:</span>' +
         '<span><span class="ac-pill ac-best"><b>11</b></span> угадано из 15</span><span><b class="st-cost">17 280 ₽</b> поставил</span><span><b class="st-win on">25 737 ₽</b> выиграл</span><span><b class="st-plus">+8 457 ₽</b> / <b class="st-minus">−5 330 ₽</b> / <b class="st-miss">мимо</b> итог</span></div>';
-      var mainHtml = legend + '<div class="acc-wrap st-wrap"><table class="acc st-main" style="--n:' + fixed.length + '"><thead>' + head + '</thead><tbody>' + body + '</tbody><tfoot>' + foot + '</tfoot></table></div>' +
+      /* ---------- Фонбет: карточки вместо широкой таблицы — на телефоне не нужно прокручивать вбок ---------- */
+      var fonMain = "", waitHtml = "";
+      if(FON){
+        var p2 = function(x){ return (x < 10 ? "0" : "") + x; };
+        var dmy = function(t){ if(!isFinite(t)) return ""; var q = new Date(t + 3 * 3600000); return p2(q.getUTCDate()) + "." + p2(q.getUTCMonth() + 1); };
+        var dmh = function(t){ if(!isFinite(t)) return ""; var q = new Date(t + 3 * 3600000); return dmy(t) + " " + p2(q.getUTCHours()) + ":" + p2(q.getUTCMinutes()); };
+        var tile = function(n, k){
+          var it = D[n].s[k];
+          if(!it) return k === "mine" ? '<div class="st-tile st-tile-na"><span class="st-tn">' + name[k] + '</span><span class="st-tna">не загружали</span></div>' : "";
+          return '<div class="st-c st-tile" data-n="' + n + '" data-k="' + k + '" tabindex="0" title="Нажми — покажу расчёт"><span class="st-tn">' + name[k] + '</span>' +
+            '<span class="ac-pill' + (it.hit >= 9 ? ' ac-best' : '') + '"><b>' + it.hit + '</b></span>' +
+            '<span class="st-v st-cost">' + fmt(it.vars) + ' ' + plural(it.vars, "строка", "строки", "строк") + ' · ' + rub(it.cost) + '</span>' +
+            (it.win === undefined ? '' : '<span class="st-v st-win' + (it.win > 0 ? ' on' : '') + '">выиграл ' + rub(it.win) + '</span><span class="st-v st-net">' + net(it) + '</span>') + '</div>';
+        };
+        fonMain = '<div class="st-cards">' + nums.map(function(n){
+          return '<div class="st-card"><div class="st-dn st-card-h" data-dn="' + n + '" tabindex="0" title="Нажми — покажу выбранные исходы"><b>№' + n + '</b><span class="st-cd">' + dmy(Date.parse(store[n].at || "")) + '</span>' +
+            (D[n].PK ? '<i class="acc-paid" title="выплаты загружены">₽</i>' : '') + '<small class="st-dn-h">исходы ›</small></div>' +
+            '<div class="st-tiles">' + fixed.map(function(k){ return tile(n, k); }).join("") + '</div></div>';
+        }).join("") + '</div>';
+        waitHtml = fonWait();
+      }
+      var mainHtml = FON ? legend + fonMain + '<div id="stCalc" class="st-calcbox" hidden></div><div id="stDraw" class="st-calcbox st-drawbox" hidden></div>' +
+        '<p class="st-note">Нажми на заголовок тиража — под карточкой появятся матчи и выбранные исходы. Нажми на стратегию — появится расчёт: сколько строк что угадали и сколько за них заплачено.</p>' :
+        legend + '<div class="acc-wrap st-wrap"><table class="acc st-main" style="--n:' + fixed.length + '"><thead>' + head + '</thead><tbody>' + body + '</tbody><tfoot>' + foot + '</tfoot></table></div>' +
         '<div id="stCalc" class="st-calcbox" hidden></div><div id="stDraw" class="st-calcbox st-drawbox" hidden></div>' +
         '<p class="st-note">Нажми на номер тиража — под таблицей появятся матчи и исходы, выбранные каждой стратегией. Нажми на ячейку — под таблицей появится расчёт: сколько строк что угадали и сколько за них заплачено. Если выплаты тиража не загружены, в ячейке только угадано и ставка.</p>';
       /* ---------- 4. как считается — на живом примере последнего тиража с выплатами ---------- */
@@ -4057,8 +4131,8 @@
         '<p class="ev-note" id="ownMsg" hidden></p></details>';
       el.innerHTML = (note ? '<p class="pay-ok" id="payOk">' + escHtml(note) + '</p>' : '') + locHtml +
         (own ? '<div class="pay-go pay-top"><button type="button" class="btn-ev" id="payOpen">Загрузить выигрыши</button></div><div id="payBox" class="pay-box" hidden></div>' : '') +
-        '<h3 class="st-h">По тиражам</h3>' + mainHtml +
-        '<h3 class="st-h">Итоги стратегий</h3>' + sumHtml + rules + chBlock + ownHtml;
+        (FON ? waitHtml + '<h3 class="st-h">Итоги стратегий</h3>' + sumHtml + '<h3 class="st-h">По тиражам</h3>' + mainHtml + rules + ownHtml :
+          '<h3 class="st-h">По тиражам</h3>' + mainHtml + '<h3 class="st-h">Итоги стратегий</h3>' + sumHtml + rules + chBlock + ownHtml);
       var ownIn = function(){
         var t = $("ownTok"), m = $("ownMsg"), v = t.value.trim(); if(!v) return;
         var say = function(x, bad){ m.hidden = false; m.textContent = x; m.classList.toggle("pay-bad", !!bad); };
@@ -4089,6 +4163,7 @@
           [].slice.call(el.querySelectorAll(".st-c.on")).forEach(function(x){ x.classList.remove("on"); });
           td.classList.add("on");
           cbox.innerHTML = calc(td.dataset.n, td.dataset.k); cbox.hidden = false;
+          var cd = td.closest ? td.closest(".st-card") : null; if(cd && cd.parentNode) cd.parentNode.insertBefore(cbox, cd.nextSibling);   /* у Фонбета расчёт открывается прямо под карточкой тиража */
           cbox.querySelector(".st-x").addEventListener("click", function(){ cbox.hidden = true; td.classList.remove("on"); });
           try { cbox.scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch(e){}
         };
@@ -4103,6 +4178,7 @@
           if(was){ dbox.hidden = true; return; }
           th.classList.add("on");
           dbox.innerHTML = drawHtml(Number(th.dataset.dn)); dbox.hidden = false;
+          var cd2 = th.closest ? th.closest(".st-card") : null; if(cd2 && cd2.parentNode) cd2.parentNode.insertBefore(dbox, cd2.nextSibling);
           dbox.querySelector(".st-x") && dbox.querySelector(".st-x").addEventListener("click", function(){ dbox.hidden = true; th.classList.remove("on"); });
           try { dbox.scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch(e){}
         };
