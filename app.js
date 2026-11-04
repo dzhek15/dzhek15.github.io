@@ -27,6 +27,23 @@
   if(BK.share) C.EV_SHARE = BK.share;
   if(FON){ C.EV_JACK14 = 0; C.EV_JACK15 = 1; }
   document.documentElement.setAttribute("data-bk", BKID);
+  /* переключение конторы перезагружает страницу: запоминаем прокрутку и возвращаем её, чтобы всё осталось на своих местах */
+  function bkScrollSave(){ try{ sessionStorage.setItem("dz_bkscroll", JSON.stringify({ y: Math.round(window.pageYOffset || 0), t: Date.now() })); }catch(e){} }
+  (function bkScrollRestore(){
+    var sv = null;
+    try{ sv = JSON.parse(sessionStorage.getItem("dz_bkscroll") || "null"); sessionStorage.removeItem("dz_bkscroll"); }catch(e){}
+    if(!sv || !sv.y || Date.now() - sv.t > 20000) return;
+    try{ if("scrollRestoration" in history) history.scrollRestoration = "manual"; }catch(e){}
+    var stop = false, t0 = Date.now();
+    function off(){ stop = true; }
+    ["wheel","touchstart","mousedown","keydown"].forEach(function(ev){ window.addEventListener(ev, off, { passive: true, once: true }); });
+    (function step(){
+      if(stop || Date.now() - t0 > 7000) return;
+      var de = document.documentElement, maxY = Math.max(de.scrollHeight, document.body ? document.body.scrollHeight : 0) - window.innerHeight;
+      if(Math.abs((window.pageYOffset || 0) - sv.y) > 2 && maxY >= sv.y - 2) window.scrollTo(0, sv.y);
+      setTimeout(step, 120);
+    })();
+  })();
   /* переключатель на обложке: запоминаем выбор и перезагружаем страницу — у Фонбета свои тиражи и купоны */
   function bkSwInit(){
     var sw = document.getElementById("bkSw");
@@ -38,6 +55,7 @@
         var to = b.getAttribute("data-bk");
         if(to === BKID) return;
         try{ localStorage.setItem(C.BOOK_KEY, to); }catch(e){}
+        bkScrollSave();
         /* адрес новой конторы чистый: купон, набор и ссылка предыдущей конторы с другими номерами тиражей не переносятся */
         location.replace(location.pathname + "?bk=" + to);
       });
@@ -56,6 +74,7 @@
       tab.addEventListener("click", function(ev){
         ev.preventDefault();
         try{ localStorage.setItem(C.BOOK_KEY, other); }catch(e){}
+        bkScrollSave();
         location.href = location.pathname + "?bk=" + other;
       });
       document.body.appendChild(tab);
