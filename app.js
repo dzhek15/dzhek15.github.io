@@ -41,7 +41,16 @@
       var y = Math.round(window.pageYOffset || 0), an = null;
       var rw = document.querySelectorAll("#rows .row");
       for(var i = 0; i < rw.length && !an; i++){ var r = rw[i].getBoundingClientRect(); if(r.height && r.top <= 0 && r.bottom > 0) an = { id: "#rows", n: i, off: Math.round(-r.top) }; }
-      for(var j = 0; j < BKS_IDS.length && !an; j++){ var e = document.getElementById(BKS_IDS[j]); if(!e) continue; var q = e.getBoundingClientRect(); if(q.height && q.top <= 0 && q.bottom > 0) an = { id: BKS_IDS[j], off: Math.round(-q.top) }; }
+      if(!an){
+        var best = null, bh = 1e9, all = document.querySelectorAll("body [id]");
+        for(var k = 0; k < all.length; k++){
+          var el = all[k]; if(!/^[A-Za-z][A-Za-z0-9]*$/.test(el.id) || /^(evBack|evBody|evTitle|bkTab|bkSw|stickyBar|dbgBtn|dbgPanel)$/.test(el.id)) continue;
+          var q = el.getBoundingClientRect(); if(!q.height || q.top > 0 || q.bottom <= 0) continue;
+          var ps = getComputedStyle(el).position; if(ps === "fixed" || ps === "sticky") continue;
+          if(q.height < bh){ bh = q.height; best = { id: el.id, off: Math.round(-q.top) }; }
+        }
+        an = best;
+      }
       var eb = document.getElementById("evBack"), ebd = document.getElementById("evBody");
       var ov = eb && !eb.hidden && bkLastOp ? bkLastOp : null;
       sessionStorage.setItem("dz_bkscroll", JSON.stringify({ y: y, an: an, pv: !!(state && state.viewPrev), ov: ov, ovs: ov && ebd ? Math.round(ebd.scrollTop || 0) : 0, t: Date.now() }));
@@ -61,16 +70,17 @@
       root.classList.add("bk-rs-go"); root.classList.remove("bk-rs");
       setTimeout(function(){ root.classList.remove("bk-rs-go"); }, 450);
     }
-    setTimeout(reveal, 5000);
+    setTimeout(reveal, sv.pv ? 6500 : 4000);
     function off(){ stop = true; reveal(); }
     ["wheel","touchstart","mousedown","keydown"].forEach(function(ev){ window.addEventListener(ev, off, { passive: true, once: true }); });
     function target(){
       var an = sv.an, el = null;
+      if(an && an.id !== "#rows" && !document.getElementById(an.id)) an = null;
       if(an){
-        el = an.id === "#rows" ? document.querySelectorAll("#rows .row")[an.n] : document.getElementById(an.id);
+        el = an.id === "#rows" ? document.querySelectorAll("#rows .row")[an.n] : document.getElementById(an.id);   /* блок с таким id есть в обеих конторах */
         if(el && el.getBoundingClientRect().height) return Math.round((window.pageYOffset || 0) + el.getBoundingClientRect().top + an.off);
       }
-      if(Date.now() - t0 > 3500 && sv.y){
+      if(!an && sv.y){
         var de = document.documentElement;
         if(Math.max(de.scrollHeight, document.body ? document.body.scrollHeight : 0) - window.innerHeight >= sv.y - 2) return sv.y;
       }
@@ -83,9 +93,10 @@
         if(typeof state === "undefined" || !state || !state.matches || !state.matches.length) return;
         if(!pvDone){
           if(!!state.viewPrev === !!sv.pv){ pvDone = true; return; }
-          if(Date.now() - pvAt < 2500 || pvTry >= 4) { if(pvTry >= 4) pvDone = true; return; }
-          pvTry++; pvAt = Date.now();
-          if(sv.pv){ if(state.prev) enterPrev(); } else leavePrev();
+          if(Date.now() - pvAt < 1200) return;
+          if(pvTry >= 4 || Date.now() - t0 > 8000){ pvDone = true; return; }
+          if(sv.pv){ if(!state.prev) return; pvTry++; pvAt = Date.now(); enterPrev(); }   /* ждём, пока прошлый тираж подгрузится */
+          else { pvTry++; pvAt = Date.now(); leavePrev(); }
           return;
         }
         if(!ovDone){
@@ -106,13 +117,14 @@
       mode();
       if(stop && pvDone && ovDone) return;
       if(stop){ setTimeout(step, 150); return; }
-      var ty = sv.ov && ovDone ? null : target();
-      if(shown && Date.now() - tShown > 3000) return;   /* дальше страницу не трогаем */
-      if(ty != null && Math.abs((window.pageYOffset || 0) - ty) > 2){ if(shown){ try{ window.scrollTo({ top: ty, behavior: "smooth" }); }catch(e){ window.scrollTo(0, ty); } } else window.scrollTo(0, ty); }
+      var ty = !pvDone || (sv.ov && ovDone) ? null : target();
+      if(shown && Date.now() - tShown > 5000) return;   /* дальше страницу не трогаем */
+      /* страница ещё дорисовывается: держим выбранную строку на месте, как только сдвинулся контент выше */
+      if(ty != null && Math.abs((window.pageYOffset || 0) - ty) > 2) window.scrollTo(0, ty);
       var atT = ty != null && Math.abs((window.pageYOffset || 0) - ty) <= 2;
       okN = (atT || (sv.ov && ovDone)) && pvDone && ovDone ? okN + 1 : 0;
-      if(okN >= 15) reveal();
-      setTimeout(step, 100);
+      if(okN >= 10 && Date.now() - t0 >= 2800) reveal();
+      setTimeout(step, shown ? 50 : 100);
     })();
   })();
   /* переключатель на обложке: запоминаем выбор и перезагружаем страницу — у Фонбета свои тиражи и купоны */
