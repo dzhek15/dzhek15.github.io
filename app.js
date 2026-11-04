@@ -2411,8 +2411,14 @@
   function liveInfo(m){
     if(m.res || m.res === VOID) return null;
     var fresh = m.fsPh && m.fsAt && Date.now() - m.fsAt < (m.fsMir ? 30 : 3) * 60000;
-    if(!fresh && !m.score) return null;
+    if(!fresh && !m.score){
+      /* Фонбет: матч начался больше 3,5 часов назад, итога нет ни в ленте, ни в архиве — он сыгран, итог придёт из истории тиража */
+      if(typeof FON !== "undefined" && FON){ var t0 = mStartMs(m); if(t0 != null && Date.now() - t0 > 3.5 * 3600000) return { end: true, ph: null, hockey: false }; }
+      return null;
+    }
     if(m.fsEnd && Date.now() - m.fsEnd < 30 * 60000) return { end: true, ph: null, hockey: false };
+    /* матч был в ленте идущим, но лента отвечает, а его там уже нет, и свежих данных давно нет — он закончился, итог подведётся */
+    if(m.fsAt && fsFeedOkAt && Date.now() - fsFeedOkAt < 3 * 60000 && fsFeedTs - m.fsAt > (fresh ? 600000 : 120000)) return { end: true, ph: null, hockey: false };
     return { ph: fresh ? m.fsPh : null, hockey: fsFeedSport(m.league) === "hockey" };
   }
   /* значок LIVE и минута в начале подписи матча, подсветка строки при голе — как на Flashscore */
@@ -2459,6 +2465,18 @@
     var t = mStartMs(m), d = t == null ? null : Date.now() - t;
     return d != null && d > -60000 && d < 4 * 3600000;
   }
+  /* архив итогов: fs-done-<спорт>.txt (ветка live) хранит окончившиеся матчи тиражей четверо суток — лента «сегодня» после полуночи их уже не отдаёт */
+  var FS_DONE_CACHE = {};
+  function fsDoneLoad(k){
+    var c = FS_DONE_CACHE[k];
+    if(c && Date.now() - c.at < 3 * 60000) return c.p;
+    var file = "fs-done-" + FS_SPORT_ID[k] + ".txt?t=" + Math.floor(Date.now() / 60000);
+    var get1 = function(url){ return fetch(url, { cache: "no-store" }).then(function(r){ if(!r.ok) throw new Error("http"); return r.text(); }).then(fsParseFeed); };
+    var p = get1(C.LIVE_PATH + file).catch(function(){ return get1(C.MIRROR_PATH + file); }).catch(function(){ return []; });
+    FS_DONE_CACHE[k] = { at: Date.now(), p: p };
+    return p;
+  }
+  var fsFeedOkAt = 0, fsFeedTs = 0;   /* когда лента последний раз отвечала и время самого свежего её снимка */
   var fsLiveBusy = false, fsLiveAt = 0;
   /* лента живых матчей: сначала Worker, а если он не открывается (workers.dev у части провайдеров
      без VPN) — снимок из GitHub (data/api/fs-<спорт>.txt, обновляется раз в 5 минут) */
@@ -2516,7 +2534,9 @@
     var pvRecent = !!(state.prev && Date.now() - (Date.parse(state.prev.deadline) || state.prev.at || 0) < 48 * 3600000);
     lists.forEach(function(l){ l.forEach(function(m){
       var pv = state.prev && l === state.prev.matches;
-      if(maybeLive(m) || (pv && pvRecent && !m.res && !m.score && mStartMs(m) == null)){ cand.push(m); sports[fsFeedSport(m.league)] = true; }
+      var fonOld = false;
+      if(FON && !m.res){ var t0 = mStartMs(m); fonOld = t0 != null ? (Date.now() - t0 > 0 && Date.now() - t0 < 96 * 3600000) : (pv && pvRecent); }   /* итог Фонбета — только из ленты и архива, ждём до четырёх суток */
+      if(maybeLive(m) || fonOld || (pv && pvRecent && !m.res && !m.score && mStartMs(m) == null)){ cand.push(m); sports[fsFeedSport(m.league)] = true; }
     }); });
     if(!cand.length) return;
     fsLiveBusy = true; fsLiveAt = Date.now(); var tk0 = Date.now();
@@ -2527,9 +2547,14 @@
       var by = {}, changed = false;
       keys.forEach(function(k, i){ by[k] = rs[i]; });
       fsLastMir = rs.some(function(g){ return g && g.mir; });
+      if(rs.some(function(g){ return g && g.length; })){
+        fsFeedOkAt = Date.now();
+        rs.forEach(function(g){ if(g && g.length){ var ts = g.mir ? (g.ts || 0) : Date.now(); if(ts > fsFeedTs) fsFeedTs = ts; } });
+      }
+      var miss = [];
       cand.forEach(function(m){
         var f = fsLookup(m, by[fsFeedSport(m.league)] || []);
-        if(!f || (f.st !== "2" && f.st !== "3")) return;
+        if(!f || (f.st !== "2" && f.st !== "3")){ if(FON && !m.res) miss.push(m); return; }
         if(f.st === "3" && f.sc !== "3"){            /* перенос, отмена и прочее — не итог */
           /* в просмотре тиража подписываем матч «перенесён»/«отменён»; в текущем купоне это делает checkFsVoids */
           var vtag = FS_VOID_CODES[f.sc];
@@ -2563,9 +2588,26 @@
           if(noteScore(m, sc, SRC_MIR, grp.ts, true)){ changed = true; if(state.prev && state.prev.matches.indexOf(m) >= 0) state.prev.at = Date.now(); }
         }
       });
-      fsLiveBusy = false;
-      dbgLog("tick", "лента: матчей-кандидатов " + cand.length + (changed ? ", есть изменения" : ", без изменений") + " · " + (Date.now() - tk0) + " мс");
-      if(changed){ state.resAt = Date.now(); save(); if(!book) renderSoon("лента"); }
+      var fin = function(){
+        fsLiveBusy = false;
+        dbgLog("tick", "лента: матчей-кандидатов " + cand.length + (changed ? ", есть изменения" : ", без изменений") + " · " + (Date.now() - tk0) + " мс");
+        if(changed){ state.resAt = Date.now(); save(); if(!book) renderSoon("лента"); }
+      };
+      if(!miss.length){ fin(); return; }
+      /* Фонбет: матча нет в сегодняшней ленте (закончился до полуночи) — ищем итог в архиве окончившихся матчей */
+      var dk = {}; miss.forEach(function(m){ dk[fsFeedSport(m.league)] = true; });
+      var dkeys = Object.keys(dk);
+      return Promise.all(dkeys.map(fsDoneLoad)).then(function(ds){
+        var dby = {}; dkeys.forEach(function(k, i){ dby[k] = ds[i] || []; });
+        miss.forEach(function(m){
+          var f = fsLookup(m, dby[fsFeedSport(m.league)] || []);
+          if(!f || f.st !== "3" || f.sc !== "3" || !/^\d+$/.test(f.hs || "") || !/^\d+$/.test(f.as || "")) return;
+          var h9 = +f.hs, a9 = +f.as;
+          m.res = h9 > a9 ? "1" : (h9 < a9 ? "2" : "X"); m.resFs = 1; m.score = f.hs + " : " + f.as; m.fsEnd = m.fsEnd || Date.now(); changed = true;
+          dbgLog("score", dbgTag(m) + ": итог из архива Flashscore " + m.score + " → " + m.res);
+        });
+        fin();
+      }).catch(function(){ fin(); });
     }).catch(function(e){ fsLiveBusy = false; dbgLog("err", "лента: " + (e && e.message || e)); });
   }
   setInterval(fsLiveTick, 5000);
@@ -4182,12 +4224,17 @@
     state.dopSum = Number(b.getAttribute("data-v")); save(); dopSync(tally());
   });
   /* нет разбора на этот тираж — кнопка серая и не нажимается, место под неё остаётся */
+  function aiPlateUpdate(){
+    var wp = $("aiWaitPlate"); if(!wp) return;
+    var lk = aiLock(), ok = !lk && !!aiFor(ai.data, 0);
+    wp.hidden = !(!ok && !lk && !state.viewPrev && state.matches && state.matches.length);
+  }
   function aiBtnState(b, idx){
     var lk = aiLock(), ok = !lk && !!aiFor(ai.data, idx);
     b.disabled = !ok;
     b.classList.toggle("ai-wait", lk);
     if(idx === 0) aiNoteUpdate();
-    if(idx === 0){ var wp = $("aiWaitPlate"); if(wp) wp.hidden = !(!ok && !lk && !state.viewPrev && state.matches && state.matches.length); }
+    aiPlateUpdate();
     b.title = lk ? "Идёт разбор ИИ — кнопка включится, когда он закончится и данные будут на сайте" : ok ? (aiRun.active ? "Короткий разбор матча от ИИ (идёт обновление разбора, пока доступен прежний)" : "Короткий разбор матча от ИИ") : "Разбор не готов";
   }
   /* Пока идёт разбор ИИ (ai_status.json «run», для владельца — ещё и состояние запуска в GitHub), все кнопки ИИ
@@ -4229,7 +4276,7 @@
     }, function(){ AI_BUST = 0; aiBtnsUpdate(); });
   }
   function aiBtnsUpdate(){
-    aiNoteUpdate();
+    aiNoteUpdate(); aiPlateUpdate();
     try { dopSync(tally()); } catch(e){}
     [].slice.call(document.querySelectorAll(".ai-btn")).forEach(function(b){ aiBtnState(b, Number(b.getAttribute("data-idx"))); });
   }
@@ -4327,7 +4374,8 @@
     var r = /^\s*(\d+)\s*[:\-]\s*(\d+)/.exec(String(m.score || ""));
     if(!r || m.res === VOID) return null;
     var a = +r[1], b = +r[2];
-    return { o: a > b ? "1" : a < b ? "2" : "X", live: true };
+    var li = FON ? liveInfo(m) : null;   /* Фонбет: матч закончился, а официальный итог ещё не пришёл — счёт окончательный, «идущим» не считаем */
+    return { o: a > b ? "1" : a < b ? "2" : "X", live: !(li && li.end) };
   }
   function mkAiLive(rec, m){
     var lo = rec && liveOutcome(m); if(!lo) return null;

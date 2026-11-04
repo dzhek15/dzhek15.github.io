@@ -91,6 +91,24 @@ def draw_tokens():
                     DRAW_REG.add(c)
     except Exception as e:
         print("fslive: тираж не прочитан", e)
+    # Фонбет: названия в линии английские — переводим словарём ru.json, как это делает сайт
+    try:
+        import json
+        fon = os.path.join(OUT, "fon")
+        ru = json.load(open(os.path.join(fon, "ru.json"), encoding="utf-8")).get("t", {})
+        lst = json.load(open(os.path.join(fon, "drawings-1.json"), encoding="utf-8"))
+        lst = lst if isinstance(lst, list) else lst.get("data", [])
+        for d in lst[:2]:
+            p = os.path.join(fon, "drawing-info-%s.json" % d["id"])
+            if not os.path.exists(p):
+                continue
+            info = json.load(open(p, encoding="utf-8"))
+            for e in (info.get("data", info).get("events") or []):
+                for side in re.split(r"\s+[—–-]\s+", e.get("name", "")):
+                    side = side.strip()
+                    toks |= norm_tokens(ru.get(side, side))
+    except Exception as e:
+        print("fslive: тираж Фонбета не прочитан", e)
     return toks
 
 
@@ -152,6 +170,59 @@ def write_draw(sport, now, toks):
     return True
 
 
+DONE_KEEP = ("AA", "AB", "AC", "AD", "AE", "AF", "AG", "AH", "PX", "PY", "WU", "WV")   # PX, PY, WU, WV нужны разборщику ленты на сайте
+
+
+def build_done(text, toks):
+    """Окончившиеся матчи тиража (AB=3, AC=3) со счётом: AA -> (заголовок турнира, запись, время начала)."""
+    out, head = {}, None
+    for rec in text.split("¬~"):
+        kv = {}
+        for p in rec.split("¬"):
+            a = p.split("÷")
+            if len(a) == 2:
+                kv[a[0]] = a[1]
+        if not kv.get("AA"):
+            if kv.get("ZY") or kv.get("ZA"):
+                head = "ZY÷%s¬ZA÷%s" % (kv.get("ZY", ""), kv.get("ZA", ""))
+            continue
+        if kv.get("AB") != "3" or kv.get("AC") != "3":
+            continue
+        if not (kv.get("AG", "").isdigit() and kv.get("AH", "").isdigit()):
+            continue
+        if not (norm_tokens(kv.get("AE", "")) & toks or norm_tokens(kv.get("AF", "")) & toks):
+            continue
+        out[kv["AA"]] = (head, "¬".join("%s÷%s" % (k, kv[k]) for k in DONE_KEEP if k in kv), int(kv.get("AD") or 0))
+    return out
+
+
+def write_done(sport, now, text, toks):
+    """fs-done-<спорт>.txt: итоги окончившихся матчей тиражей за четверо суток. Лента «сегодня» после полуночи
+    уже не отдаёт вчерашние матчи, а итог Фонбета берётся только отсюда."""
+    found = build_done(text, toks)
+    path = os.path.join(WOUT, "fs-done-%d.txt" % sport)
+    old = open(path, encoding="utf-8").read() if os.path.exists(path) else ""
+    head = None
+    for rec in old.split("¬~"):
+        if rec.startswith("ZY÷"):
+            head = rec; continue
+        kv = dict(p.split("÷", 1) for p in rec.split("¬") if "÷" in p)
+        if kv.get("AA") and kv["AA"] not in found and now - int(kv.get("AD") or 0) < 96 * 3600:
+            found[kv["AA"]] = (head, rec, int(kv.get("AD") or 0))
+    if not found:
+        return False
+    groups = {}
+    for aa, (h, rec, ts) in sorted(found.items(), key=lambda x: x[1][2]):
+        groups.setdefault(h or "ZY÷¬ZA÷", []).append(rec)
+    body = "ZT÷%d¬~" % now + "".join(h + "¬~" + "¬~".join(rs) + "¬~" for h, rs in groups.items())
+    strip = lambda t: re.sub(r"^ZT÷\d+", "", t)
+    if strip(old) != strip(body):
+        os.makedirs(WOUT, exist_ok=True)
+        open(path, "w", encoding="utf-8").write(body)
+        print("fslive: done", sport, "обновлён,", len(found), "матчей,", len(body), "байт")
+    return True
+
+
 def write_feed(name, body, force):
     os.makedirs(WOUT, exist_ok=True)
     path = os.path.join(WOUT, name)
@@ -180,6 +251,8 @@ def main():
             write_feed("fs-%d.txt" % sport, mk(build(text, now)), FORCE)
             if toks:
                 write_draw(sport, now, toks)
+        if toks:
+            write_done(sport, now, text, toks)
         ok = True
     return 0 if ok else 1
 
