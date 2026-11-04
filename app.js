@@ -29,20 +29,29 @@
   document.documentElement.setAttribute("data-bk", BKID);
   /* переключение конторы перезагружает страницу: запоминаем прокрутку и возвращаем её, чтобы всё осталось на своих местах */
   var BKS_IDS = ["cover","roll","keepBar","bookBar","prevBar","aiTblBar","aiWaitPlate","cmpvBar","coupon","prevCsv","pctLegend"];
+  /* окно, которое открыла последняя нажатая кнопка раздела: после переключения конторы открываем то же окно */
+  var BKS_OPEN = ["btnDiff","btnBrief","btnPF","btnFeedSt","btnZash","btnCen","btnData","btnSim","btnKelly","btnMonster","btnStat"], bkLastOp = null;
+  document.addEventListener("click", function(ev){
+    var t = ev.target, b = t && t.closest ? t.closest("button") : null;
+    if(!b || (t.closest && t.closest("#evBack"))) return;
+    bkLastOp = BKS_OPEN.indexOf(b.id) >= 0 ? b.id : null;
+  }, true);
   function bkScrollSave(){
     try{
       var y = Math.round(window.pageYOffset || 0), an = null;
       var rw = document.querySelectorAll("#rows .row");
       for(var i = 0; i < rw.length && !an; i++){ var r = rw[i].getBoundingClientRect(); if(r.height && r.top <= 0 && r.bottom > 0) an = { id: "#rows", n: i, off: Math.round(-r.top) }; }
       for(var j = 0; j < BKS_IDS.length && !an; j++){ var e = document.getElementById(BKS_IDS[j]); if(!e) continue; var q = e.getBoundingClientRect(); if(q.height && q.top <= 0 && q.bottom > 0) an = { id: BKS_IDS[j], off: Math.round(-q.top) }; }
-      sessionStorage.setItem("dz_bkscroll", JSON.stringify({ y: y, an: an, t: Date.now() }));
+      var eb = document.getElementById("evBack"), ebd = document.getElementById("evBody");
+      var ov = eb && !eb.hidden && bkLastOp ? bkLastOp : null;
+      sessionStorage.setItem("dz_bkscroll", JSON.stringify({ y: y, an: an, pv: !!(state && state.viewPrev), ov: ov, ovs: ov && ebd ? Math.round(ebd.scrollTop || 0) : 0, t: Date.now() }));
     }catch(e){}
   }
   /* после перезагрузки возвращаемся в тот же раздел страницы (по якорю: блок или строка матча), запасной вариант — та же высота */
   (function bkScrollRestore(){
     var sv = null;
     try{ sv = JSON.parse(sessionStorage.getItem("dz_bkscroll") || "null"); sessionStorage.removeItem("dz_bkscroll"); }catch(e){}
-    if(!sv || (!sv.y && !sv.an) || Date.now() - sv.t > 30000) return;
+    if(!sv || (!sv.y && !sv.an && !sv.ov && !sv.pv) || Date.now() - sv.t > 30000) return;
     try{ if("scrollRestoration" in history) history.scrollRestoration = "manual"; }catch(e){}
     var stop = false, t0 = Date.now();
     function off(){ stop = true; }
@@ -59,9 +68,37 @@
       }
       return null;
     }
+    /* тот же режим (прошлый или текущий тираж) и то же открытое окно, что были в прежней конторе */
+    var pvTry = 0, pvAt = 0, pvDone = sv.pv == null, ovDone = !sv.ov, ovAt = 0, ovsDone = !sv.ovs;
+    function mode(){
+      try{
+        if(typeof state === "undefined" || !state || !state.matches || !state.matches.length) return;
+        if(!pvDone){
+          if(!!state.viewPrev === !!sv.pv){ pvDone = true; return; }
+          if(Date.now() - pvAt < 2500 || pvTry >= 4) { if(pvTry >= 4) pvDone = true; return; }
+          pvTry++; pvAt = Date.now();
+          if(sv.pv){ if(state.prev) enterPrev(); } else leavePrev();
+          return;
+        }
+        if(!ovDone){
+          var ob = document.getElementById(sv.ov);
+          if(ob && !ob.disabled && ob.offsetParent !== null){ ovDone = true; ovAt = Date.now(); ob.click(); }
+          else if(Date.now() - t0 > 9000) ovDone = true;
+          return;
+        }
+        if(!ovsDone && sv.ov){
+          var bd = document.getElementById("evBody");
+          if(bd && bd.scrollHeight - bd.clientHeight >= sv.ovs - 2){ bd.scrollTop = sv.ovs; ovsDone = true; }
+          else if(Date.now() - ovAt > 6000) ovsDone = true;
+        }
+      }catch(e){ }
+    }
     (function step(){
-      if(stop || Date.now() - t0 > 12000) return;
-      var ty = target();
+      if(Date.now() - t0 > 20000) return;
+      mode();
+      if(stop && pvDone && ovDone) return;
+      if(stop){ setTimeout(step, 150); return; }
+      var ty = sv.ov && ovDone ? null : target();
       if(ty != null && Math.abs((window.pageYOffset || 0) - ty) > 2) window.scrollTo(0, ty);
       setTimeout(step, 100);
     })();
@@ -7868,7 +7905,7 @@
     return Promise.all([
       jget(MIRROR + "status.json?t=" + t), jget(MIRROR + "news.json?t=" + t),
       jget(MIRROR + "sites.json?t=" + t), jget(GH_RUNS),
-      jget(MIRROR + "ai_status.json?t=" + t), jget(MIRROR + "ai.json?t=" + t),
+      jget(MIRROR + BK.mir + "ai_status.json?t=" + t), jget(MIRROR + BK.mir + "ai.json?t=" + t),
       ownTok() ? fetch(AI_WF + "/runs?per_page=1&t=" + t, { headers: aiRunHdr(), cache: "no-store" }).then(function(x){ return x.ok ? x.json() : null; }).catch(function(){ return null; }) : null
     ]).then(function(r){
       var st = r[0] || {}, nw = r[1], si = r[2], gh = r[3] && r[3].workflow_runs && r[3].workflow_runs[0];
@@ -7899,15 +7936,23 @@
       src("stavka.tv", "составы тиража и результаты", "stavka_ok", "stavka_ok_at", "stavka_error");
       var cur = String(state.tirazh || "");
       var nl = !nw ? 1 : String(nw.number) !== cur ? 1 : ageMin(nw.at) > 5 * 60 ? 1 : 0;
-      rows.push({ n: "Новости по матчам", d: "Google Новости, раз в 2 часа", at: nw && nw.at, lv: nl,
-        s: !nw ? "файла нет" : String(nw.number) !== cur ? "собраны для тиража №" + nw.number : nl ? "давно не обновлялись" : "свежие" });
       var sl = !si ? 1 : String(si.number) !== cur ? 1 : 0;
-      rows.push({ n: "Сайты команд", d: "Wikidata, для новых команд тиража", at: si && si.at, lv: sl,
-        s: !si ? "файла нет" : String(si.number) !== cur ? "собраны для тиража №" + si.number : "готовы" });
+      if(!FON){   /* новости и сайты команд собираются по тиражу Балтбета: в Фонбете их номер не сравниваем */
+        rows.push({ n: "Новости по матчам", d: "Google Новости, раз в 2 часа", at: nw && nw.at, lv: nl,
+          s: !nw ? "файла нет" : String(nw.number) !== cur ? "собраны для тиража №" + nw.number : nl ? "давно не обновлялись" : "свежие" });
+        rows.push({ n: "Сайты команд", d: "Wikidata, для новых команд тиража", at: si && si.at, lv: sl,
+          s: !si ? "файла нет" : String(si.number) !== cur ? "собраны для тиража №" + si.number : "готовы" });
+      }
       /* разбор ИИ по расписанию (11:00 МСК): цепочка разбора пишет ai_status.json — «идёт» при старте,
          «готово» или «ошибка» в конце. Зелёный — проведён для текущего тиража, жёлтый — идёт,
          красный — не начался или прервался. */
       (function(){
+        /* запуск через workflow_dispatch в окне вечернего (с 22:01) или контрольного (с 11:01) прохода — это автозапуск цикла keepalive, а не ручной */
+        function aiHow(a){
+          if(!a || a.event === "schedule") return "по расписанию";
+          var d = a.start ? new Date(Date.parse(a.start) + 3 * 3600000) : null, q = d ? d.getUTCHours() * 60 + d.getUTCMinutes() : -1;
+          return (q >= 22 * 60 + 1 && q < 23 * 60 + 40) || (q >= 11 * 60 + 1 && q < 12 * 60 + 40) ? "автозапуск" : "вручную";
+        }
         var curN = String(state.tirazh || ""), done = aj && String(aj.number) === curN && curN !== "";
         var stT = as && as.start ? fmtStamp(as.start, true) : "", sameDraw = as && (!as.number || String(as.number) === curN);
         /* два прохода на тираж: вечерний (накануне закрытия с 22:01 МСК) и контрольный (в день закрытия с 11:01 МСК) */
@@ -7921,9 +7966,9 @@
         if(grAct){ lv = 1; at = gr.run_started_at || gr.created_at;
           sTxt = (gr.status === "in_progress" ? "идёт (" + grHow + "), начало " : "в очереди у GitHub (" + grHow + "), поставлен в ") + fmtStamp(at, true) +
             (done ? "; сейчас на сайте разбор, опубликованный в " + fmtStamp(aj.at, true) + ", он будет заменён" : ""); }
-        else if(as && as.state === "run" && ageMin(as.start) <= 60){ lv = 1; at = as.start; sTxt = "идёт (" + (as.event === "schedule" ? "по расписанию" : "запущен вручную") + "), начало " + stT +
+        else if(as && as.state === "run" && ageMin(as.start) <= 60){ lv = 1; at = as.start; sTxt = "идёт (" + aiHow(as) + "), начало " + stT +
             (done ? "; сейчас на сайте разбор, опубликованный в " + fmtStamp(aj.at, true) + ", он будет заменён" : ""); }
-        else if(done){ lv = morOpen && !ctrlDone && mm >= 11 * 60 + 40 ? 1 : 0; at = aj.at || (as && as.end); sTxt = (aj.stage === "morning" ? "контрольный проход" : aj.stage === "evening" ? "вечерний проход" : "разбор") + " проведён для тиража №" + curN + (as && as.start && sameDraw ? " (" + (as.event === "schedule" ? "по расписанию" : "вручную") + "), начало " + stT + (as.end ? ", опубликован " + fmtStamp(as.end, true) : "") : ", опубликован " + fmtStamp(aj.at, true)) + (ctrlDone ? "; автозапуск по этому тиражу больше не нужен" : morOpen ? (lv ? "; контрольный проход запаздывает: GitHub должен был запустить его в 11:01 МСК" : "; контрольный проход обновит всё в 11:01 МСК") : "; контрольный проход обновит всё в 11:01 МСК в день закрытия"); }
+        else if(done){ lv = morOpen && !ctrlDone && mm >= 11 * 60 + 40 ? 1 : 0; at = aj.at || (as && as.end); sTxt = (aj.stage === "morning" ? "контрольный проход" : aj.stage === "evening" ? "вечерний проход" : "разбор") + " проведён для тиража №" + curN + (as && as.start && sameDraw ? " (" + aiHow(as) + "), начало " + stT + (as.end ? ", опубликован " + fmtStamp(as.end, true) : "") : ", опубликован " + fmtStamp(aj.at, true)) + (ctrlDone ? "; автозапуск по этому тиражу больше не нужен" : morOpen ? (lv ? "; контрольный проход запаздывает: GitHub должен был запустить его в 11:01 МСК" : "; контрольный проход обновит всё в 11:01 МСК") : "; контрольный проход обновит всё в 11:01 МСК в день закрытия"); }
         else if(as && as.state === "run"){ lv = 2; at = as.start; sTxt = "начался в " + stT + ", но больше часа без итога — похоже, прервался"; }
         else if(as && as.state === "fail" && ageMin(as.start) <= 20 * 60){ lv = 2; at = as.end || as.start; sTxt = "прервался с ошибкой, начало " + stT; }
         else { lv = 2; at = null;
