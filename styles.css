@@ -4449,13 +4449,13 @@ html.bk-rs-go::before{opacity:0; pointer-events:none; transition:opacity .35s ea
 
 
 /* статистика Фонбета: таблица с датами, короткими заголовками и только нужными столбцами */
-.st-wait{max-width:720px; margin:12px auto 6px; padding:12px 14px; border:1px solid var(--rule); border-radius:var(--r); background:var(--surface-2); font-size:14px; line-height:1.5}
+.st-wbox{max-width:720px; margin:12px auto 6px; padding:12px 14px; border:1px solid var(--rule); border-radius:var(--r); background:var(--surface-2); font-size:14px; line-height:1.5}
 .st-wait-h{margin:0; font-weight:700; color:var(--ink)}
 .st-wait-t{margin:10px 0 2px; font-size:11.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
-.st-wait ul{margin:0; padding:0; list-style:none}
-.st-wait li{padding:6px 0; border-top:1px solid var(--rule); color:var(--ink)}
-.st-wait li:first-child{border-top:0}
-.st-wait li b{font-family:var(--f-num)}
+.st-wbox ul{margin:0; padding:0; list-style:none}
+.st-wbox li{padding:6px 0; border-top:1px solid var(--rule); color:var(--ink)}
+.st-wbox li:first-child{border-top:0}
+.st-wbox li b{font-family:var(--f-num)}
 .st-wmine{color:var(--brand-gold); font-weight:600}
 .st-wait-n{margin:10px 0 0; font-size:12.5px}
 .st-main.st-fon{min-width:calc(48px + var(--n, 4) * 50px); table-layout:fixed}

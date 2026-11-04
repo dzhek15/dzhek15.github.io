@@ -3859,7 +3859,7 @@
         var rg = [], z0 = null, z1 = null;
         miss.forEach(function(v){ if(z0 === null){ z0 = z1 = v; } else if(v === z1 + 1){ z1 = v; } else { rg.push(z0 === z1 ? "№" + z0 : "№" + z0 + "–" + z1); z0 = z1 = v; } });
         if(z0 !== null) rg.push(z0 === z1 ? "№" + z0 : "№" + z0 + "–" + z1);
-        waitHtml = '<div class="st-wait"><p class="st-wait-h">В статистике ' + nums.length + ' ' + plural(nums.length, "тираж", "тиража", "тиражей") + ' с итогами' + (nums.length ? ': №' + nums[0] + (nums.length > 1 ? ' … №' + nums[nums.length - 1] : '') : '') + '</p>' +
+        waitHtml = '<div class="st-wbox"><p class="st-wait-h">В статистике ' + nums.length + ' ' + plural(nums.length, "тираж", "тиража", "тиражей") + ' с итогами' + (nums.length ? ': №' + nums[0] + (nums.length > 1 ? ' … №' + nums[nums.length - 1] : '') : '') + '</p>' +
           (wl.length ? '<p class="st-wait-t">Ждут итогов</p><ul>' + wl.join("") + '</ul>' : '') +
           (rg.length ? '<p class="st-mute st-wait-n">Без итогов: ' + rg.join(", ") + '. totobrief итоги Фонбета не отдаёт, журнал сайта ведётся с тиража №27 — новые тиражи попадают сюда сами, когда сыграны все 15 матчей.</p>' : '') + '</div>';
         return waitHtml;
