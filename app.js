@@ -22,6 +22,8 @@
       Storage.prototype.getItem = function(k){ return /^(baltsystem-kupon|dzhek-undo1|dzhek-prevcsv|dzhek-acc|dzhek-pvui)/.test(String(k)) ? null : gi0.call(this, k); };
     }catch(e){}
   }
+  /* при переключении конторы адрес получает метку &_=…: так браузер не берёт страницу из своего кэша (иначе после смены конторы мог открыться старый вид); в адресной строке метку убираем */
+  try{ if(/[?&]_=/.test(location.search) && history.replaceState) history.replaceState(null, "", location.pathname + location.search.replace(/([?&])_=[^&]*&?/, "$1").replace(/[?&]$/, "") + location.hash); }catch(e){}
   var BK = C.BOOKS[BKID], FON = BKID === "fonbet";
   var BKL = BK.slug + "/drawings?page=";
   if(BK.share) C.EV_SHARE = BK.share;
@@ -140,7 +142,7 @@
         try{ localStorage.setItem(C.BOOK_KEY, to); }catch(e){}
         bkScrollSave();
         /* адрес новой конторы чистый: купон, набор и ссылка предыдущей конторы с другими номерами тиражей не переносятся */
-        location.replace(location.pathname + "?bk=" + to);
+        location.replace(location.pathname + "?bk=" + to + "&_=" + Date.now().toString(36));
       });
     });
     /* боковой ярлык с названием конторы: нажатие переключает на другую контору */
@@ -158,7 +160,7 @@
         ev.preventDefault();
         try{ localStorage.setItem(C.BOOK_KEY, other); }catch(e){}
         bkScrollSave();
-        location.href = location.pathname + "?bk=" + other;
+        location.href = location.pathname + "?bk=" + other + "&_=" + Date.now().toString(36);
       });
       document.body.appendChild(tab);
     }
