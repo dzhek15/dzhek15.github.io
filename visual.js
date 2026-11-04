@@ -65,9 +65,13 @@
 
   /* ---------- обложка-журнал: матч тура, лента из 15 меток, отсчёт, пыль, блик, параллакс ---------- */
   var fxs = { idx: 0, rot: 0, cd: 0, kick: 0, scSeen: {}, list: [] };
+  /* порядок матчей по времени начала. У тиражей Балтбета даты матча нет, только время по Москве: ночные матчи (01:00, 03:30) идут уже после вечерних,
+     поэтому считаем от начала первого матча тиража (g.kickoff): сколько минут после него, с переходом через полночь */
+  var koBase = null;
   function koKey(m){
     var d = /(\d{1,2})\.(\d{1,2})/.exec(m.date || ""), t = /(\d{1,2}):(\d{2})/.exec(m.time || "");
     if(!t) return 1e9;
+    if(!d && koBase !== null) return (Number(t[1]) * 60 + Number(t[2]) - koBase + 1440) % 1440;
     return (d ? Number(d[2]) * 1e6 + Number(d[1]) * 1e4 : 5e8) + Number(t[1]) * 100 + Number(t[2]);
   }
   function embImg(D, name, m){
@@ -76,6 +80,7 @@
   }
   function pickFeat(g){
     var D = window.DZ, L = g.matches.map(function(m, i){ return { m: m, i: i, s: D.liveOf(m) }; });
+    koBase = g.kickoff > 0 ? (Math.floor(g.kickoff / 60000) + 180) % 1440 : null;   /* время начала первого матча по Москве, в минутах от полуночи */
     var live = L.filter(function(x){ return x.s.st === "live"; });
     if(live.length) return { mode: "live", list: live, all: L };
     var wait = L.filter(function(x){ return x.s.st === "wait"; }).sort(function(a, b){ return koKey(a.m) - koKey(b.m) || a.i - b.i; });
@@ -144,7 +149,7 @@
     else if(!po && pn && key in fxs.scSeen && f.mode === "live" && +pn[1] === 0 && +pn[2] === 0) cls += " ft-goal ft-go";   /* начало матча: «GO!» вместо «ГОЛ!» */
     fxs.scSeen[key] = sc;
     if(f.mode === "live") k = '<b class="ft-dot"></b>В эфире' + (x.s.min ? ' · <span class="ft-min">' + esc(x.s.min) + '</span>' : "");
-    else if(f.mode === "next") k = 'Ближайший матч · ' + esc([m.date, m.time].filter(Boolean).join(" "));
+    else if(f.mode === "next") k = 'Ближайший матч · ' + esc([m.date || (koBase !== null && g.kickoff > 0 && Math.floor((g.kickoff + koKey(m) * 60000 + 3 * 3600000) / 86400000) > Math.floor((Date.now() + 3 * 3600000) / 86400000) ? "завтра" : ""), m.time].filter(Boolean).join(" "));
     else k = 'Главный итог тура';
     var mid = sc ? '<div class="ft-sc">' + scoreHtml(m) + '</div>' : '<div class="ft-sc ft-vs"><span>' + esc(m.time || "—") + '</span></div>';
     var sig = f.mode + "|" + x.i + "|" + sc + "|" + (x.s.min || "") + "|" + m.home + m.away;
