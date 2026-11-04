@@ -4441,3 +4441,7 @@ html::before{content:"";position:fixed;left:0;right:0;top:0;height:3px;z-index:6
 :root[data-theme="light"] .bk-sw{background:rgba(255,252,244,.88)}
 :root[data-theme="light"] .bk-sw button:not([aria-pressed="true"]){color:#3b2f1a}
 :root[data-theme="light"] .bk-sw button:not([aria-pressed="true"]):hover{color:#1a1410; background:rgba(var(--c),.16)}
+
+/* переключение конторы: страница встаёт на прежнее место невидимой и плавно проявляется */
+html.bk-rs body{opacity:0}
+html.bk-rs-go body{opacity:1; transition:opacity .35s ease}

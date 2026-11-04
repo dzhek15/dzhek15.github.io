@@ -53,8 +53,16 @@
     try{ sv = JSON.parse(sessionStorage.getItem("dz_bkscroll") || "null"); sessionStorage.removeItem("dz_bkscroll"); }catch(e){}
     if(!sv || (!sv.y && !sv.an && !sv.ov && !sv.pv) || Date.now() - sv.t > 30000) return;
     try{ if("scrollRestoration" in history) history.scrollRestoration = "manual"; }catch(e){}
-    var stop = false, t0 = Date.now();
-    function off(){ stop = true; }
+    var stop = false, t0 = Date.now(), shown = false, okN = 0, tShown = 0;
+    /* пока страница встаёт на место, она невидима, чтобы не было рывков; потом плавно проявляется */
+    var root = document.documentElement; root.classList.add("bk-rs");
+    function reveal(){
+      if(shown) return; shown = true; tShown = Date.now();
+      root.classList.add("bk-rs-go"); root.classList.remove("bk-rs");
+      setTimeout(function(){ root.classList.remove("bk-rs-go"); }, 450);
+    }
+    setTimeout(reveal, 5000);
+    function off(){ stop = true; reveal(); }
     ["wheel","touchstart","mousedown","keydown"].forEach(function(ev){ window.addEventListener(ev, off, { passive: true, once: true }); });
     function target(){
       var an = sv.an, el = null;
@@ -94,12 +102,16 @@
       }catch(e){ }
     }
     (function step(){
-      if(Date.now() - t0 > 20000) return;
+      if(Date.now() - t0 > 20000){ reveal(); return; }
       mode();
       if(stop && pvDone && ovDone) return;
       if(stop){ setTimeout(step, 150); return; }
       var ty = sv.ov && ovDone ? null : target();
-      if(ty != null && Math.abs((window.pageYOffset || 0) - ty) > 2) window.scrollTo(0, ty);
+      if(shown && Date.now() - tShown > 3000) return;   /* дальше страницу не трогаем */
+      if(ty != null && Math.abs((window.pageYOffset || 0) - ty) > 2){ if(shown){ try{ window.scrollTo({ top: ty, behavior: "smooth" }); }catch(e){ window.scrollTo(0, ty); } } else window.scrollTo(0, ty); }
+      var atT = ty != null && Math.abs((window.pageYOffset || 0) - ty) <= 2;
+      okN = (atT || (sv.ov && ovDone)) && pvDone && ovDone ? okN + 1 : 0;
+      if(okN >= 15) reveal();
       setTimeout(step, 100);
     })();
   })();
