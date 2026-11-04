@@ -3821,6 +3821,8 @@
     var vp = loadVirt().catch(function(){ return null; }), vap = loadVirtAi().catch(function(){ return null; });
     Promise.all([aiH, draws, vp, payLoadShared(), vap, FON ? tiltJournal() : null]).then(function(r){
       var aih = r[0] || {}, vdata = r[2] || {}, vai = r[4] || {}, tjn = r[5], el = $("accBox"); if(!el) return;
+      /* у Фонбета нумерация идёт с единицы с октября 2026: старые тиражи 2020–2022 (№600 и т. п.) к текущей линейке не относятся — убираем из статистики и из памяти браузера */
+      if(FON) Object.keys(store).forEach(function(k){ var t = Date.parse(store[k].at || ""); if(!isFinite(t) || t < Date.now() - 150 * 86400000) delete store[k]; });
       var nums = Object.keys(store).map(Number).sort(function(a, b){ return accOrd(store[b].at, b) - accOrd(store[a].at, a); });
       var keep = {}; nums.forEach(function(n, i){ if(i < 40 || payFor(n)) keep[n] = store[n]; }); accWrite(keep);
       if(FON && tjn && tjn.draws) nums.forEach(function(n){
@@ -4013,11 +4015,12 @@
           (it.win === undefined ? '' : '<span class="st-v st-win' + (it.win > 0 ? ' on' : '') + '">' + rub(it.win) + '</span><span class="st-v st-net">' + net(it) + '</span>') + '</td>';
       };
       var fixed = cols.map(function(c){ return c[0]; }).filter(function(k){ return !isCh(k); });   /* обучение — отдельным блоком внизу */
-      /* Фонбет: только стратегии, по которым есть данные, плюс «Защита», «Монстр + толпа» и «Мои CSV» (они видны всегда) */
-      if(FON) fixed = fixed.filter(function(k){ return k === "zash" || k === "cen" || k === "mine" || (tot[k] && tot[k].n > 0); });
-      var head = '<tr><th>Тираж</th>' + fixed.map(function(k){ return '<th>' + name[k] + '</th>'; }).join("") + '</tr>';
+      /* Фонбет: только стратегии, по которым есть данные, плюс «Мои CSV» (виден всегда); «Защита» и «Монстр + толпа» появятся, когда у них будут итоги */
+      if(FON) fixed = fixed.filter(function(k){ return k === "mine" || (tot[k] && tot[k].n > 0); });
+      var shortN = {}; cols.forEach(function(c){ shortN[c[0]] = c[2]; });
+      var head = '<tr><th>Тираж</th>' + fixed.map(function(k){ return FON ? '<th title="' + escHtml(name[k]) + '">' + escHtml(shortN[k] || name[k]) + '</th>' : '<th>' + name[k] + '</th>'; }).join("") + '</tr>';
       var body = nums.map(function(n){
-        return '<tr><th scope="row" class="st-dn" data-dn="' + n + '" tabindex="0" title="Нажми — покажу выбранные исходы">' + n + (D[n].PK ? '<i class="acc-paid" title="выплаты загружены">₽</i>' : '') + '<small class="st-dn-h">исходы</small></th>' + fixed.map(function(k){ return cell(n, k); }).join("") + '</tr>';
+        return '<tr><th scope="row" class="st-dn" data-dn="' + n + '" tabindex="0" title="Нажми — покажу выбранные исходы">' + n + (FON && store[n].at ? '<small class="st-dt">' + dmy(Date.parse(store[n].at)) + '</small>' : '') + (D[n].PK ? '<i class="acc-paid" title="выплаты загружены">₽</i>' : '') + '<small class="st-dn-h">исходы</small></th>' + fixed.map(function(k){ return cell(n, k); }).join("") + '</tr>';
       }).join("");
       var foot = '<tr><th scope="row">Среднее<small>угадано</small></th>' + fixed.map(function(k){
         return cnt[k] ? '<td><span class="ac-pill' + ((sum[k] / cnt[k]) >= 9 ? ' ac-best' : '') + '"><b>' + f1(sum[k] / cnt[k]) + '</b></span><span class="st-v st-cost">' + cnt[k] + ' тир.</span></td>' : '<td class="acc-na">—</td>';
@@ -4027,30 +4030,8 @@
       }).join("") + '</tr>' : '');
       var legend = '<div class="st-leg"><span class="st-leg-t">В ячейке сверху вниз:</span>' +
         '<span><span class="ac-pill ac-best"><b>11</b></span> угадано из 15</span><span><b class="st-cost">17 280 ₽</b> поставил</span><span><b class="st-win on">25 737 ₽</b> выиграл</span><span><b class="st-plus">+8 457 ₽</b> / <b class="st-minus">−5 330 ₽</b> / <b class="st-miss">мимо</b> итог</span></div>';
-      /* ---------- Фонбет: карточки вместо широкой таблицы — на телефоне не нужно прокручивать вбок ---------- */
-      var fonMain = "", waitHtml = "";
-      if(FON){
-        var p2 = function(x){ return (x < 10 ? "0" : "") + x; };
-        var dmy = function(t){ if(!isFinite(t)) return ""; var q = new Date(t + 3 * 3600000); return p2(q.getUTCDate()) + "." + p2(q.getUTCMonth() + 1); };
-        var dmh = function(t){ if(!isFinite(t)) return ""; var q = new Date(t + 3 * 3600000); return dmy(t) + " " + p2(q.getUTCHours()) + ":" + p2(q.getUTCMinutes()); };
-        var tile = function(n, k){
-          var it = D[n].s[k];
-          if(!it) return k === "mine" ? '<div class="st-tile st-tile-na"><span class="st-tn">' + name[k] + '</span><span class="st-tna">не загружали</span></div>' : "";
-          return '<div class="st-c st-tile" data-n="' + n + '" data-k="' + k + '" tabindex="0" title="Нажми — покажу расчёт"><span class="st-tn">' + name[k] + '</span>' +
-            '<span class="ac-pill' + (it.hit >= 9 ? ' ac-best' : '') + '"><b>' + it.hit + '</b></span>' +
-            '<span class="st-v st-cost">' + fmt(it.vars) + ' ' + plural(it.vars, "строка", "строки", "строк") + ' · ' + rub(it.cost) + '</span>' +
-            (it.win === undefined ? '' : '<span class="st-v st-win' + (it.win > 0 ? ' on' : '') + '">выиграл ' + rub(it.win) + '</span><span class="st-v st-net">' + net(it) + '</span>') + '</div>';
-        };
-        fonMain = '<div class="st-cards">' + nums.map(function(n){
-          return '<div class="st-card"><div class="st-dn st-card-h" data-dn="' + n + '" tabindex="0" title="Нажми — покажу выбранные исходы"><b>№' + n + '</b><span class="st-cd">' + dmy(Date.parse(store[n].at || "")) + '</span>' +
-            (D[n].PK ? '<i class="acc-paid" title="выплаты загружены">₽</i>' : '') + '<small class="st-dn-h">исходы ›</small></div>' +
-            '<div class="st-tiles">' + fixed.map(function(k){ return tile(n, k); }).join("") + '</div></div>';
-        }).join("") + '</div>';
-        waitHtml = fonWait();
-      }
-      var mainHtml = FON ? legend + fonMain + '<div id="stCalc" class="st-calcbox" hidden></div><div id="stDraw" class="st-calcbox st-drawbox" hidden></div>' +
-        '<p class="st-note">Нажми на заголовок тиража — под карточкой появятся матчи и выбранные исходы. Нажми на стратегию — появится расчёт: сколько строк что угадали и сколько за них заплачено.</p>' :
-        legend + '<div class="acc-wrap st-wrap"><table class="acc st-main" style="--n:' + fixed.length + '"><thead>' + head + '</thead><tbody>' + body + '</tbody><tfoot>' + foot + '</tfoot></table></div>' +
+      var waitHtml = FON ? fonWait() : "";
+      var mainHtml =legend + '<div class="acc-wrap st-wrap"><table class="acc st-main' + (FON ? ' st-fon' : '') + '" style="--n:' + fixed.length + '"><thead>' + head + '</thead><tbody>' + body + '</tbody><tfoot>' + foot + '</tfoot></table></div>' +
         '<div id="stCalc" class="st-calcbox" hidden></div><div id="stDraw" class="st-calcbox st-drawbox" hidden></div>' +
         '<p class="st-note">Нажми на номер тиража — под таблицей появятся матчи и исходы, выбранные каждой стратегией. Нажми на ячейку — под таблицей появится расчёт: сколько строк что угадали и сколько за них заплачено. Если выплаты тиража не загружены, в ячейке только угадано и ставка.</p>';
       /* ---------- 4. как считается — на живом примере последнего тиража с выплатами ---------- */
@@ -4131,8 +4112,7 @@
         '<p class="ev-note" id="ownMsg" hidden></p></details>';
       el.innerHTML = (note ? '<p class="pay-ok" id="payOk">' + escHtml(note) + '</p>' : '') + locHtml +
         (own ? '<div class="pay-go pay-top"><button type="button" class="btn-ev" id="payOpen">Загрузить выигрыши</button></div><div id="payBox" class="pay-box" hidden></div>' : '') +
-        (FON ? waitHtml + '<h3 class="st-h">Итоги стратегий</h3>' + sumHtml + '<h3 class="st-h">По тиражам</h3>' + mainHtml + rules + ownHtml :
-          '<h3 class="st-h">По тиражам</h3>' + mainHtml + '<h3 class="st-h">Итоги стратегий</h3>' + sumHtml + rules + chBlock + ownHtml);
+        '<h3 class="st-h">По тиражам</h3>' + mainHtml + waitHtml + '<h3 class="st-h">Итоги стратегий</h3>' + sumHtml + rules + (FON ? "" : chBlock) + ownHtml;
       var ownIn = function(){
         var t = $("ownTok"), m = $("ownMsg"), v = t.value.trim(); if(!v) return;
         var say = function(x, bad){ m.hidden = false; m.textContent = x; m.classList.toggle("pay-bad", !!bad); };

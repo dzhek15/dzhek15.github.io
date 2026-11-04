@@ -4448,8 +4448,8 @@ html.bk-rs-go::before{opacity:0; pointer-events:none; transition:opacity .35s ea
 @keyframes bkRsSpin{to{transform:rotate(360deg)}}
 
 
-/* статистика Фонбета: карточки тиражей вместо широкой таблицы */
-.st-wait{max-width:720px; margin:0 auto 6px; padding:12px 14px; border:1px solid var(--rule); border-radius:var(--r); background:var(--surface-2); font-size:14px; line-height:1.5}
+/* статистика Фонбета: таблица с датами, короткими заголовками и только нужными столбцами */
+.st-wait{max-width:720px; margin:12px auto 6px; padding:12px 14px; border:1px solid var(--rule); border-radius:var(--r); background:var(--surface-2); font-size:14px; line-height:1.5}
 .st-wait-h{margin:0; font-weight:700; color:var(--ink)}
 .st-wait-t{margin:10px 0 2px; font-size:11.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
 .st-wait ul{margin:0; padding:0; list-style:none}
@@ -4458,19 +4458,11 @@ html.bk-rs-go::before{opacity:0; pointer-events:none; transition:opacity .35s ea
 .st-wait li b{font-family:var(--f-num)}
 .st-wmine{color:var(--brand-gold); font-weight:600}
 .st-wait-n{margin:10px 0 0; font-size:12.5px}
-.st-cards{display:grid; gap:12px; max-width:720px; margin:0 auto}
-.st-card{border:1px solid var(--rule); border-radius:var(--r); background:var(--surface); overflow:hidden}
-.st-card-h{display:flex; align-items:baseline; gap:10px; padding:10px 14px; border-bottom:1px solid var(--rule); background:var(--surface-2); cursor:pointer}
-.st-card-h b{font:700 18px/1.1 var(--f-num); color:var(--ink)}
-.st-card-h .st-cd{font-size:13px; color:var(--muted)}
-.st-card-h .acc-paid{margin:0; vertical-align:baseline}
-.st-card-h .st-dn-h{margin-left:auto; font-size:12px; color:var(--muted); text-decoration:underline dotted}
-.st-card-h.on{background:rgba(217,164,65,.18)}
-.st-tiles{display:grid; grid-template-columns:repeat(auto-fill,minmax(122px,1fr)); gap:0}
-.st-tile{display:flex; flex-direction:column; align-items:flex-start; gap:4px; padding:10px 12px 9px; background:var(--surface); min-width:0; box-shadow:inset -1px -1px 0 var(--rule)}
-.st-tile .st-v{margin-top:0; white-space:normal}
-.st-tn{font-size:11.5px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--muted)}
-.st-tile .ac-pill b{font-size:18px}
-.st-tile-na{justify-content:center}
-.st-tna{font-size:13px; color:var(--muted)}
-.st-tile.st-c.on{box-shadow:inset 0 0 0 2px var(--brand-gold)}
+.st-main.st-fon{min-width:calc(48px + var(--n, 4) * 50px); table-layout:fixed}
+.st-main.st-fon thead th{font-size:11px; letter-spacing:0; padding:9px 1px}
+.st-main.st-fon tbody th .st-dt{display:block; margin-top:2px; font:500 10.5px/1 var(--f-body, inherit); color:var(--muted)}
+.st-main.st-fon tbody th, .st-main.st-fon tfoot th{width:48px; min-width:48px; padding:9px 3px}
+.st-main.st-fon thead th:first-child{width:48px}
+.st-main.st-fon tbody td, .st-main.st-fon tfoot td{padding:9px 1px 8px; font-size:12px}
+.st-main.st-fon .st-v{white-space:nowrap; font-size:11.5px}
+.st-main.st-fon .ac-pill b{font-size:15px}
