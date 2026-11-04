@@ -4412,12 +4412,11 @@ body.is-prev .aitbl-bar .aitbl-t{position:absolute; left:50%; top:50%; transform
 .tilt-learn li b{color:var(--ink)}
 
 
-/* Метка конторы: боковая вкладка и тонкая линия сверху (Балтбет — синий, Фонбет — красный) */
+/* Метка конторы: боковая вкладка (Балтбет — синий, Фонбет — красный) */
 html{--bkc:70,128,214}
 html[data-bk="fonbet"]{--bkc:232,0,36}
 :root[data-theme="light"]{--bkc:48,104,190}
 :root[data-theme="light"][data-bk="fonbet"]{--bkc:222,0,34}
-html::before{content:"";position:fixed;left:0;right:0;top:0;height:3px;z-index:60;pointer-events:none;background:linear-gradient(90deg,transparent,rgba(var(--bkc),.95) 20%,rgba(var(--bkc),.95) 80%,transparent)}
 .bk-tab{position:fixed;left:0;top:34%;z-index:60;display:flex;align-items:center;justify-content:center;width:26px;min-height:88px;padding:0;border-radius:0 8px 8px 0;cursor:pointer;text-decoration:none;touch-action:manipulation;background:linear-gradient(180deg,rgba(var(--bkc),.95),rgba(var(--bkc),.72));box-shadow:0 0 18px rgba(var(--bkc),.45),inset 0 0 0 1px rgba(255,255,255,.18);transition:width .18s ease,box-shadow .18s ease,filter .18s ease;-webkit-tap-highlight-color:transparent}
 .bk-tab span{display:block;writing-mode:vertical-rl;transform:rotate(180deg);font:800 11px/1 "IBM Plex Sans",sans-serif;letter-spacing:.32em;color:#fff;padding:16px 0;white-space:nowrap}
 .bk-tab:hover,.bk-tab:focus-visible{width:30px;filter:brightness(1.12);box-shadow:0 0 24px rgba(var(--bkc),.65),inset 0 0 0 1px rgba(255,255,255,.28)}
@@ -4434,7 +4433,6 @@ html::before{content:"";position:fixed;left:0;right:0;top:0;height:3px;z-index:6
 .bk-sw{border-color:rgba(var(--bkc),.75); box-shadow:0 0 16px rgba(var(--bkc),.28)}
 .bk-sw button + button{border-left-color:rgba(var(--bkc),.5)}
 .bk-sw button{position:relative}
-.bk-sw button:not([aria-pressed="true"])::after{content:""; position:absolute; left:18%; right:18%; bottom:5px; height:2px; border-radius:2px; background:rgba(var(--c),.8)}
 .bk-sw button[aria-pressed="true"]{background:linear-gradient(180deg,rgba(var(--c),1),rgba(var(--c),.78)); color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.35); box-shadow:inset 0 0 0 1px rgba(255,255,255,.2)}
 .bk-sw button[data-bk="fonbet"][aria-pressed="true"]{background:linear-gradient(180deg,#f01c3c,#c4001f)}
 .bk-sw button:not([aria-pressed="true"]):hover{color:#fff; background:rgba(var(--c),.22)}
