@@ -12522,6 +12522,60 @@
     return { added: add.length, dup: dup };
   }
   /* готовый набор Охоты на этот тираж (virt.json): система 14 из 15 + самые сильные строки до полного бюджета; тот же, что идёт в статистику */
+  /* Охота = Монстр Келли + добор: исходы и строки Монстра, как их показывает окно «Монстр Келли» сейчас, входят в Охоту целиком.
+     Набор с сервера собран по данным на момент пересчёта, а Монстр считается живьём (линия, доля толпы), поэтому он может уйти вперёд:
+     недостающие исходы добавляются в систему, недостающие строки Монстра ставятся вместо самых слабых строк добора (основа и бриф не трогаются) */
+  function huntMonsterMerge(rec){
+    if(FON || !rec || !rec.z || !rec.sets || rec.sets.length !== 15 || state.matches.length !== 15) return rec;
+    var pl = null;
+    try {
+      var E = kelEdges(), K = planMonster(limitLines("mkelLimit", limitMaxLines()), !!E);
+      pl = K && !K.error && K.pick && K.pick.plan;
+    } catch(e){ return rec; }
+    if(!pl || !pl.rows || pl.rows.length !== 15 || !pl.lines || !pl.lines.length) return rec;
+    var rows = virtRows(rec.z), have = {}, i;
+    rows.forEach(function(r){ have[r] = 1; });
+    var core = rec.sys || rec.sets, sys2 = [], addSet = [], changed = false;
+    for(i = 0; i < 15; i++){
+      var cs = String(core[i] || ""), ms = pl.rows[i].set.map(function(k){ return OUT[k]; }).join(""), u = cs;
+      ms.split("").forEach(function(ch){ if(u.indexOf(ch) < 0){ u += ch; changed = true; } });
+      sys2.push(u.split("").sort(function(a, b){ return "1X2".indexOf(a) - "1X2".indexOf(b); }).join(""));
+    }
+    var miss = [], seen = {};
+    pl.lines.forEach(function(l){ var t = l.map(function(q){ return OUT[q]; }).join(""); if(!have[t] && !seen[t]){ seen[t] = 1; miss.push(t); } });
+    if(!changed && !miss.length) return rec;
+    /* порядок: основа Охоты, все строки Монстра, остальное (прежние строки Монстра и добор); при нехватке места срезается хвост */
+    var cap = HUNT_ROWS, nb = Math.min(rows.length, rec.n_sys || 0), keep = [], got = {};
+    function put(t){ if(!got[t] && keep.length < cap){ got[t] = 1; keep.push(t); } }
+    rows.slice(0, nb).forEach(put);
+    pl.lines.forEach(function(l){ put(l.map(function(q){ return OUT[q]; }).join("")); });
+    rows.slice(nb).forEach(put);
+    var o = {}; Object.keys(rec).forEach(function(k){ o[k] = rec[k]; });
+    o.sets = sys2; o.sys = sys2; o.n_sys = Math.min(keep.length, nb + pl.lines.length); o.n = keep.length; o.merged = true;
+    o.bl = (rec.bl || []).slice(); o.wy = {}; Object.keys(rec.wy || {}).forEach(function(k){ o.wy[k] = rec.wy[k]; });
+    o.add = (rec.add || []).map(function(a, j){ return String(a || "").split("").filter(function(ch){ return sys2[j].indexOf(ch) < 0; }).join(""); });
+    for(i = 0; i < 15; i++){
+      var kp = pl.rows[i].kup || null;
+      if(!kp) continue;
+      Object.keys(kp).forEach(function(ch){
+        if(String(o.bl[i] || "").indexOf(ch) < 0){ o.bl[i] = String(o.bl[i] || "") + ch; }
+        if(!o.wy[i + ch]) o.wy[i + ch] = kp[ch];
+      });
+    }
+    o.z = keep.map(function(s){
+      var v = 0, a, t = ""; for(a = 0; a < 15; a++) v = v * 3 + OUT.indexOf(s.charAt(a));
+      for(a = 0; a < 5; a++){ t = "0123456789abcdefghijklmnopqrstuvwxyz".charAt(v % 36) + t; v = Math.floor(v / 36); }
+      return t;
+    }).join("");
+    var MS = monsterHuntStrength();
+    if(MS){
+      var pin = 1, p15 = 0;
+      for(i = 0; i < 15; i++){ var sp = 0; sys2[i].split("").forEach(function(ch){ sp += MS.probs[i][OUT.indexOf(ch)]; }); pin *= Math.min(1, sp); }
+      keep.forEach(function(s){ var pr = 1; for(var a = 0; a < 15; a++) pr *= MS.probs[a][OUT.indexOf(s.charAt(a))]; p15 += pr; });
+      o.pin = Math.round(pin * 1e5) / 1e5; o.p15 = Math.round(p15 * 1e6) / 1e6; o.p14 = null; o.p14_sys = null;
+    }
+    return o;
+  }
   function showHuntSet(box, rec){
     var rows = virtRows(rec.z), price = briefPrice(), sets = rec.sets || [], core = rec.sys || rec.sets || [], bl = rec.bl || [], wy = rec.wy || {};
     var lines = rows.map(function(r){ return r.split("").map(function(ch){ return OUT.indexOf(ch); }); });
@@ -12550,6 +12604,7 @@
       + '<button type="button" id="huntCsv" class="btn-ev">Скачать CSV</button></div>';
     if(!canBasket) h += '<p class="ev-note dt-center">Больше ' + fmt(BASKET_MAX) + ' строк корзина не вмещает — такой купон выгружается сразу в CSV.</p>';
     if(!rec.rect) h += '<p class="ev-note">Серые исходы с пунктиром встречаются только в строках добора; синие входят в систему и выбраны по доводам, а не по чистой линии. Выигрыш не гарантирован: система даёт не меньше 14 из 15 при попадании всех исходов в набор, остальные строки повышают шанс на 15. «Подставить в купон» ставит в таблицу исходы системы.</p>';
+    if(!FON) h += '<p class="ev-note">Охота — это Монстр Келли плюс добор: все исходы и все строки Монстра входят в неё целиком, ' + (rec.merged ? 'недостающие подтянуты по свежим данным вместо самых слабых строк добора.' : 'сверх них добавлены свои исходы и строки.') + '</p>';
     if(!FON && rec.algo === "monster") h += learnHtml();
     box.innerHTML = h;
     $("evBack").hidden = false;
@@ -12763,11 +12818,11 @@
       loadVirt().then(function(){ showHunt(); }); return;
     }
     var vrec = virt.data && virt.data[String(state.tirazh)];
-    if(vrec && vrec.z && vrec.sets && vrec.sets.length === 15 && state.matches.length === 15){ showHuntSet(box, vrec); return; }
+    if(vrec && vrec.z && vrec.sets && vrec.sets.length === 15 && state.matches.length === 15){ showHuntSet(box, huntMonsterMerge(vrec)); return; }
     /* набора на сервере ещё нет (он собирается вместе с разбором в день закрытия) — тот же расчёт на устройстве */
     if(state.matches.length === 15 && !window.__huntOld){
       var lk = huntLocalKey();
-      if(huntLocal.rec && huntLocal.key === lk){ showHuntSet(box, huntLocal.rec); return; }
+      if(huntLocal.rec && huntLocal.key === lk){ showHuntSet(box, huntMonsterMerge(huntLocal.rec)); return; }
       box.innerHTML = '<p id="huntWait" class="ev-sub dt-center">Собираю «Охоту на 15»: система 14 из 15 и добор до ' + fmt(HUNT_ROWS) + ' строк внутри её исходов. Это занимает до минуты, окно не закрывай.</p>';
       $("evBack").hidden = false;
       if(huntLocal.busy === lk) return;
@@ -12777,7 +12832,7 @@
         var bx = $("evBody");
         if(rec.error){ if(bx && bx.querySelector("#huntWait")) bx.innerHTML = '<p class="ev-warn">Посчитать не получилось: ' + escHtml(rec.error) + '.</p>'; return; }
         huntLocal.key = lk; huntLocal.rec = rec;
-        if(bx && bx.querySelector("#huntWait")) showHuntSet(bx, rec);
+        if(bx && bx.querySelector("#huntWait")) showHuntSet(bx, huntMonsterMerge(rec));
       });
       return;
     }
