@@ -28,20 +28,42 @@
   if(FON){ C.EV_JACK14 = 0; C.EV_JACK15 = 1; }
   document.documentElement.setAttribute("data-bk", BKID);
   /* переключение конторы перезагружает страницу: запоминаем прокрутку и возвращаем её, чтобы всё осталось на своих местах */
-  function bkScrollSave(){ try{ sessionStorage.setItem("dz_bkscroll", JSON.stringify({ y: Math.round(window.pageYOffset || 0), t: Date.now() })); }catch(e){} }
+  var BKS_IDS = ["cover","roll","keepBar","bookBar","prevBar","aiTblBar","aiWaitPlate","cmpvBar","coupon","prevCsv","pctLegend"];
+  function bkScrollSave(){
+    try{
+      var y = Math.round(window.pageYOffset || 0), an = null;
+      var rw = document.querySelectorAll("#rows .row");
+      for(var i = 0; i < rw.length && !an; i++){ var r = rw[i].getBoundingClientRect(); if(r.height && r.top <= 0 && r.bottom > 0) an = { id: "#rows", n: i, off: Math.round(-r.top) }; }
+      for(var j = 0; j < BKS_IDS.length && !an; j++){ var e = document.getElementById(BKS_IDS[j]); if(!e) continue; var q = e.getBoundingClientRect(); if(q.height && q.top <= 0 && q.bottom > 0) an = { id: BKS_IDS[j], off: Math.round(-q.top) }; }
+      sessionStorage.setItem("dz_bkscroll", JSON.stringify({ y: y, an: an, t: Date.now() }));
+    }catch(e){}
+  }
+  /* после перезагрузки возвращаемся в тот же раздел страницы (по якорю: блок или строка матча), запасной вариант — та же высота */
   (function bkScrollRestore(){
     var sv = null;
     try{ sv = JSON.parse(sessionStorage.getItem("dz_bkscroll") || "null"); sessionStorage.removeItem("dz_bkscroll"); }catch(e){}
-    if(!sv || !sv.y || Date.now() - sv.t > 20000) return;
+    if(!sv || (!sv.y && !sv.an) || Date.now() - sv.t > 30000) return;
     try{ if("scrollRestoration" in history) history.scrollRestoration = "manual"; }catch(e){}
     var stop = false, t0 = Date.now();
     function off(){ stop = true; }
     ["wheel","touchstart","mousedown","keydown"].forEach(function(ev){ window.addEventListener(ev, off, { passive: true, once: true }); });
+    function target(){
+      var an = sv.an, el = null;
+      if(an){
+        el = an.id === "#rows" ? document.querySelectorAll("#rows .row")[an.n] : document.getElementById(an.id);
+        if(el && el.getBoundingClientRect().height) return Math.round((window.pageYOffset || 0) + el.getBoundingClientRect().top + an.off);
+      }
+      if(Date.now() - t0 > 3500 && sv.y){
+        var de = document.documentElement;
+        if(Math.max(de.scrollHeight, document.body ? document.body.scrollHeight : 0) - window.innerHeight >= sv.y - 2) return sv.y;
+      }
+      return null;
+    }
     (function step(){
-      if(stop || Date.now() - t0 > 7000) return;
-      var de = document.documentElement, maxY = Math.max(de.scrollHeight, document.body ? document.body.scrollHeight : 0) - window.innerHeight;
-      if(Math.abs((window.pageYOffset || 0) - sv.y) > 2 && maxY >= sv.y - 2) window.scrollTo(0, sv.y);
-      setTimeout(step, 120);
+      if(stop || Date.now() - t0 > 12000) return;
+      var ty = target();
+      if(ty != null && Math.abs((window.pageYOffset || 0) - ty) > 2) window.scrollTo(0, ty);
+      setTimeout(step, 100);
     })();
   })();
   /* переключатель на обложке: запоминаем выбор и перезагружаем страницу — у Фонбета свои тиражи и купоны */
