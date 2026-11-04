@@ -1,8 +1,36 @@
 {
- "updated": "2026-11-03",
- "count": 35,
+ "updated": "2026-11-04",
+ "count": 39,
  "note": "база обоев: каждый день после разбора ИИ добавляются новые по свежим новостям, рисуют бесплатные нейросети",
  "items": [
+  {
+   "src": "img/wp/auto/20261104-1.webp",
+   "light": "img/wp/auto/20261104-1l.webp",
+   "theme": "Травмы Наполи",
+   "by": "pollinations:sana",
+   "d": "2026-11-04"
+  },
+  {
+   "src": "img/wp/auto/20261104-2.webp",
+   "light": "img/wp/auto/20261104-2l.webp",
+   "theme": "Новый тренер Вест Хэма",
+   "by": "pollinations:sana",
+   "d": "2026-11-04"
+  },
+  {
+   "src": "img/wp/auto/20261104-3.webp",
+   "light": "img/wp/auto/20261104-3l.webp",
+   "theme": "Ночь Лиги чемпионов",
+   "by": "pollinations:sana",
+   "d": "2026-11-04"
+  },
+  {
+   "src": "img/wp/auto/20261104-4.webp",
+   "light": "img/wp/auto/20261104-4l.webp",
+   "theme": "Дождь и давление",
+   "by": "pollinations:sana",
+   "d": "2026-11-04"
+  },
   {
    "src": "img/wp/auto/20261103-1.webp",
    "light": "img/wp/auto/20261103-1l.webp",
