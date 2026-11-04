@@ -60,17 +60,17 @@
   (function bkScrollRestore(){
     var sv = null;
     try{ sv = JSON.parse(sessionStorage.getItem("dz_bkscroll") || "null"); sessionStorage.removeItem("dz_bkscroll"); }catch(e){}
-    if(!sv || (!sv.y && !sv.an && !sv.ov && !sv.pv) || Date.now() - sv.t > 30000) return;
+    if(!sv || (!sv.y && !sv.an && !sv.ov && !sv.pv) || Date.now() - sv.t > 30000){ document.documentElement.classList.remove("bk-rs"); return; }
     try{ if("scrollRestoration" in history) history.scrollRestoration = "manual"; }catch(e){}
     var stop = false, t0 = Date.now(), shown = false, okN = 0, tShown = 0;
-    /* пока страница встаёт на место, она невидима, чтобы не было рывков; потом плавно проявляется */
+    /* пока страница встаёт на место, её закрывает заставка в цвет темы с крутилкой (страница под ней не мелькает); потом заставка плавно уходит */
     var root = document.documentElement; root.classList.add("bk-rs");
     function reveal(){
       if(shown) return; shown = true; tShown = Date.now();
       root.classList.add("bk-rs-go"); root.classList.remove("bk-rs");
       setTimeout(function(){ root.classList.remove("bk-rs-go"); }, 450);
     }
-    setTimeout(reveal, sv.pv ? 6500 : 4000);
+    setTimeout(reveal, sv.pv ? 5500 : 3500);
     function off(){ stop = true; reveal(); }
     ["wheel","touchstart","mousedown","keydown"].forEach(function(ev){ window.addEventListener(ev, off, { passive: true, once: true }); });
     function target(){
@@ -123,7 +123,7 @@
       if(ty != null && Math.abs((window.pageYOffset || 0) - ty) > 2) window.scrollTo(0, ty);
       var atT = ty != null && Math.abs((window.pageYOffset || 0) - ty) <= 2;
       okN = (atT || (sv.ov && ovDone)) && pvDone && ovDone ? okN + 1 : 0;
-      if(okN >= 10 && Date.now() - t0 >= 2800) reveal();
+      if(okN >= 8 && Date.now() - t0 >= 2200) reveal();
       setTimeout(step, shown ? 50 : 100);
     })();
   })();

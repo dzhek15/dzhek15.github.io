@@ -4442,6 +4442,8 @@ html::before{content:"";position:fixed;left:0;right:0;top:0;height:3px;z-index:6
 :root[data-theme="light"] .bk-sw button:not([aria-pressed="true"]){color:#3b2f1a}
 :root[data-theme="light"] .bk-sw button:not([aria-pressed="true"]):hover{color:#1a1410; background:rgba(var(--c),.16)}
 
-/* переключение конторы: страница встаёт на прежнее место невидимой и плавно проявляется */
-html.bk-rs body{opacity:0}
-html.bk-rs-go body{opacity:1; transition:opacity .35s ease}
+/* переключение конторы: пока страница встаёт на прежнее место, её закрывает заставка в цвет темы с крутилкой; потом плавно уходит */
+html.bk-rs::before,html.bk-rs-go::before{content:""; position:fixed; left:0; top:0; right:0; bottom:0; height:auto; z-index:2147483000; background:var(--bg)}
+html.bk-rs::after{content:""; position:fixed; left:50%; top:46%; width:34px; height:34px; margin:-17px 0 0 -17px; z-index:2147483001; box-sizing:border-box; border:2px solid rgba(201,162,75,.28); border-top-color:#c9a24b; border-radius:50%; animation:bkRsSpin .9s linear infinite}
+html.bk-rs-go::before{opacity:0; pointer-events:none; transition:opacity .35s ease}
+@keyframes bkRsSpin{to{transform:rotate(360deg)}}
