@@ -4,7 +4,7 @@
   var OUT = C.OUT;
   /* ---------- букмекер: Балтбет или Фонбет ----------
      Выбор хранится в браузере; ?bk=fonbet / ?bk=baltbet в адресе — переключить сразу.
-     У Фонбета своя лента totobrief, своё зеркало (fon-…) и своё хранилище купонов (…-fon). */
+     У Фонбета своя лента основной источник, своё зеркало (fon-…) и своё хранилище купонов (…-fon). */
   var BKID = "baltbet";
   try{
     var bkQ = /[?&]bk=(baltbet|fonbet)\b/.exec(location.search);
@@ -165,7 +165,7 @@
       document.body.appendChild(tab);
     }
     var bf = document.getElementById("btnFetch");
-    if(bf) bf.title = "Забрать актуальный тираж " + BK.title + "а с totobrief";
+    if(bf) bf.title = "Забрать актуальный тираж " + BK.title + "а";
   }
   if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", bkSwInit); else bkSwInit();
   var KEY = C.STORAGE_KEY + BK.sfx;
@@ -501,7 +501,7 @@
 
   /* Момент первого матча тиража в московском времени, независимо от часового пояса зрителя.
      Дата в строках вида «13.09», время «16:30». МСК = UTC+3. */
-  /* «2026-09-14T20:00:00Z» у totobrief для Балтбета — это московское время, а не UTC.
+  /* «2026-09-14T20:00:00Z» у основной источник для Балтбета — это московское время, а не UTC.
      У Фонбета время настоящее UTC: ended_at совпадает с start_at первого матча, а start_at
      сходится с Flashscore только как UTC («Родина — Оренбург» 16:30 = 19:30 МСК). */
   var TB_OFS = FON ? 0 : 3;
@@ -530,7 +530,7 @@
     return best;
   }
 
-  /* время последнего ответа totobrief, по МСК */
+  /* время последнего ответа основной источник, по МСК */
   function resStamp(){
     if(!state.resAt) return "";
     var d = new Date(Number(state.resAt) + 3 * 3600000);
@@ -561,7 +561,7 @@
       ? (Number(((state.drawByNo || {})[state.prev.tirazh] || {}).pool) || Number(state.prev.pool) || 0)
       : (Number(state.poolSum) || 0);
     if(FON){
-      /* Фонбет пул тиража не публикует (totobrief отдаёт только суперприз) */
+      /* Фонбет пул тиража не публикует (основной источник отдаёт только суперприз) */
       fw.hidden = false; $("tkFund").textContent = "не публикуется";
       fw.title = "Фонбет не публикует пул тиража: известен только суперприз";
     } else if(fShow > 0){
@@ -1996,7 +1996,7 @@
     }
     return true;
   }
-  /* латиница для второй попытки: totobrief пишет «Элверсберг», Flashscore — «Эльферсберг»,
+  /* латиница для второй попытки: основной источник пишет «Элверсберг», Flashscore — «Эльферсберг»,
      а по-английски Elversberg находят оба */
   var TRANSLIT = { "а":"a","б":"b","в":"v","г":"g","д":"d","е":"e","ё":"e","ж":"zh","з":"z","и":"i","й":"y","к":"k",
     "л":"l","м":"m","н":"n","о":"o","п":"p","р":"r","с":"s","т":"t","у":"u","ф":"f","х":"h","ц":"ts","ч":"ch",
@@ -2255,7 +2255,7 @@
   }
   /* ---------- отладка просмотра ----------
      Включается адресом ?debug=1 (запоминается в браузере) или пятью быстрыми тапами по логотипу; ?debug=0 выключает.
-     Пишет журнал: откуда пришёл счёт и принят ли он, ответы ленты и totobrief с задержкой, время перерисовок,
+     Пишет журнал: откуда пришёл счёт и принят ли он, ответы ленты и основной источник с задержкой, время перерисовок,
      долгие задачи (зависания) и ошибки. Панель — кнопка «отладка» внизу справа, журнал копируется одной кнопкой. */
   var DBG = { on: false, buf: [], max: 500, t0: Date.now(), feed: {}, api: {}, rn: 0, rsum: 0, rmax: 0, slow: 0, lt: 0, ltmax: 0, errs: 0, open: false, el: null };
   try{
@@ -2289,7 +2289,7 @@
     var w = fsWorkerDown && Date.now() - fsWorkerDown < 2 * 60000 ? "не отвечает " + ago(fsWorkerDown) + " назад, идём через снимок" : "ок";
     var fk = Object.keys(DBG.feed).map(function(k){ var f = DBG.feed[k]; return k + ": " + f.src + " " + f.ms + " мс" + (f.age != null ? ", снимку " + f.age + " с" : "") + ", " + ago(f.at) + " назад"; }).join("; ") || "ещё не опрашивали";
     var ak = Object.keys(DBG.api).map(function(k){ var f = DBG.api[k]; return k + " " + f.ms + " мс" + (f.err ? " ОШИБКА" : "") + ", " + ago(f.at) + " назад"; }).join("; ") || "—";
-    return "<b>Лента (worker):</b> " + w + "<br><b>Последние опросы ленты:</b> " + fk + "<br><b>totobrief:</b> " + ak +
+    return "<b>Лента (worker):</b> " + w + "<br><b>Последние опросы ленты:</b> " + fk + "<br><b>Источник тиражей:</b> " + ak +
       "<br><b>Перерисовок:</b> " + DBG.rn + ", среднее " + (DBG.rn ? Math.round(DBG.rsum / DBG.rn) : 0) + " мс, максимум " + Math.round(DBG.rmax) + " мс, медленных (&gt;80 мс) " + DBG.slow +
       "<br><b>Зависаний (&gt;100 мс):</b> " + DBG.lt + (DBG.lt ? ", самое долгое " + Math.round(DBG.ltmax) + " мс" : "") + " · <b>ошибок:</b> " + DBG.errs;
   }
@@ -2367,18 +2367,18 @@
     rsT = setTimeout(function(){ rsT = 0; var w = rsWhy; rsWhy = ""; dbgLog("рисуем", "причина: " + w); try{ render(); }catch(e){ DBG.errs++; dbgLog("err", "render: " + (e && e.message)); } }, 150);
   }
   /* ---------- быстрый счёт из ленты Flashscore ----------
-     totobrief отдаёт счёт с задержкой, лента Flashscore — почти сразу. Пока матч идёт, счёт
-     берём из ленты (каждые 15 секунд); итог матча и исход по-прежнему только от totobrief.
-     Свежий счёт из ленты не затирается более старым от totobrief, пока тот не подведёт итог. */
+     основной источник отдаёт счёт с задержкой, лента Flashscore — почти сразу. Пока матч идёт, счёт
+     берём из ленты (каждые 15 секунд); итог матча и исход по-прежнему только от основного источника.
+     Свежий счёт из ленты не затирается более старым от основной источник, пока тот не подведёт итог. */
   var FS_LIVE_EVERY = 15000, FS_KEEP = 5 * 60000;
-  /* Источники счёта по надёжности: totobrief отстаёт, снимок из GitHub отстаёт меньше, лента Flashscore — самый свежий.
+  /* Источники счёта по надёжности: основной источник отстаёт, снимок из GitHub отстаёт меньше, лента Flashscore — самый свежий.
      Счёт не должен «качаться»: более слабый или более старый источник не откатывает уже принятый счёт (иначе
      гол пропадал и появлялся заново, а вместе с ним прыгали места наборов). Откат принимаем только от равного
      или более сильного источника с не более старыми данными — так отмена гола (VAR) всё равно доходит. */
-  var SRC_TB = 1, SRC_MIR = 2, SRC_FEED = 3, SRC_NAME = { 1: "totobrief", 2: "снимок", 3: "лента" };
+  var SRC_TB = 1, SRC_MIR = 2, SRC_FEED = 3, SRC_NAME = { 1: "источник тиража", 2: "снимок", 3: "лента" };
   function scPair(x){ var r = /(\d+)\D+(\d+)/.exec(x || ""); return r ? [+r[1], +r[2]] : null; }
   function mergeScore(m, sc){
-    if(FON && m.resFs && !sc) return;   /* у Фонбета totobrief счёта не даёт — не стираем счёт из Flashscore */
+    if(FON && m.resFs && !sc) return;   /* у Фонбета основной источник счёта не даёт — не стираем счёт из Flashscore */
     noteScore(m, sc, SRC_TB, Date.now());
     if(m.res){ delete m.fsAt; delete m.fsPh; }
   }
@@ -2403,17 +2403,17 @@
     }
     var down = !!a && (b[0] < a[0] || b[1] < a[1]);
     /* перекрёстный счёт (1:2 против 2:1): отставанием источника это не объяснить — один из источников ошибся
-       (бывает, totobrief выдаёт счёт с перепутанными хозяевами и гостями). Верим Flashscore (лента и свежий снимок),
-       а totobrief по этому матчу дальше не слушаем, пока он спорит с лентой */
+       (бывает, основной источник выдаёт счёт с перепутанными хозяевами и гостями). Верим Flashscore (лента и свежий снимок),
+       а основной источник по этому матчу дальше не слушаем, пока он спорит с лентой */
     var cross = !!a && !m.res && ((b[0] < a[0] && b[1] > a[1]) || (b[0] > a[0] && b[1] < a[1]));
     if(cross && src >= SRC_MIR){
       m.tbX = 1; delete m.dn; m.gmax = b.slice();
-      dbgLog("score", tag + ": " + old + " → " + sc + " от " + SRC_NAME[src] + " — перекрёстный счёт, верим Flashscore, totobrief по матчу игнорируем");
+      dbgLog("score", tag + ": " + old + " → " + sc + " от " + SRC_NAME[src] + " — перекрёстный счёт, верим Flashscore, источник тиража по матчу игнорируем");
       m.score = sc; m.scAt = now; m.scT = t; m.scSrc = src; m.scHi = now;
       return true;
     }
     if(cross && src === SRC_TB && m.tbX){
-      dbgLog("rej", tag + ": " + old + " → " + sc + " от totobrief отклонено: спорит с Flashscore");
+      dbgLog("rej", tag + ": " + old + " → " + sc + " от источника тиража отклонено: спорит с Flashscore");
       return false;
     }
     if(!down && m.dn) delete m.dn;                           /* любой источник снова не ниже принятого — ожидание отката сбрасываем */
@@ -2422,7 +2422,7 @@
       if(incOnly) why = "источник только повышает";
       else if(t < (m.scT || 0) && src <= (m.scSrc || 0)) why = "данные старее принятых";
       else {
-        /* Счёт только растёт. Источники отстают друг от друга (totobrief и лента то опережают, то нет), поэтому
+        /* Счёт только растёт. Источники отстают друг от друга (основной источник и лента то опережают, то нет), поэтому
            «меньший» счёт от одного из них — чаще всего отставание, а не отмена гола. Откат принимаем, только если
            меньший счёт держится без перерыва ROLLBACK_MS и никто за это время не показал принятый или больший счёт. */
         if(!m.dn || m.dn.sc !== sc){ m.dn = { sc: sc, t0: now }; why = "ждём подтверждения отката (источники отстают друг от друга)"; }
@@ -2667,13 +2667,13 @@
         }
         if(!/^\d+$/.test(f.hs || "") || !/^\d+$/.test(f.as || "")) return;
         var grp = by[fsFeedSport(m.league)], mir = !!(grp && grp.mir);
-        /* снимок из GitHub старше получаса — не верим, пусть остаётся только счёт из totobrief */
+        /* снимок из GitHub старше получаса — не верим, пусть остаётся только счёт из основной источник */
         if(mir && (!grp.ts || Date.now() - grp.ts > 30 * 60000)) return;
         var sc = f.hs + " : " + f.as, oldAc = m.fsPh ? m.fsPh.ac : null;
         m.fsAt = mir ? grp.ts : Date.now(); m.fsMir = mir;
         if(f.st === "3"){
           if(!m.fsEnd){ m.fsEnd = m.fsAt; changed = true; }
-          /* Фонбет: итогов у totobrief нет — исход берём по финальному счёту Flashscore (основное время, код «3») */
+          /* Фонбет: итогов у основной источник нет — исход берём по финальному счёту Flashscore (основное время, код «3») */
           if(FON && !m.res){
             var h9 = +f.hs, a9 = +f.as;
             m.res = h9 > a9 ? "1" : (h9 < a9 ? "2" : "X"); m.resFs = 1; m.score = sc; changed = true;
@@ -2685,7 +2685,7 @@
         m.fsPh = { ac: f.sc, ao: f.ao, bx: f.bx, at: m.fsAt };
         if(oldAc !== f.sc) changed = true;
         /* лента — счёт как есть; снимок из GitHub может отставать, поэтому от него берём фазу и минуту,
-           а счёт только повышаем или подтверждаем (отмену гола ждём от ленты или totobrief) */
+           а счёт только повышаем или подтверждаем (отмену гола ждём от ленты или основной источник) */
         if(!mir){
           if(noteScore(m, sc, SRC_FEED, Date.now())){ changed = true; if(state.prev && state.prev.matches.indexOf(m) >= 0) state.prev.at = Date.now(); }
         } else if(grp.ts && Date.now() - grp.ts < 12 * 60000){
@@ -3270,15 +3270,15 @@
       if(!groups) return null;
       out.push('<div class="cx-card cx-yc"><div class="cx-h"><b>' + escHtml(team) + '</b></div>' + groups + '</div>');
     }
-    return '<div class="cx-grid' + (out.length === 1 ? ' cx-one' : '') + '">' + out.join("") + '</div><p class="cx-src">ESPN</p>';
+    return '<div class="cx-grid' + (out.length === 1 ? ' cx-one' : '') + '">' + out.join("") + '</div>';
   }
   function cxVisual(label, lines){
     var out = [], fn = label === "Турнирная задача" ? cxTable : label === "xG" ? cxXg : label === "Дорога" ? cxRoad : label === "Доли игроков" ? cxShare : null, i;
     if(label === "Жёлтые карточки") return cxCards(lines);
-    if(label === "Статистика команд"){ var h = cxStats(lines); return h ? '<div class="cx-grid cx-one">' + h + '</div>' + '<p class="cx-src">football-data.co.uk</p>' : ""; }
+    if(label === "Статистика команд"){ var h = cxStats(lines); return h ? '<div class="cx-grid cx-one">' + h + '</div>' + '' : ""; }
     if(!fn) return "";
     for(i = 0; i < lines.length; i++){ var c = fn(lines[i]); if(!c) return ""; out.push(c); }
-    var src = label === "xG" ? "Understat" : label === "Дорога" ? "ESPN, Open-Meteo, расчёт" : label === "Доли игроков" ? "тотализатор" : "таблица ESPN, расчёт";
+    var src = label === "xG" ? "расчёт" : label === "Доли игроков" ? "тотализатор" : "расчёт";
     return '<div class="cx-grid' + (out.length === 1 || label === "Дорога" || label === "Доли игроков" ? ' cx-one' : '') + '">' + out.join("") + '</div><p class="cx-src">' + src + '</p>';
   }
   function aiCalcHtml(r){
@@ -3299,8 +3299,35 @@
     var miss = (c.miss && c.miss.length) ? ' · нет: ' + escHtml(c.miss.join(", ")) : "";
     return '<p class="ai-cov ai-cov-' + cls + '"><b>Данные: ' + c.score + ' из 100</b>' + miss + '</p>';
   }
-  function aiHtml(r, full, mt){
-    var src = (r.s || []).map(function(x){
+  /* На сайте называем источниками только Flashscore и Betzona: остальные названия и домены из текстов убираем */
+  var SRC_NAMES = "ESPN|Understat|football-data|Open-Meteo|Transfermarkt|Sofascore|WhoScored|FBref|ClubElo|stronghand|totobrief|stavka|Google\\s+Новости|Sports\\s*Mole|Yahoo(?:\\s+Sports)?|BBC(?:\\s+Sport)?|Sky\\s+Sports|Fakti|Goal\\.com|Marca|AS\\.com";
+  var SRC_DOM = "\\b[a-z0-9-]+(?:\\.[a-z0-9-]+)*\\.(?:com|ru|tv|net|org|info|co|[a-z]{2})\\b";
+  var SRC_BAD_RE = new RegExp(SRC_DOM + "|(?:" + SRC_NAMES + ")", "i");
+  function srcAllowedName(n){ n = String(n || ""); return !n || srcMark(n) !== n ? "" : n; }
+  /* плохие названия и домены -> \u0002 (betzona.ru и flashscore.* остаются) */
+  function srcMark(s){
+    return String(s || "").replace(new RegExp(SRC_DOM + "|(?:" + SRC_NAMES + ")", "gi"), function(w){
+      return /^(?:[a-z0-9-]+\.)*(?:betzona\.ru|flashscore\.[a-z.]+)$/i.test(w) || /^(?:betzona|flashscore)$/i.test(w) ? w : "\u0002";
+    });
+  }
+  function srcScrubText(s){
+    s = String(s || "");
+    if(!SRC_BAD_RE.test(s)) return s;
+    s = srcMark(s);
+    if(s.indexOf("\u0002") < 0) return s;
+    s = s.replace(/\(([^()]*)\)/g, function(all, inner){
+      if(inner.indexOf("\u0002") < 0) return all;
+      var keep = inner.split(/\s*[,;]\s*/).filter(function(p){ return p && p.indexOf("\u0002") < 0; });
+      return keep.length ? "(" + keep.join(", ") + ")" : "";
+    });
+    s = s.replace(/\s*,\s*\u0002/g, "").replace(/\u0002\s*,\s*/g, "").replace(/\s+и\s+\u0002/g, "").replace(/\u0002\s+и\s+/g, "")
+         .replace(/(?:по данным|таблица|по|из|от|на|с)\s+\u0002/gi, "").replace(/\u0002/g, "");
+    return s.replace(/[ \t]{2,}/g, " ").replace(/\s+([.,;:])/g, "$1");
+  }
+  function srcScrubHtml(h){ return String(h || "").split(/(<[^>]*>)/).map(function(p){ return p.charAt(0) === "<" ? p : srcScrubText(p); }).join(""); }
+  function aiHtml(r, full, mt){ return srcScrubHtml(aiHtml0(r, full, mt)).replace(/<span class="ai-pt-s">[\s.,;]*<\/span>/g, "").replace(/<p class="cx-src">[\s.,;]*<\/p>/g, ""); }
+  function aiHtml0(r, full, mt){
+    var src = (r.s || []).filter(function(x){ return x && /(?:^|\/\/|\.)(?:betzona\.ru|flashscore\.[a-z.]+)(?:\/|$)/i.test(String(x.u || "")); }).map(function(x){
       return '<a target="_blank" rel="noopener noreferrer" href="' + escHtml(x.u) + '">' + escHtml(x.n) + '</a>';
     }).join(" · ");
     var fin = "";
@@ -3734,7 +3761,7 @@
     });
     return accDistRows(hits);
   }
-  /* Фонбет: totobrief итогов новых тиражей не отдаёт — берём их из data/api/fon/history.json
+  /* Фонбет: основной источник итогов новых тиражей не отдаёт — берём их из data/api/fon/history.json
      (итоги собраны по Flashscore). Отменённый/перенесённый матч там помечен «*». */
   var fonHistP = null;
   function fonHistDraws(){
@@ -3762,7 +3789,7 @@
     if(x.pool_sum != null && !(Number(x.jackpot) > 0)) x.jackpot = x.pool_sum;
     x.pool_sum = null;
   }
-  /* итоги Фонбета: totobrief их не отдаёт; берём из старого архива (до №14) и из журнала сайта (с №27: итоги матчей из ленты) */
+  /* итоги Фонбета: основной источник их не отдаёт; берём из старого архива (до №14) и из журнала сайта (с №27: итоги матчей из ленты) */
   function fonFillJ(info, tj){
     if(!tj || !tj.results) return;
     var jd = tj.draws && tj.draws[String(info.number)], at = Date.parse(info.ended_at || "");
@@ -3861,7 +3888,7 @@
         if(z0 !== null) rg.push(z0 === z1 ? "№" + z0 : "№" + z0 + "–" + z1);
         waitHtml = '<div class="st-wbox"><p class="st-wait-h">В статистике ' + nums.length + ' ' + plural(nums.length, "тираж", "тиража", "тиражей") + ' с итогами' + (nums.length ? ': №' + nums[0] + (nums.length > 1 ? ' … №' + nums[nums.length - 1] : '') : '') + '</p>' +
           (wl.length ? '<p class="st-wait-t">Ждут итогов</p><ul>' + wl.join("") + '</ul>' : '') +
-          (rg.length ? '<p class="st-mute st-wait-n">Без итогов: ' + rg.join(", ") + '. totobrief итоги Фонбета не отдаёт, журнал сайта ведётся с тиража №27 — новые тиражи попадают сюда сами, когда сыграны все 15 матчей.</p>' : '') + '</div>';
+          (rg.length ? '<p class="st-mute st-wait-n">Без итогов: ' + rg.join(", ") + '. Итогов Фонбета в источнике тиражей нет, журнал сайта ведётся с тиража №27 — новые тиражи попадают сюда сами, когда сыграны все 15 матчей.</p>' : '') + '</div>';
         return waitHtml;
       };
       if(!nums.length){ el.innerHTML = FON ? fonWait() + '<p class="ev-note">Тиражей с известными итогами матчей пока нет: статистика появится, когда будут сыграны все 15 матчей первого тиража, записанного журналом. Итоги Балтбета здесь не смешиваются.</p>' : '<p class="ev-warn">Пока не удалось получить итоги прошлых тиражей. Попробуй позже.</p>'; return; }
@@ -4604,7 +4631,7 @@
     var ok = /^https?:\/\//i.test(url || "");
     var href = ok ? url : "https://www.google.com/search?q=" + encodeURIComponent(team + " официальный сайт футбол");
     return '<a class="nw-link" target="_blank" rel="noopener noreferrer" href="' + escHtml(href) + '">Сайт: ' + escHtml(team) +
-      '<span>' + (ok ? escHtml(nwHost(url)) : "не нашли в базе — поиск в Google") + '</span></a>';
+      '<span>' + (ok ? escHtml(nwHost(url)) : "не нашли в базе — поиск") + '</span></a>';
   }
   function mkNewsBtn(m, idx, prev){
     var b = document.createElement("button");
@@ -4654,9 +4681,8 @@
     var links =
       '<div class="nw-links">' +
         '<a class="nw-link" target="_blank" rel="noopener noreferrer" href="https://www.google.com/search?q=' + q(pair + " стартовые составы") + '">Стартовые составы<span>поиск, появляются за час до начала</span></a>' +
-        '<a class="nw-link" target="_blank" rel="noopener noreferrer" href="https://www.google.com/search?q=' + q(pair + " sofascore") + '">Sofascore<span>составы, рейтинги игроков</span></a>' +
-        '<a class="nw-link" target="_blank" rel="noopener noreferrer" href="https://www.google.com/search?q=' + q(pair + " травмы дисквалификации") + '">Травмы и дисквалификации<span>поиск по обеим командам</span></a>' +
-        '<a class="nw-link" target="_blank" rel="noopener noreferrer" href="https://news.google.com/search?hl=ru&gl=RU&ceid=RU:ru&q=' + q(pair + " when:7d") + '">Все новости<span>Google Новости за неделю</span></a>' +
+                '<a class="nw-link" target="_blank" rel="noopener noreferrer" href="https://www.google.com/search?q=' + q(pair + " травмы дисквалификации") + '">Травмы и дисквалификации<span>поиск по обеим командам</span></a>' +
+        '<a class="nw-link" target="_blank" rel="noopener noreferrer" href="https://news.google.com/search?hl=ru&gl=RU&ceid=RU:ru&q=' + q(pair + " when:7d") + '">Все новости<span>новости за неделю</span></a>' +
       '</div>' +
       '<div class="nw-links" id="nwSites">' + siteLink(h, "") + siteLink(a, "") + '</div>';
     var box = $("evBody");
@@ -4691,7 +4717,7 @@
         var hot = NW_HOT.test(x.t) && !x.f;
         return '<li class="' + (hot ? "hot" : "") + (x.f ? " fc" : "") + '">' +
           '<a target="_blank" rel="noopener noreferrer" href="' + escHtml(x.u) + '">' + escHtml(x.t) + '</a>' +
-          '<span class="nw-meta">' + escHtml(x.s || "") + (x.d ? " · " + nwAgo(x.d) : "") +
+          '<span class="nw-meta">' + escHtml(srcAllowedName(x.s)) + (x.d ? " · " + nwAgo(x.d) : "") +
           (x.b ? "" : " · про одну команду") + (x.f ? " · прогноз" : "") + '</span></li>';
       }).join("") + '</ul>';
     });
@@ -5646,7 +5672,7 @@
   function pickByCrowd(most){
     if(spinning) return;
     if(!state.matches.some(function(m){ return m.pct && m.pct.pool; })){
-      say("В строках нет процентов — сначала нажми «Обновить тираж», чтобы подтянуть доли игроков с totobrief.");
+      say("В строках нет процентов — сначала нажми «Обновить тираж», чтобы подтянуть доли игроков.");
       return;
     }
     var mid = most === "mid";   /* «средние»: исход со средней долей игроков — не самый популярный и не самый редкий */
@@ -7511,14 +7537,14 @@
     if(x === "\u0425") x = "X";           /* кириллическая Х из чужих файлов */
     return (x === "1" || x === "X" || x === "2") ? x : null;
   }
-  /* Итог матча из ответа totobrief. Если тираж уже разыгран (status finished), а итога у матча
+  /* Итог матча из ответа основного источника. Если тираж уже разыгран (status finished), а итога у матча
      нет — матч отменён: Балтбет засчитывает его угаданным для любой ставки. Помечаем «*».
      Сверено на тираже 5008 (Леванте — Атлетик): число победителей сходится только так. */
   var VOID = "*";
   function evRes(e, info){
     var r = normOut(e && e.result);
     if(r) return r;
-    /* totobrief не отдаёт итоги Фонбета вовсе — пустой итог там не значит «матч отменён» */
+    /* основной источник не отдаёт итоги Фонбета вовсе — пустой итог там не значит «матч отменён» */
     if(FON) return (e && e.result === VOID) ? VOID : "";
     return (info && info.status === "finished") ? VOID : "";
   }
@@ -7899,12 +7925,12 @@
   $("spinSpeed").addEventListener("change", function(e){ state.speed = Number(e.target.value); save(); });
   $("spinSpeed").value = String(state.speed);
 
-  /* ---------- подтяжка тиража с totobrief ---------- */
+  /* ---------- подтяжка тиража с основной источник ---------- */
   var API = C.API_BASE;
   /* Зеркало: GitHub Actions раз в полчаса кладёт снимок того же API в data/api/
-     (drawings-N.json, drawing-info-ID.json, status.json). Когда totobrief лежит,
+     (drawings-N.json, drawing-info-ID.json, status.json). Когда основной источник лежит,
      сайт читает их — те же форматы, тот же код разбора. Если лежит долго,
-     скрипт зеркала подкладывает состав тиража и результаты со stavka.tv
+     скрипт зеркала подкладывает состав тиража и результаты со запасной источник
      (id вида «s5012», без процентов и коэффициентов). */
   var MIRROR = C.MIRROR_PATH;
   var feed = { src: "", statusAt: 0, status: null };
@@ -7920,8 +7946,8 @@
     var w = fonRuReady || Promise.resolve();
     var p = w.then(function(){ return apiFetch0(path); });
     var isInfo = /^drawing-info\//.test(path);
-    /* totobrief отдаёт в pool_sum Фонбета суперприз, а сам пул (фонд) не отдаёт: переносим в jackpot,
-       пул — неизвестен. Итоги прошлых тиражей — из истории Фонбета (totobrief их не отдаёт) */
+    /* основной источник отдаёт в pool_sum Фонбета суперприз, а сам пул (фонд) не отдаёт: переносим в jackpot,
+       пул — неизвестен. Итоги прошлых тиражей — из истории Фонбета (основной источник их не отдаёт) */
     return Promise.all([p, isInfo ? fonHistDraws() : null]).then(function(rr){
       var r = rr[0], fh = rr[1];
       if(!r.ok) return r;
@@ -7935,12 +7961,12 @@
   }
   function apiFetch0(path){
     /* no-store: браузер (особенно Safari на телефоне) иначе отдаёт счёт из своего кэша */
-    /* totobrief может молчать (сеть, блокировка): через 6 с сдаёмся и берём зеркало, иначе кнопка зависает */
+    /* основной источник может молчать (сеть, блокировка): через 6 с сдаёмся и берём зеркало, иначе кнопка зависает */
     var ac = typeof AbortController === "function" ? new AbortController() : null, tm = ac ? setTimeout(function(){ try{ ac.abort(); }catch(e){} }, 6000) : 0;
     return fetch(API + path, ac ? {cache: "no-store", signal: ac.signal} : {cache: "no-store"})
       .then(function(r){
         clearTimeout(tm);
-        if(!r.ok) throw new Error("totobrief " + r.status);
+        if(!r.ok) throw new Error("источник тиражей " + r.status);
         if(feed.src !== "live"){ feed.src = "live"; showFeed(); }
         return r;
       })
@@ -8014,13 +8040,13 @@
         rows.push({ n: name, d: d, at: st[atKey], lv: lv,
           s: !ok ? "не отвечает" + (st[errKey] ? ": " + String(st[errKey]).slice(0, 80) : "") : lv ? "давно без свежих данных" : "отвечает" });
       };
-      src("totobrief", "тираж, доли игроков, линия конторы", "totobrief_ok", "totobrief_ok_at", "totobrief_error");
-      src("stavka.tv", "составы тиража и результаты", "stavka_ok", "stavka_ok_at", "stavka_error");
+      src("Основной источник", "тираж, доли игроков, линия конторы", "totobrief_ok", "totobrief_ok_at", "totobrief_error");
+      src("Запасной источник", "составы тиража и результаты", "stavka_ok", "stavka_ok_at", "stavka_error");
       var cur = String(state.tirazh || "");
       var nl = !nw ? 1 : String(nw.number) !== cur ? 1 : ageMin(nw.at) > 5 * 60 ? 1 : 0;
       var sl = !si ? 1 : String(si.number) !== cur ? 1 : 0;
       if(!FON){   /* новости и сайты команд собираются по тиражу Балтбета: в Фонбете их номер не сравниваем */
-        rows.push({ n: "Новости по матчам", d: "Google Новости, раз в 2 часа", at: nw && nw.at, lv: nl,
+        rows.push({ n: "Новости по матчам", d: "заголовки по матчам, раз в 2 часа", at: nw && nw.at, lv: nl,
           s: !nw ? "файла нет" : String(nw.number) !== cur ? "собраны для тиража №" + nw.number : nl ? "давно не обновлялись" : "свежие" });
         rows.push({ n: "Сайты команд", d: "Wikidata, для новых команд тиража", at: si && si.at, lv: sl,
           s: !si ? "файла нет" : String(si.number) !== cur ? "собраны для тиража №" + si.number : "готовы" });
@@ -8082,7 +8108,7 @@
           '<div><b>' + escHtml(r.n) + '</b> — ' + escHtml(r.s) +
           '<span class="nw-meta">' + escHtml(r.d) + ' · ' + escHtml(r.at ? ageTxt(r.at) : "время неизвестно") + '</span></div></li>';
       }).join("") + '</ul>' +
-      '<p class="ev-note">Время — московское. Основной источник — totobrief, запасной — stavka.tv: если один молчит, сайт берёт данные из другого и из зеркала на GitHub.</p>' +
+      '<p class="ev-note">Время — московское. Есть основной и запасной источники: если один молчит, сайт берёт данные из другого и из зеркала на GitHub.</p>' +
       (ownTok() ? '<div class="ai-run-own"><b>Разбор ИИ — только для владельца</b><p class="ev-note" id="aiRunSt">Узнаю у GitHub…</p>' +
         '<button type="button" class="btn" id="aiRunGo" disabled>Запустить разбор сейчас</button>' +
         '<p class="ev-note">Пока идёт разбор, новый запустить нельзя. Если текущий тираж уже разобран — вашим запуском или по расписанию, — автозапуск с 11:01 до 11:37 его пропускает.</p></div>' : '');
@@ -8150,10 +8176,10 @@
     var st = feed.status, note = $("tkFeedNote"), wrap = $("tkFeedWrap");
     if(!st){ note.textContent = ""; return; }
     var tb = fmtStamp(st.totobrief_ok_at), sv = fmtStamp(st.stavka_ok_at);
-    note.textContent = tb ? " · totobrief " + fmtStamp(st.totobrief_ok_at, true) : " · снимка totobrief нет";
-    wrap.title = "totobrief не отвечает — данные взяты из зеркала на GitHub." +
-      (tb ? " Последний живой снимок totobrief (проценты и коэффициенты на тот момент): " + tb + " МСК." : "") +
-      (sv ? " Составы и результаты со stavka.tv: " + sv + " МСК." : "") +
+    note.textContent = tb ? " · основной источник " + fmtStamp(st.totobrief_ok_at, true) : " · снимка основного источника нет";
+    wrap.title = "Основной источник не отвечает — данные взяты из зеркала на GitHub." +
+      (tb ? " Последний живой снимок основного источника (проценты и коэффициенты на тот момент): " + tb + " МСК." : "") +
+      (sv ? " Составы и результаты из запасного источника: " + sv + " МСК." : "") +
       (st.updated_at ? " Зеркало обновлено " + fmtStamp(st.updated_at) + " МСК." : "");
   }
 
@@ -8252,14 +8278,14 @@
       if(q.norm_win_1 != null) m.kf = [q.norm_win_1, q.norm_draw, q.norm_win_2];
       /* сыгранные матчи: фактический исход и счёт приезжают в том же ответе */
       var r7 = evRes(evs[i], info);
-      if(r7 || !m.resFs) m.res = r7;        /* итог Фонбета из Flashscore пустым ответом totobrief не стираем */
+      if(r7 || !m.resFs) m.res = r7;        /* итог Фонбета из Flashscore пустым ответом основной источник не стираем */
       mergeScore(m, evs[i].score || "");
     }
-    state.resAt = Date.now();          /* когда данные с totobrief пришли в последний раз */
+    state.resAt = Date.now();          /* когда данные с основной источник пришли в последний раз */
     if(info.id) state.tirazhId = info.id;
     save();
     var pch = psig0 !== curSig();
-    if(!pch && !book && UJ.silent){ dbgLog("totobrief", "текущий тираж: без изменений, перерисовку пропускаем"); renderKickoff(); return true; }
+    if(!pch && !book && UJ.silent){ dbgLog("тираж", "текущий тираж: без изменений, перерисовку пропускаем"); renderKickoff(); return true; }
     if(book) bookShow(); else render();   /* bookShow сам вызывает render и пересчитывает «по факту угадано» */
     return true;
   }
@@ -8459,11 +8485,11 @@
         p.at = Date.now();
         save();
         var ch = sig0 !== prevSig(p);
-        dbgLog("totobrief", "прошлый тираж: " + (Date.now() - tr0) + " мс, " + (ch ? "есть изменения" : "без изменений"));
+        dbgLog("тираж", "прошлый тираж: " + (Date.now() - tr0) + " мс, " + (ch ? "есть изменения" : "без изменений"));
         DBG.api["прошлый"] = { ms: Date.now() - tr0, at: Date.now() };
-        if(state.viewPrev && ch) renderSoon("totobrief");
+        if(state.viewPrev && ch) renderSoon("тираж");
       })
-      .catch(function(e){ DBG.api["прошлый"] = { ms: Date.now() - tr0, at: Date.now(), err: 1 }; dbgLog("err", "totobrief (прошлый тираж): " + (e && e.message || e)); });
+      .catch(function(e){ DBG.api["прошлый"] = { ms: Date.now() - tr0, at: Date.now(), err: 1 }; dbgLog("err", "источник тиражей (прошлый тираж): " + (e && e.message || e)); });
   }
   /* при первом запуске после обновления прошлого тиража ещё нет — подтягиваем его по номеру */
   function seedPrev(){
@@ -10612,9 +10638,9 @@
       })
       .then(function(res){
         pullBusy = false; if(!silent){ btn.disabled = false; btn.classList.remove("is-loading"); lbl.textContent = was; }
-        DBG.api["текущий"] = { ms: Date.now() - tp0, at: Date.now() }; dbgLog("totobrief", "опрос тиража: " + (Date.now() - tp0) + " мс");
+        DBG.api["текущий"] = { ms: Date.now() - tp0, at: Date.now() }; dbgLog("тираж", "опрос тиража: " + (Date.now() - tp0) + " мс");
         if(res && res.changed){
-          say("На totobrief появился тираж №" + res.changed + ", а открыт №" + state.tirazh +
+          say("Появился тираж №" + res.changed + ", а открыт №" + state.tirazh +
               ". Нажми «Обновить тираж», чтобы перейти на него — купон и корзина этого тиража сохранятся, к ним можно вернуться.");
           tryPending();
         }
@@ -10633,7 +10659,7 @@
         pullBusy = false; if(!silent){ btn.disabled = false; btn.classList.remove("is-loading"); lbl.textContent = was; }
         DBG.api["текущий"] = { ms: Date.now() - tp0, at: Date.now(), err: 1 }; dbgLog("err", "опрос тиража: " + (err && err.message || err));
         tryPending();
-        if(!silent) say("Не удалось забрать тираж ни с totobrief, ни из зеркала: " + (err && err.message ? err.message : err) +
+        if(!silent) say("Не удалось забрать тираж ни из основного источника, ни из зеркала: " + (err && err.message ? err.message : err) +
                         ". На странице-артефакте запросы наружу запрещены — автоподтяжка работает только в размещённой версии.");
       });
   }
