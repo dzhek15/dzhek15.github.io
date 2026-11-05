@@ -1700,7 +1700,7 @@ body.is-prev .row .pick.ai-pk{opacity:1; border-color:var(--ai-pk-bd); color:var
 
 /* рейтинг наборов */
 .pc-rkt{max-width:560px; margin:0 auto; border:1px solid var(--rule-strong); border-radius:var(--r); background:var(--surface-2); overflow:hidden}
-.pc-rkh,.pc-rk{display:grid; grid-template-columns:34px minmax(0,1fr) 60px 38px 56px; align-items:center; gap:4px; padding:0 8px}
+.pc-rkh,.pc-rk{display:grid; grid-template-columns:34px minmax(0,1fr) 60px max(38px,var(--rk9,0px)) max(56px,var(--rka,0px)); align-items:center; gap:4px; padding:0 8px}
 .pc-rkh{height:26px; font-size:10px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); border-bottom:1px solid var(--rule)}
 .pc-rkh span:nth-child(n+3){text-align:center}
 .pc-rkb{position:relative; display:flex; flex-direction:column}
@@ -1728,7 +1728,7 @@ body.is-prev .row .pick.ai-pk{opacity:1; border-color:var(--ai-pk-bd); color:var
 .rk-v.ok{color:#58c883}
 .pc-rknote{margin:0 0 8px}
 .pc-rknote .lv-dot{display:inline-block; vertical-align:middle; margin-right:6px}
-@media (max-width:400px){ .pc-rkh,.pc-rk{grid-template-columns:28px minmax(0,1fr) 52px 30px 52px; gap:3px; padding:0 6px} .rk-n b{font-size:13px} }
+@media (max-width:400px){ .pc-rkh,.pc-rk{grid-template-columns:28px minmax(0,1fr) 52px max(30px,var(--rk9,0px)) max(52px,var(--rka,0px)); gap:3px; padding:0 6px} .rk-n b{font-size:13px} }
 
 /* рейтинг наборов: выделенная «живая» карточка */
 .pc-rkw{position:relative; max-width:580px; margin:18px auto 6px; padding:12px 10px 10px; border:1px solid var(--brand-gold); border-radius:12px;
@@ -1847,7 +1847,7 @@ body.is-prev .row .tcol .tc-t.tc-pp{font-size:11px; font-weight:700; letter-spac
 .pc-tm.pc-pp{color:var(--muted); font-style:normal}
 /* пометка набора ИИ в рейтинге */
 .rk-ai{font-style:normal; font-weight:800; font-size:10px; letter-spacing:.04em; color:var(--gold-ink); border:1px solid currentColor; border-radius:4px; padding:0 4px; margin-right:2px}
-@media (max-width:340px){ .pc-rkh,.pc-rk{grid-template-columns:24px minmax(0,1fr) 46px 26px 48px; gap:2px; padding:0 5px} .rk-n b{font-size:12px; letter-spacing:-.02em} .rk-n small{font-size:10px} .rk-ai{font-size:9px; padding:0 3px} }
+@media (max-width:340px){ .pc-rkh,.pc-rk{grid-template-columns:24px minmax(0,1fr) 46px max(26px,var(--rk9,0px)) max(48px,var(--rka,0px)); gap:2px; padding:0 5px} .rk-n b{font-size:12px; letter-spacing:-.02em} .rk-n small{font-size:10px} .rk-ai{font-size:9px; padding:0 3px} }
 
 /* напоминалка: названия команд в активном тираже нажимаются, там история их матчей в тото */
 .tm-hint{display:flex; align-items:center; justify-content:center; padding:7px 10px 9px; font-size:12px; line-height:1.25; color:var(--muted); text-align:center}
@@ -2208,7 +2208,7 @@ body.is-prev #coupon{margin-top:0}
 .aitbl-v{font-style:normal; font:700 10px/1 "IBM Plex Sans",sans-serif; letter-spacing:.04em; text-transform:uppercase; color:var(--brand-gold); border:1px dashed var(--brand-gold); border-radius:4px; padding:3px 5px; white-space:nowrap; flex:none}
 @media (max-width:380px){ .aitbl-v .f{display:none} .aitbl-v .s{display:inline} }
 @media (max-width:430px){ .rk-vt .f{display:none} .rk-vt .s{display:inline} }
-@media (max-width:340px){ .rk-vt{font-size:9px; padding:0 2px; letter-spacing:0} .aitbl-bar{gap:6px; padding-left:10px; padding-right:6px} .aitbl-t{font-size:12px; letter-spacing:.03em} .aitbl-bar button{padding:0 7px; gap:4px; font-size:11px} .aitbl-bar button svg{display:none} .pc-rkh,.pc-rk{grid-template-columns:22px minmax(0,1fr) 44px 26px 36px} .pc-rkh{font-size:9px; letter-spacing:0} }
+@media (max-width:340px){ .rk-vt{font-size:9px; padding:0 2px; letter-spacing:0} .aitbl-bar{gap:6px; padding-left:10px; padding-right:6px} .aitbl-t{font-size:12px; letter-spacing:.03em} .aitbl-bar button{padding:0 7px; gap:4px; font-size:11px} .aitbl-bar button svg{display:none} .pc-rkh,.pc-rk{grid-template-columns:22px minmax(0,1fr) 44px max(26px,var(--rk9,0px)) max(36px,var(--rka,0px))} .pc-rkh{font-size:9px; letter-spacing:0} }
 @media (max-width:360px){ .ai-paper{padding:12px 11px 10px} .ai-paper .ai-txt{font-size:14.5px} .ai-blk p{font-size:14px} .ai-k-main p{font-size:14.5px} .ai-blk-h{letter-spacing:.1em} }
 
 /* просмотр тиража: проценты и кэфы под исходом, зашедший исход подсвечен */
@@ -3608,7 +3608,7 @@ body.is-prev .pc-vars .pc-vr.win .pc-h{font-size:17px; box-shadow:0 0 0 1.5px va
   body.is-prev .console{padding-left:6px; padding-right:6px}
   body.is-prev .pcsv{padding:8px 4px; margin-inline:0}
   .pc-rkw{padding:8px 4px 6px}
-  .pc-rkh,.pc-rk{grid-template-columns:26px minmax(0,1fr) 42px 24px 48px; gap:3px; padding:0 4px}
+  .pc-rkh,.pc-rk{grid-template-columns:26px minmax(0,1fr) 42px max(24px,var(--rk9,0px)) max(48px,var(--rka,0px)); gap:3px; padding:0 4px}
   .pc-rkw .rk-p b{width:24px; height:24px; font-size:13px}
   .rk-n b{font-size:15px; letter-spacing:0}
   .rk-n small{font-size:11.5px}

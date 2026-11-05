@@ -10041,11 +10041,15 @@
         if(o && o.place !== k + 1 && pe) rk.mv[q.i] = { d: o.place - (k + 1), at: Date.now() };
       });
       rkNow = sc;
+      /* колонки «9+» и «Живых» — по самому длинному числу, чтобы 3 194 и 4 587 не наезжали друг на друга */
+      var rkL9 = 0, rkLa = 0;
+      sc.forEach(function(q){ rkL9 = Math.max(rkL9, fmt(q.w).length); rkLa = Math.max(rkLa, fmt(q.a).length); });
+      var rkW9 = Math.ceil(rkL9 * 10.5 + 2), rkWa = Math.ceil(rkLa * 10.5 + 2);
       h += '<div class="pc-rkw"><div class="pc-rkttl"><span class="pc-rkx">Рейтинг наборов</span>' + (sc.some(function(q){ return q.out; }) ? '<button type="button" class="pc-rklv' + (pcsv.rkLive ? " on" : "") + '" id="pcRkLive" aria-pressed="' + !!pcsv.rkLive + '">Только живые</button>' : '') + (liveN ? '<span class="pc-rklive"><i class="lv-dot"></i>LIVE · ' + liveN + '</span>' : '') + '</div>' +
         '<p class="pc-lnote pc-rknote">Считаются сыгранные матчи' + (liveN ? ' и идущие по текущему счёту' : '') + '. Тап по набору открывает его.' +
         (pcsv.sets.some(function(x){ return x.ai; }) ? '<br>' + RK_VT + '\u2014 набор не ставится на деньги, он нужен для отслеживания.' : '') +
         (sc.some(function(q){ return q.out; }) ? '<br><span class="rk-x" aria-hidden="true">\u00d7</span> \u2014 набор выбыл: после сыгранных матчей ни один его вариант уже не наберёт ' + PAY + '+.' : '') + '</p>' +
-        '<div class="pc-rkt' + (pcsv.rkLive ? " live-only" : "") + '" role="tablist"><div class="pc-rkh"><span>#</span><span>Набор</span><span>Лучший</span><span>9+</span><span>Живых</span></div><div class="pc-rkb">';
+        '<div class="pc-rkt' + (pcsv.rkLive ? " live-only" : "") + '" role="tablist" style="--rk9:' + rkW9 + 'px;--rka:' + rkWa + 'px"><div class="pc-rkh"><span>#</span><span>Набор</span><span>Лучший</span><span>9+</span><span>Живых</span></div><div class="pc-rkb">';
       sc.forEach(function(q, k){
         var st = pcsv.sets[q.i], mv = rk.mv[q.i], tr = "";
         if(mv && Date.now() - mv.at < 90000) tr = '<u class="' + (mv.d > 0 ? "up" : "dn") + '">' + (mv.d > 0 ? "▲" : "▼") + Math.abs(mv.d) + '</u>';
