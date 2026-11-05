@@ -1,0 +1,21 @@
+name: tests
+
+# Проверка сверки названий команд Балтбет <-> Фонбет при каждой правке app.js или теста
+on:
+  push:
+    paths:
+      - "app.js"
+      - "tests/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  match:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+      - name: Тест сверки названий
+        run: node tests/match.test.js

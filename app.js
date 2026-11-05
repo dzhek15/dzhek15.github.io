@@ -12954,6 +12954,7 @@
   var ARB = { data: null, loading: null, err: "" };
   /* название команды для сверки Балтбета с Фонбетом: без «ФК/FC/СК» в любом месте («Рига ФК» = «ФК Рига»), ё/я/ю как е/у,
      двойные буквы схлопнуты («Мьяльбю» = «Мьелльбю») */
+  /* ARB-MATCH-BEGIN (этот блок проверяет tests/match.test.js — правьте вместе с тестом) */
   var ARB_STOP = { "фк": 1, "fc": 1, "ск": 1, "sk": 1, "кф": 1 };
   function arbNorm(x){
     var t = String(x || "").toLowerCase().replace(/ё/g, "е").replace(/я/g, "е").replace(/ю/g, "у").replace(/й/g, "и").replace(/[^a-zа-я0-9]+/g, " ").trim().split(" ");
@@ -12964,17 +12965,69 @@
     a = arbNorm(a); b = arbNorm(b);
     if(!a || !b) return false;
     if(a === b) return true;
-    var lim = Math.min(a.length, b.length) >= 6 ? 2 : Math.min(a.length, b.length) >= 4 ? 1 : 0;
-    if(Math.min(a.length, b.length) >= 5 && (a.indexOf(b) === 0 || b.indexOf(a) === 0)) return true;
-    if(!lim || a[0] !== b[0]) return false;
-    /* расстояние Левенштейна: «Шавиш» / «Шавеш» */
+    var mn = Math.min(a.length, b.length), lim = mn >= 6 ? 2 : mn >= 4 ? 1 : 0;
+    /* «Спарта» и «Спартак» — разные клубы: если одно название — начало другого, это не опечатка */
+    if(!lim || a[0] !== b[0] || a.indexOf(b) === 0 || b.indexOf(a) === 0) return false;
+    return arbEdit(a, b) <= lim;
+  }
+  /* «Команда – Команда»: Фонбет пишет длинное тире, Балтбет — « — », иногда просто дефис с пробелами */
+  function arbSplit(name){
+    var n = String(name || "").trim(), p = n.split(/\s+[-\u2013\u2014]\s+/);
+    if(p.length < 2) p = n.split(/\s*[\u2013\u2014]\s*/);
+    if(p.length < 2) return null;
+    return [p[0].trim(), p.slice(1).join(" - ").trim()];
+  }
+  /* скелет названия: кириллица -> латиница, без гласных, v=w, c=k, i=j=y. «Мьелльбю» и «Mjolby» дают одинаковый скелет,
+     поэтому матч не теряется, даже если словарь перевода ru.json не знает команды и в Фонбете осталась латиница */
+  var ARB_TR = { "а": "a", "б": "b", "в": "v", "г": "g", "д": "d", "е": "e", "ж": "z", "з": "z", "и": "i", "й": "i", "к": "k", "л": "l", "м": "m", "н": "n", "о": "o",
+    "п": "p", "р": "r", "с": "s", "т": "t", "у": "u", "ф": "f", "х": "h", "ц": "c", "ч": "c", "ш": "s", "щ": "s", "ъ": "", "ь": "", "ы": "i", "э": "e", "ю": "u", "я": "a", "ё": "e" };
+  function arbSkel(x){
+    var t = String(x || "").toLowerCase();
+    try { t = t.normalize("NFKD").replace(/[\u0300-\u036f]/g, ""); } catch(e){}
+    t = t.replace(/[а-яё]/g, function(c){ return ARB_TR[c] || ""; }).replace(/[^a-z0-9 ]+/g, " ").split(/\s+/).filter(function(w){ return w && !ARB_STOP[w]; }).join("");
+    t = t.replace(/ph/g, "f").replace(/ck/g, "k").replace(/[cq]/g, "k").replace(/[wv]/g, "f").replace(/x/g, "ks").replace(/[hjy]/g, "").replace(/z/g, "s");
+    t = t.replace(/(?!^)[aeiou]/g, "").replace(/(.)\1+/g, "$1");
+    return t;
+  }
+  function arbEdit(a, b){
     var d = [], i, j;
     for(i = 0; i <= a.length; i++){ d[i] = [i]; }
     for(j = 1; j <= b.length; j++) d[0][j] = j;
     for(i = 1; i <= a.length; i++) for(j = 1; j <= b.length; j++)
       d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
-    return d[a.length][b.length] <= lim;
+    return d[a.length][b.length];
   }
+  /* слова-«приставки» клубов: сами по себе клуб не определяют */
+  var ARB_GEN = "юнайтед сити атлетико атлетик реал спортинг спорт динамо депортиво депортес интер локомотив спартак црвена united city real sporting sport athletic atletico dinamo deportivo olimpik олимпик клуб club team стад stade saint сент рейнджерс ровер ровers rovers town тауни альбион альбиони".split(" ");
+  function arbToks(x){
+    return String(x || "").toLowerCase().replace(/[^a-zа-яё0-9]+/g, " ").trim().split(" ").filter(function(w){
+      return w && !ARB_STOP[w] && ["аль", "эль", "ал", "al", "el", "де", "ди", "de", "di", "da", "до"].indexOf(w) < 0;
+    });
+  }
+  /* сходство двух названий команд: 3 — совпали после нормализации, 2 — опечатка/скелет или как начало (Динамо / Динамо Киев),
+     1 — общее значимое слово («Аль-Иттихад Аль-Искандери» / «Аль-Иттихад Александрия»), 0 — разные */
+  function arbTeam(a, b){
+    if(arbNorm(a) && arbNorm(a) === arbNorm(b)) return 3;
+    if(arbSame(a, b)) return 2;
+    var x = arbSkel(a), y = arbSkel(b), ta = arbToks(a), tb = arbToks(b);
+    if(x && y && x[0] === y[0] && ((x === y && x.length >= 3) || (Math.min(x.length, y.length) >= 5 && arbEdit(x, y) <= 1))) return 2;
+    var s = ta.length <= tb.length ? ta : tb, l = ta.length <= tb.length ? tb : ta;
+    if(s.length && l.length > s.length && s.every(function(w, i){ return arbSame(w, l[i]); })) return 2;
+    var hit = ta.some(function(w){
+      var nw = arbNorm(w); if(nw.length < 4 || ARB_GEN.indexOf(w) >= 0) return false;
+      return tb.some(function(v){ return arbSame(w, v); });
+    });
+    return hit ? 1 : 0;
+  }
+  /* пара матчей (дом, гости) против пары: 2 — обе команды уверенно (или уверенно + по скелету), 1 — приблизительно, 0 — не тот матч.
+     Уверенное имя одной команды + лишь «общее слово» у другой — это другой соперник (Манчестер Юнайтед — Челси / Манчестер Сити — Челси) */
+  function arbPair(h1, a1, h2, a2){
+    var u = arbTeam(h1, h2), v = arbTeam(a1, a2);
+    if(!u || !v) return 0;
+    if((u === 3 && v === 1) || (u === 1 && v === 3)) return 0;
+    return u >= 2 && v >= 2 ? 2 : 1;
+  }
+  /* ARB-MATCH-END */
   function arbLoad(){
     if(FON) return Promise.resolve(null);
     if(ARB.loading) return ARB.loading;
@@ -12993,20 +13046,23 @@
   }
   function arbRows(){
     var D = ARB.data; if(!D) return [];
-    var out = [];
+    var cand = [];
     state.matches.forEach(function(m, i){
       var pb = evPool(m), pr = evProbs(m); if(!pb) return;
-      D.ev.forEach(function(e){
-        var nm = String(e.name || "").split(/\s[-\u2013\u2014]\s/); if(nm.length < 2) return;
-        var h = D.ru[nm[0]] || nm[0], a = D.ru[nm.slice(1).join(" - ")] || nm.slice(1).join(" - ");
-        if(!(arbSame(m.home, h) && arbSame(m.away, a))) return;
-        var q = e.quotes || {}, pf = [Number(q.pool_win_1), Number(q.pool_draw), Number(q.pool_win_2)];
+      D.ev.forEach(function(e, k){
+        var nm = arbSplit(e.name); if(!nm) return;
+        var h = D.ru[nm[0]] || nm[0], a = D.ru[nm[1]] || nm[1];
+        var q = arbPair(m.home, m.away, h, a); if(!q) return;
+        var qq = e.quotes || {}, pf = [Number(qq.pool_win_1), Number(qq.pool_draw), Number(qq.pool_win_2)];
         var sf = pf[0] + pf[1] + pf[2]; if(!(sf > 50)) return;
-        pf = pf.map(function(v){ return v / sf; });
-        out.push({ i: i, m: m, pb: pb, pf: pf, p: pr, fo: e.order });
+        cand.push({ q: q, i: i, k: k, row: { i: i, m: m, pb: pb, pf: pf.map(function(v){ return v / sf; }), p: pr, fo: e.order, approx: q < 2 || arbTeam(m.home, h) < 3 || arbTeam(m.away, a) < 3 } });
       });
     });
-    return out;
+    /* один матч Балтбета — один матч Фонбета: лучшие пары первыми, занятые пропускаем */
+    cand.sort(function(x, y){ return y.q - x.q; });
+    var usedI = {}, usedK = {}, out = [];
+    cand.forEach(function(c){ if(usedI[c.i] || usedK[c.k]) return; usedI[c.i] = usedK[c.k] = 1; out.push(c.row); });
+    return out.sort(function(x, y){ return x.i - y.i; });
   }
   /* «Одиночество строки»: сколько строк толпы совпадает с каждой строкой купона целиком.
      Если строка сыграет на 15, суперприз делится между всеми такими. Толпа считается по долям выбора в каждом матче
@@ -13045,7 +13101,7 @@
           tips.push('<b>' + OUT[k] + '</b>: ' + (d > 0 ? 'в Фонбете' : 'в Балтбете') + ' на него ставят меньше (' + pct(Math.min(r.pb[k], r.pf[k])) + '% против ' + pct(Math.max(r.pb[k], r.pf[k])) + '%) — доля выигрыша там больше в ' + (Math.max(r.pb[k], r.pf[k]) / Math.min(r.pb[k], r.pf[k])).toFixed(2).replace(".", ",") + ' раза');
         }
       }
-      return '<li><b>' + (r.i + 1) + '. ' + escHtml(r.m.home + ' — ' + r.m.away) + '</b> (в Фонбете № ' + r.fo + '): линия ' + (r.p ? r.p.map(pct).join('/') : '—') + ' · толпа Б ' + r.pb.map(pct).join('/') + ' · толпа Ф ' + r.pf.map(pct).join('/') + (tips.length ? '<br>' + tips.join('<br>') : ' — толпы совпадают') + '</li>';
+      return '<li><b>' + (r.i + 1) + '. ' + escHtml(r.m.home + ' — ' + r.m.away) + '</b> (в Фонбете № ' + r.fo + (r.approx ? ', названия сверены приблизительно' : '') + '): линия ' + (r.p ? r.p.map(pct).join('/') : '—') + ' · толпа Б ' + r.pb.map(pct).join('/') + ' · толпа Ф ' + r.pf.map(pct).join('/') + (tips.length ? '<br>' + tips.join('<br>') : ' — толпы совпадают') + '</li>';
     }).join("");
     return '<div class="ev-arb"><div class="ev-arb-h">Арбитраж с Фонбетом (тираж №' + ARB.data.num + '): общих матчей ' + R.length + ', заметных расхождений толпы ' + hot + '</div><ul class="ev-kai-l">' + li + '</ul><p class="ev-note">Купон Монстра Келли считается по толпе Балтбета. Здесь видно, какой исход выгоднее сыграть в Фонбете, а какой — здесь: при угадывании выплата тем больше, чем меньше доля толпы.</p></div>';
   }
@@ -13142,7 +13198,7 @@
         state.matches.forEach(function(m, i){
           for(var j = 0; j < D.ms.length; j++){
             var bm = D.ms[j];
-            if(!(arbSame(m.home, bm.home) && arbSame(m.away, bm.away))) continue;
+            if(!arbPair(m.home, m.away, bm.home, bm.away)) continue;
             var pr = evProbs(m), far = pr && bm.p && [0, 1, 2].some(function(k){ return Math.abs(pr[k] - bm.p[k]) > 0.12; });
             if(far){ skipLine.push((i + 1) + ". " + m.home + " — " + m.away); return; }
             if(!sets[j]){ return; }
