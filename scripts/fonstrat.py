@@ -243,6 +243,10 @@ def feed_results():
     return rows, E
 
 
+def Date_end(h):
+    return utc(str(h.get("ended_at") or "")[:19])
+
+
 def utc(s):
     try:
         return datetime.strptime(s[:19].replace("T", " "), "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc).timestamp()
@@ -409,6 +413,20 @@ def main():
                     jr["results"][str(e["id"])] = {"s": "%d:%d" % (gh, ga), "r": "1" if gh > ga else ("2" if gh < ga else "X")}
                     print("итог", e["name"], gh, ga)
                     break
+
+    # 2б. итоги из архива fonres.py (history.json): матчи, сыгранные раньше, чем лента «сегодня» успела их отдать
+    try:
+        hd = rd(os.path.join(FON, "history.json"), {}).get("draws", {})
+        for num, rec in jr["draws"].items():
+            h = hd.get(str(num))
+            if rec.get("done") or not h or abs(Date_end(h) - rec.get("end", 0)) > 2 * 86400:
+                continue
+            for i, e in enumerate(rec["ev"]):
+                x = h["ev"][i] if i < len(h.get("ev", [])) else None
+                if x and len(x) > 10 and x[9] in ("1", "X", "2") and str(e["id"]) not in jr["results"]:
+                    jr["results"][str(e["id"])] = {"s": str(x[10]).replace(" ", ""), "r": x[9]}
+    except Exception as e:
+        print("итоги из архива не подмешаны:", e)
 
     # 3. подсчёт закрытых тиражей
     for num, rec in jr["draws"].items():

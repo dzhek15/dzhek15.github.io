@@ -8827,6 +8827,7 @@
       sys = br.map(function(x){ return x.replace(/,/g, "").split("").join(","); }); nm = FON ? "ИИ-купон · виртуальный" : "ИИ-бриф · виртуальный";
       /* гарантия брифа: до №5058 — 13 из 15 (230–281 строка), с нового правила — 14 из 15 (от 534 строк) */
       if(!FON){ sub = "бриф " + (br.length >= 400 ? 14 : 13) + " из 15"; nm = "ИИ-" + sub + " · виртуальный"; }
+      else sub = fonCap(22000);
     } else {
       for(i = 0; i < p.matches.length; i++){ var r = aiPrevRec(p.tirazh, i); if(!r) return; picks.push(r.p); }
       sys = [picks.join(",")];
@@ -8864,15 +8865,20 @@
       }).catch(function(){ delete stratView[tir]; });
       return;
     }
-    [["kel", "Келли"], ["mkel", "Монстр Келли"], ["sim", "Симуляция"], ["gap", "Расхождения"]].forEach(function(q){
-      var line = c[q[0]]; if(!Array.isArray(line) || line.length !== p.matches.length) return;
+    var strats = [["kel", "Келли"], ["mkel", "Монстр Келли"], ["sim", "Симуляция"], ["gap", "Расхождения"]];
+    if(FON){
+      if(!c.vt) fonTiltView(c, p, tir);
+      else { strats.push(["zash", "Защита"], ["cen", "Монстр + толпа"]); ["zash", "cen"].forEach(function(k){ if(c.vt[k]) c[k + "V"] = c.vt[k]; }); }
+    }
+    strats.forEach(function(q){
+      var line = (q[0] === "zash" || q[0] === "cen") ? c[q[0] + "V"] : c[q[0]]; if(!Array.isArray(line) || line.length !== p.matches.length) return;
       var brief = q[0] === "mkel" && Array.isArray(c.mkelR) && c.mkelR.length > 0;   /* Монстр — бриф 14 из 15: строки системы как есть */
       var sys = brief ? c.mkelR.map(function(x){ return x.replace(/,/g, "").split("").join(","); }) : [line.join(",")], sig = brief ? sys.length + "|" + sys[0] + "|" + sys[sys.length - 1] : sys[0], k = -1, i;
       for(i = 0; i < pcsv.sets.length; i++) if(pcsv.sets[i].strat === q[0]){ k = i; break; }
       if(k >= 0 && pcsv.sets[k].sig === sig) return;
       var set = { name: q[1] + (brief ? " бриф 14 из 15" : "") + " · виртуальный", ai: 1, strat: q[0], link: 0, sig: sig, sys: sys, rows: pcsvExpand(sys) };
       if(brief) set.brief = 1;
-      set.sub = brief ? "бриф 14 из 15" : "допы";   /* Монстр — бриф, остальные стратегии — прямоугольник с допами */
+      set.sub = brief ? "бриф 14 из 15" : (FON ? fonCap(q[0] === "zash" || q[0] === "cen" ? 25600 : limitMaxLines() * linePrice()) : "допы");   /* Монстр — бриф, остальные стратегии — прямоугольник с допами */
       if(brief && Array.isArray(c.mkel) && c.mkel.length === p.matches.length && Array.isArray(c.mkelK)){
         set.core = c.mkel.slice(); set.bl = c.mkelK.map(function(kp){ return kp ? Object.keys(kp).join("") : ""; });
         set.wy = {}; c.mkelK.forEach(function(kp, j){ if(kp) Object.keys(kp).forEach(function(o){ set.wy[j + o] = kp[o]; }); });
@@ -8881,6 +8887,29 @@
       if(k >= 0) pcsv.sets[k] = set; else pcsv.sets.push(set);
       if(k >= 0 && pcsv.act === k) pcsvUse(k);
     });
+  }
+  /* Фонбет: подпись набора-прямоугольника с допами и потолок суммы («допы · до 16 200 ₽») */
+  function fonCap(rub){ return "допы · до " + fmt(rub) + " ₽"; }
+  /* Фонбет: «Защита» и «Монстр + толпа» на 512 строк (25 600 ₽) — считаются по линии тиража так же, как в купоне */
+  function fonTiltView(c, p, tir){
+    if(c.vt || c.vtBusy) return;
+    c.vtBusy = 1;
+    apiFetch("drawing-info/" + p.id).then(function(r){ return r.ok ? r.json() : null; }).then(function(j){
+      var info = j && (j.data || j); if(!info || !(info.events || []).length) return;
+      info.number = info.number || tir;
+      var bak = { matches: state.matches, poolSum: state.poolSum, jackpot: state.jackpot, tirazh: state.tirazh }, out = {};
+      try {
+        state.matches = matchesFromInfo(info); state.poolSum = Number(info.pool_sum) || 0; state.jackpot = Number(info.jackpot) || 0; state.tirazh = String(info.number);
+        ["zash", "cen"].forEach(function(k){
+          try {
+            var pl = planTilt(512, k);
+            if(pl && pl.rows) out[k] = pl.rows.map(function(r){ return r.set.map(function(o){ return OUT[o]; }).join(""); });
+          } catch(e){}
+        });
+      } finally { state.matches = bak.matches; state.poolSum = bak.poolSum; state.jackpot = bak.jackpot; state.tirazh = bak.tirazh; }
+      c.vt = out;
+      if(state.viewPrev && state.prev && String(state.prev.tirazh) === tir) renderPrevCsv();
+    }).catch(function(){ c.vtBusy = 0; });
   }
   /* виртуальный набор стратегии «Охота на 15 · бриф 14 из 15»: строки готовы заранее (virt.json), в хранилище не пишутся */
   /* отпечаток строк набора: если строки пересчитали при том же времени и числе, просмотр всё равно обновится */
@@ -8896,7 +8925,7 @@
     if(!rows.length) return;
     var set = { name: (rec.name || "Охота на 15") + " · виртуальный", ai: 1, virt: 1, link: 0, sig: vsig, pin: rec.pin,
                 sys: rows.map(function(x){ return x.split("").join(","); }), rows: rows,
-                core: rec.sys || null, bl: rec.bl || [], wy: rec.wy || {}, nsys: rec.n_sys || 0, sub: rec.rect ? "допы" : "бриф 14 из 15" };
+                core: rec.sys || null, bl: rec.bl || [], wy: rec.wy || {}, nsys: rec.n_sys || 0, sub: rec.rect ? (FON ? fonCap(300000) : "допы") : "бриф 14 из 15" };
     if(k >= 0) pcsv.sets[k] = set; else pcsv.sets.push(set);
     if(k >= 0 && pcsv.act === k) pcsvUse(k);
   }
@@ -9431,7 +9460,7 @@
     return out;
   }
   function cmpName(st, i){
-    if(st.strat) return ({ kel: "Келли", mkel: "Монстр", sim: "Симул.", gap: "Расхожд." })[st.strat] || "Набор";
+    if(st.strat) return ({ kel: "Келли", mkel: "Монстр", sim: "Симул.", gap: "Расхожд.", zash: "Защита", cen: "М+Т" })[st.strat] || "Набор";
     if(st.virt) return "Охота";
     if(st.ai) return "ИИ";
     return "Мой " + (i + 1);
@@ -10022,7 +10051,7 @@
         if(mv && Date.now() - mv.at < 90000) tr = '<u class="' + (mv.d > 0 ? "up" : "dn") + '">' + (mv.d > 0 ? "▲" : "▼") + Math.abs(mv.d) + '</u>';
         h += '<button type="button" role="tab" class="pc-rk' + (q.out ? " out" : "") + (q.i === pcsv.act ? " on" : "") + (st.ai || st.virt || st.strat ? "" : " mine") + " " + rkKind(st) + (k < 3 && pe ? " m" + (k + 1) : "") + '" data-t="' + q.i + '" data-id="' + q.i + '" aria-pressed="' + (q.i === pcsv.act) + '" title="' + escHtml(st.link && !st.lname ? "Ссылка · " + pcsvLabel(st) : pcsvNm(st.name)) + ' · ' + fmt(st.rows.length) + ' вар.">' +
           '<span class="rk-p"><b>' + (k + 1) + '</b>' + tr + '</span>' +
-          '<span class="rk-n"><b>' + escHtml(pcsvLabel(st)) + '</b>' + ((st.link && !st.lname) || st.virt || st.ai ? (st.sub ? '<span class="rk-fn">' + escHtml(st.sub) + '</span>' : '') : '<span class="rk-fn">' + escHtml(pcsvNm(st.name)) + '</span>') + '<small>' + (q.out ? '<span class="rk-x" title="Набор выбыл: ни один вариант уже не наберёт ' + PAY + '+">\u00d7</span> ' : '') + (st.strat ? '<em class="rk-ai rk-st">' + ({ kel: "Келли", mkel: "Монстр", sim: "Симул.", gap: "Расхожд." })[st.strat] + '</em>' + RK_VT : st.virt ? '<em class="rk-ai rk-hunt">Охота</em>' + RK_VT : st.ai ? '<em class="rk-ai">ИИ</em>' + RK_VT : "") + '<span class="rk-cnt">' + fmt(st.rows.length) + ' вар.</span></small></span>' +
+          '<span class="rk-n"><b>' + escHtml(pcsvLabel(st)) + '</b>' + ((st.link && !st.lname) || st.virt || st.ai ? (st.sub ? '<span class="rk-fn">' + escHtml(st.sub) + '</span>' : '') : '<span class="rk-fn">' + escHtml(pcsvNm(st.name)) + '</span>') + '<small>' + (q.out ? '<span class="rk-x" title="Набор выбыл: ни один вариант уже не наберёт ' + PAY + '+">\u00d7</span> ' : '') + (st.strat ? '<em class="rk-ai rk-st">' + ({ kel: "Келли", mkel: "Монстр", sim: "Симул.", gap: "Расхожд.", zash: "Защита", cen: "М+Т" })[st.strat] + '</em>' + RK_VT : st.virt ? '<em class="rk-ai rk-hunt">Охота</em>' + RK_VT : st.ai ? '<em class="rk-ai">ИИ</em>' + RK_VT : "") + '<span class="rk-cnt">' + fmt(st.rows.length) + ' вар.</span></small></span>' +
           '<span class="rk-v">' + (pe ? '<i class="cn" data-k="' + q.i + 'b">' + q.b + '</i><small> из ' + pe + '</small>' : '—') + '</span>' +
           '<span class="rk-v' + (q.w ? " ok" : "") + '"><i class="cn" data-k="' + q.i + 'w">' + fmt(q.w) + '</i></span><span class="rk-v"><i class="cn" data-k="' + q.i + 'a">' + fmt(q.a) + '</i></span>' +
           '<span class="rk-bar" data-w="' + (n ? Math.round(q.b / n * 100) : 0) + '" data-pay="' + (n ? Math.round(PAY / n * 100) : 60) + '"><i></i><u></u></span></button>';
