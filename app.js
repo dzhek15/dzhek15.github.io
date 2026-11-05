@@ -12952,19 +12952,28 @@
      и в Фонбете, толпы распределяются по-разному: исход, недогруженный в одном тото, там и ценнее.
      Отношение долей толпы (Б / Ф) — во сколько раз доля выигрыша на этот исход больше в Фонбете. */
   var ARB = { data: null, loading: null, err: "" };
-  function arbNorm(x){ return String(x || "").toLowerCase().replace(/ё/g, "е").replace(/[^a-zа-я0-9]/g, ""); }
+  /* название команды для сверки Балтбета с Фонбетом: без «ФК/FC/СК» в любом месте («Рига ФК» = «ФК Рига»), ё/я/ю как е/у,
+     двойные буквы схлопнуты («Мьяльбю» = «Мьелльбю») */
+  var ARB_STOP = { "фк": 1, "fc": 1, "ск": 1, "sk": 1, "кф": 1 };
+  function arbNorm(x){
+    var t = String(x || "").toLowerCase().replace(/ё/g, "е").replace(/я/g, "е").replace(/ю/g, "у").replace(/й/g, "и").replace(/[^a-zа-я0-9]+/g, " ").trim().split(" ");
+    t = t.filter(function(w){ return w && !ARB_STOP[w]; }).join("");
+    return t.replace(/(.)\1+/g, "$1");
+  }
   function arbSame(a, b){
     a = arbNorm(a); b = arbNorm(b);
     if(!a || !b) return false;
-    if(a === b || a.indexOf(b) === 0 || b.indexOf(a) === 0) return true;
-    if(a.slice(0, 3) !== b.slice(0, 3)) return false;
-    /* расстояние Левенштейна ≤ 2: «Шавиш» / «Шавеш» */
+    if(a === b) return true;
+    var lim = Math.min(a.length, b.length) >= 6 ? 2 : Math.min(a.length, b.length) >= 4 ? 1 : 0;
+    if(Math.min(a.length, b.length) >= 5 && (a.indexOf(b) === 0 || b.indexOf(a) === 0)) return true;
+    if(!lim || a[0] !== b[0]) return false;
+    /* расстояние Левенштейна: «Шавиш» / «Шавеш» */
     var d = [], i, j;
     for(i = 0; i <= a.length; i++){ d[i] = [i]; }
     for(j = 1; j <= b.length; j++) d[0][j] = j;
     for(i = 1; i <= a.length; i++) for(j = 1; j <= b.length; j++)
       d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
-    return d[a.length][b.length] <= 2;
+    return d[a.length][b.length] <= lim;
   }
   function arbLoad(){
     if(FON) return Promise.resolve(null);
@@ -12988,7 +12997,7 @@
     state.matches.forEach(function(m, i){
       var pb = evPool(m), pr = evProbs(m); if(!pb) return;
       D.ev.forEach(function(e){
-        var nm = String(e.name || "").split(" - "); if(nm.length < 2) return;
+        var nm = String(e.name || "").split(/\s[-\u2013\u2014]\s/); if(nm.length < 2) return;
         var h = D.ru[nm[0]] || nm[0], a = D.ru[nm.slice(1).join(" - ")] || nm.slice(1).join(" - ");
         if(!(arbSame(m.home, h) && arbSame(m.away, a))) return;
         var q = e.quotes || {}, pf = [Number(q.pool_win_1), Number(q.pool_draw), Number(q.pool_win_2)];
