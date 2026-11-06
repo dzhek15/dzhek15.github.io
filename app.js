@@ -1141,6 +1141,9 @@
      всеми, кто угадал не меньше её порога, а строка получает сумму по всем
      категориям от 9 до своего k. То есть «ровно 12» — это доля фонда, которую
      делят все с 12 и выше, а не только угадавшие ровно двенадцать. */
+  /* Фонбет не публикует пул: считаем на условном фонде и платим только за 12+ (как в «Отборе строк») */
+  var FON_FUND = 30000000;
+  function payKmin(){ return FON ? 12 : 9; }
   function evPayouts(pDist, lines, fund, jack){
     var A = fund / 90;
     var alloc = {
@@ -1156,7 +1159,7 @@
     var pay = [];
     for(var m = 0; m <= 15; m++){
       var v = 0;
-      for(var c = 9; c <= m; c++) v += alloc[c] / n[c];
+      for(var c = payKmin(); c <= m; c++) v += alloc[c] / n[c];
       pay[m] = v;
     }
     return { pay: pay, n: n, alloc: alloc };
@@ -11822,7 +11825,7 @@
         poly = nx;
       }
       var w = 0;
-      for(var k = 9; k < poly.length; k++) w += poly[k] * sc.pay[s][k];
+      for(var k = payKmin(); k < poly.length; k++) w += poly[k] * sc.pay[s][k];
       g += Math.log(Math.max(1e-9, 1 - cost / bank + w / bank));
     }
     return g / sc.S;
@@ -11840,7 +11843,8 @@
     var fund = (typical && poolNow < typical * 0.6) ? typical : poolNow;
     var jack = Number(state.jackpot) || 0;
     var bank = KELLY_BANK;      /* расчётный банк модели, не реальный баланс */
-    if(!fund) return { error: FON ? "Фонбет не публикует пул тиража, а без него выплату и рост банка не посчитать" : "не знаю размер призового фонда — нажми «Обновить тираж»" };
+    if(FON){ fund = FON_FUND; jack = 0; }   /* пула у Фонбета нет: условный фонд, суперприз не считаем */
+    if(!fund) return { error: "не знаю размер призового фонда — нажми «Обновить тираж»" };
     var probs = [], pools = [], bad = null;
     state.matches.forEach(function(m){
       var pr = evProbs(m), pl = evPool(m);
@@ -11860,7 +11864,7 @@
         if(cands.some(function(c){ return c.key === key; })) return;
         var cost = plan.combos * price;
         var ev = evAverage(sets, probs, pools, lines, fund, jack, 400);
-        var pWin = evTail(evCouponDist(sets, probs), 9);
+        var pWin = evTail(evCouponDist(sets, probs), payKmin());
         var W = ev.avg * plan.combos;                 /* средняя выплата купона */
         var f = cost / bank, b = pWin > 0 ? (W / pWin) / cost - 1 : -1;
         var g = (f < 1 && pWin > 0 && b > -1) ? pWin * Math.log(1 + f * b) + (1 - pWin) * Math.log(1 - f) : -Infinity;
@@ -12044,8 +12048,8 @@
     }
     var sets = rows.map(function(r){ return r.set; }), cost = combos * price;
     var ev = evAverage(sets, probs, pools, lines, fund, jack, 400);
-    return { key: "fill", src: "Монстр: ядро + добор", plan: { rows: rows, combos: combos, fill: fill, added: added }, cost: cost,
-             pWin: evTail(evCouponDist(sets, probs), 9), ret: ev.avg * combos / cost, g: cost < bank ? kelGrowth(sets, sc, cost, bank) : -Infinity };
+    return { key: "fill", src: full() ? "Монстр: ядро + добор" : "Монстр Келли", plan: { rows: rows, combos: combos, fill: fill, added: added }, cost: cost,
+             pWin: evTail(evCouponDist(sets, probs), payKmin()), ret: ev.avg * combos / cost, g: cost < bank ? kelGrowth(sets, sc, cost, bank) : -Infinity };
   }
 
   /* ---------- Монстр Келли = бриф 14 из 15 ----------
@@ -12229,7 +12233,8 @@
     var fund = (typical && poolNow < typical * 0.6) ? typical : poolNow;
     var jack = Number(state.jackpot) || 0;
     var bank = KELLY_BANK;      /* расчётный банк модели, не реальный баланс */
-    if(!fund) return { error: FON ? "Фонбет не публикует пул тиража, а без него выплату и рост банка не посчитать" : "не знаю размер призового фонда — нажми «Обновить тираж»" };
+    if(FON){ fund = FON_FUND; jack = 0; }   /* пула у Фонбета нет: условный фонд, суперприз не считаем */
+    if(!fund) return { error: "не знаю размер призового фонда — нажми «Обновить тираж»" };
     var probs = [], pools = [], bad = null;
     state.matches.forEach(function(m, idx){
       var pr = edgeAdj(idx, evProbs(m)), pl = evPool(m);
@@ -12249,7 +12254,7 @@
         if(cands.some(function(c){ return c.key === key; })) return;
         var cost = plan.combos * price;
         var ev = evAverage(sets, probs, pools, lines, fund, jack, 400);
-        var pWin = evTail(evCouponDist(sets, probs), 9);
+        var pWin = evTail(evCouponDist(sets, probs), payKmin());
         var W = ev.avg * plan.combos;                 /* средняя выплата купона */
         var g = cost < bank ? kelGrowth(sets, sc, cost, bank) : -Infinity;
         cands.push({ key: key, src: pair[0], plan: plan, cost: cost, pWin: pWin, ret: W / cost, g: g });
@@ -12271,7 +12276,7 @@
         if(cands.some(function(c){ return c.key === key; })) return;
         var cost = combos * price, plan = { rows: rows.map(function(r, i){ return cp(r, sets[i]); }), combos: combos };
         var ev = evAverage(sets, probs, pools, lines, fund, jack, 400);
-        cands.push({ key: key, src: "Своя сборка", plan: plan, cost: cost, pWin: evTail(evCouponDist(sets, probs), 9), ret: ev.avg * combos / cost, g: cost < bank ? kelGrowth(sets, sc, cost, bank) : -Infinity });
+        cands.push({ key: key, src: "Своя сборка", plan: plan, cost: cost, pWin: evTail(evCouponDist(sets, probs), payKmin()), ret: ev.avg * combos / cost, g: cost < bank ? kelGrowth(sets, sc, cost, bank) : -Infinity });
       };
       addCand();
       while(step++ < 40){
@@ -13299,6 +13304,7 @@
     var L = limitLines("kelLimit", limitMaxLines()), K = planByKelly(L), price = linePrice();
     var h = stratHow('Цель — быстрее всего растить банк. Сравниваются системы по вероятностям и купоны «Симуляции» на все допустимые размеры в пределах лимита суммы; купон собирается на выбранную сумму (самый крупный допустимый в её пределах), а из равных по размеру берётся тот, у которого ожидаемый рост банка больше. Рядом показан купон с наибольшим ростом. Банк модели — расчётные 30 000 ₽, а не реальный баланс. Если рост отрицательный — модель предупреждает, что ставить невыгодно.', "kelly");
     h += limitSelect("kelLimit", L);
+    if(FON) h += '<p class="ev-note dt-center fon-fund-note">Пул Фонбет не публикует, поэтому рост банка и отдача здесь — оценка на условном фонде (30 млн ₽, выплаты за 12+). Набор исходов от этой оценки зависит слабо, а вывод «выгодно или нет» — ориентир, не гарантия.</p>';
     if(K.error){
       box.innerHTML = h + '<p class="ev-warn">Посчитать не получилось: ' + K.error + '.</p>' + (FON ? balPanelHtml("kel") : "");
       $("evBack").hidden = false; limitBind(box, showKellyStrat); if(FON) balBind(box); return;
@@ -13332,6 +13338,7 @@
     var HOW_BRIEF = 'Монстр Келли собирает <b>бриф 14 из 15</b> на сумму не больше ' + fmt(MK_BRIEF_RUB) + ' ₽. Это готовая система из библиотеки: если все 15 исходов окажутся внутри основы купона, гарантированно угадано не меньше 14. Из всех готовых форм, которые влезают в сумму, берётся та, где основа с наибольшей вероятностью накрывает все 15 исходов: сначала решается, в каких матчах поставить одиночки, двойники и тройники (перебор точный), затем в каждом матче берутся самые сильные исходы. «Сила» исхода — вероятность, умноженная на (вероятность / доля толпы): при близких вероятностях берётся исход, который толпа недоигрывает, и выплата за него делится на меньшее число победителей. Зафиксированные матчи не меняются. Остальные источники — ранжирование исходов в разборе ИИ (психология, новости, прогнозы людей), выбор ИИ по матчу, ИИ-критик, факты, события (стадионы, праздники, символические даты, травмы, составы, психология — из описаний) и голоса Betzona — входят в «силу» исхода вместе с Келли: в режиме «доводы 60% · Келли 40%» ориентир на них, но Келли (вероятность модели против толпы) остаётся основой и единственной опорой там, где доводов нет. Исход, который источники изменили, в таблице синий. Прежний способ (ядро по росту банка + добор) остаётся только у Фонбета.<br><br><b>Монстр Келли · улучшения</b> — те же поправки к вероятностям, которых нет в линии: перекосы против толпы из разбора ИИ (+3 п.п. за один факт, +6 за несколько) и усталость по календарю Flashscore (+2 п.п. отдохнувшей стороне). Они могут поменять, какие исходы попадут в основу. Шансы ниже — розыгрыш 3000 тиражей по вероятностям матчей, а не гарантия.';
     var h = stratHow(!FON ? HOW_BRIEF : 'Цель — закрыть как можно больше вариантов на выбранную сумму, не теряя идею Келли. Бюджет такой же, как у Келли: самый крупный купон в пределах суммы. Сначала собирается ядро — купон с наибольшим ростом расчётного банка (кандидаты: системы по вероятностям, «Симуляция», «Ровно на сумму» и своя сборка от фаворитов по одному исходу). Если ядро дешевле бюджета, остаток добирается исходами из других источников по порядку доверия: факты ИИ против толпы (травмы, ротация, мотивация, кризис), усталость по календарю Flashscore, выбор психологического разбора ИИ, ИИ-критик (риск для фаворита), факты и аргументы людей Betzona, их голоса; что останется — по росту банка. Добранные исходы в таблице <span class=\"kel-up-t\">синие</span>, под матчем — источник и причина. Рост считается по полному распределению выплат: 300 сценариев итогов тиража, в каждом своя таблица выплат (если побеждают фавориты, угадывает и толпа, и приз дробится). Банк модели — расчётные 30 000 ₽, а не реальный баланс. Если рост отрицательный — модель предупреждает, что сумма для такого банка слишком велика или купон невыгоден.<br><br><b>Монстр Келли · улучшения</b> — то же, но с поправками, которых нет в линии: перекосы против толпы из разбора ИИ (кадровые потери, ротация, мотивация, кризис; +3 п.п. за один факт, +6 за несколько) и усталость по календарю Flashscore со всеми турнирами (+2 п.п. отдохнувшей стороне или сопернику команды, у которой через 3 дня еврокубок или кубок). Купон сравнивается с Монстром Келли без улучшений на ту же сумму: добавленные исходы в таблице <span class="kel-up-t">синие</span>, под матчем — почему и откуда; убранные подписаны там же. Сдвиги — стартовые допущения: журнал проверяет каждый источник отдельно.', "monster");
     if(FON) h += limitSelect("mkelLimit", L);
+    if(FON) h += '<p class="ev-note dt-center fon-fund-note">Пул Фонбет не публикует, поэтому рост банка и отдача здесь — оценка на условном фонде (30 млн ₽, выплаты за 12+). Набор исходов от этой оценки зависит слабо, а вывод «выгодно или нет» — ориентир, не гарантия.</p>';
     if(E){
       var el = Object.keys(E).map(function(i){ var m = state.matches[i]; return E[i].map(function(a){ return '<li><b>' + (Number(i) + 1) + '. ' + escHtml(m ? m.home + ' — ' + m.away : '') + ': ' + a.o + '</b> (+' + Math.round(a.d * 100) + ' п.п., ' + escHtml(a.src) + ') — ' + escHtml(a.why) + '</li>'; }).join(""); }).join("");
       h += '<div class="ev-kai"><label class="ev-kai-sw">' + (FON ? '<input type="checkbox" id="kelAi"' + (useAi ? ' checked' : '') + '> ' : '') + 'Монстр Келли · улучшения: перекосы ИИ и усталость (' + Object.keys(E).length + ' матч.)</label><ul class="ev-kai-l">' + el + '</ul>' + (diff ? diff.html : '') + '</div>';
@@ -13376,7 +13383,7 @@
     if(K.brain && full()) h += '<p class="ev-note dt-center">Вероятности матчей — от мозга Монстра (обучен на ' + LEARN.brain.n + ' матчах, точнее линии на новых).</p>';
     if(pick && K.core && pick !== K.core){
       var by = {}; (pick.plan.added || []).forEach(function(a){ (by[a.src] = by[a.src] || []).push((a.i + 1) + ". " + a.o); });
-      h += '<div class="ev-kai"><b>Ядро Монстра</b> — купон с наибольшим ростом банка: ' + escHtml(K.core.src) + ', ' + fmt(K.core.plan.combos) + ' стр. за ' + fmt(K.core.cost) + ' ₽ (рост ' + (isFinite(K.core.g) ? (K.core.g * 100).toFixed(2).replace(".", ",") + '%' : '—') + '). Остаток бюджета до ' + fmt(K.target) + ' стр. добран:<ul class="ev-kai-l">' + Object.keys(by).map(function(k){ return '<li><b class="kel-up-t">' + escHtml(k) + '</b>: ' + by[k].join(", ") + '</li>'; }).join("") + '</ul>Добранные исходы в таблице синие, причина — под матчем.</div>';
+      if(full()) h += '<div class="ev-kai"><b>Ядро Монстра</b> — купон с наибольшим ростом банка: ' + escHtml(K.core.src) + ', ' + fmt(K.core.plan.combos) + ' стр. за ' + fmt(K.core.cost) + ' ₽ (рост ' + (isFinite(K.core.g) ? (K.core.g * 100).toFixed(2).replace(".", ",") + '%' : '—') + '). Остаток бюджета до ' + fmt(K.target) + ' стр. добран:<ul class="ev-kai-l">' + Object.keys(by).map(function(k){ return '<li><b class="kel-up-t">' + escHtml(k) + '</b>: ' + by[k].join(", ") + '</li>'; }).join("") + '</ul>Добранные исходы в таблице синие, причина — под матчем.</div>';
     }
     if(pick){
       h += stratCards([["Строк", fmt(pick.plan.combos) + " · " + fmt(pick.cost) + " ₽"], ["Шанс приза", stratChance(pick.pWin)], ["Рост банка", isFinite(pick.g) ? (pick.g >= 0 ? "+" : "") + (pick.g * 100).toFixed(2) + "%" : "—"]]);
