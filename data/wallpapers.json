@@ -1,8 +1,36 @@
 {
- "updated": "2026-11-06",
- "count": 47,
+ "updated": "2026-11-07",
+ "count": 51,
  "note": "база обоев: каждый день после разбора ИИ добавляются новые по свежим новостям, рисуют бесплатные нейросети",
  "items": [
+  {
+   "src": "img/wp/auto/20261107-1.webp",
+   "light": "img/wp/auto/20261107-1l.webp",
+   "theme": "Классику РПЛ",
+   "by": "pollinations:sana",
+   "d": "2026-11-07"
+  },
+  {
+   "src": "img/wp/auto/20261107-2.webp",
+   "light": "img/wp/auto/20261107-2l.webp",
+   "theme": "Английский дождь",
+   "by": "pollinations:sana",
+   "d": "2026-11-07"
+  },
+  {
+   "src": "img/wp/auto/20261107-3.webp",
+   "light": "img/wp/auto/20261107-3l.webp",
+   "theme": "Бельгийская тактика",
+   "by": "pollinations:sana",
+   "d": "2026-11-07"
+  },
+  {
+   "src": "img/wp/auto/20261107-4.webp",
+   "light": "img/wp/auto/20261107-4l.webp",
+   "theme": "Испанская решимость",
+   "by": "pollinations:sana",
+   "d": "2026-11-07"
+  },
   {
    "src": "img/wp/auto/20261106-1.webp",
    "light": "img/wp/auto/20261106-1l.webp",
