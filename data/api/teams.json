@@ -130,6 +130,9 @@
 "альмиранте браун": {
 "f": "65uq50CN-WbzCJCY1.png"
 },
+"альтамура": {
+"f": "CY3YDjjC-63urVQ98.png"
+},
 "альчоне": {
 "f": "WnUOt98k-nVlzfdm2.png"
 },
@@ -280,6 +283,12 @@
 "бандырмаспор": {
 "f": "IqHsN4S0-jwWnbfkt.png"
 },
+"бари": {
+"f": "OCZAFtU0-plT8zlNA.png"
+},
+"барлетта": {
+"f": "AajibnRq-t4GQxEM5.png"
+},
 "барранкилья": {
 "f": "4On2CIR0-WMQ3R7Tc.png"
 },
@@ -388,6 +397,9 @@
 },
 "ботафого сп": {
 "f": "fy7q1GPq-dA1p8k46.png"
+},
+"ботошани": {
+"f": "fiH0mKRq-QHBIn1Bk.png"
 },
 "бохум": {
 "f": "IRiimykC-86lnAaq9.png"
@@ -560,6 +572,9 @@
 },
 "волендам": {
 "f": "8tDUPO86-WYtEUtB2.png"
+},
+"волеренга": {
+"f": "0YSE1xXH-K0xfe77l.png"
 },
 "волунтари": {
 "f": "fq436niC-nJvEYWTe.png"
@@ -829,6 +844,9 @@
 ],
 "id": 974
 },
+"кавезе": {
+"f": "hKDTHR6k-lQsonYNp.png"
+},
 "кадис": {
 "c": [
 "#186bb6",
@@ -847,6 +865,9 @@
 },
 "кальяри": {
 "f": "tSQII3hT-McvX4bye.png"
+},
+"камаз": {
+"f": "hGzkFG96-vD9TzUeh.png"
 },
 "кан": {
 "c": [
@@ -872,6 +893,9 @@
 },
 "кауно жальгирис": {
 "f": "WWSvU6ne-hjhLeNs8.png"
+},
+"кафр касем": {
+"f": "hCxfJ7R0-0InkJTkf.png"
 },
 "кельн": {
 "f": "KMphsCCN-86lnAaq9.png"
@@ -969,6 +993,9 @@
 "кристал пэлас": {
 "f": "GfkvlLmC-drybTCiH.png"
 },
+"кристиансунд": {
+"f": "pMvZuskC-4GUthy9Q.png"
+},
 "кроли таун": {
 "f": "Sp2BMgme-4zecB0bR.png"
 },
@@ -1046,6 +1073,9 @@
 },
 "легия варшава": {
 "f": "xvnFF9Pq-6mFghhX5.png"
+},
+"лейрия": {
+"f": "rcpl2ime-zyuxoKRh.png"
 },
 "ленинградец": {
 "f": "SnXBs4gT-KnkNHWWC.png"
@@ -1137,6 +1167,9 @@
 },
 "майнц": {
 "f": "tbR3gUTH-EoYxhN5r.png"
+},
+"маккаби бней рейна": {
+"f": "vqIFkvB6-0hTXKNzr.png"
 },
 "маккаби тель-авив": {
 "f": "vifKdrkC-EgfVDm2G.png"
@@ -1373,6 +1406,9 @@
 "орсомарсо": {
 "f": "nJOU79BN-OQvTHdKn.png"
 },
+"орхус фремад": {
+"f": "ULYay2gT-IDqsYBbo.png"
+},
 "осасуна": {
 "f": "UTfY3r86-Yu8w588N.png"
 },
@@ -1384,6 +1420,9 @@
 },
 "офи": {
 "f": "OW14akRq-v7zcSpep.png"
+},
+"оцелул": {
+"f": "21YVNIjC-2sTKI8jQ.png"
 },
 "падерборн": {
 "f": "6ufhxjSq-Qmnf8wEL.png"
@@ -1423,6 +1462,9 @@
 },
 "пиза": {
 "f": "vPrevkT0-GMOw3SI3.png"
+},
+"пичерно": {
+"f": "fLL9crU0-bVwIsq6I.png"
 },
 "пласа колония": {
 "f": "2Bu4C5AN-SARVQmpJ.png"
@@ -1987,6 +2029,9 @@
 "флуминенсе рж": {
 "f": "wp-fluminense-fc.png"
 },
+"фоджа": {
+"f": "fe8o9Pme-v9LWknvd.png"
+},
 "фортуна кельн": {
 "f": "dAR8o26k-4vL7JG21.png"
 },
@@ -2020,8 +2065,14 @@
 "халл сити": {
 "f": "WGeGdCSq-bJFnYpTt.png"
 },
+"хапоэль афула": {
+"f": "bgHe8elC-zqa7zUmG.png"
+},
 "хапоэль беэр-шева": {
 "f": "MH6GxSQq-A3ON3kaq.png"
+},
+"хапоэль кфар-сава": {
+"f": "ja2Vi35k-29ebI4SF.png"
 },
 "хартберг": {
 "f": "d8UOL7gT-0QjFNZnd.png"
@@ -2035,6 +2086,9 @@
 "#e31820"
 ],
 "id": 973
+},
+"хвидовре": {
+"f": "tA90N9UH-UusW87Jh.png"
 },
 "хельсингборг": {
 "f": "G0ygoh8k-2TRrus0k.png"
