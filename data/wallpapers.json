@@ -1,8 +1,36 @@
 {
- "updated": "2026-11-09",
- "count": 59,
+ "updated": "2026-11-10",
+ "count": 60,
  "note": "база обоев: каждый день после разбора ИИ добавляются новые по свежим новостям, рисуют бесплатные нейросети",
  "items": [
+  {
+   "src": "img/wp/auto/20261110-1.webp",
+   "light": "img/wp/auto/20261110-1l.webp",
+   "theme": "Дерби КХЛ",
+   "by": "pollinations:sana",
+   "d": "2026-11-10"
+  },
+  {
+   "src": "img/wp/auto/20261110-2.webp",
+   "light": "img/wp/auto/20261110-2l.webp",
+   "theme": "Кубковая сенсация",
+   "by": "pollinations:sana",
+   "d": "2026-11-10"
+  },
+  {
+   "src": "img/wp/auto/20261110-3.webp",
+   "light": "img/wp/auto/20261110-3l.webp",
+   "theme": "Борьба за еврокубки",
+   "by": "pollinations:sana",
+   "d": "2026-11-10"
+  },
+  {
+   "src": "img/wp/auto/20261110-4.webp",
+   "light": "img/wp/auto/20261110-4l.webp",
+   "theme": "Травмы и давление",
+   "by": "pollinations:sana",
+   "d": "2026-11-10"
+  },
   {
    "src": "img/wp/auto/20261109-1.webp",
    "light": "img/wp/auto/20261109-1l.webp",
@@ -391,27 +419,6 @@
    "src": "img/wp/auto/20261101-g21.webp",
    "light": "img/wp/auto/20261101-g21l.webp",
    "theme": "Поле после дождя",
-   "by": "generated",
-   "d": "2026-11-01"
-  },
-  {
-   "src": "img/wp/auto/20261101-g22.webp",
-   "light": "img/wp/auto/20261101-g22l.webp",
-   "theme": "Раздевалка",
-   "by": "generated",
-   "d": "2026-11-01"
-  },
-  {
-   "src": "img/wp/auto/20261101-g23.webp",
-   "light": "img/wp/auto/20261101-g23l.webp",
-   "theme": "Капитанская повязка",
-   "by": "generated",
-   "d": "2026-11-01"
-  },
-  {
-   "src": "img/wp/auto/20261101-g24.webp",
-   "light": "img/wp/auto/20261101-g24l.webp",
-   "theme": "Арена с высоты",
    "by": "generated",
    "d": "2026-11-01"
   }
