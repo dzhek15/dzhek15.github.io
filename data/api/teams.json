@@ -209,6 +209,9 @@
 "асколи": {
 "f": "GtO8URA6-Gtw8U9oh.png"
 },
+"ассат": {
+"f": "wp-porin-assat.png"
+},
 "астон вилла": {
 "f": "UHchCEVH-jwz95gs0.png"
 },
@@ -254,6 +257,9 @@
 },
 "атлетико тукуман": {
 "f": "I11ACdhT-QitRwNMT.png"
+},
+"атлетико феникс": {
+"f": "S2eaUoPq-tWWbnBbh.png"
 },
 "атлон таун": {
 "c": [
@@ -599,6 +605,9 @@
 "виртус энтелла": {
 "f": "hbM9tPVH-rwnYBqYT.png"
 },
+"виссел кобе": {
+"f": "4CKtsE76-4SU3kZUI.png"
+},
 "витесс": {
 "c": [
 "#f8e30c",
@@ -758,6 +767,9 @@
 "дармштадт": {
 "f": "hbrmZHCN-hnEPJbbt.png"
 },
+"даямонд": {
+"f": "wp-rushden-diamonds-f-c.png"
+},
 "де графсхап": {
 "c": [
 "#00a0e4",
@@ -901,6 +913,12 @@
 ],
 "id": 974
 },
+"йокогама ф. маринос": {
+"f": "Ia82rx86-plFsSE3r.png"
+},
+"кавасаки фронтале": {
+"f": "ld45KI6k-vi0GlO7U.png"
+},
 "кавезе": {
 "f": "hKDTHR6k-lQsonYNp.png"
 },
@@ -944,6 +962,12 @@
 },
 "каррарезе": {
 "f": "lf1fmHoe-t4GQxEM5.png"
+},
+"касива рейсол": {
+"f": "d8zQqMoe-A1NlaOLn.png"
+},
+"касима антлерс": {
+"f": "2ZWjdFRq-4SARfF5k.png"
 },
 "кастельон б": {
 "f": "23WDtN5k-4SOfubw7.png"
@@ -996,6 +1020,9 @@
 },
 "ковентри сити": {
 "f": "QHmiKlDN-SSMx8z8I.png"
+},
+"ковентри юнайтед": {
+"f": "wp-coventry-united-f-c.png"
 },
 "коджаелиспор": {
 "f": "MmgQ3IA6-pfQVcl7E.png"
@@ -1104,6 +1131,9 @@
 },
 "ла-лувье": {
 "f": "wp-raal-la-louviere.png"
+},
+"ла-лус": {
+"f": "IsmU6IBN-f1cSN420.png"
 },
 "лаваль": {
 "f": "nLm3y8S0-vHcbmpKn.png"
@@ -1239,6 +1269,9 @@
 "люнгбю": {
 "f": "EFcJbJA6-j9C0y7Tm.png"
 },
+"ля-нусия": {
+"f": "wp-cf-la-nucia.png"
+},
 "магриб фес": {
 "c": [
 "#ffff01",
@@ -1299,6 +1332,9 @@
 },
 "марсель": {
 "f": "t6Kb5X76-AcP8ZdxL.png"
+},
+"матида зельвия": {
+"f": "IJNqPkBN-6uZPCvr9.png"
 },
 "мб руиссе": {
 "f": "GEMJ49CN-2wF033pH.png"
@@ -1720,6 +1756,9 @@
 "родина": {
 "f": "GUISmY76-Cn9ZORqk.png"
 },
+"розенборг (ж)": {
+"f": "wp-rosenborg-bk.png"
+},
 "рома": {
 "f": "j31Z1pne-GtNb9h2q.png"
 },
@@ -2044,6 +2083,9 @@
 "тун": {
 "f": "h6IND07k-xbUiUE46.png"
 },
+"уд кастеллоненсе": {
+"f": "wp-ud-castellonense.png"
+},
 "удинезе": {
 "f": "277EtfPq-SYw7EcY6.png"
 },
@@ -2095,6 +2137,9 @@
 },
 "уоркингтон": {
 "f": "M98O1gjT-2PBXgRPe.png"
+},
+"уоррингтон райлэндс": {
+"f": "wp-warrington-rylands-1906-f-c.png"
 },
 "уоррингтон таун": {
 "f": "EqWSRriC-dUDxzbGu.png"
