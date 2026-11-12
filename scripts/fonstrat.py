@@ -438,13 +438,79 @@ def main():
     except Exception as e:
         print("итоги из архива не подмешаны:", e)
 
-    # 2в. итоги, внесённые вручную для матчей, которых нет в ленте Flashscore (низшие лиги): data/api/fon/res_manual.json
+    # 2в. сверка с архивом ленты Flashscore (английские названия, 7 суток, счёт основного времени AT/AU):
+    # архив — главный источник, он перезаписывает всё, что журнал мог снять раньше (овертайм, пенальти, неверная пара)
+    try:
+        import fonres as FR
+        import emblems as E2
+        rows = []
+        for dd in range(-FR.BACK, 1):
+            for sp in (1, 4):
+                rows += FR.parse(FR.get(FR.FEED % (sp, dd)))
+        same = lambda q, c: E2.same(FR.norm(q), FR.norm(c))
+        fixed = 0
+        for num, rec in jr["draws"].items():
+            for e in rec["ev"]:
+                nm = split_name(e["name"]); st = utc(e.get("start") or "")
+                if not nm or not st or st > now - 2 * 3600:
+                    continue
+                both = [(abs(ts - st), gh, ga) for fh, fa, ts, gh, ga in rows if same(nm[0], fh) and same(nm[1], fa)]
+                near = [x for x in both if x[0] <= 6 * 3600]
+                if not near:                 # у Фонбета дата иногда сдвинута на сутки: берём единственную пару в пределах 36 ч
+                    wide = [x for x in both if x[0] <= 36 * 3600]
+                    near = wide if len({(x[1], x[2]) for x in wide}) == 1 else []
+                if not near:
+                    continue
+                _, gh, ga = min(near)
+                new = {"s": "%d:%d" % (gh, ga), "r": "1" if gh > ga else ("2" if gh < ga else "X")}
+                old = jr["results"].get(str(e["id"]))
+                if old != new:
+                    jr["results"][str(e["id"])] = new
+                    fixed += 1
+                    print("сверка: тираж", num, e["name"], (old or {}).get("s"), "→", new["s"])
+        print("сверка с Flashscore: исправлено", fixed, "итогов")
+    except Exception as ex:
+        print("сверка с архивом не выполнена:", repr(ex))
+
+    # 2г. итоги, внесённые вручную для матчей, которых нет в ленте Flashscore (низшие лиги): data/api/fon/res_manual.json (главнее всего)
     try:
         for k, v in (rd(os.path.join(FON, "res_manual.json"), {}) or {}).items():
-            if k not in jr["results"] and v.get("r") in ("1", "X", "2"):
+            if v.get("r") in ("1", "X", "2"):
                 jr["results"][str(k)] = {"s": str(v.get("s", "")).replace(" ", ""), "r": v["r"]}
     except Exception as e:
         print("ручные итоги не подмешаны:", e)
+
+    # 2д. закрытый тираж, чьи итоги изменились (сверка, ручной итог), пересчитывается заново
+    for num, rec in jr["draws"].items():
+        if rec.get("done") and rec.get("res"):
+            cur = [(jr["results"].get(str(e["id"])) or {}).get("r") or "?" for e in rec["ev"]]
+            if cur != rec["res"]:
+                rec["done"] = False
+                rec.pop("unk", None)
+                print("тираж", num, "пересчитывается: итоги изменились")
+
+    # 2е. история (history.json) — те же итоги, что и в журнале
+    try:
+        hp = os.path.join(FON, "history.json")
+        hh = rd(hp, {})
+        chg = 0
+        for num, rec in jr["draws"].items():
+            h = (hh.get("draws") or {}).get(str(num))
+            if not h or abs(Date_end(h) - rec.get("end", 0)) > 2 * 86400:
+                continue
+            for i, e in enumerate(rec["ev"]):
+                r = jr["results"].get(str(e["id"]))
+                if r and i < len(h.get("ev", [])) and len(h["ev"][i]) > 10:
+                    sc = r["s"].replace(":", " : ")
+                    if h["ev"][i][9] != r["r"] or h["ev"][i][10] != sc:
+                        h["ev"][i][9], h["ev"][i][10] = r["r"], sc
+                        chg += 1
+        if chg:
+            with open(hp, "w", encoding="utf-8") as f:
+                json.dump(hh, f, ensure_ascii=False, separators=(",", ":"))
+            print("история: поправлено строк", chg)
+    except Exception as e:
+        print("история не синхронизирована:", e)
 
     # 3. подсчёт закрытых тиражей
     for num, rec in jr["draws"].items():
