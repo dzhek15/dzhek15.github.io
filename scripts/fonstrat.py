@@ -222,11 +222,11 @@ def feed_results():
     """Сыгранные матчи ленты: [(дом, гость, время, счёт дома, счёт гостей)]."""
     import emblems as E
     rows = []
-    for day in (0, 1):
+    for sp, day in [(a, b) for a in (1, 4) for b in (0, 1)]:
         try:
-            text = E.get(E.FEED % (1, day)).decode("utf-8", "ignore")
+            text = E.get(E.FEED % (sp, day)).decode("utf-8", "ignore")
         except Exception as e:
-            print("лента", day, "не снялась:", e)
+            print("лента", sp, day, "не снялась:", e)
             continue
         for rec in text.split("¬~"):
             o = {}
@@ -234,10 +234,16 @@ def feed_results():
                 kv = part.split("÷")
                 if len(kv) == 2:
                     o[kv[0]] = kv[1]
-            if o.get("AB") != "3" or not (o.get("AE") and o.get("AF")):
+            if o.get("AB") != "3" or not (o.get("AE") and o.get("AF")) or o.get("AC") not in ("3", "10", "11"):
                 continue
-            try:
-                rows.append((o["AE"], o["AF"], int(o.get("AD", "0")), int(o["AG"]), int(o["AH"])))
+            try:   # итог — счёт основного времени (AT/AU): без овертайма, буллитов, доп. времени и пенальти
+                if o.get("AT", "").isdigit() and o.get("AU", "").isdigit():
+                    gh, ga = int(o["AT"]), int(o["AU"])
+                elif o.get("AC") == "3":
+                    gh, ga = int(o["AG"]), int(o["AH"])
+                else:
+                    continue
+                rows.append((o["AE"], o["AF"], int(o.get("AD", "0")), gh, ga))
             except (KeyError, ValueError):
                 continue
     return rows, E

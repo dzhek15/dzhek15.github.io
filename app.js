@@ -2039,7 +2039,7 @@
       if(!obj.AA){
         if(obj.ZY || obj.ZA){ cur = { country: obj.ZY || "", league: obj.ZA || "", matches: [] }; groups.push(cur); }
       } else if(cur && obj.AE && obj.AF && obj.WU && obj.WV && obj.PX && obj.PY){
-        cur.matches.push({ id: obj.AA, home: obj.AE, away: obj.AF, hSlug: obj.WU, aSlug: obj.WV, hId: obj.PX, aId: obj.PY, hLogo: obj.OA || "", aLogo: obj.OB || "", hs: obj.AG, as: obj.AH, ao: obj.AO, bx: obj.BX, ts: obj.AD || obj.ADE || null, st: obj.AB || "", sc: obj.AC || "" });
+        cur.matches.push({ id: obj.AA, home: obj.AE, away: obj.AF, hSlug: obj.WU, aSlug: obj.WV, hId: obj.PX, aId: obj.PY, hLogo: obj.OA || "", aLogo: obj.OB || "", hs: obj.AG, as: obj.AH, rh: obj.AT, ra: obj.AU, ao: obj.AO, bx: obj.BX, ts: obj.AD || obj.ADE || null, st: obj.AB || "", sc: obj.AC || "" });
       }
     }
     return groups;
@@ -2098,9 +2098,9 @@
         var mm = g.matches[j];
         if(isWomen && !leagueW && !(/\(ж\)/i.test(mm.home) && /\(ж\)/i.test(mm.away))) continue;
         if(fsNameOk(hClean, hCore, mm.home, mm.hSlug) && fsNameOk(aClean, aCore, mm.away, mm.aSlug))
-          return { h: { url: mm.hSlug, id: mm.hId, logo: mm.hLogo }, a: { url: mm.aSlug, id: mm.aId, logo: mm.aLogo }, mid: mm.id, ts: mm.ts, st: mm.st, sc: mm.sc, hs: mm.hs, as: mm.as, ao: mm.ao, bx: mm.bx };
+          return { h: { url: mm.hSlug, id: mm.hId, logo: mm.hLogo }, a: { url: mm.aSlug, id: mm.aId, logo: mm.aLogo }, mid: mm.id, ts: mm.ts, st: mm.st, sc: mm.sc, hs: mm.hs, as: mm.as, rh: mm.rh, ra: mm.ra, ao: mm.ao, bx: mm.bx };
         if(fsNameOk(hClean, hCore, mm.away, mm.aSlug) && fsNameOk(aClean, aCore, mm.home, mm.hSlug))
-          return { h: { url: mm.aSlug, id: mm.aId, logo: mm.aLogo }, a: { url: mm.hSlug, id: mm.hId, logo: mm.hLogo }, mid: mm.id, ts: mm.ts, st: mm.st, sc: mm.sc, hs: mm.as, as: mm.hs, ao: mm.ao, bx: mm.bx };
+          return { h: { url: mm.aSlug, id: mm.aId, logo: mm.aLogo }, a: { url: mm.hSlug, id: mm.hId, logo: mm.hLogo }, mid: mm.id, ts: mm.ts, st: mm.st, sc: mm.sc, hs: mm.as, as: mm.hs, rh: mm.ra, ra: mm.rh, ao: mm.ao, bx: mm.bx };
       }
     }
     return null;
@@ -2149,13 +2149,13 @@
       });
     });
     if(!best || tie) return null;
-    return { h: { url: best.hSlug, id: best.hId, logo: best.hLogo }, a: { url: best.aSlug, id: best.aId, logo: best.aLogo }, mid: best.id, ts: best.ts, st: best.st, sc: best.sc, hs: best.hs, as: best.as, ao: best.ao, bx: best.bx };
+    return { h: { url: best.hSlug, id: best.hId, logo: best.hLogo }, a: { url: best.aSlug, id: best.aId, logo: best.aLogo }, mid: best.id, ts: best.ts, st: best.st, sc: best.sc, hs: best.hs, as: best.as, rh: best.rh, ra: best.ra, ao: best.ao, bx: best.bx };
   }
   var FON_LAT = null;
   function fonLatin(x){
     if(!FON) return x;
     var ks = Object.keys(FON_RU.t || {});
-    if(!FON_LAT || FON_LAT.n !== ks.length){ FON_LAT = { n: ks.length, m: {} }; ks.forEach(function(k){ FON_LAT.m[FON_RU.t[k]] = k; }); }
+    if(!FON_LAT || FON_LAT.n !== ks.length){ FON_LAT = { n: ks.length, m: {} }; ks.forEach(function(k){ FON_LAT.m[FON_RU.t[k]] = k; FON_LAT.m[FON_BAL[FON_RU.t[k]] || FON_RU.t[k]] = k; }); }
     var w = /\s*\(ж\)$/.test(x), b = String(x || "").replace(/\s*\(ж\)$/, "");
     return FON_LAT.m[b] ? FON_LAT.m[b] + (w ? " (w)" : "") : x;
   }
@@ -2630,6 +2630,18 @@
       .then(fsParseFeed)
       .catch(function(e){ if(tm) clearTimeout(tm); fsWorkerDown = Date.now(); dbgLog("err", "worker ленты: " + (e && e.message || e) + " → идём через снимок GitHub на 2 минуты"); return mirror(); });
   }
+  /* итог матча — счёт основного времени: хоккей без овертайма и буллитов, футбол без дополнительного времени и пенальти.
+     Flashscore: AC 3 — обычный финал, 10 — после ОТ/доп. времени, 11 — после буллитов/пенальти; AG/AH тогда
+     включают ОТ и буллиты, а счёт основного времени лежит в AT/AU */
+  function fsFinished(f){ return !!f && f.st === "3" && (f.sc === "3" || f.sc === "10" || f.sc === "11"); }
+  function fsRegScore(f){
+    var dg = /^\d+$/;
+    if(!f) return null;
+    if(dg.test(f.rh || "") && dg.test(f.ra || "")) return [+f.rh, +f.ra];
+    if((f.sc === "10" || f.sc === "11") && f.st === "3") return null;   /* основное время неизвестно — итог не фиксируем */
+    if(dg.test(f.hs || "") && dg.test(f.as || "")) return [+f.hs, +f.as];
+    return null;
+  }
   function fsLiveTick(){
     if(fsLiveBusy || document.hidden || typeof fetch !== "function") return;
     if(Date.now() - fsLiveAt < FS_LIVE_EVERY - 1500) return;
@@ -2662,23 +2674,24 @@
       cand.forEach(function(m){
         var f = fsLookup(m, by[fsFeedSport(m.league)] || []);
         if(!f || (f.st !== "2" && f.st !== "3")){ if(FON && !m.res) miss.push(m); return; }
-        if(f.st === "3" && f.sc !== "3"){            /* перенос, отмена и прочее — не итог */
+        if(f.st === "3" && !fsFinished(f)){            /* перенос, отмена и прочее — не итог */
           /* в просмотре тиража подписываем матч «перенесён»/«отменён»; в текущем купоне это делает checkFsVoids */
           var vtag = FS_VOID_CODES[f.sc];
           if(vtag && state.prev && state.prev.matches.indexOf(m) >= 0 && !m.res && m.fsVoid !== vtag){ m.fsVoid = vtag; changed = true; }
           return;
         }
-        if(!/^\d+$/.test(f.hs || "") || !/^\d+$/.test(f.as || "")) return;
+        var rg = f.st === "3" ? fsRegScore(f) : (/^\d+$/.test(f.hs || "") && /^\d+$/.test(f.as || "") ? (f.sc === "7" && /^\d+$/.test(f.rh || "") && /^\d+$/.test(f.ra || "") ? [+f.rh, +f.ra] : [+f.hs, +f.as]) : null);
+        if(!rg) return;
         var grp = by[fsFeedSport(m.league)], mir = !!(grp && grp.mir);
         /* снимок из GitHub старше получаса — не верим, пусть остаётся только счёт из основной источник */
         if(mir && (!grp.ts || Date.now() - grp.ts > 30 * 60000)) return;
-        var sc = f.hs + " : " + f.as, oldAc = m.fsPh ? m.fsPh.ac : null;
+        var sc = rg[0] + " : " + rg[1], oldAc = m.fsPh ? m.fsPh.ac : null;
         m.fsAt = mir ? grp.ts : Date.now(); m.fsMir = mir;
         if(f.st === "3"){
           if(!m.fsEnd){ m.fsEnd = m.fsAt; changed = true; }
           /* Фонбет: итогов у основной источник нет — исход берём по финальному счёту Flashscore (основное время, код «3») */
           if(FON && !m.res){
-            var h9 = +f.hs, a9 = +f.as;
+            var h9 = rg[0], a9 = rg[1];
             m.res = h9 > a9 ? "1" : (h9 < a9 ? "2" : "X"); m.resFs = 1; m.score = sc; changed = true;
             dbgLog("score", dbgTag(m) + ": итог по Flashscore " + sc + " → " + m.res);
           }
@@ -2708,9 +2721,10 @@
         var dby = {}; dkeys.forEach(function(k, i){ dby[k] = ds[i] || []; });
         miss.forEach(function(m){
           var f = fsLookup(m, dby[fsFeedSport(m.league)] || []);
-          if(!f || f.st !== "3" || f.sc !== "3" || !/^\d+$/.test(f.hs || "") || !/^\d+$/.test(f.as || "")) return;
-          var h9 = +f.hs, a9 = +f.as;
-          m.res = h9 > a9 ? "1" : (h9 < a9 ? "2" : "X"); m.resFs = 1; m.score = f.hs + " : " + f.as; m.fsEnd = m.fsEnd || Date.now(); changed = true;
+          var rg2 = fsFinished(f) ? fsRegScore(f) : null;
+          if(!rg2) return;
+          var h9 = rg2[0], a9 = rg2[1];
+          m.res = h9 > a9 ? "1" : (h9 < a9 ? "2" : "X"); m.resFs = 1; m.score = h9 + " : " + a9; m.fsEnd = m.fsEnd || Date.now(); changed = true;
           dbgLog("score", dbgTag(m) + ": итог из архива Flashscore " + m.score + " → " + m.res);
         });
         fin();
@@ -8215,15 +8229,21 @@
 
   /* Фонбет: названия команд и турниров приходят по-английски — переводим словарём data/api/fon/ru.json
      ({t: команды, c: части названия турнира, f: турнир целиком}); чего нет в словаре, остаётся как есть */
-  var FON_RU = { t: {}, c: {}, f: {} }, fonRuReady = FON && typeof fetch === "function"
-    ? fetch(MIRROR + "fon/ru.json?t=" + Math.floor(Date.now() / 600000)).then(function(r){ return r.ok ? r.json() : null; })
-        .then(function(j){ if(j) FON_RU = { t: j.t || {}, c: j.c || {}, f: j.f || {} }; }).catch(function(){})
+  var FON_RU = { t: {}, c: {}, f: {} }, FON_BAL = {}, fonRuReady = FON && typeof fetch === "function"
+    ? Promise.all([
+        fetch(MIRROR + "fon/ru.json?t=" + Math.floor(Date.now() / 600000)).then(function(r){ return r.ok ? r.json() : null; })
+          .then(function(j){ if(j) FON_RU = { t: j.t || {}, c: j.c || {}, f: j.f || {} }; }).catch(function(){}),
+        /* единая библиотека названий: команда, которая есть у Балтбета, пишется у Фонбета так же (data/api/fon/ru_bal.json) */
+        fetch(MIRROR + "fon/ru_bal.json?t=" + Math.floor(Date.now() / 600000)).then(function(r){ return r.ok ? r.json() : null; })
+          .then(function(j){ if(j && j.t) FON_BAL = j.t; }).catch(function(){})
+      ]).then(function(){ FON_LAT = null; })
     : Promise.resolve();
   function ruTeam(x){
     if(!FON) return x;
     var m = /^(\d+:\d+\s+)?(.*?)(\s*\((?:w|W)\))?$/.exec(String(x || "").trim());
     if(!m) return x;
     var base = FON_RU.t[m[2]] || latRu(m[2]);
+    base = FON_BAL[base] || base.replace(/\s*\bU\s?(\d{2})$/, "($1)");   /* молодёжные — «Греция(21)», как у Балтбета */
     return (m[1] || "") + base + (m[3] ? " (ж)" : "");
   }
   /* запасной перевод: названия, которых ещё нет в словаре (конвейер пополняет его сам), пишем русскими буквами по правилам */
@@ -8775,7 +8795,7 @@
       rowsEl.appendChild(row);
     });
     var done = p.matches.filter(function(m){ return m.res; }).length;
-    var live = p.matches.filter(function(m){ return !m.res && m.score; }).length;
+    var live = p.matches.filter(function(m){ if(m.res || !m.score) return false; var li = liveInfo(m); return !(li && li.end); }).length;   /* матч, который уже закончился и ждёт итога, не «идёт» */
     var voids = p.matches.filter(function(m){ return m.res === VOID; }).length;
     var bar = $("prevBar");
     var curN = Number(state.tirazh), prvN = curN - 1, pn = Number(p.tirazh);

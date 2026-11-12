@@ -6,7 +6,7 @@ data/api/fs-<спорт>.txt в том же формате ленты (сайт 
 Первая запись «ZT÷<время снимка>» нужна сайту, чтобы понимать возраст данных.
 Ключей и платных API не нужно.
 """
-import os, re, sys, time, urllib.request
+import calendar, os, re, sys, time, urllib.request
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "data", "api")
@@ -18,7 +18,7 @@ HDR = {"User-Agent": "Mozilla/5.0 (dzhek15 fslive)", "Origin": "https://dzhek15.
 # FSLIVE_FAST=1: только fs-now (матчи тиража, быстрый круг каждые 20 с); FSLIVE_FORCE=1: писать файл всегда, чтобы обновить время снимка
 FAST = os.environ.get("FSLIVE_FAST") == "1"
 FORCE = os.environ.get("FSLIVE_FORCE") == "1"
-KEEP = ("AA", "AB", "AC", "AD", "AE", "AF", "AG", "AH", "AO", "BX", "OA", "OB", "PX", "PY", "WU", "WV")
+KEEP = ("AA", "AB", "AC", "AD", "AE", "AF", "AG", "AH", "AT", "AU", "AO", "BX", "OA", "OB", "PX", "PY", "WU", "WV")
 
 
 def get(url):
@@ -44,10 +44,11 @@ def build(text, now, toks=None):
             if kv.get("ZY") or kv.get("ZA"):
                 head = "ZY÷%s¬ZA÷%s" % (kv.get("ZY", ""), kv.get("ZA", "")); keep_head = False
             continue
-        if toks is not None and not (norm_tokens(kv.get("AE", "")) & toks or norm_tokens(kv.get("AF", "")) & toks):
+        if toks is not None and not want(kv, head, toks):
             continue
         live = kv.get("AB") == "2"
-        done = kv.get("AB") == "3" and kv.get("AC") == "3" and now - int(kv.get("AD") or 0) < 4 * 3600
+        # AC=3 — обычный финал, 10 — после ОТ/доп. времени, 11 — после буллитов/пенальти: итог по AT/AU (основное время)
+        done = kv.get("AB") == "3" and kv.get("AC") in FIN_CODES and now - int(kv.get("AD") or 0) < 4 * 3600
         # перенесён (AC=4) или отменён (AC=5): держим сутки, сайт подписывает такой матч в просмотре тиража
         void = kv.get("AB") == "3" and kv.get("AC") in ("4", "5") and abs(now - int(kv.get("AD") or 0)) < 36 * 3600
         if not (live or done or void):
@@ -59,6 +60,28 @@ def build(text, now, toks=None):
 
 
 DKEEP = ("AA", "AD", "AE", "AF", "OA", "OB", "PX", "PY", "WU", "WV")   # только то, что нужно для ссылки на матч
+
+
+FIN_CODES = ("3", "10", "11")
+EN_COMMON = {"united", "city", "real", "athletic", "sport", "sporting", "club", "town", "rovers", "county", "wanderers",
+             "albion", "athletico", "atletico", "dynamo", "dinamo", "spartak", "olympic", "youth", "reserves", "women"}
+FON_EV = []   # (время начала UTC, страна по-русски) матчей тиража Фонбета — второй способ найти матч, если названия не совпали
+
+
+def want(kv, head, toks):
+    """Матч из ленты нужен, если слово его названия есть среди слов тиража, либо он начинается в минуту матча
+    тиража Фонбета в той же стране (Flashscore пишет «Эль-Терасана» и «Masar», у Фонбета «Терсана» и «Masar»)."""
+    if norm_tokens(kv.get("AE", "")) & toks or norm_tokens(kv.get("AF", "")) & toks:
+        return True
+    try:
+        ad = int(kv.get("AD") or 0)
+    except ValueError:
+        return False
+    zy = re.search(r"ZY÷([^¬]*)", head or "")
+    ctry = (zy.group(1) if zy else "").strip().lower().replace("ё", "е")
+    if not ctry:
+        return False
+    return any(abs(ad - ts) <= 600 and ctry == c for ts, c in FON_EV)
 
 
 def norm_tokens(name):
@@ -95,7 +118,8 @@ def draw_tokens():
     try:
         import json
         fon = os.path.join(OUT, "fon")
-        ru = json.load(open(os.path.join(fon, "ru.json"), encoding="utf-8")).get("t", {})
+        ru_all = json.load(open(os.path.join(fon, "ru.json"), encoding="utf-8"))
+        ru, ru_c = ru_all.get("t", {}), ru_all.get("c", {})
         lst = json.load(open(os.path.join(fon, "drawings-1.json"), encoding="utf-8"))
         lst = lst if isinstance(lst, list) else lst.get("data", [])
         for d in lst[:2]:
@@ -104,9 +128,18 @@ def draw_tokens():
                 continue
             info = json.load(open(p, encoding="utf-8"))
             for e in (info.get("data", info).get("events") or []):
+                try:
+                    ts = calendar.timegm(time.strptime(str(e.get("start_at"))[:19], "%Y-%m-%d %H:%M:%S"))
+                    cc = str(e.get("championship") or "").split(".")
+                    if len(cc) > 1:
+                        c = ru_c.get(cc[1].strip())
+                        if c:
+                            FON_EV.append((ts, c.lower().replace("ё", "е")))
+                except Exception:
+                    pass
                 for side in re.split(r"\s+[—–-]\s+", e.get("name", "")):
                     side = side.strip()
-                    toks |= norm_tokens(ru.get(side, side))
+                    toks |= norm_tokens(ru.get(side, side)) | (norm_tokens(side) - EN_COMMON)
     except Exception as e:
         print("fslive: тираж Фонбета не прочитан", e)
     return toks
@@ -128,7 +161,7 @@ def build_draw(text, toks):
         hz = (head or "").lower().replace("ё", "е")
         zy = re.search(r"zy÷([^¬]*)", hz); za = re.search(r"za÷([^:¬]*)", hz)
         reg = (zy.group(1).strip() if zy else "") in DRAW_REG or (za.group(1).strip() if za else "") in DRAW_REG
-        if not (reg or norm_tokens(kv.get("AE", "")) & toks or norm_tokens(kv.get("AF", "")) & toks):
+        if not (reg or want(kv, head, toks)):
             continue
         out[kv["AA"]] = (head, "¬".join("%s÷%s" % (k, kv[k]) for k in DKEEP if k in kv), int(kv.get("AD") or 0))
     return out
@@ -170,7 +203,7 @@ def write_draw(sport, now, toks):
     return True
 
 
-DONE_KEEP = ("AA", "AB", "AC", "AD", "AE", "AF", "AG", "AH", "PX", "PY", "WU", "WV")   # PX, PY, WU, WV нужны разборщику ленты на сайте
+DONE_KEEP = ("AA", "AB", "AC", "AD", "AE", "AF", "AG", "AH", "AT", "AU", "PX", "PY", "WU", "WV")   # PX, PY, WU, WV нужны разборщику ленты на сайте
 
 
 def build_done(text, toks):
@@ -186,11 +219,11 @@ def build_done(text, toks):
             if kv.get("ZY") or kv.get("ZA"):
                 head = "ZY÷%s¬ZA÷%s" % (kv.get("ZY", ""), kv.get("ZA", ""))
             continue
-        if kv.get("AB") != "3" or kv.get("AC") != "3":
+        if kv.get("AB") != "3" or kv.get("AC") not in FIN_CODES:
             continue
         if not (kv.get("AG", "").isdigit() and kv.get("AH", "").isdigit()):
             continue
-        if not (norm_tokens(kv.get("AE", "")) & toks or norm_tokens(kv.get("AF", "")) & toks):
+        if not want(kv, head, toks):
             continue
         out[kv["AA"]] = (head, "¬".join("%s÷%s" % (k, kv[k]) for k in DONE_KEEP if k in kv), int(kv.get("AD") or 0))
     return out

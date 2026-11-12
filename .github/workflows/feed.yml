@@ -37,6 +37,10 @@ jobs:
         run: python3 scripts/fonres.py
         continue-on-error: true
 
+      - name: Единая библиотека названий команд (Фонбет как у Балтбета)
+        run: python3 scripts/fonlib.py
+        continue-on-error: true
+
       - name: Журнал Фонбета - Защита и Ценность (проверка вперёд)
         run: python3 scripts/fonstrat.py
         continue-on-error: true

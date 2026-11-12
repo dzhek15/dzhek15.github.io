@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FON = os.path.join(ROOT, "data", "api", "fon")
 HIST = os.path.join(FON, "history.json")
-FEED = "https://2.flashscore.ninja/2/x/feed/f_1_%d_3_en_1"
+FEED = "https://2.flashscore.ninja/2/x/feed/f_%d_%d_3_en_1"
 BACK = 7
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -41,10 +41,17 @@ def parse(text):
             kv = part.split("÷")
             if len(kv) == 2:
                 o[kv[0]] = kv[1]
-        if o.get("AB") != "3" or not (o.get("AE") and o.get("AF")):
+        if o.get("AB") != "3" or not (o.get("AE") and o.get("AF")) or o.get("AC") not in ("3", "10", "11"):
             continue
+        # итог — счёт основного времени (AT/AU): без овертайма, буллитов, доп. времени и пенальти (AC 10 / 11)
         try:
-            out.append((o["AE"], o["AF"], int(o.get("AD", "0")), int(o["AG"]), int(o["AH"])))
+            if o.get("AT", "").isdigit() and o.get("AU", "").isdigit():
+                gh, ga = int(o["AT"]), int(o["AU"])
+            elif o.get("AC") == "3":
+                gh, ga = int(o["AG"]), int(o["AH"])
+            else:
+                continue
+            out.append((o["AE"], o["AF"], int(o.get("AD", "0")), gh, ga))
         except (KeyError, ValueError):
             continue
     return out
@@ -107,7 +114,8 @@ def main():
     days = range(-min(BACK, int((now - first) / 86400) + 1), 1)
     rows = []
     for dd in days:
-        rows += parse(get(FEED % dd))
+        for sp in (1, 4):                 # футбол и хоккей
+            rows += parse(get(FEED % (sp, dd)))
     print("fonres: сыгранных в ленте", len(rows), "за дни", days[0], "…", days[-1])
     jres = {}
     try:

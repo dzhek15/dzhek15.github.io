@@ -19,3 +19,5 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
       - name: Тест сверки названий
         run: node tests/match.test.js
+      - name: Тест итога по основному времени
+        run: node tests/fsfinal.test.js
