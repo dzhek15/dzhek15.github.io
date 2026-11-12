@@ -1,8 +1,36 @@
 {
- "updated": "2026-11-11",
+ "updated": "2026-11-12",
  "count": 60,
  "note": "база обоев: каждый день после разбора ИИ добавляются новые по свежим новостям, рисуют бесплатные нейросети",
  "items": [
+  {
+   "src": "img/wp/auto/20261112-1.webp",
+   "light": "img/wp/auto/20261112-1l.webp",
+   "theme": "Узбекский дебют",
+   "by": "pollinations:sana",
+   "d": "2026-11-12"
+  },
+  {
+   "src": "img/wp/auto/20261112-2.webp",
+   "light": "img/wp/auto/20261112-2l.webp",
+   "theme": "Армения – Кипр",
+   "by": "pollinations:sana",
+   "d": "2026-11-12"
+  },
+  {
+   "src": "img/wp/auto/20261112-3.webp",
+   "light": "img/wp/auto/20261112-3l.webp",
+   "theme": "Мадагаскар – Гвинея",
+   "by": "pollinations:sana",
+   "d": "2026-11-12"
+  },
+  {
+   "src": "img/wp/auto/20261112-4.webp",
+   "light": "img/wp/auto/20261112-4l.webp",
+   "theme": "Литва – Суринам",
+   "by": "pollinations:sana",
+   "d": "2026-11-12"
+  },
   {
    "src": "img/wp/auto/20261111-1.webp",
    "light": "img/wp/auto/20261111-1l.webp",
@@ -391,34 +419,6 @@
    "src": "img/wp/auto/20261101-g13.webp",
    "light": "img/wp/auto/20261101-g13l.webp",
    "theme": "Мяч в дожде под фонарём",
-   "by": "generated",
-   "d": "2026-11-01"
-  },
-  {
-   "src": "img/wp/auto/20261101-g14.webp",
-   "light": "img/wp/auto/20261101-g14l.webp",
-   "theme": "Тренерская зона",
-   "by": "generated",
-   "d": "2026-11-01"
-  },
-  {
-   "src": "img/wp/auto/20261101-g15.webp",
-   "light": "img/wp/auto/20261101-g15l.webp",
-   "theme": "Кубок на траве",
-   "by": "generated",
-   "d": "2026-11-01"
-  },
-  {
-   "src": "img/wp/auto/20261101-g16.webp",
-   "light": "img/wp/auto/20261101-g16l.webp",
-   "theme": "Табло в тумане",
-   "by": "generated",
-   "d": "2026-11-01"
-  },
-  {
-   "src": "img/wp/auto/20261101-g17.webp",
-   "light": "img/wp/auto/20261101-g17l.webp",
-   "theme": "Штрафная площадка",
    "by": "generated",
    "d": "2026-11-01"
   }
