@@ -281,11 +281,15 @@ def learn_update(jr, now):
     obs = {}
     for r in done:
         for i, e in enumerate(r["ev"]):
+            if r["res"][i] not in ("1", "X", "2"):
+                continue            # итог неизвестен — в обучении не участвует
             o = "1X2".index(r["res"][i])
             hits[o] += 1
             for j in range(3):
                 exp[j] += e.get("p0", e["p"])[j]
         for i, tr in enumerate(r.get("tr") or []):
+            if r["res"][i] not in ("1", "X", "2"):
+                continue
             for j in range(3):
                 t = tr[j]
                 if t >= 9:
@@ -434,14 +438,29 @@ def main():
     except Exception as e:
         print("итоги из архива не подмешаны:", e)
 
+    # 2в. итоги, внесённые вручную для матчей, которых нет в ленте Flashscore (низшие лиги): data/api/fon/res_manual.json
+    try:
+        for k, v in (rd(os.path.join(FON, "res_manual.json"), {}) or {}).items():
+            if k not in jr["results"] and v.get("r") in ("1", "X", "2"):
+                jr["results"][str(k)] = {"s": str(v.get("s", "")).replace(" ", ""), "r": v["r"]}
+    except Exception as e:
+        print("ручные итоги не подмешаны:", e)
+
     # 3. подсчёт закрытых тиражей
     for num, rec in jr["draws"].items():
         if rec.get("done") or now < rec.get("end", 1e18):
             continue
         res = [(jr["results"].get(str(e["id"])) or {}).get("r") for e in rec["ev"]]
         if any(r is None for r in res):
-            rec["res_n"] = sum(r is not None for r in res)
-            continue
+            known = sum(r is not None for r in res)
+            rec["res_n"] = known
+            # матча нет в ленте Flashscore (низшая лига) и итога нет трое суток: тираж не вечно открыт —
+            # закрываем, неизвестный матч считаем непокрытым («?»), чтобы статистику не завысить
+            if not (now > rec.get("end", 1e18) + 72 * 3600 and known >= 13):
+                continue
+            res = [r if r is not None else "?" for r in res]
+            rec["unk"] = len(res) - known
+            print("тираж", num, "закрыт с неизвестными итогами:", rec["unk"])
         rec["res"] = res
         rec["score"] = {}
         for k in rec["sets"]:
