@@ -1,8 +1,36 @@
 {
- "updated": "2026-11-12",
+ "updated": "2026-11-13",
  "count": 60,
  "note": "база обоев: каждый день после разбора ИИ добавляются новые по свежим новостям, рисуют бесплатные нейросети",
  "items": [
+  {
+   "src": "img/wp/auto/20261113-1.webp",
+   "light": "img/wp/auto/20261113-1l.webp",
+   "theme": "Дуэль Молдова‑Казахстан",
+   "by": "pollinations:sana",
+   "d": "2026-11-13"
+  },
+  {
+   "src": "img/wp/auto/20261113-2.webp",
+   "light": "img/wp/auto/20261113-2l.webp",
+   "theme": "Тренерский вызов",
+   "by": "pollinations:sana",
+   "d": "2026-11-13"
+  },
+  {
+   "src": "img/wp/auto/20261113-3.webp",
+   "light": "img/wp/auto/20261113-3l.webp",
+   "theme": "Травма лидера",
+   "by": "pollinations:sana",
+   "d": "2026-11-13"
+  },
+  {
+   "src": "img/wp/auto/20261113-4.webp",
+   "light": "img/wp/auto/20261113-4l.webp",
+   "theme": "Дружеский матч",
+   "by": "pollinations:sana",
+   "d": "2026-11-13"
+  },
   {
    "src": "img/wp/auto/20261112-1.webp",
    "light": "img/wp/auto/20261112-1l.webp",
@@ -391,34 +419,6 @@
    "src": "img/wp/auto/20261101-g09.webp",
    "light": "img/wp/auto/20261101-g09l.webp",
    "theme": "Скамейка запасных",
-   "by": "generated",
-   "d": "2026-11-01"
-  },
-  {
-   "src": "img/wp/auto/20261101-g10.webp",
-   "light": "img/wp/auto/20261101-g10l.webp",
-   "theme": "Трофей в свете",
-   "by": "generated",
-   "d": "2026-11-01"
-  },
-  {
-   "src": "img/wp/auto/20261101-g11.webp",
-   "light": "img/wp/auto/20261101-g11l.webp",
-   "theme": "Стадион на рассвете",
-   "by": "generated",
-   "d": "2026-11-01"
-  },
-  {
-   "src": "img/wp/auto/20261101-g12.webp",
-   "light": "img/wp/auto/20261101-g12l.webp",
-   "theme": "Свисток судьи",
-   "by": "generated",
-   "d": "2026-11-01"
-  },
-  {
-   "src": "img/wp/auto/20261101-g13.webp",
-   "light": "img/wp/auto/20261101-g13l.webp",
-   "theme": "Мяч в дожде под фонарём",
    "by": "generated",
    "d": "2026-11-01"
   }
