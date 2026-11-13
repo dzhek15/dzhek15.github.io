@@ -611,6 +611,9 @@
 "вила нова": {
 "f": "M5AhQV5k-OjIDDdYc.png"
 },
+"вила-нова": {
+"f": "M5AhQV5k-OjIDDdYc.png"
+},
 "виллем ii": {
 "f": "hbv1mqS0-WQMFphXe.png"
 },
@@ -951,8 +954,14 @@
 "ипсвич таун": {
 "f": "r9vl4eQq-0C98slBk.png"
 },
+"исидро метапан": {
+"f": "wp-a-d-isidro-metapan.png"
+},
 "исмаили": {
 "f": "MmqBtane-OYCzxRxR.png"
+},
+"ист файф": {
+"f": "Y5RrDAle-GYKwgq56.png"
 },
 "иттихад танжер": {
 "c": [
@@ -1004,6 +1013,9 @@
 "#bca593"
 ],
 "id": 88
+},
+"каньуэльс": {
+"f": "SQEjDG5k-OM0ewH6q.png"
 },
 "кардифф сити": {
 "f": "AaPWNHkC-x4VfTaKj.png"
@@ -1328,6 +1340,9 @@
 },
 "лузитания": {
 "f": "wp-lusitania-f-c.png"
+},
+"луис анхель фирпо": {
+"f": "wp-c-d-luis-angel-firpo.png"
 },
 "льянерос": {
 "f": "dtGebzCN-hjn5AE5Q.png"
@@ -1691,6 +1706,9 @@
 "пиза": {
 "f": "vPrevkT0-GMOw3SI3.png"
 },
+"питерхед": {
+"f": "fNbunNjT-f9VC89dt.png"
+},
 "пичерно": {
 "f": "fLL9crU0-bVwIsq6I.png"
 },
@@ -1790,6 +1808,9 @@
 },
 "реал сосьедад": {
 "f": "rcAkl5le-vJb36ZBF.png"
+},
+"реал сосьедад 2": {
+"f": "wp-real-sociedad.png"
 },
 "ред стар": {
 "f": "fT80UIA6-pEpm230o.png"
@@ -1988,6 +2009,9 @@
 "сент-миррен": {
 "f": "KbDNdAU0-tOCheaQB.png"
 },
+"сентрал кордоба (росарио)": {
+"f": "GfdtA8ne-j54b6INn.png"
+},
 "сентраль кордоба сде(р)": {
 "f": "zNZbAfjC-d69BZg1U.png"
 },
@@ -2050,6 +2074,9 @@
 },
 "спартак москва": {
 "f": "nNSI2PQq-reD2dQ65.png"
+},
+"спеннимур таун": {
+"f": "tOkc9fUH-fTmRJPwD.png"
 },
 "специя": {
 "f": "08qns8VH-SEcuqyiS.png"
@@ -2135,6 +2162,9 @@
 },
 "текстильщик": {
 "f": "r3YFCyB6-bkOy8IPC.png"
+},
+"телфорд": {
+"f": "jLjef686-AX3yoE3N.png"
 },
 "тенерифе": {
 "f": "S8MpS386-UBV6BGsc.png"
@@ -2494,6 +2524,9 @@
 },
 "чезена": {
 "f": "4djRU87k-25XOeEt1.png"
+},
+"челмсфорд сити": {
+"f": "0Y48lfne-SY7hNqon.png"
 },
 "челси": {
 "f": "lMxEQ8me-vcRg8e0j.png"
