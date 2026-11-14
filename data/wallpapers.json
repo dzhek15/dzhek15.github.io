@@ -1,8 +1,36 @@
 {
- "updated": "2026-11-13",
+ "updated": "2026-11-14",
  "count": 60,
  "note": "база обоев: каждый день после разбора ИИ добавляются новые по свежим новостям, рисуют бесплатные нейросети",
  "items": [
+  {
+   "src": "img/wp/auto/20261114-1.webp",
+   "light": "img/wp/auto/20261114-1l.webp",
+   "theme": "Потери перед матчем",
+   "by": "pollinations:sana",
+   "d": "2026-11-14"
+  },
+  {
+   "src": "img/wp/auto/20261114-2.webp",
+   "light": "img/wp/auto/20261114-2l.webp",
+   "theme": "Давление трибун",
+   "by": "pollinations:sana",
+   "d": "2026-11-14"
+  },
+  {
+   "src": "img/wp/auto/20261114-3.webp",
+   "light": "img/wp/auto/20261114-3l.webp",
+   "theme": "Кубковая сенсация",
+   "by": "pollinations:sana",
+   "d": "2026-11-14"
+  },
+  {
+   "src": "img/wp/auto/20261114-4.webp",
+   "light": "img/wp/auto/20261114-4l.webp",
+   "theme": "Борьба за еврокубки",
+   "by": "pollinations:sana",
+   "d": "2026-11-14"
+  },
   {
    "src": "img/wp/auto/20261113-1.webp",
    "light": "img/wp/auto/20261113-1l.webp",
@@ -391,34 +419,6 @@
    "src": "img/wp/auto/20261101-g05.webp",
    "light": "img/wp/auto/20261101-g05l.webp",
    "theme": "Сапоги на скамье",
-   "by": "generated",
-   "d": "2026-11-01"
-  },
-  {
-   "src": "img/wp/auto/20261101-g06.webp",
-   "light": "img/wp/auto/20261101-g06l.webp",
-   "theme": "Прожекторы сквозь дым",
-   "by": "generated",
-   "d": "2026-11-01"
-  },
-  {
-   "src": "img/wp/auto/20261101-g07.webp",
-   "light": "img/wp/auto/20261101-g07l.webp",
-   "theme": "Разметка поля сверху",
-   "by": "generated",
-   "d": "2026-11-01"
-  },
-  {
-   "src": "img/wp/auto/20261101-g08.webp",
-   "light": "img/wp/auto/20261101-g08l.webp",
-   "theme": "Мяч у штанги",
-   "by": "generated",
-   "d": "2026-11-01"
-  },
-  {
-   "src": "img/wp/auto/20261101-g09.webp",
-   "light": "img/wp/auto/20261101-g09l.webp",
-   "theme": "Скамейка запасных",
    "by": "generated",
    "d": "2026-11-01"
   }
