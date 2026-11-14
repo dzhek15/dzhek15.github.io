@@ -10688,7 +10688,12 @@
         loadHistory(rows);
         /* тираж сменился, а в корзине уже что-то есть — молча не сносим.
            Если номер запрошен явно (ссылка на купон), переход как раз и нужен. */
-        if(!wantNumber && silent && String(d.number) !== String(state.tirazh) && (state.played.length || state.rolls)){
+        /* открытый тираж уже закрыт (приём окончен или источник не считает его активным) — держать его в корзине незачем:
+           его купон остаётся в сохранённых, а новый активный тираж подтягивается сам, прошлым становится тот, что идёт сейчас */
+        var oldRow = null; rows.forEach(function(x){ if(String(x.number) === String(state.tirazh)) oldRow = x; });
+        var oldDl = Date.parse((oldRow && oldRow.ended_at) || state.deadline || "");
+        var oldClosed = (oldRow && oldRow.status && oldRow.status !== "active") || (isFinite(oldDl) && oldDl < Date.now());
+        if(!wantNumber && silent && !oldClosed && String(d.number) !== String(state.tirazh) && (state.played.length || state.rolls)){
           return { changed: d.number };
         }
         state.deadline = d.ended_at || "";
