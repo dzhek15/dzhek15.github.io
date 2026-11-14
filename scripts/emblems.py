@@ -89,6 +89,8 @@ def sim(w, v):
 def same(q, c):
     """Совпадение имён: все важные слова одного нашлись (точно или почти) среди слов другого."""
     if tag(q) != tag(c): return False
+    sq = lambda x: re.sub(r"[^a-z0-9]+", "", ascii_(x))
+    if len(sq(q)) >= 4 and re.search(r"\d", sq(q)) and sq(q) == sq(c): return True   # «HV71» и «HV 71»
     qw, cw = words(q), words(c)
     def cover(a, b): return bool(a) and all(any(sim(x, y) for y in b) for x in a)
     return cover(core(q), cw) or cover(core(c), qw)

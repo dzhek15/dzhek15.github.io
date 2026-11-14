@@ -2076,6 +2076,10 @@
     var al = FS_ALIAS[String(queryClean || "").toLowerCase().replace(/ё/g, "е")];
     if(al && al.some(function(x){ return x.toLowerCase() === String(candidateName || "").toLowerCase(); })) return true;
     if(fsMatches(queryCore, candidateName)) return true;
+    /* названия из букв и цифр без длинных слов: «HV71» у Фонбета и «ХВ-71» на Flashscore — сравниваем слитно, в латинице */
+    var sq = function(x){ return translit(String(x || "").toLowerCase().replace(/ё/g, "е")).replace(/[^a-z0-9]+/g, ""); };
+    var sqQ = sq(queryClean);
+    if(sqQ.length >= 4 && /\d/.test(sqQ) && sqQ === sq(fsNoCountry(candidateName))) return true;
     var candCore = fsCoreWords(fsNoCountry(candidateName));
     if(candCore.length && fsMatches(candCore, queryClean)) return true;
     /* латинский адрес команды: «Гол Гохар» у Flashscore называется «Сирьян», но адрес — gol-gohar */
