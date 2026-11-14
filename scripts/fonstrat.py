@@ -235,9 +235,9 @@ def feed_results():
                 if len(kv) == 2:
                     o[kv[0]] = kv[1]
             if o.get("AB") == "3" and o.get("AE") and o.get("AF") and o.get("AC") in ("4", "5"):
-                try:    # отменён (5) или перенесён и не сыгран за 48 часов (4): в тото выигрыш по любому исходу
+                try:    # отменён (5) или перенесён (4): в тото выигрыш по любому исходу, сразу
                     ts = int(o.get("AD", "0"))
-                    if o.get("AC") == "5" or (ts and time.time() > ts + 48 * 3600):
+                    if ts and time.time() > ts:
                         rows.append((o["AE"], o["AF"], ts, -1, -1))
                 except ValueError:
                     pass

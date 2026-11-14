@@ -2709,10 +2709,10 @@
           /* в просмотре тиража подписываем матч «перенесён»/«отменён»; в текущем купоне это делает checkFsVoids */
           var vtag = FS_VOID_CODES[f.sc];
           if(vtag && state.prev && state.prev.matches.indexOf(m) >= 0 && !m.res && m.fsVoid !== vtag){ m.fsVoid = vtag; changed = true; }
-          /* Фонбет: отменённый матч (код 5) засчитан выигрышным по любому исходу; перенесённый (код 4) — если за 48 часов с начала так и не сыгран */
+          /* Фонбет: отменённый матч (код 5) засчитан выигрышным по любому исходу; перенесённый (код 4) — так же, сразу */
           if(vtag && FON && state.prev && state.prev.matches.indexOf(m) >= 0 && !m.res){
             var tsV = Number(f.ts) * 1000;
-            if(f.sc === "5" || (f.sc === "4" && tsV > 0 && Date.now() > tsV + 48 * 3600000)){ m.res = VOID; m.resFs = 1; changed = true; }
+            if(!(tsV > 0) || Date.now() > tsV){ m.res = VOID; m.resFs = 1; changed = true; }
           }
           return;
         }
@@ -2758,7 +2758,7 @@
         miss.forEach(function(m){
           var f = fsLookup(m, dby[fsFeedSport(m.league)] || []);
           var rg2 = fsFinished(f) ? fsRegScore(f) : null;
-          if(!rg2 && f && f.st === "3" && f.sc === "5" && !m.res){ m.res = VOID; m.resFs = 1; m.fsEnd = m.fsEnd || Date.now(); changed = true; return; }   /* отменён — выигрыш по любому исходу */
+          if(!rg2 && f && f.st === "3" && (f.sc === "5" || f.sc === "4") && !m.res){ m.res = VOID; m.resFs = 1; m.fsEnd = m.fsEnd || Date.now(); changed = true; return; }   /* отменён — выигрыш по любому исходу */
           if(!rg2) return;
           var h9 = rg2[0], a9 = rg2[1];
           m.res = h9 > a9 ? "1" : (h9 < a9 ? "2" : "X"); m.resFs = 1; m.score = h9 + " : " + a9; m.fsEnd = m.fsEnd || Date.now(); changed = true;
