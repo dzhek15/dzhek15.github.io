@@ -463,6 +463,10 @@ def main():
             for sp in (1, 4):
                 rows += FR.parse(FR.get(FR.FEED % (sp, dd)))
         same = lambda q, c: E2.same(FR.norm(q), FR.norm(c))
+        sched = []                   # будущие дни: матч, исчезнувший со своего дня и стоящий в расписании позже, перенесён
+        for dd in range(1, 7):
+            for sp in (1, 4):
+                sched += FR.parse_sched(FR.get(FR.FEED % (sp, dd), tries=1))
         fixed = 0
         for num, rec in jr["draws"].items():
             for e in rec["ev"]:
@@ -475,6 +479,17 @@ def main():
                     wide = [x for x in both if x[0] <= 36 * 3600]
                     near = wide if len({(x[1], x[2]) for x in wide}) == 1 else []
                 if not near:
+                    # на своём дне матча нет, а в расписании он стоит позже (перенос): в тото — выигрыш по любому исходу, сразу
+                    # название команды у Фонбета и в Flashscore может не совпасть («Telecom Egypt» = «WE SC»): тогда хватает одной команды
+                    # на том же месте (дом/гости), если она в течение 36 ч не играла ничего другого, а ближайший её матч — позже
+                    played = [1 for fh, fa, ts, gh, ga in rows if abs(ts - st) <= 36 * 3600 and (FR.norm(nm[0]) == FR.norm(fh) or FR.norm(nm[1]) == FR.norm(fa))]
+                    cand = [(fh, fa, ts) for fh, fa, ts in sched if st + 6 * 3600 < ts < st + 4 * 86400 and (same(nm[0], fh) or same(nm[1], fa))]
+                    if not both and not played and len(cand) == 1 and st < now - 2 * 3600:
+                        new = resd(-1, -1)
+                        if jr["results"].get(str(e["id"])) != new:
+                            jr["results"][str(e["id"])] = new
+                            fixed += 1
+                            print("сверка: тираж", num, e["name"], "перенесён → отм")
                     continue
                 _, gh, ga = min(near)
                 new = resd(gh, ga)

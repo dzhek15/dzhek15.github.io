@@ -67,6 +67,20 @@ def parse(text):
     return out
 
 
+def parse_sched(text):
+    """Ещё не начавшиеся матчи ленты (AB=1): [(дом, гость, время начала)] — по ним видно, что матч перенесён на другой день."""
+    out = []
+    for rec in text.split("¬~"):
+        o = {}
+        for part in rec.split("¬"):
+            kv = part.split("÷")
+            if len(kv) == 2:
+                o[kv[0]] = kv[1]
+        if o.get("AB") == "1" and o.get("AE") and o.get("AF") and o.get("AD", "").isdigit():
+            out.append((o["AE"], o["AF"], int(o["AD"])))
+    return out
+
+
 def res_of(gh, ga):
     """Исход и счёт строкой; отменённый матч (счёт -1 : -1) — «*» и «отм.»: выигрыш по любому исходу."""
     if gh < 0 or ga < 0:
