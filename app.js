@@ -32,7 +32,7 @@
   /* переключение конторы перезагружает страницу: запоминаем прокрутку и возвращаем её, чтобы всё осталось на своих местах */
   var BKS_IDS = ["cover","roll","keepBar","bookBar","prevBar","aiTblBar","aiWaitPlate","cmpvBar","coupon","prevCsv","pctLegend"];
   /* окно, которое открыла последняя нажатая кнопка раздела: после переключения конторы открываем то же окно */
-  var BKS_OPEN = ["btnDiff","btnBrief","btnPF","btnFeedSt","btnZash","btnCen","btnData","btnSim","btnKelly","btnMonster","btnStat"], bkLastOp = null;
+  var BKS_OPEN = ["btnDiff","btnBrief","btnPF","btnFeedSt","btnZash","btnCen","btnData","btnSim","btnKelly","btnMonster","btnSingles","btnStat"], bkLastOp = null;
   document.addEventListener("click", function(ev){
     var t = ev.target, b = t && t.closest ? t.closest("button") : null;
     if(!b || (t.closest && t.closest("#evBack"))) return;
@@ -1751,7 +1751,34 @@
       .replace(/[«»"'`]/g, " ").replace(/(^|\s)фк\.?(?=\s|$)/g, " ")
       .replace(/\s+/g, " ").trim();
   }
-  function teamInfo(name){ return TEAMDB[teamKey(name)] || null; }
+  /* единый ключ команды для обеих контор: тот же, что scripts/fonlib.py key() — «Торрейнсе» = «Торреенсе», «Гвинея U23» = «Гвинея(23)», латиница-двойники кириллицы */
+  var JK_LOOK = { a: "а", c: "с", e: "е", k: "к", m: "м", h: "н", o: "о", p: "р", t: "т", x: "х", y: "у", b: "в" };
+  function jsKey(name){
+    var s = String(name || "").toLowerCase().replace(/ё/g, "е"), w = /\(ж\)\s*$/.test(s) ? " (ж)" : "";
+    s = s.replace(/\s*\(ж\)\s*$/, "");
+    s = s.replace(/\s*(?:\(\s*u?(\d{2})\s*\)|(?<![\p{L}\p{N}_])u\s?(\d{2}))\s*$/u, function(a, b, c){ return " u" + (b || c); });
+    if(/[а-я]/.test(s)) s = s.replace(/[acekmhoptxyb]/g, function(c){ return JK_LOOK[c]; });
+    s = s.replace(/я/g, "е").replace(/ю/g, "у").replace(/й/g, "и");
+    var STOP = { "фк": 1, "ск": 1, "fc": 1, "sk": 1, "кф": 1, "fk": 1, "cf": 1 };
+    var toks = s.split(/[^a-zа-я0-9]+/).filter(function(t){ return t && !STOP[t]; });
+    return toks.join("").replace(/(.)\1+/g, "$1") + w;
+  }
+  var TEAMDB_K = null, FSLOGO_K = null, FSLOGO_N = -1;
+  function teamDbIndex(){
+    if(TEAMDB_K) return TEAMDB_K;
+    TEAMDB_K = {};
+    Object.keys(TEAMDB).forEach(function(k){ var j = jsKey(k); if(j && !TEAMDB_K[j]) TEAMDB_K[j] = TEAMDB[k]; });
+    return TEAMDB_K;
+  }
+  function teamInfo(name){ return TEAMDB[teamKey(name)] || teamDbIndex()[jsKey(name)] || null; }
+  /* эмблема из ленты Flashscore по тому же единому ключу (имя у Фонбета и у Балтбета может писаться по-разному) */
+  function fsLogoOf(name){
+    var fl = state.fsLogo || {}, f = fl[teamKey(name)];
+    if(f) return f;
+    var ks = Object.keys(fl);
+    if(FSLOGO_N !== ks.length){ FSLOGO_K = {}; ks.forEach(function(k){ var j = jsKey(k); if(j && !FSLOGO_K[j]) FSLOGO_K[j] = fl[k]; }); FSLOGO_N = ks.length; }
+    return FSLOGO_K[jsKey(name)] || null;
+  }
   /* картинка эмблемы: своя база (icons/teams), иначе — эмблема из ленты Flashscore,
      которую сайт уже читает для времени матчей. У сборных вместо эмблемы — флаг */
   var FS_LOGO_HOST = "https://static.flashscore.com/res/image/data/";
@@ -1760,7 +1787,7 @@
     if(t && t.id) return "icons/teams/" + t.id + ".webp";
     if(t && t.f) return "icons/teams/fs/" + t.f;
     if(nat) return null;
-    var f = (state.fsLogo || {})[teamKey(name)];
+    var f = fsLogoOf(name);
     return f && /^[\w-]+\.png$/.test(f) ? FS_LOGO_HOST + f : null;
   }
   function loadTeamDb(){
@@ -1768,7 +1795,7 @@
     teamDbAt = Date.now();
     fetch(MIRROR + "teams.json?t=" + Math.floor(Date.now() / 3600000))
       .then(function(r){ return r.ok ? r.json() : null; })
-      .then(function(j){ if(j && typeof j === "object"){ TEAMDB = j; render(); } attachFsLogos(); })
+      .then(function(j){ if(j && typeof j === "object"){ TEAMDB = j; TEAMDB_K = null; render(); } attachFsLogos(); })
       .catch(function(){});
   }
   function mkEmb(name, nat){
@@ -2236,7 +2263,7 @@
     var list = state.matches.slice();
     if(state.prev && Array.isArray(state.prev.matches)) list = list.concat(state.prev.matches);
     var need = list.filter(function(m){
-      return [m.home, m.away].some(function(n){ return n && !teamInfo(n) && !state.fsLogo[teamKey(n)]; });
+      return [m.home, m.away].some(function(n){ return n && !teamInfo(n) && !fsLogoOf(n); });
     });
     if(!need.length) return;
     var sports = {};
@@ -2682,6 +2709,11 @@
           /* в просмотре тиража подписываем матч «перенесён»/«отменён»; в текущем купоне это делает checkFsVoids */
           var vtag = FS_VOID_CODES[f.sc];
           if(vtag && state.prev && state.prev.matches.indexOf(m) >= 0 && !m.res && m.fsVoid !== vtag){ m.fsVoid = vtag; changed = true; }
+          /* Фонбет: отменённый матч (код 5) засчитан выигрышным по любому исходу; перенесённый (код 4) — если за 48 часов с начала так и не сыгран */
+          if(vtag && FON && state.prev && state.prev.matches.indexOf(m) >= 0 && !m.res){
+            var tsV = Number(f.ts) * 1000;
+            if(f.sc === "5" || (f.sc === "4" && tsV > 0 && Date.now() > tsV + 48 * 3600000)){ m.res = VOID; m.resFs = 1; changed = true; }
+          }
           return;
         }
         var rg = f.st === "3" ? fsRegScore(f) : (/^\d+$/.test(f.hs || "") && /^\d+$/.test(f.as || "") ? (f.sc === "7" && /^\d+$/.test(f.rh || "") && /^\d+$/.test(f.ra || "") ? [+f.rh, +f.ra] : [+f.hs, +f.as]) : null);
@@ -2726,6 +2758,7 @@
         miss.forEach(function(m){
           var f = fsLookup(m, dby[fsFeedSport(m.league)] || []);
           var rg2 = fsFinished(f) ? fsRegScore(f) : null;
+          if(!rg2 && f && f.st === "3" && f.sc === "5" && !m.res){ m.res = VOID; m.resFs = 1; m.fsEnd = m.fsEnd || Date.now(); changed = true; return; }   /* отменён — выигрыш по любому исходу */
           if(!rg2) return;
           var h9 = rg2[0], a9 = rg2[1];
           m.res = h9 > a9 ? "1" : (h9 < a9 ? "2" : "X"); m.resFs = 1; m.score = h9 + " : " + a9; m.fsEnd = m.fsEnd || Date.now(); changed = true;
@@ -8233,13 +8266,13 @@
 
   /* Фонбет: названия команд и турниров приходят по-английски — переводим словарём data/api/fon/ru.json
      ({t: команды, c: части названия турнира, f: турнир целиком}); чего нет в словаре, остаётся как есть */
-  var FON_RU = { t: {}, c: {}, f: {} }, FON_BAL = {}, fonRuReady = FON && typeof fetch === "function"
+  var FON_RU = { t: {}, c: {}, f: {} }, FON_BAL = {}, FON_BALK = {}, fonRuReady = FON && typeof fetch === "function"
     ? Promise.all([
         fetch(MIRROR + "fon/ru.json?t=" + Math.floor(Date.now() / 600000)).then(function(r){ return r.ok ? r.json() : null; })
           .then(function(j){ if(j) FON_RU = { t: j.t || {}, c: j.c || {}, f: j.f || {} }; }).catch(function(){}),
         /* единая библиотека названий: команда, которая есть у Балтбета, пишется у Фонбета так же (data/api/fon/ru_bal.json) */
         fetch(MIRROR + "fon/ru_bal.json?t=" + Math.floor(Date.now() / 600000)).then(function(r){ return r.ok ? r.json() : null; })
-          .then(function(j){ if(j && j.t) FON_BAL = j.t; }).catch(function(){})
+          .then(function(j){ if(j && j.t){ FON_BAL = j.t; FON_BALK = j.k || {}; } }).catch(function(){})
       ]).then(function(){ FON_LAT = null; })
     : Promise.resolve();
   function ruTeam(x){
@@ -8247,7 +8280,7 @@
     var m = /^(\d+:\d+\s+)?(.*?)(\s*\((?:w|W)\))?$/.exec(String(x || "").trim());
     if(!m) return x;
     var base = FON_RU.t[m[2]] || latRu(m[2]);
-    base = FON_BAL[base] || base.replace(/\s*\bU\s?(\d{2})$/, "($1)");   /* молодёжные — «Греция(21)», как у Балтбета */
+    base = FON_BAL[base] || FON_BALK[jsKey(base)] || base.replace(/\s*\bU\s?(\d{2})$/, "($1)");   /* молодёжные — «Греция(21)», как у Балтбета */
     return (m[1] || "") + base + (m[3] ? " (ж)" : "");
   }
   /* запасной перевод: названия, которых ещё нет в словаре (конвейер пополняет его сам), пишем русскими буквами по правилам */
@@ -10743,7 +10776,7 @@
   }
   $("btnFeedSt").addEventListener("click", showData);
   if(!full()){
-    var VT = { btnDiff: "Матчи с нестандартной картиной", btnPF: "Отобрать перспективные строки купона", btnBrief: "Сжать систему до меньшего числа строк", btnData: "Стратегия «Охота на 15»", btnSim: "Стратегия «Симуляция»", btnKelly: "Стратегия «Келли»", btnZash: "Стратегия «Защита»", btnCen: "Стратегия «Монстр + толпа»", btnMonster: "Стратегия «Монстр Келли»", btnStat: "Статистика стратегий в прошлых тиражах" };
+    var VT = { btnDiff: "Матчи с нестандартной картиной", btnPF: "Отобрать перспективные строки купона", btnBrief: "Сжать систему до меньшего числа строк", btnSingles: "Только самые уверенные одиночные исходы", btnData: "Стратегия «Охота на 15»", btnSim: "Стратегия «Симуляция»", btnKelly: "Стратегия «Келли»", btnZash: "Стратегия «Защита»", btnCen: "Стратегия «Монстр + толпа»", btnMonster: "Стратегия «Монстр Келли»", btnStat: "Статистика стратегий в прошлых тиражах" };
     Object.keys(VT).forEach(function(k){ var e = $(k); if(e) e.title = VT[k]; });
   }
   setTimeout(function(){ checkData(); }, 4000);
@@ -12343,6 +12376,7 @@
     blend: "Три стратегии собирают купон на свежих данных. Каждая отвечает за свою цель; результаты копятся в статистике.",
     hunt: "Максимально сильный набор на крупный бюджет: сильная основа и расширение по итогам анализа. Набор считается один раз и дальше не меняется — по нему ведётся статистика.",
     sim: "Купон, нацеленный на частые призы. Размер ограничивается выбранной суммой.",
+    singles: "Ставит только самые уверенные одиночные исходы; остальные матчи остаются как есть.",
     kelly: "Купон на выбранную сумму с лучшим, по модели сайта, соотношением риска и отдачи. Если купон невыгоден, сайт честно предупредит.",
     monster: "Развитие «Келли»: та же цель, но с дополнительным анализом матчей. Купон собирается автоматически на выбранную сумму.",
     tilt: "Прямоугольный купон на выбранную сумму. Состав собирается автоматически по собственной модели сайта; результаты копятся в статистике."
@@ -12361,7 +12395,8 @@
     ["Келли", "Купон на выбранную сумму с лучшим соотношением риска и отдачи."],
     ["Монстр Келли", "Развитие «Келли» с дополнительным анализом матчей."],
     ["Защита", "Прямоугольный купон, нацеленный на то, чтобы как можно чаще накрывать матчи."],
-    ["Монстр + толпа", "Прямоугольный купон с поправкой на поведение игроков."]
+    ["Монстр + толпа", "Прямоугольный купон с поправкой на поведение игроков."],
+    ["Одиночки", "Ставит только самые уверенные одиночные исходы; остальные матчи не трогает."]
   ];
   var STRAT_GUIDE = [
     ["Расхождения", "Ищет матчи, где доля игроков сильнее всего расходится с оценкой конторы, и ставит исходы, которые толпа недоигрывает. Выигрыш в тотализаторе делится между угадавшими, поэтому такие исходы выгоднее.<span class=\"ev-bt\">На истории (733 тиража, 4142–5024): замена отдаёт не больше 5 п.п. вероятности, в среднем 2,8 замены за тираж. Приз в 10,4% тиражей, 12+ — в 0,41%. Прежнее правило (до 15 п.п., 8,4 замены) давало 7,1% и 0,14%. У линии фаворитов без замен призов чаще (12,7%). По деньгам модель даёт замене отдачу 2,06 против 1,36, но это одна крупная выплата: интервал разницы от −0,27 до +2,11, то есть ноль внутри. Выигрыш неустойчив.</span><span class=\"ev-bt\">Системный купон под лимит суммы (допы только на недогруженные толпой исходы) на истории не проверялся.</span>"],
@@ -12374,6 +12409,7 @@
     ["Монстр Келли", "Цель — не отставать по результату и улучшать Келли, а не копировать его. Собирает бриф 14 из 15 на сумму не больше 35 000 ₽: готовая система из библиотеки, которая гарантирует 14 угаданных, если все 15 исходов окажутся в основе купона. Форма выбирается по шансу накрыть все 15 исходов, исходы в матчах — по вероятности с поправкой на то, что толпа недоигрывает. Строки можно положить в корзину или скачать CSV. У Фонбета остаётся прежний способ: ядро по росту банка и добор."],
     ["Защита", "Цель — как можно чаще накрывать матчи. Прямоугольный купон на выбранную сумму до 300 000 ₽: допы идут туда, где они сильнее всего поднимают шанс накрыть матч по линии конторы. Толпа не учитывается. Прогнозы записываются в журнал и проверяются по итогам тиражей."],
     ["Монстр + толпа", "Цель — не делить приз с толпой. Тот же прямоугольный купон, но вес исхода — вероятность по линии конторы с поправкой на недогруз толпы (степень 0,6, мягко: на истории Фонбета доли игроков сжаты к равным). Проверка вперёд — в самой карточке."],
+    ,["Одиночки", "Цель — поставить только то, в чём стратегии согласны. Берутся исходы по матчам у всех стратегий конторы; матч ставится в купон, если этот исход есть у каждой стратегии и не меньше половины стратегий ставят на него одного, без двойников. Остальные матчи не трогаются, поэтому проставляется не весь купон."]
 
 
 
@@ -12466,6 +12502,7 @@
     });
     if(go && plan && plan.lines) go.textContent = "Основа в купон";
     limitBind(box, rerender);
+    if(FON && BAL_KEY[name]) balAttach(box, BAL_KEY[name]);
   }
   var STRAT_NOTE = '<p class="ev-note">Строки с фиксом не меняются. «Назад» откатит купон к прежнему виду. Это модель, а не гарантия.</p>';
 
@@ -12763,6 +12800,7 @@
       $("evBack").hidden = true;
       say("«Охота на 15»: " + fmt(lines.length) + " строк на " + fmt(lines.length * price) + " ₽ — в CSV.");
     });
+    balAttach(box, "hunt");
   }
   /* ---------- «Охота на 15» для тиража, у которого ещё нет готового набора ----------
      Тот же расчёт, что в pipeline/mkhunt.py: исходы по матчам набираются жадно, пока бриф 14 из 15 укладывается в 10 000 строк,
@@ -13240,6 +13278,12 @@
         return state.matches.map(function(m, ix){ var r = P.plan.rows.filter(function(x){ return x.m === m; })[0];
           return r ? { p: r.p || null, q: r.q || null, why: r.why || "", kup: fl[ix] || null, kdel: kd[ix] || null } : null; }); };
       var out = { no: state.tirazh, ms: state.matches.map(function(m){ return { home: m.home, away: m.away, p: evProbs(m) }; }), kel: null, mkel: null, det: { kel: null, mkel: null }, err: {} };
+      /* остальные стратегии: те же расчёты, что видит игрок в Балтбете (Симуляция, Охота, Защита, Монстр + толпа) */
+      var tryS = function(key, fn){ try { out[key] = fn() || null; if(!out[key]) out.err[key] = "нет купона"; } catch(e){ out.err[key] = String(e && e.message || e); } };
+      tryS("sim", function(){ var S = planBySim(stratBudgetValue()); return S && !S.error ? rows({ plan: S }) : null; });
+      tryS("zash", function(){ var T = planTilt(tiltLines(TILT.zash.key, 1024), "zash"); return T && !T.error ? rows({ plan: T }) : null; });
+      tryS("cen", function(){ var T = planTilt(tiltLines(TILT.cen.key, 1024), "cen"); return T && !T.error ? rows({ plan: T }) : null; });
+      tryS("hunt", function(){ var N = Number(state.huntSize) || 100, H = planHunt(HUNT_SIZES.indexOf(N) < 0 ? 100 : N); return H && !H.error && H.tab && H.tab.set ? H.tab.set.map(function(st){ return st && st.length ? st.slice() : null; }) : null; });
       try { var K = planByKelly(limitLines("kelLimit", limitMaxLines())); if(K && !K.error && K.pick){ out.kel = rows(K.pick); out.det.kel = det(K.pick); } else out.err.kel = K && K.error || "нет купона"; } catch(e){ out.err.kel = String(e && e.message || e); }
       try { var E = kelEdges(), M = planMonster(limitLines("mkelLimit", limitMaxLines()), !!E); if(M && !M.error && M.pick){ out.mkel = rows(M.pick); out.det.mkel = det(M.pick); } else out.err.mkel = M && M.error || "нет купона"; } catch(e){ out.err.mkel = String(e && e.message || e); }
       return out;
@@ -13272,12 +13316,22 @@
     });
     return BAL.busy;
   }
+  var BAL_NM = { kel: "Келли", mkel: "Монстр Келли", sim: "Симуляция", hunt: "Охота на 15", zash: "Защита", cen: "Монстр + толпа" };
+  var BAL_KEY = { "Келли": "kel", "Монстр Келли": "mkel", "Монстр Келли · улучшения": "mkel", "Симуляция": "sim", "Защита": "zash", "Монстр + толпа": "cen" };
   function balPanelHtml(which){
-    var nm = which === "mkel" ? "Монстр Келли" : "Келли";
-    return '<div class="ev-arb ev-bal"><div class="ev-arb-h">Расстановка по Балтбету</div>' +
-      '<p class="ev-note" style="text-align:left">Фонбет не публикует пул, поэтому «' + nm + '» здесь не посчитать. Матчи, которые есть и в Балтбете, можно проставить так, как «' + nm +
-      '» расставляет их там по пулу Балтбета. Остальные матчи не трогаются.</p>' +
-      '<div class="bal-go" style="text-align:center;margin:10px 0 8px"><button type="button" id="balFill" class="btn-ev" data-w="' + which + '">Проставить схожие матчи Балтбета</button></div><div id="balOut" class="ev-note" style="text-align:left"></div></div>';
+    var nm = BAL_NM[which] || "Келли";
+    return '<div class="ev-arb ev-bal" style="margin-top:14px"><div class="ev-arb-h">Варианты Балтбета</div>' +
+      '<p class="ev-note" style="text-align:left">Матчи, которые есть и в Балтбете, можно проставить так, как «' + nm +
+      '» расставляет их там. Остальные матчи не трогаются.</p>' +
+      '<div class="bal-go" style="text-align:center;margin:10px 0 8px"><button type="button" id="balFill" class="btn-ev" data-w="' + which + '">Расставить варианты Балтбета</button></div><div id="balOut" class="ev-note" style="text-align:left"></div></div>';
+  }
+  /* кнопка «Расставить варианты Балтбета» под окном любой стратегии Фонбета */
+  function balAttach(box, which){
+    if(!FON || !box || !which || box.querySelector("#balFill")) return;
+    var d = document.createElement("div"); d.innerHTML = balPanelHtml(which);
+    var go = box.querySelector(".ev-data-go");      /* сразу под кнопками «Подставить в купон», чтобы не искать внизу окна */
+    if(go && go.parentNode) go.parentNode.insertBefore(d, go.nextSibling); else box.appendChild(d);
+    balBind(d);
   }
   function balBind(box){
     var b = box.querySelector("#balFill"); if(!b) return;
@@ -13311,13 +13365,13 @@
           return;
         }
         save(); render();
-        say("Расстановка по Балтбету («" + (which === "mkel" ? "Монстр Келли" : "Келли") + "»): проставлено " + done.length + " из 15 матчей (" + done.map(function(d){ return d.i + 1; }).join(", ") + "), общих с тиражом Балтбета №" + D.no + (locked ? "; фиксированных не тронуто: " + locked : "") + ". Остальные матчи проставь сам. «Назад» откатит изменения.");
+        say("Расстановка по Балтбету («" + (BAL_NM[which] || "Келли") + "»): проставлено " + done.length + " из 15 матчей (" + done.map(function(d){ return d.i + 1; }).join(", ") + "), общих с тиражом Балтбета №" + D.no + (locked ? "; фиксированных не тронуто: " + locked : "") + ". Остальные матчи проставь сам. «Назад» откатит изменения.");
         $("evBack").hidden = true;   /* окно закрываем: результат виден в купоне и в подсказке */
         out.innerHTML = 'Проставлено <b>' + done.length + ' из 15</b> по тиражу Балтбета №' + escHtml(String(D.no)) + ': ' +
           done.map(function(d){ var m = state.matches[d.i]; return (d.i + 1) + '. ' + escHtml(m.home + " — " + m.away) + ' <b>' + d.s + '</b>'; }).join(" · ") +
           (locked ? '. Фиксированных матчей не тронуто: ' + locked : '') + (skipLine.length ? '. Не совпали по линии, пропущены: ' + escHtml(skipLine.join("; ")) : '') +
           '. Остальные ' + (15 - done.length) + ' матч(ей) в Балтбете этого тиража не играются — их нужно проставить самому.';
-        var tr = done.map(function(d){ var m = state.matches[d.i], dt = d.dt || {}; return { idx: d.i, m: m, p: dt.p || null, q: dt.q || null, set: d.set, why: dt.why || "", kup: dt.kup || null, locked: false }; }),
+        var tr = done.map(function(d){ var m = state.matches[d.i], dt = d.dt || {}; return { idx: d.i, m: m, p: dt.p || evProbs(m) || null, q: dt.q || null, set: d.set, why: dt.why || "", kup: dt.kup || null, locked: false }; }),
             nb = done.filter(function(d){ return d.dt && d.dt.kup; }).length;
         out.innerHTML += stratTable(tr) + (nb ? (full() ? '<p class="ev-note"><b class="kel-up-t">Синие</b> исходы попали в расстановку не по линии конторы: по перекосу против толпы Балтбета, улучшениям ИИ, усталости и доводам источников. Наведи на исход или открой матч в купоне — там описание причины, как в Балтбете. Вероятности и толпа в таблице — по Балтбету.</p>' : '<p class="ev-note"><b class="kel-up-t">Синие</b> исходы выбраны по расширенному анализу матчей.</p>') : '');
       }).catch(function(e){ b.disabled = false; out.textContent = "Не получилось взять Балтбет: " + String(e && e.message || e) + "."; });
@@ -13644,6 +13698,74 @@
   $("btnSim").addEventListener("click", showSim);
   $("btnKelly").addEventListener("click", showKellyStrat);
   if($("btnMonster")) $("btnMonster").addEventListener("click", showMonsterStrat);
+  /* ---------- «Одиночки»: исходы, с которыми согласны все стратегии ----------
+     Берутся наборы исходов по матчам у всех стратегий текущей конторы. Матч попадает в купон, только если у каждой стратегии
+     этот исход есть среди выбранных и не меньше половины стратегий ставят на него одного, без двойников. Остальные матчи не трогаются. */
+  var SING_NM = { kel: "Келли", mkel: "Монстр Келли", sim: "Симуляция", hunt: "Охота", zash: "Защита", cen: "Монстр + толпа", gap: "Расхождения" };
+  function singlesGather(){
+    var list = [], err = {};
+    var rowsOf = function(P){ return P && P.rows && P.rows.length === state.matches.length ? state.matches.map(function(m, i){
+      var r = P.rows.filter(function(x){ return x.m === m; })[0]; return r && !r.locked && r.p && r.set && r.set.length ? r.set.slice() : null; }) : null; };
+    var add = function(key, fn){ try { var sets = fn(); if(sets && sets.some(Boolean)) list.push({ key: key, nm: SING_NM[key], sets: sets }); else err[key] = 1; } catch(e){ err[key] = 1; } };
+    add("sim", function(){ var S = planBySim(stratBudgetValue()); return S && !S.error ? rowsOf(S) : null; });
+    add("kel", function(){ var K = planByKelly(limitLines("kelLimit", limitMaxLines())); return K && !K.error && K.pick ? rowsOf(K.pick.plan) : null; });
+    add("mkel", function(){ var E = kelEdges(), M = planMonster(limitLines("mkelLimit", limitMaxLines()), !!E); return M && !M.error && M.pick ? rowsOf(M.pick.plan) : null; });
+    add("hunt", function(){
+      var vr = virt.data && virt.data[String(state.tirazh)];
+      if(vr && vr.sets && vr.sets.length === 15) return vr.sets.map(function(st){ var a = String(st || "").split("").map(function(c){ return OUT.indexOf(c); }).filter(function(k){ return k >= 0; }); return a.length ? a : null; });
+      var N = Number(state.huntSize) || 100, H = planHunt(HUNT_SIZES.indexOf(N) < 0 ? 100 : N);
+      return H && !H.error && H.tab && H.tab.set ? H.tab.set.map(function(st){ return st && st.length ? st.slice() : null; }) : null;
+    });
+    if(FON){
+      add("zash", function(){ var T = planTilt(tiltLines(TILT.zash.key, 1024), "zash"); return T && !T.error ? rowsOf(T) : null; });
+      add("cen", function(){ var T = planTilt(tiltLines(TILT.cen.key, 1024), "cen"); return T && !T.error ? rowsOf(T) : null; });
+    } else {
+      add("gap", function(){ var G = planGapSys(limitLines("gapLimit", 1)); return G && !G.error ? rowsOf(G) : null; });
+    }
+    return { list: list, err: err };
+  }
+  /* единственный исход, с которым согласны все голосовавшие стратегии, или -1 */
+  function singlesPick(list, i){
+    var voters = list.map(function(x){ return x.sets[i]; }).filter(Boolean);
+    if(voters.length < 3) return -1;
+    for(var k = 0; k < 3; k++){
+      if(!voters.every(function(st){ return st.indexOf(k) >= 0; })) continue;
+      var alone = voters.filter(function(st){ return st.length === 1; }).length;
+      if(alone * 2 >= voters.length) return k;
+    }
+    return -1;
+  }
+  function showSingles(){
+    var box = stratGuard("Одиночки"); if(!box) return;
+    if(!virt.data && !virt.singTry){
+      virt.singTry = true; box.innerHTML = '<p class="ev-sub dt-center">Собираю наборы стратегий…</p>'; $("evBack").hidden = false;
+      Promise.resolve(loadVirt()).catch(function(){}).then(function(){ showSingles(); }); return;
+    }
+    var G = singlesGather(), list = G.list, nS = list.length;
+    var h = stratHow('Собираются исходы по матчам у всех стратегий этой конторы (' + list.map(function(x){ return x.nm; }).join(", ") + '). Матч ставится в купон, только если этот исход есть у каждой стратегии и не меньше половины из них ставят на него одного, без двойников. Матчи без такого согласия не трогаются.', "singles");
+    if(nS < 3){
+      box.innerHTML = h + '<p class="ev-warn">Мало данных: стратегий с расстановкой ' + nS + ', нужно хотя бы три.</p>'; $("evBack").hidden = false; return;
+    }
+    var rows = state.matches.map(function(m, i){
+      var k = m.mode === "lock" ? -1 : singlesPick(list, i);
+      return { idx: i, m: m, locked: m.mode === "lock", p: evProbs(m) || [1 / 3, 1 / 3, 1 / 3], q: null, set: k >= 0 ? [k] : [], why: "" };
+    });
+    var n = rows.filter(function(r){ return r.set.length; }).length;
+    h += stratCards([["Стратегий", String(nS)], ["Одиночек", n + " из " + state.matches.length]]);
+    h += '<table class="ev-tab ev-data-tab"><thead><tr><th>№</th><th>Матч</th><th>Одиночка</th></tr></thead><tbody>';
+    rows.forEach(function(r){
+      var det = full() ? list.map(function(x){ var st = x.sets[r.idx]; return x.nm + " " + (st ? st.map(function(k){ return OUT[k]; }).join("") : "—"); }).join(" · ") : "";
+      h += '<tr><td class="nw">' + (r.idx + 1) + '</td><td><div class="dt-m">' + escHtml(r.m.home) + ' — ' + escHtml(r.m.away) + '</div>' + (det ? '<div class="dt-why">' + escHtml(det) + '</div>' : '') + '</td>'
+        + '<td class="nw"><span class="dt-pick' + (r.locked ? ' dt-lock' : '') + '">' + (r.set.length ? OUT[r.set[0]] : (r.locked ? "фикс" : "—")) + '</span></td></tr>';
+    });
+    h += '</tbody></table>';
+    h += n ? '<div class="ev-data-go ev-data-go2"><button type="button" id="dataApply" class="btn-ev">Подставить в купон</button></div>'
+           : '<p class="ev-note dt-center">Сейчас ни в одном матче стратегии не сходятся на одном исходе.</p>';
+    h += '<p class="ev-note">В купон ставятся только матчи с одиночкой, остальные остаются как есть. «Назад» откатит купон к прежнему виду. Это модель, а не гарантия.</p>';
+    stratFinish(box, h, n ? { rows: rows } : null, "Одиночки", showSingles);
+  }
+  if($("btnSingles")) $("btnSingles").addEventListener("click", showSingles);
+
   $("btnStat").addEventListener("click", function(){ showAcc(); });
   /* телефон: корзину можно свернуть до заголовка; решение запоминается */
   (function(){

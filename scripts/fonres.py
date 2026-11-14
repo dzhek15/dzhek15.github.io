@@ -41,6 +41,16 @@ def parse(text):
             kv = part.split("÷")
             if len(kv) == 2:
                 o[kv[0]] = kv[1]
+        if o.get("AB") == "3" and o.get("AE") and o.get("AF") and o.get("AC") in ("4", "5"):
+            # матч отменён (5) или перенесён (4): в тото считается сыгранным и выигрышным по любому исходу ("*");
+            # перенос засчитываем, только когда с начала прошло 48 часов — до тех пор матч ещё может сыграться
+            try:
+                ts = int(o.get("AD", "0"))
+                if o.get("AC") == "5" or (ts and time.time() > ts + 48 * 3600):
+                    out.append((o["AE"], o["AF"], ts, -1, -1))
+            except ValueError:
+                pass
+            continue
         if o.get("AB") != "3" or not (o.get("AE") and o.get("AF")) or o.get("AC") not in ("3", "10", "11"):
             continue
         # итог — счёт основного времени (AT/AU): без овертайма, буллитов, доп. времени и пенальти (AC 10 / 11)
@@ -55,6 +65,13 @@ def parse(text):
         except (KeyError, ValueError):
             continue
     return out
+
+
+def res_of(gh, ga):
+    """Исход и счёт строкой; отменённый матч (счёт -1 : -1) — «*» и «отм.»: выигрыш по любому исходу."""
+    if gh < 0 or ga < 0:
+        return "*", "отм."
+    return ("1" if gh > ga else "2" if gh < ga else "X"), "%d : %d" % (gh, ga)
 
 
 def utc(s):
@@ -138,7 +155,7 @@ def main():
                         if st and ts and abs(ts - st) > 6 * 3600:
                             continue
                         if E.same(nm[0], fh) and E.same(nm[1], fa):
-                            res, sc = ("1" if gh > ga else "2" if gh < ga else "X"), "%d : %d" % (gh, ga)
+                            res, sc = res_of(gh, ga)
                             break
             if not res and str(e.get("id")) in jres:          # итог, уже снятый журналом стратегий
                 j = jres[str(e["id"])]; res, sc = j.get("r", ""), (j.get("s") or "").replace(":", " : ")
@@ -147,10 +164,10 @@ def main():
                 cand = []
                 if nm:                                  # запасной проход: совпала одна команда, время ±3 ч, кандидат один
                     for fh, fa, ts, gh, ga in rows:
-                        if st and ts and abs(ts - st) <= 3 * 3600 and (E.same(nm[0], fh) or E.same(nm[1], fa)):
+                        if gh >= 0 and st and ts and abs(ts - st) <= 3 * 3600 and (E.same(nm[0], fh) or E.same(nm[1], fa)):
                             cand.append((gh, ga))
                 if len(set(cand)) == 1 and len(cand) == 1:
-                    gh, ga = cand[0]; res, sc = ("1" if gh > ga else "2" if gh < ga else "X"), "%d : %d" % (gh, ga)
+                    gh, ga = cand[0]; res, sc = res_of(gh, ga)
             found += 1 if res else 0
             ev_out.append([(split(e.get("name")) or [e.get("name"), ""])[0], (split(e.get("name")) or ["", ""])[1], e.get("championship", ""),
                            q.get("bk_win_1"), q.get("bk_draw"), q.get("bk_win_2"), q.get("pool_win_1"), q.get("pool_draw"), q.get("pool_win_2"), res, sc])

@@ -123,6 +123,10 @@ def fon_events(teams):
         draws = draws.get("data", draws)
     except Exception as e:
         log("Фонбет: нет данных:", e); return out
+    try:    # единая библиотека: название Фонбета приводится к названию Балтбета (ru_bal.json), эмблема сохраняется под ним
+        rb = json.load(open(os.path.join(API, "fon", "ru_bal.json"), encoding="utf-8")).get("t", {})
+    except Exception:
+        rb = {}
     for d in draws[:2]:
         p = os.path.join(API, "fon", "drawing-info-%s.json" % d.get("id"))
         if not os.path.exists(p): continue
@@ -135,6 +139,7 @@ def fon_events(teams):
             for en in parts:
                 m = re.match(r"^(.*?)(\s*\((?:w|W)\))?$", en)
                 r = ru.get(m.group(1))
+                r = rb.get(r, r) if r else r
                 ruparts.append(None if not r else r + (" (ж)" if m.group(2) else ""))
             if None in ruparts: continue
             if all(team_key(n) in teams for n in ruparts): continue

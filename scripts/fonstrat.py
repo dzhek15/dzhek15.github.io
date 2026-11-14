@@ -196,7 +196,7 @@ def score(sets, res):
     dist = [1]
     cov = 0
     for s, r in zip(sets, res):
-        hit = r in s
+        hit = r in s or r == "*"            # отменённый матч — выигрыш по любому исходу
         cov += hit
         f = [len(s) - 1, 1] if hit else [len(s), 0]
         nd = [0] * (len(dist) + 1)
@@ -234,6 +234,14 @@ def feed_results():
                 kv = part.split("÷")
                 if len(kv) == 2:
                     o[kv[0]] = kv[1]
+            if o.get("AB") == "3" and o.get("AE") and o.get("AF") and o.get("AC") in ("4", "5"):
+                try:    # отменён (5) или перенесён и не сыгран за 48 часов (4): в тото выигрыш по любому исходу
+                    ts = int(o.get("AD", "0"))
+                    if o.get("AC") == "5" or (ts and time.time() > ts + 48 * 3600):
+                        rows.append((o["AE"], o["AF"], ts, -1, -1))
+                except ValueError:
+                    pass
+                continue
             if o.get("AB") != "3" or not (o.get("AE") and o.get("AF")) or o.get("AC") not in ("3", "10", "11"):
                 continue
             try:   # итог — счёт основного времени (AT/AU): без овертайма, буллитов, доп. времени и пенальти
@@ -247,6 +255,13 @@ def feed_results():
             except (KeyError, ValueError):
                 continue
     return rows, E
+
+
+def resd(gh, ga):
+    """Запись итога журнала; отменённый матч (счёт -1:-1) — «*»: выигрыш по любому исходу."""
+    if gh < 0 or ga < 0:
+        return {"s": "отм", "r": "*"}
+    return {"s": "%d:%d" % (gh, ga), "r": "1" if gh > ga else ("2" if gh < ga else "X")}
 
 
 def Date_end(h):
@@ -420,7 +435,7 @@ def main():
                 if st and ts and abs(ts - st) > 8 * 3600:
                     continue
                 if E.same(h, fh) and E.same(a, fa):
-                    jr["results"][str(e["id"])] = {"s": "%d:%d" % (gh, ga), "r": "1" if gh > ga else ("2" if gh < ga else "X")}
+                    jr["results"][str(e["id"])] = resd(gh, ga)
                     print("итог", e["name"], gh, ga)
                     break
 
@@ -433,7 +448,7 @@ def main():
                 continue
             for i, e in enumerate(rec["ev"]):
                 x = h["ev"][i] if i < len(h.get("ev", [])) else None
-                if x and len(x) > 10 and x[9] in ("1", "X", "2") and str(e["id"]) not in jr["results"]:
+                if x and len(x) > 10 and x[9] in ("1", "X", "2", "*") and str(e["id"]) not in jr["results"]:
                     jr["results"][str(e["id"])] = {"s": str(x[10]).replace(" ", ""), "r": x[9]}
     except Exception as e:
         print("итоги из архива не подмешаны:", e)
@@ -462,7 +477,7 @@ def main():
                 if not near:
                     continue
                 _, gh, ga = min(near)
-                new = {"s": "%d:%d" % (gh, ga), "r": "1" if gh > ga else ("2" if gh < ga else "X")}
+                new = resd(gh, ga)
                 old = jr["results"].get(str(e["id"]))
                 if old != new:
                     jr["results"][str(e["id"])] = new
@@ -475,7 +490,7 @@ def main():
     # 2г. итоги, внесённые вручную для матчей, которых нет в ленте Flashscore (низшие лиги): data/api/fon/res_manual.json (главнее всего)
     try:
         for k, v in (rd(os.path.join(FON, "res_manual.json"), {}) or {}).items():
-            if v.get("r") in ("1", "X", "2"):
+            if v.get("r") in ("1", "X", "2", "*"):
                 jr["results"][str(k)] = {"s": str(v.get("s", "")).replace(" ", ""), "r": v["r"]}
     except Exception as e:
         print("ручные итоги не подмешаны:", e)
@@ -501,7 +516,7 @@ def main():
             for i, e in enumerate(rec["ev"]):
                 r = jr["results"].get(str(e["id"]))
                 if r and i < len(h.get("ev", [])) and len(h["ev"][i]) > 10:
-                    sc = r["s"].replace(":", " : ")
+                    sc = "отм." if r["r"] == "*" else r["s"].replace(":", " : ")
                     if h["ev"][i][9] != r["r"] or h["ev"][i][10] != sc:
                         h["ev"][i][9], h["ev"][i][10] = r["r"], sc
                         chg += 1
