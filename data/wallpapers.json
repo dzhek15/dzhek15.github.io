@@ -1,8 +1,36 @@
 {
- "updated": "2026-11-14",
+ "updated": "2026-11-15",
  "count": 60,
  "note": "база обоев: каждый день после разбора ИИ добавляются новые по свежим новостям, рисуют бесплатные нейросети",
  "items": [
+  {
+   "src": "img/wp/auto/20261115-1.webp",
+   "light": "img/wp/auto/20261115-1l.webp",
+   "theme": "Ночной матч Лиги наций",
+   "by": "pollinations:sana",
+   "d": "2026-11-15"
+  },
+  {
+   "src": "img/wp/auto/20261115-2.webp",
+   "light": "img/wp/auto/20261115-2l.webp",
+   "theme": "Решающий матч в тумане",
+   "by": "pollinations:sana",
+   "d": "2026-11-15"
+  },
+  {
+   "src": "img/wp/auto/20261115-3.webp",
+   "light": "img/wp/auto/20261115-3l.webp",
+   "theme": "Травмы и давление",
+   "by": "pollinations:sana",
+   "d": "2026-11-15"
+  },
+  {
+   "src": "img/wp/auto/20261115-4.webp",
+   "light": "img/wp/auto/20261115-4l.webp",
+   "theme": "Борьба за еврокубки",
+   "by": "pollinations:sana",
+   "d": "2026-11-15"
+  },
   {
    "src": "img/wp/auto/20261114-1.webp",
    "light": "img/wp/auto/20261114-1l.webp",
@@ -391,34 +419,6 @@
    "src": "img/wp/auto/20261101-g01.webp",
    "light": "img/wp/auto/20261101-g01l.webp",
    "theme": "Мяч в центре круга",
-   "by": "generated",
-   "d": "2026-11-01"
-  },
-  {
-   "src": "img/wp/auto/20261101-g02.webp",
-   "light": "img/wp/auto/20261101-g02l.webp",
-   "theme": "Туннель к полю",
-   "by": "generated",
-   "d": "2026-11-01"
-  },
-  {
-   "src": "img/wp/auto/20261101-g03.webp",
-   "light": "img/wp/auto/20261101-g03l.webp",
-   "theme": "Ворота и сетка",
-   "by": "generated",
-   "d": "2026-11-01"
-  },
-  {
-   "src": "img/wp/auto/20261101-g04.webp",
-   "light": "img/wp/auto/20261101-g04l.webp",
-   "theme": "Угловой флажок",
-   "by": "generated",
-   "d": "2026-11-01"
-  },
-  {
-   "src": "img/wp/auto/20261101-g05.webp",
-   "light": "img/wp/auto/20261101-g05l.webp",
-   "theme": "Сапоги на скамье",
    "by": "generated",
    "d": "2026-11-01"
   }
