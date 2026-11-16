@@ -1,8 +1,36 @@
 {
- "updated": "2026-11-15",
+ "updated": "2026-11-16",
  "count": 60,
  "note": "база обоев: каждый день после разбора ИИ добавляются новые по свежим новостям, рисуют бесплатные нейросети",
  "items": [
+  {
+   "src": "img/wp/auto/20261116-1.webp",
+   "light": "img/wp/auto/20261116-1l.webp",
+   "theme": "Дерби под прожекторами",
+   "by": "pollinations:sana",
+   "d": "2026-11-16"
+  },
+  {
+   "src": "img/wp/auto/20261116-2.webp",
+   "light": "img/wp/auto/20261116-2l.webp",
+   "theme": "Сенсация в тумане",
+   "by": "pollinations:sana",
+   "d": "2026-11-16"
+  },
+  {
+   "src": "img/wp/auto/20261116-3.webp",
+   "light": "img/wp/auto/20261116-3l.webp",
+   "theme": "Тактика и давление",
+   "by": "pollinations:sana",
+   "d": "2026-11-16"
+  },
+  {
+   "src": "img/wp/auto/20261116-4.webp",
+   "light": "img/wp/auto/20261116-4l.webp",
+   "theme": "Травмы и дождь",
+   "by": "pollinations:sana",
+   "d": "2026-11-16"
+  },
   {
    "src": "img/wp/auto/20261115-1.webp",
    "light": "img/wp/auto/20261115-1l.webp",
@@ -394,33 +422,6 @@
    "theme": "Иберийский дождь",
    "by": "pollinations:sana",
    "d": "2026-11-02"
-  },
-  {
-   "src": "img/wp/auto/20261031-1.webp",
-   "light": "img/wp/auto/20261031-1l.webp",
-   "theme": "Среда под прожекторами",
-   "by": "pollinations:sana",
-   "d": "2026-10-31"
-  },
-  {
-   "src": "img/wp/auto/20261031-3.webp",
-   "light": "img/wp/auto/20261031-3l.webp",
-   "theme": "Напряжение у ворот",
-   "by": "pollinations:sana",
-   "d": "2026-10-31"
-  },
-  {
-   "src": "img/wp/auto/20261030-3.webp",
-   "light": "img/wp/auto/20261030-3l.webp",
-   "theme": "Дебют у костра Бернли",
-   "by": "pollinations:sana"
-  },
-  {
-   "src": "img/wp/auto/20261101-g01.webp",
-   "light": "img/wp/auto/20261101-g01l.webp",
-   "theme": "Мяч в центре круга",
-   "by": "generated",
-   "d": "2026-11-01"
   }
  ]
 }
