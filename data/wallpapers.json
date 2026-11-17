@@ -1,8 +1,36 @@
 {
- "updated": "2026-11-16",
+ "updated": "2026-11-17",
  "count": 60,
  "note": "база обоев: каждый день после разбора ИИ добавляются новые по свежим новостям, рисуют бесплатные нейросети",
  "items": [
+  {
+   "src": "img/wp/auto/20261117-1.webp",
+   "light": "img/wp/auto/20261117-1l.webp",
+   "theme": "Дания — Норвегия",
+   "by": "pollinations:sana",
+   "d": "2026-11-17"
+  },
+  {
+   "src": "img/wp/auto/20261117-2.webp",
+   "light": "img/wp/auto/20261117-2l.webp",
+   "theme": "Саудовская Аравия — Узбекистан",
+   "by": "pollinations:sana",
+   "d": "2026-11-17"
+  },
+  {
+   "src": "img/wp/auto/20261117-3.webp",
+   "light": "img/wp/auto/20261117-3l.webp",
+   "theme": "Динамо — Нефтехимик",
+   "by": "pollinations:sana",
+   "d": "2026-11-17"
+  },
+  {
+   "src": "img/wp/auto/20261117-4.webp",
+   "light": "img/wp/auto/20261117-4l.webp",
+   "theme": "Конго — Коморы",
+   "by": "pollinations:sana",
+   "d": "2026-11-17"
+  },
   {
    "src": "img/wp/auto/20261116-1.webp",
    "light": "img/wp/auto/20261116-1l.webp",
@@ -394,34 +422,6 @@
    "theme": "Травма в Бернли",
    "by": "pollinations:sana",
    "d": "2026-11-03"
-  },
-  {
-   "src": "img/wp/auto/20261102-1.webp",
-   "light": "img/wp/auto/20261102-1l.webp",
-   "theme": "Дерби под прожекторами",
-   "by": "pollinations:sana",
-   "d": "2026-11-02"
-  },
-  {
-   "src": "img/wp/auto/20261102-2.webp",
-   "light": "img/wp/auto/20261102-2l.webp",
-   "theme": "Битва за выживание",
-   "by": "pollinations:sana",
-   "d": "2026-11-02"
-  },
-  {
-   "src": "img/wp/auto/20261102-3.webp",
-   "light": "img/wp/auto/20261102-3l.webp",
-   "theme": "Кубковая ночь",
-   "by": "pollinations:sana",
-   "d": "2026-11-02"
-  },
-  {
-   "src": "img/wp/auto/20261102-4.webp",
-   "light": "img/wp/auto/20261102-4l.webp",
-   "theme": "Иберийский дождь",
-   "by": "pollinations:sana",
-   "d": "2026-11-02"
   }
  ]
 }
