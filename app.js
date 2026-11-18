@@ -2410,7 +2410,19 @@
      гол пропадал и появлялся заново, а вместе с ним прыгали места наборов). Откат принимаем только от равного
      или более сильного источника с не более старыми данными — так отмена гола (VAR) всё равно доходит. */
   var SRC_TB = 1, SRC_MIR = 2, SRC_FEED = 3, SRC_NAME = { 1: "источник тиража", 2: "снимок", 3: "лента" };
-  function scPair(x){ var r = /(\d+)\D+(\d+)/.exec(x || ""); return r ? [+r[1], +r[2]] : null; }
+  /* счёт — только «1 : 0» (допускаем хвост в скобках); «18.1103:00» — дата и время из чужого источника, это не счёт */
+  function scPair(x){ var r = /^\s*(\d{1,3})\s*[:\-–—]\s*(\d{1,3})(?=\s|$|\()/.exec(x || ""); return r ? [+r[1], +r[2]] : null; }
+  /* чистим счёт-мусор, попавший в сохранённое состояние (с запасным источником дата и время однажды попали в счёт) */
+  function scrubScores(){
+    var bad = 0;
+    [state.matches, state.prev && state.prev.matches].forEach(function(l){
+      (l || []).forEach(function(m){
+        if(m && m.score && !scPair(m.score)){ m.score = ""; bad++; if(l !== state.matches && state.prev) state.prev.rescore = 1; }
+      });
+    });
+    if(bad){ save(); if(state.prev && state.prev.rescore) setTimeout(refreshPrev, 400); }
+    return bad;
+  }
   function mergeScore(m, sc){
     if(FON && m.resFs && !sc) return;   /* у Фонбета основной источник счёта не даёт — не стираем счёт из Flashscore */
     noteScore(m, sc, SRC_TB, Date.now());
@@ -4817,6 +4829,7 @@
   }
   var pickPopKey = "", pickOffKey = "";   /* pickOffKey: исход только что сняли — пока курсор над кнопкой, без золотой подсветки наведения */
   function render(){
+    scrubScores();
     var t0 = performance.now();
     renderCore(); ujSoon(); renderWaitNote(); cmpvRender();
     if(typeof DBG !== "object") return;
@@ -8570,7 +8583,7 @@
   /* счёт и итоги прошлого тиража — тем же ответом drawing-info */
   function refreshPrev(){
     var p = state.prev;
-    if(!p || p.cur || !p.id || typeof fetch !== "function" || prevDone()) return;
+    if(!p || p.cur || !p.id || typeof fetch !== "function" || (prevDone() && !p.rescore)) return;
     var tr0 = Date.now();
     apiFetch("drawing-info/" + p.id)
       .then(function(r){ return r.ok ? r.json() : null; })
@@ -8585,7 +8598,7 @@
           if(r8 || !p.matches[i].resFs) p.matches[i].res = r8;
           mergeScore(p.matches[i], e.score || "");
         });
-        p.at = Date.now();
+        p.at = Date.now(); delete p.rescore;
         save();
         var ch = sig0 !== prevSig(p);
         dbgLog("тираж", "прошлый тираж: " + (Date.now() - tr0) + " мс, " + (ch ? "есть изменения" : "без изменений"));
