@@ -53,8 +53,30 @@ def get(url, timeout=25):
         return r.read()
 
 
+def _via_proxy(url):
+    """Запасной путь для totobrief: с серверов GitHub он иногда не отвечает (TLS-таймаут часами).
+    Читаем тот же JSON через r.jina.ai — он отдаёт тело ответа без изменений."""
+    raw = get("https://r.jina.ai/" + url, timeout=40).decode("utf-8")
+    i = raw.find("Markdown Content:")
+    if i < 0:
+        raise RuntimeError("прокси: нет тела ответа")
+    return json.loads(raw[i + len("Markdown Content:"):].strip())
+
+
+_PROXY_ONLY = [bool(os.environ.get("FEED_FORCE_PROXY"))]
+
+
 def jget(url):
-    return json.loads(get(url).decode("utf-8"))
+    if url.startswith(TB) and _PROXY_ONLY[0]:
+        return _via_proxy(url)
+    try:
+        return json.loads(get(url).decode("utf-8"))
+    except Exception as e:
+        if not url.startswith(TB):
+            raise
+        log("прямой запрос не прошёл (%s), дальше через прокси" % repr(e)[:80])
+        _PROXY_ONLY[0] = True   # не ждём таймаут на каждом запросе этого запуска
+        return _via_proxy(url)
 
 
 def rd(name, default):
