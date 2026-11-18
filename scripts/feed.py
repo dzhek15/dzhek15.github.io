@@ -315,7 +315,9 @@ def parse_stavka(html):
         elif is_res and last_head:
             out = []
             for x in parsed:
-                score = next((c for c in x["cells"] if re.search(r"\d+\s*:\s*\d+", c)), "")
+                # счёт — отдельная ячейка «1:0»; «18.11 03:00» (дата и время начала) и «03:00» — не счёт
+                score = next((c for c in x["cells"] if re.fullmatch(r"\d{1,3}\s*:\s*\d{1,3}", c.strip())
+                              and not re.fullmatch(r"\d{2}\s*:\s*\d{2}", c.strip())), "")
                 score = re.sub(r"\s+", "", score)
                 res = next((c for c in x["cells"] if c in ("1", "X", "2", "Х")), "")
                 res = "X" if res == "Х" else res
