@@ -1,8 +1,36 @@
 {
- "updated": "2026-11-17",
+ "updated": "2026-11-18",
  "count": 60,
  "note": "база обоев: каждый день после разбора ИИ добавляются новые по свежим новостям, рисуют бесплатные нейросети",
  "items": [
+  {
+   "src": "img/wp/auto/20261118-1.webp",
+   "light": "img/wp/auto/20261118-1l.webp",
+   "theme": "Давление трибун",
+   "by": "pollinations:sana",
+   "d": "2026-11-18"
+  },
+  {
+   "src": "img/wp/auto/20261118-2.webp",
+   "light": "img/wp/auto/20261118-2l.webp",
+   "theme": "Кубковая сенсация",
+   "by": "pollinations:sana",
+   "d": "2026-11-18"
+  },
+  {
+   "src": "img/wp/auto/20261118-3.webp",
+   "light": "img/wp/auto/20261118-3l.webp",
+   "theme": "Волевая победа",
+   "by": "pollinations:sana",
+   "d": "2026-11-18"
+  },
+  {
+   "src": "img/wp/auto/20261118-4.webp",
+   "light": "img/wp/auto/20261118-4l.webp",
+   "theme": "Травмы и борьба",
+   "by": "pollinations:sana",
+   "d": "2026-11-18"
+  },
   {
    "src": "img/wp/auto/20261117-1.webp",
    "light": "img/wp/auto/20261117-1l.webp",
@@ -394,34 +422,6 @@
    "theme": "Дождь и давление",
    "by": "pollinations:sana",
    "d": "2026-11-04"
-  },
-  {
-   "src": "img/wp/auto/20261103-1.webp",
-   "light": "img/wp/auto/20261103-1l.webp",
-   "theme": "Атлетико – Бавария",
-   "by": "pollinations:sana",
-   "d": "2026-11-03"
-  },
-  {
-   "src": "img/wp/auto/20261103-2.webp",
-   "light": "img/wp/auto/20261103-2l.webp",
-   "theme": "Дерби – Норвич",
-   "by": "pollinations:sana",
-   "d": "2026-11-03"
-  },
-  {
-   "src": "img/wp/auto/20261103-3.webp",
-   "light": "img/wp/auto/20261103-3l.webp",
-   "theme": "Кубковая сенсация",
-   "by": "pollinations:sana",
-   "d": "2026-11-03"
-  },
-  {
-   "src": "img/wp/auto/20261103-4.webp",
-   "light": "img/wp/auto/20261103-4l.webp",
-   "theme": "Травма в Бернли",
-   "by": "pollinations:sana",
-   "d": "2026-11-03"
   }
  ]
 }
