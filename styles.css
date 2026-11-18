@@ -4466,3 +4466,33 @@ html.bk-rs-go::before{opacity:0; pointer-events:none; transition:opacity .35s ea
 .st-main.st-fon tbody td, .st-main.st-fon tfoot td{padding:9px 1px 8px; font-size:12px}
 .st-main.st-fon .st-v{white-space:nowrap; font-size:11.5px}
 .st-main.st-fon .ac-pill b{font-size:15px}
+
+/* ===== единые русские подписи состояния матча: Идёт / Закончился / Отменён / Перенесён ===== */
+:root:not([data-compact="1"]) body.is-prev .row .tc-t.tc-ft,
+:root:not([data-compact="1"]) body.is-prev .row .tc-t.tc-cn,
+:root:not([data-compact="1"]) body.is-prev .row .tcol .tc-t.tc-pp{font-size:10px; line-height:1.1; font-weight:700; letter-spacing:0; padding:4px 5px; text-align:center; white-space:nowrap}
+:root:not([data-compact="1"]) body.is-prev .row .tc-t.tc-cn,
+:root:not([data-compact="1"]) body.is-prev .row .tcol .tc-t.tc-pp{color:var(--muted)}
+body.is-prev .row .tcol .tc-st{display:block; font:700 9.5px/1 var(--f-num); letter-spacing:.03em; color:#f6dd95; text-align:center}
+:root[data-theme="light"] body.is-prev .row .tcol .tc-st{color:#7a5410}
+:root[data-theme="light"]:not([data-compact="1"]) body.is-prev .row .tc-t.tc-cn,
+:root[data-theme="light"]:not([data-compact="1"]) body.is-prev .row .tcol .tc-t.tc-pp{color:#5b6664}
+@media (max-width:560px){
+  :root:not([data-compact="1"]) body.is-prev .row{grid-template-columns:66px minmax(0,1fr)}
+}
+@media (max-width:360px){
+  :root:not([data-compact="1"]) body.is-prev .row{grid-template-columns:62px minmax(0,1fr)}
+  :root:not([data-compact="1"]) body.is-prev .row .tc-t.tc-ft,
+  :root:not([data-compact="1"]) body.is-prev .row .tc-t.tc-cn,
+  :root:not([data-compact="1"]) body.is-prev .row .tcol .tc-t.tc-pp{font-size:9.5px; padding:4px 4px}
+}
+/* «Весь купон»: подпись состояния в ячейке времени */
+.pc-tc .pc-tm.pc-tx{font-size:10px; font-weight:700; letter-spacing:0}
+.pc-tc .pc-tm.pc-cn{color:var(--muted)}
+.pc-tc .pc-tm.pc-stk{flex-direction:column; gap:3px}
+.pc-tc .pc-tm.pc-stk small{font:700 9.5px/1 var(--f-num); letter-spacing:.02em}
+.pc-tc .pc-tm .pc-mn{display:inline-flex; align-items:center; gap:4px}
+:root[data-theme="light"] .pc-cov .pc-tc .pc-tm.pc-cn{color:rgba(243,234,210,.6)}
+@media (max-width:420px){ .pc-tc .pc-tm.pc-tx{font-size:9.5px} }
+@media (max-width:560px){ body.is-prev .pc-cov .pc-cr{grid-template-columns:20px 44px 74px minmax(0,1fr) 26px repeat(3,34px)} body.is-prev .pc-cov .pc-tc .pc-tm.pc-tx{font-size:10px} }
+@media (max-width:360px){ body.is-prev .pc-cov .pc-cr{grid-template-columns:18px 40px 68px minmax(0,1fr) 24px repeat(3,31px)} body.is-prev .pc-cov .pc-tc .pc-tm.pc-tx{font-size:9.5px} }

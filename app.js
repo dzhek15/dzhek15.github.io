@@ -1883,7 +1883,7 @@
         '<td class="nw">' + (e.pool ? e.pool.join(" / ") : "—") + '</td>' +
         (e.res ? '<td class="nw th-res' + cls + '">' + escHtml(e.res) + '</td>' +
                  '<td class="nw">' + escHtml(String(e.score || "").replace(/\s+/g, "")) + '</td></tr>'
-               : '<td class="nw th-void" colspan="2" title="матч отменён, засчитан всем">отменён</td></tr>');
+               : '<td class="nw th-void" colspan="2" title="матч отменён, засчитан всем">Отменён</td></tr>');
     });
     return h + '</table>';
   }
@@ -2577,7 +2577,7 @@
     if(li.end){
       var e = document.createElement("span");
       e.className = "lv-chip lv-end"; e.title = "Матч закончился, итог подводится";
-      e.innerHTML = '<b class="lv-tag">КОНЕЦ</b>';
+      e.innerHTML = '<b class="lv-tag">Закончился</b>';
       meta.insertBefore(e, meta.firstChild); return;
     }
     var goal = goalOn(m), mn = liveMinute(li.ph, li.hockey);
@@ -8555,7 +8555,7 @@
   function mkVoid(){
     var sc = document.createElement("span");
     sc.className = "mscore void";
-    sc.textContent = "отменён";
+    sc.textContent = "Отменён";
     sc.title = "Матч отменён: Балтбет засчитывает его угаданным для любой ставки";
     return sc;
   }
@@ -8802,19 +8802,21 @@
       /* телефон: слева время или минута, цвет полосы — угадал ли ИИ; строка раскрывается по тапу */
       var li2 = liveInfo(m), lo2 = liveOutcome(m), fin2 = !!m.res || (li2 && li2.end);
       var tcol = document.createElement("div"); tcol.className = "tcol";
-      var tt, tAttr = "";
-      if(m.res === VOID) tt = "ОТМ";
-      else if(m.res) tt = "Full time";
-      else if(fin2) tt = "КОНЕЦ";
+      var tt, tAttr = "", tCls = "", tPre = "";
+      /* единые подписи: «Идёт» (минута под ним), «Закончился», «Отменён», «Перенесён»; до начала — время матча */
+      if(m.res === VOID){ tt = "Отменён"; tCls = " tc-cn"; }
+      else if(m.res){ tt = "Закончился"; tCls = " tc-ft"; }
+      else if(fin2){ tt = "Закончился"; tCls = " tc-ft"; }
       else if(li2){
         var mn2 = liveMinute(li2.ph, li2.hockey, true);
-        tt = mn2 && mn2.t !== "" ? String(mn2.t) : "LIVE";
+        if(mn2 && mn2.t !== ""){ tt = String(mn2.t); tPre = '<b class="tc-st tc-st-live">Идёт</b>'; }
+        else tt = "Идёт";
         if(mn2 && mn2.tick && li2.ph) tAttr = ' data-ac="' + li2.ph.ac + '" data-ao="' + escHtml(li2.ph.ao || "") + '" data-bx="' + escHtml(li2.ph.bx || "") + '" data-at="' + li2.ph.at + '" data-h="' + (li2.hockey ? 1 : 0) + '" data-s="1"';
         if(mn2 && mn2.n != null) row.style.setProperty("--p", Math.min(100, Math.round(mn2.n / mn2.tot * 100)) + "%");
       } else tt = m.time || "—";
-      var ppTag = !m.res && !m.score && m.fsVoid ? (m.fsVoid === "отменён" ? "ОТМЕНЁН" : "ПЕРЕНОС") : "";
-      if(ppTag) tt = ppTag;
-      tcol.innerHTML = '<b class="tc-t' + (li2 && !fin2 ? " tc-live lv-min" : "") + (tt === "Full time" ? " tc-ft" : "") + (tt === "КОНЕЦ" ? " tc-end" : "") + '"'  + tAttr + '>' + (tt === "Full time" ? "Full<br>time" : escHtml(tt)) + '</b><i class="tc-n">' + (idx + 1) + '</i>';
+      var ppTag = !m.res && !m.score && m.fsVoid ? (m.fsVoid === "отменён" ? "Отменён" : "Перенесён") : "";
+      if(ppTag){ tt = ppTag; tPre = ""; tCls = ""; }
+      tcol.innerHTML = tPre + '<b class="tc-t' + (li2 && !fin2 ? " tc-live lv-min" : "") + tCls + '"'  + tAttr + '>' + escHtml(tt) + '</b><i class="tc-n">' + (idx + 1) + '</i>';
       if(ppTag){ var tcb = tcol.querySelector(".tc-t"); if(tcb) tcb.classList.add("tc-pp"); }
       row.insertBefore(tcol, num.nextSibling);
       if(li2 && !fin2) row.classList.add("st-live", "is-lv");
@@ -9543,14 +9545,15 @@
   }
   function pcTime(m){
     var li = liveInfo(m);
-    if(m.res === VOID) return '<span class="pc-tm pc-tx">ОТМ</span>';
-    if(m.res) return '<span class="pc-tm pc-tx pc-ftm">Full time</span>';
-    if(m.fsVoid && !m.score) return '<span class="pc-tm pc-tx pc-pp">' + (m.fsVoid === "отменён" ? "отмена" : "перенос") + '</span>';
-    if(li && li.end) return '<span class="pc-tm pc-tx lv">КОНЕЦ</span>';
+    if(m.res === VOID) return '<span class="pc-tm pc-tx pc-cn">Отменён</span>';
+    if(m.res) return '<span class="pc-tm pc-tx pc-ftm">Закончился</span>';
+    if(m.fsVoid && !m.score) return '<span class="pc-tm pc-tx pc-pp">' + (m.fsVoid === "отменён" ? "Отменён" : "Перенесён") + '</span>';
+    if(li && li.end) return '<span class="pc-tm pc-tx pc-ftm">Закончился</span>';
     if(li){
-      var mn = liveMinute(li.ph, li.hockey, true), txt = mn && mn.t !== "" ? String(mn.t) : "LIVE";
+      var mn = liveMinute(li.ph, li.hockey, true), txt = mn && mn.t !== "" ? String(mn.t) : "";
       var at = mn && mn.tick && li.ph ? ' data-ac="' + li.ph.ac + '" data-ao="' + escHtml(li.ph.ao || "") + '" data-bx="' + escHtml(li.ph.bx || "") + '" data-at="' + li.ph.at + '" data-h="' + (li.hockey ? 1 : 0) + '" data-s="1"' : "";
-      return '<span class="pc-tm lv' + (txt === "LIVE" ? ' pc-tx' : '') + '"><i class="lv-dot"></i><b class="lv-min"' + at + '>' + escHtml(txt) + '</b></span>';
+      if(!txt) return '<span class="pc-tm lv pc-tx"><i class="lv-dot"></i><b>Идёт</b></span>';
+      return '<span class="pc-tm lv pc-stk"><small>Идёт</small><span class="pc-mn"><i class="lv-dot"></i><b class="lv-min"' + at + '>' + escHtml(txt) + '</b></span></span>';
     }
     if(pcDay(m)) return '<span class="pc-tm pc-dd"><small>' + escHtml(pcDay(m)) + '</small><b>' + escHtml(m.time || "—") + '</b></span>';      /* другой день: дата мелко над временем, ячейка не растёт */
     return '<span class="pc-tm">' + escHtml(m.time || "—") + '</span>';
