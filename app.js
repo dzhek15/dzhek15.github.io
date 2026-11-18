@@ -2673,6 +2673,29 @@
     if(dg.test(f.hs || "") && dg.test(f.as || "")) return [+f.hs, +f.as];
     return null;
   }
+  /* Фонбет: запасной источник итога — журнал сайта (fon/strat_journal.json): там итоги из архива Flashscore по id матча тиража.
+     Нужен, когда матч уже пропал из ленты «сегодня», а в архиве окончившихся его ещё нет */
+  function fonJrApply(m, J){
+    if(!J || !J.draws || !J.results) return false;
+    var pv = state.prev && Array.isArray(state.prev.matches) && state.prev.matches.indexOf(m) >= 0;
+    var idx = (pv ? state.prev.matches : state.matches).indexOf(m);
+    var num = String(pv ? state.prev.tirazh : state.tirazh), tid = pv ? state.prev.id : state.tirazhId;
+    var jd = J.draws[num];
+    if(idx < 0 || !jd || !jd.ev || (tid && String(jd.id) !== String(tid))) return false;
+    var ev = jd.ev[idx], r = ev && J.results[String(ev.id)];
+    if(!r) return false;
+    /* страховка от сдвига порядка: день начала матча (МСК) должен совпасть */
+    var st = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/.exec(ev.start || "");
+    if(st && m.date){
+      var d0 = new Date(Date.UTC(+st[1], +st[2] - 1, +st[3], +st[4] + 3, +st[5])), p2 = function(x){ return (x < 10 ? "0" : "") + x; };
+      if(p2(d0.getUTCDate()) + "." + p2(d0.getUTCMonth() + 1) !== m.date) return false;
+    }
+    if(r.r === "*"){ m.res = VOID; }
+    else if(r.r === "1" || r.r === "X" || r.r === "2"){ m.res = r.r; if(r.s && /^\d+:\d+$/.test(r.s)) m.score = r.s.replace(":", " : "); }
+    else return false;
+    m.resFs = 1; m.fsEnd = m.fsEnd || Date.now();
+    return true;
+  }
   function fsLiveTick(){
     if(fsLiveBusy || document.hidden || typeof fetch !== "function") return;
     if(Date.now() - fsLiveAt < FS_LIVE_EVERY - 1500) return;
@@ -2764,7 +2787,13 @@
           m.res = h9 > a9 ? "1" : (h9 < a9 ? "2" : "X"); m.resFs = 1; m.score = h9 + " : " + a9; m.fsEnd = m.fsEnd || Date.now(); changed = true;
           dbgLog("score", dbgTag(m) + ": итог из архива Flashscore " + m.score + " → " + m.res);
         });
-        fin();
+        /* что не нашлось и в архиве — берём из журнала (итоги по ленте Flashscore, обновляются раз в полчаса) */
+        var left = miss.filter(function(m){ return !m.res; });
+        if(!left.length){ fin(); return; }
+        return tiltJournal().then(function(J){
+          left.forEach(function(m){ if(!m.res && fonJrApply(m, J)){ changed = true; dbgLog("score", dbgTag(m) + ": итог из журнала " + (m.score || "") + " → " + m.res); } });
+          fin();
+        });
       }).catch(function(){ fin(); });
     }).catch(function(e){ fsLiveBusy = false; dbgLog("err", "лента: " + (e && e.message || e)); });
   }
