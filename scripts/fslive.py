@@ -32,6 +32,29 @@ def get(url):
     return None
 
 
+# Лента «сегодня» делится по московской дате: в 00:00 матч, начавшийся вечером, исчезает из неё прямо посреди игры
+# или сразу после финального свистка. Поэтому вчерашний день читаем напрямую у Flashscore (русские названия, тот же формат).
+YDAY = "https://46.flashscore.ninja/46/x/feed/f_%d_-1_3_ru-ru_1"
+YHDR = {"User-Agent": "Mozilla/5.0 (dzhek15 fslive)", "x-fsign": "SW9D1eZo"}
+
+
+def get_yday(sport, now):
+    """Вчерашняя лента для матчей, перешагнувших полночь. В быстром круге — только первые часы после полуночи."""
+    msk_hour = ((now + 3 * 3600) // 3600) % 24
+    if FAST and msk_hour >= 6:
+        return ""
+    for k in range(2):
+        try:
+            with urllib.request.urlopen(urllib.request.Request(YDAY % sport, headers=YHDR), timeout=20) as r:
+                t = r.read().decode("utf-8")
+            if "AA÷" in t:
+                return t
+        except Exception as e:
+            print("fslive: вчерашняя лента", sport, "попытка", k + 1, e, flush=True)
+            time.sleep(2)
+    return ""
+
+
 def build(text, now, toks=None):
     out, head, keep_head = [], None, False
     for rec in text.split("¬~"):
@@ -175,6 +198,9 @@ def write_draw(sport, now, toks):
         text = get((FEED % sport).replace("day=0", "day=%d" % day))
         if text and "AA÷" in text:
             found.update(build_draw(text, toks))
+    yt = get_yday(sport, now)
+    if yt:
+        found.update(build_draw(yt, toks))
     os.makedirs(WOUT, exist_ok=True)
     path = os.path.join(WOUT, "fs-draw-%d.txt" % sport)
     old = open(path, encoding="utf-8").read() if os.path.exists(path) else ""
@@ -276,6 +302,7 @@ def main():
         text = get(FEED % sport)
         if not text or "AA÷" not in text:
             print("fslive: лента", sport, "недоступна, файл не трогаю"); continue
+        text = text + "¬~" + get_yday(sport, now)   # вчерашние матчи, дошедшие до полуночи или закончившиеся после неё
         mk = lambda recs: "ZT÷%d" % now + "¬~" + "¬~".join(recs) + ("¬~" if recs else "")
         # fs-now-<спорт>.txt — только матчи тиража: меняется редко (гол, фаза), поэтому коммитится каждую минуту
         if toks:
