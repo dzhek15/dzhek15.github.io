@@ -1,8 +1,36 @@
 {
- "updated": "2026-11-18",
+ "updated": "2026-11-19",
  "count": 60,
  "note": "база обоев: каждый день после разбора ИИ добавляются новые по свежим новостям, рисуют бесплатные нейросети",
  "items": [
+  {
+   "src": "img/wp/auto/20261119-1.webp",
+   "light": "img/wp/auto/20261119-1l.webp",
+   "theme": "Защита Орландо",
+   "by": "pollinations:sana",
+   "d": "2026-11-19"
+  },
+  {
+   "src": "img/wp/auto/20261119-2.webp",
+   "light": "img/wp/auto/20261119-2l.webp",
+   "theme": "Бенфика — Рома",
+   "by": "pollinations:sana",
+   "d": "2026-11-19"
+  },
+  {
+   "src": "img/wp/auto/20261119-3.webp",
+   "light": "img/wp/auto/20261119-3l.webp",
+   "theme": "Доха Дерби",
+   "by": "pollinations:sana",
+   "d": "2026-11-19"
+  },
+  {
+   "src": "img/wp/auto/20261119-4.webp",
+   "light": "img/wp/auto/20261119-4l.webp",
+   "theme": "Кубковый шок",
+   "by": "pollinations:sana",
+   "d": "2026-11-19"
+  },
   {
    "src": "img/wp/auto/20261118-1.webp",
    "light": "img/wp/auto/20261118-1l.webp",
@@ -394,34 +422,6 @@
    "theme": "Турнирный прессинг",
    "by": "pollinations:sana",
    "d": "2026-11-05"
-  },
-  {
-   "src": "img/wp/auto/20261104-1.webp",
-   "light": "img/wp/auto/20261104-1l.webp",
-   "theme": "Травмы Наполи",
-   "by": "pollinations:sana",
-   "d": "2026-11-04"
-  },
-  {
-   "src": "img/wp/auto/20261104-2.webp",
-   "light": "img/wp/auto/20261104-2l.webp",
-   "theme": "Новый тренер Вест Хэма",
-   "by": "pollinations:sana",
-   "d": "2026-11-04"
-  },
-  {
-   "src": "img/wp/auto/20261104-3.webp",
-   "light": "img/wp/auto/20261104-3l.webp",
-   "theme": "Ночь Лиги чемпионов",
-   "by": "pollinations:sana",
-   "d": "2026-11-04"
-  },
-  {
-   "src": "img/wp/auto/20261104-4.webp",
-   "light": "img/wp/auto/20261104-4l.webp",
-   "theme": "Дождь и давление",
-   "by": "pollinations:sana",
-   "d": "2026-11-04"
   }
  ]
 }
