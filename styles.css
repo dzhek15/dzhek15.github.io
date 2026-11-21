@@ -2500,7 +2500,7 @@ body.is-prev .pct-col.hit b,body.is-prev .kf-col.hit{color:var(--ink); font-weig
 @media (max-width:520px){ .ev-paper .ev-head h2{font-size:12.5px; letter-spacing:.06em} .ev-paper .ev-head{margin:6px 8px 0; padding:9px 38px 8px} .ev-paper .ev-body{padding:10px 10px 14px} }
 /* разбор ИИ: окно шире и выше, чтобы меньше листать */
 .ev-back:has(.ev-paper){padding:10px}
-.ev-box.ev-paper, [data-compact="1"] .ev-box.ev-paper{width:min(1240px, 98vw); max-width:min(1240px, 98vw); max-height:97vh; max-height:97dvh}
+.ev-box.ev-paper, [data-compact="1"] .ev-box.ev-paper{width:min(1240px, 98vw); max-width:min(1240px, 98vw); height:97vh; height:97dvh; max-height:97vh; max-height:97dvh}
 @media (min-width:1000px){
   .ev-paper .ai-blks{display:block; column-count:2; column-gap:34px; column-rule:1px solid #B9AB8C}
   .ev-paper .ai-blks > .ai-blk, .ev-paper .ai-blks > *{margin:0 0 18px}
