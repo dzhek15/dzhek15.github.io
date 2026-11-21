@@ -2497,6 +2497,10 @@ body.is-prev .pct-col.hit b,body.is-prev .kf-col.hit{color:var(--ink); font-weig
 .ev-paper .ev-note, .ev-paper .ev-warn{font:italic 400 13px/1.45 "PT Serif",Georgia,serif; color:#5E5446}
 .ev-paper .ai-cmp .ai-c{border-radius:0}
 @media (max-width:520px){ .ev-paper .ev-head h2{font-size:12.5px; letter-spacing:.06em} .ev-paper .ev-head{margin:6px 8px 0; padding:9px 38px 8px} .ev-paper .ev-body{padding:10px 10px 14px} }
+/* разбор ИИ: окно шире и выше, чтобы меньше листать */
+.ev-back:has(.ev-paper){padding:10px}
+.ev-box.ev-paper, [data-compact="1"] .ev-box.ev-paper{width:min(1080px, 96vw); max-width:min(1080px, 96vw); max-height:96vh; max-height:96dvh}
+@media (max-width:520px){ .ev-back:has(.ev-paper){padding:6px} .ev-box.ev-paper, [data-compact="1"] .ev-box.ev-paper{width:100%; max-width:100%; max-height:97vh; max-height:97dvh} }
 @media (max-width:420px){ .acc-u{display:none} }
 
 /* разбор ИИ: все заголовки по центру */
