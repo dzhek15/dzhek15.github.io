@@ -171,7 +171,12 @@
   var KEY = C.STORAGE_KEY + BK.sfx;
   var MAX_CSV = C.MAX_CSV;
   var book = null;          /* открытый CSV: {name, rows:[["1","X",...]], idx} — только в памяти вкладки */
-  var ZMIN = C.ZOOM_MIN, ZMAX = C.ZOOM_MAX, ZSTEP = C.ZOOM_STEP;
+  /* показанные 100% на компьютере рисуются в половину реального размера; на телефоне 100% = 100%.
+     Диапазон: 10%…200%, шаг 5% */
+  var IS_PHONE = (navigator.maxTouchPoints > 0) && Math.min(screen.width || 9999, screen.height || 9999) < 600;
+  var ZBASE = IS_PHONE ? 1 : (C.ZOOM_BASE || 1);
+  var ZMIN = ZBASE * 0.1, ZMAX = ZBASE * 2, ZSTEP = ZBASE * 0.05, ZKEY = "dzh15.zoom2";   /* масштаб общий для обоих букмекеров и хранится отдельно от тиража */
+  function zoomStored(){ try{ var v = Number(localStorage.getItem(ZKEY)); return (isFinite(v) && v > 0) ? v : null; }catch(e){ return null; } }
 
   var SEED = [
     ["14.09","21:15","Азия. Лига Чемпионов","Эстеглаль ФК","Аль Садд",[],"rand"],
@@ -270,9 +275,14 @@
   if(!state.waitSets || !state.waitSets.tirazh || !Array.isArray(state.waitSets.payloads) || !state.waitSets.payloads.length) state.waitSets = null;
   if(state.tirazhId == null) state.tirazhId = null;
   state.compact = false;   /* компактный вид убран вместе с кнопкой */
-  state.zoom = Number(state.zoom);
-  if(!isFinite(state.zoom) || state.zoom <= 0) state.zoom = 1;
-  state.zoom = Math.round(Math.max(ZMIN, Math.min(ZMAX, state.zoom)) * 100) / 100;
+  var zst = zoomStored();
+  if(zst === null){   /* первый запуск новой шкалы: цифра на экране прежняя, но рисуется вдвое мельче */
+    zst = Number(state.zoom);
+    if(!isFinite(zst) || zst <= 0) zst = 1;
+    zst = zst * ZBASE;
+  }
+  state.zoom = Math.round(Math.max(ZMIN, Math.min(ZMAX, zst)) * 1000) / 1000;
+  try{ localStorage.setItem(ZKEY, String(state.zoom)); }catch(e){}
   state.target = Number(state.target);
   if(!isFinite(state.target) || state.target < 0) state.target = 0;
   state.price = Number(state.price); if(!isFinite(state.price) || state.price <= 0) state.price = BK.price;
@@ -705,19 +715,20 @@
   /* ---------- масштаб ---------- */
   /* CSS zoom на body: значение живёт в состоянии и переживает перезагрузку */
   function applyZoom(){
-    var z = Number(state.zoom) || 1;
+    var z = Number(state.zoom) || ZBASE;
     document.body.style.zoom = (z === 1 ? "" : String(z));
     document.documentElement.style.setProperty("--ui-zoom", String(z)); /* окна (меню) гасят масштаб страницы и всегда занимают весь экран */
     var lbl = $("zoomVal");
-    if(lbl) lbl.textContent = Math.round(z * 100) + "%";
+    if(lbl) lbl.textContent = Math.round(z / ZBASE * 100) + "%";
     var zi = $("btnZoomIn"), zo = $("btnZoomOut");
     if(zi) zi.disabled = z >= ZMAX - 0.001;
     if(zo) zo.disabled = z <= ZMIN + 0.001;
   }
 
   function setZoom(z){
-    z = Math.round(Math.max(ZMIN, Math.min(ZMAX, z)) * 100) / 100;
+    z = Math.round(Math.max(ZMIN, Math.min(ZMAX, z)) * 1000) / 1000;
     state.zoom = z;
+    try{ localStorage.setItem(ZKEY, String(z)); }catch(e){}
     applyZoom();
     save();
     return z;
@@ -759,7 +770,7 @@
     var z = fitZoom();
     var turnedCompact = false;
     /* мельче 60% читать уже нельзя — сначала включаем компактный вид, потом меряем заново */
-    if(z < 0.6 && !state.compact){
+    if(z < 0.6 * ZBASE && !state.compact){
       state.compact = true;
       turnedCompact = true;
       render();
@@ -10816,8 +10827,8 @@
     save(); render();
   });
 
-  $("btnZoomIn").addEventListener("click", function(){ setZoom((Number(state.zoom) || 1) + ZSTEP); });
-  $("btnZoomOut").addEventListener("click", function(){ setZoom((Number(state.zoom) || 1) - ZSTEP); });
+  $("btnZoomIn").addEventListener("click", function(){ setZoom((Number(state.zoom) || ZBASE) + ZSTEP); });
+  $("btnZoomOut").addEventListener("click", function(){ setZoom((Number(state.zoom) || ZBASE) - ZSTEP); });
 
   function applyThemeBtn(){
     var isLight = document.documentElement.getAttribute("data-theme") === "light";
