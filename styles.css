@@ -2503,7 +2503,7 @@ body.is-prev .pct-col.hit b,body.is-prev .kf-col.hit{color:var(--ink); font-weig
 .ev-box.ev-paper, [data-compact="1"] .ev-box.ev-paper{width:min(1000px, 98vw); max-width:min(1000px, 98vw); height:97vh; height:97dvh; max-height:97vh; max-height:97dvh}
 @media (max-width:520px){ .ev-back:has(.ev-paper){padding:6px} .ev-box.ev-paper, [data-compact="1"] .ev-box.ev-paper{width:100%; max-width:100%; max-height:97vh; max-height:97dvh} }
 /* окна не зависят от масштаба страницы (кнопки − 100% +) */
-#evBack{zoom:calc(1 / var(--ui-zoom, 1))}
+#evBack{zoom:calc(var(--mz, 1) / var(--ui-zoom, 1))}
 /* все окна на ПК: максимально развёрнуты в высоту */
 @media (min-width:521px){
   .ev-back{padding:8px}
@@ -4510,8 +4510,11 @@ body.is-prev .row .tcol .tc-st{display:block; font:700 9.5px/1 var(--f-num); let
 @media (max-width:560px){ body.is-prev .pc-cov .pc-cr{grid-template-columns:20px 44px 74px minmax(0,1fr) 26px repeat(3,34px)} body.is-prev .pc-cov .pc-tc .pc-tm.pc-tx{font-size:10px} }
 @media (max-width:360px){ body.is-prev .pc-cov .pc-cr{grid-template-columns:18px 40px 68px minmax(0,1fr) 24px repeat(3,31px)} body.is-prev .pc-cov .pc-tc .pc-tm.pc-tx{font-size:9.5px} }
 
-/* все окна на ПК: по ширине таблицы с матчами (не уже 480px), высота — на весь экран */
+/* все окна на ПК: по ширине таблицы с матчами, на весь экран по высоте; размеры в «экранных» пикселях (делим на масштаб окон --mz) */
 @media (min-width:521px){
   .ev-box, [data-compact="1"] .ev-box, .ev-box.ev-paper, [data-compact="1"] .ev-box.ev-paper, .ev-box:has(.st-main){
-    width:min(98vw, max(480px, var(--tbl-w, 1000px))); max-width:98vw}
+    width:min(calc(98vw / var(--mz, 1)), max(calc(480px / var(--mz, 1)), calc(var(--tbl-w, 1000px) / var(--mz, 1))));
+    max-width:calc(98vw / var(--mz, 1));
+    height:calc(98dvh / var(--mz, 1)); max-height:calc(98dvh / var(--mz, 1))}
 }
+@media (max-width:520px){ .ev-box, .ev-box.ev-paper, [data-compact="1"] .ev-box.ev-paper{max-height:calc(97dvh / var(--mz, 1))} }

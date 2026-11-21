@@ -717,7 +717,8 @@
   function applyZoom(){
     var z = Number(state.zoom) || ZBASE;
     document.body.style.zoom = (z === 1 ? "" : String(z));
-    document.documentElement.style.setProperty("--ui-zoom", String(z)); /* окна (меню) гасят масштаб страницы и всегда занимают весь экран */
+    document.documentElement.style.setProperty("--ui-zoom", String(z));
+    document.documentElement.style.setProperty("--mz", String(IS_PHONE ? 1 : Math.max(0.55, Math.round(z * 1.1 * 1000) / 1000))); /* масштаб окон на ПК: вдвое мельче прежнего, при увеличении страницы растёт вместе с ней */ /* окна (меню) гасят масштаб страницы и всегда занимают весь экран */
     var lbl = $("zoomVal");
     if(lbl) lbl.textContent = Math.round(z / ZBASE * 100) + "%";
     var zi = $("btnZoomIn"), zo = $("btnZoomOut");
