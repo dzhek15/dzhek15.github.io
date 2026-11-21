@@ -2499,7 +2499,13 @@ body.is-prev .pct-col.hit b,body.is-prev .kf-col.hit{color:var(--ink); font-weig
 @media (max-width:520px){ .ev-paper .ev-head h2{font-size:12.5px; letter-spacing:.06em} .ev-paper .ev-head{margin:6px 8px 0; padding:9px 38px 8px} .ev-paper .ev-body{padding:10px 10px 14px} }
 /* разбор ИИ: окно шире и выше, чтобы меньше листать */
 .ev-back:has(.ev-paper){padding:10px}
-.ev-box.ev-paper, [data-compact="1"] .ev-box.ev-paper{width:min(1080px, 96vw); max-width:min(1080px, 96vw); max-height:96vh; max-height:96dvh}
+.ev-box.ev-paper, [data-compact="1"] .ev-box.ev-paper{width:min(1240px, 98vw); max-width:min(1240px, 98vw); max-height:97vh; max-height:97dvh}
+@media (min-width:1000px){
+  .ev-paper .ai-blks{display:block; column-count:2; column-gap:34px; column-rule:1px solid #B9AB8C}
+  .ev-paper .ai-blks > .ai-blk, .ev-paper .ai-blks > *{margin:0 0 18px}
+  .ev-paper .ai-blk-h{break-after:avoid}
+  .ev-paper .ai-blk p, .ev-paper .ai-facts li{break-inside:avoid}
+}
 @media (max-width:520px){ .ev-back:has(.ev-paper){padding:6px} .ev-box.ev-paper, [data-compact="1"] .ev-box.ev-paper{width:100%; max-width:100%; max-height:97vh; max-height:97dvh} }
 @media (max-width:420px){ .acc-u{display:none} }
 
