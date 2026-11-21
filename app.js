@@ -723,7 +723,19 @@
     var zi = $("btnZoomIn"), zo = $("btnZoomOut");
     if(zi) zi.disabled = z >= ZMAX - 0.001;
     if(zo) zo.disabled = z <= ZMIN + 0.001;
+    syncTblW();
   }
+
+  /* ширина таблицы с матчами в реальных пикселях экрана: все окна на ПК делаются такой же ширины */
+  function syncTblW(){
+    try{
+      var r = $("rows"), box = r && (r.closest(".panel") || r.parentNode);
+      var w = box ? box.getBoundingClientRect().width : 0;
+      if(w > 200) document.documentElement.style.setProperty("--tbl-w", Math.round(w) + "px");
+    }catch(e){}
+  }
+  window.addEventListener("resize", syncTblW);
+  try{ if(window.ResizeObserver){ var tro = new ResizeObserver(syncTblW); document.addEventListener("DOMContentLoaded", function(){ var r = $("rows"); if(r) tro.observe(r.closest(".panel") || r); syncTblW(); }); } }catch(e){}
 
   function setZoom(z){
     z = Math.round(Math.max(ZMIN, Math.min(ZMAX, z)) * 1000) / 1000;

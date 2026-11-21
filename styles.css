@@ -4509,3 +4509,9 @@ body.is-prev .row .tcol .tc-st{display:block; font:700 9.5px/1 var(--f-num); let
 @media (max-width:420px){ .pc-tc .pc-tm.pc-tx{font-size:9.5px} }
 @media (max-width:560px){ body.is-prev .pc-cov .pc-cr{grid-template-columns:20px 44px 74px minmax(0,1fr) 26px repeat(3,34px)} body.is-prev .pc-cov .pc-tc .pc-tm.pc-tx{font-size:10px} }
 @media (max-width:360px){ body.is-prev .pc-cov .pc-cr{grid-template-columns:18px 40px 68px minmax(0,1fr) 24px repeat(3,31px)} body.is-prev .pc-cov .pc-tc .pc-tm.pc-tx{font-size:9.5px} }
+
+/* все окна на ПК: по ширине таблицы с матчами (не уже 480px), высота — на весь экран */
+@media (min-width:521px){
+  .ev-box, [data-compact="1"] .ev-box, .ev-box.ev-paper, [data-compact="1"] .ev-box.ev-paper, .ev-box:has(.st-main){
+    width:min(98vw, max(480px, var(--tbl-w, 1000px))); max-width:98vw}
+}
