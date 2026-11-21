@@ -707,6 +707,7 @@
   function applyZoom(){
     var z = Number(state.zoom) || 1;
     document.body.style.zoom = (z === 1 ? "" : String(z));
+    document.documentElement.style.setProperty("--ui-zoom", String(z)); /* окна (меню) гасят масштаб страницы и всегда занимают весь экран */
     var lbl = $("zoomVal");
     if(lbl) lbl.textContent = Math.round(z * 100) + "%";
     var zi = $("btnZoomIn"), zo = $("btnZoomOut");
